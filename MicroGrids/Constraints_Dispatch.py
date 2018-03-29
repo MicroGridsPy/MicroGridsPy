@@ -18,7 +18,7 @@ def Generator_Bounds_Min_Integer(model,t): # Maximun energy output of the diesel
     minimun value.
     :param model: Pyomo model as defined in the Model_creation library.
     '''
-    return model.Generator_Nominal_Capacity*model.Generator_Min_Out_Put + (model.Generator_Energy_Integer[t]-1)*model.Generator_Nominal_Capacity <= model.Generator_Total_Period_Energy[t]                                                                                                
+    return model.Generator_Total_Period_Energy[t] >= model.Generator_Nominal_Capacity*model.Generator_Min_Out_Put + (model.Generator_Energy_Integer[t]-1)*model.Generator_Nominal_Capacity                                                                                                 
                                                                                                
 def Generator_Bounds_Max_Integer(model,t): # Maximun energy output of the diesel generator
     ''' 

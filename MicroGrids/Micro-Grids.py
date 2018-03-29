@@ -10,7 +10,7 @@ from Economical_Analysis import Levelized_Cost_Of_Energy
 
 
 # Type of problem formulation:
-formulation = 'Dispatch'
+formulation = 'Integer'
 
 model = AbstractModel() # define type of optimization problem
 
@@ -43,6 +43,15 @@ elif formulation =='Dispatch':
 plot = 'No Average' # 'No Average' or 'Average'
 Plot_Energy_Total(instance, Time_Series, plot)
 
+
+
+    
+#    index = pd.DatetimeIndex(start='2016-01-01 00:00:00', periods=len(Time_Series), 
+#                                       freq=('H'))
+#    Start_Date = '2017-01-01 00:00:00'
+#    end_Date = '2017-06-30 23:55:00'
+#    Time_Series.index = index
+#    cost = Time_Series['Total Cost Generator'][Start_Date:end_Date].sum()
 #PercentageOfUse = Percentage_Of_Use(Time_Series) # Plot the percentage of use 
 #Energy_Flow = Energy_Flow(Time_Series) # Plot the quantity of energy of each technology analized
 #Energy_Participation = Energy_Participation(Energy_Flow)

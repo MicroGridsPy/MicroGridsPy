@@ -1,6 +1,6 @@
 # Objective funtion
 
-def Net_Present_Cost(model): # OBJECTIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
+def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
     '''
     This function computes the sum of the multiplication of the net present cost 
     NPC (USD) of each scenario and their probability of occurrence.

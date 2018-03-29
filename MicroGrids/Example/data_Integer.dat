@@ -2,35 +2,23 @@ param: Periods := 8760;
 
 param: Years := 20;
 
-param: StartDate := '01/01/2014 00:00:00';
+param: StartDate := '01/01/2014 01:00:00';
 
 param: PlotTime := 1;
 
 param: PlotDay := '06/09/2014 00:00:00';
 
-param: PlotScenario:= 1;
+param: PlotScenario:= 2;
 
 param: Delta_Time := 1;
 
-param: PV_invesment_Cost := 1.67;
-
 param: Battery_Invesment_Cost := 0.6;
-
-param: Generator_Invesment_Cost := 1.48;
-
-param: Maintenance_Operation_Cost_PV := 0.015;
 
 param: Maintenance_Operation_Cost_Battery:= 0.015;
 
-param: Maintenance_Operation_Cost_Generator := 0.015;
-
-param: Diesel_Cost := 1.18;
-
 param: Discount_Rate := 0.12;
 
-param: Interest_Rate_Loan := 0.06;
-
-param: Lost_Load_Probability := 0.05;
+param: Lost_Load_Probability := 0.0;
 
 param: Discharge_Battery_Efficiency := 0.95;
 
@@ -38,38 +26,93 @@ param: Charge_Battery_Efficiency := 0.95;
 
 param: Deep_of_Discharge := 0.2;
 
-param: Inverter_Efficiency := 0.99;
-
-param: Low_Heating_Value := 9890;
-
-param: Value_Of_Lost_Load := 0.0002;
-
-param: Porcentage_Funded := 0.55;
+param: Value_Of_Lost_Load := 0.0001;
 
 param: Maximun_Battery_Discharge_Time := 5;
 
 param: Maximun_Battery_Charge_Time := 5;
 
-param: PV_Nominal_Capacity := 300;
-
-param: Battery_Reposition_Time := 10;
-
 # new parameters
 
-param: Generator_Effiency:= 0.337;
 
-param: Generator_Min_Out_Put:= 0.2; 
-
-param: Cost_Increase := 0.01;
-
-param: Generator_Nominal_Capacity := 32570.3;
 
 param: Scenarios :=3;
 
+param: Battery_Cycles := 4000;
+
 param: Scenario_Weight :=
 
-1   0.34
-2   0.33
-3   0.33;
+1   	0.4
+2   	0.3
+3   	0.3;
+
+# New parameters 3
 
 
+param: Renewable_Source := 2;
+
+param: Renewable_Invesment_Cost :=
+
+1   	1.4
+2   	1.4;
+
+param: Inverter_Efficiency_Renewable :=
+
+1   	0.9
+2   	0.92;
+
+param: Renewable_Nominal_Capacity :=
+
+1   	300
+2   	295;
+
+param: Maintenance_Operation_Cost_Renewable :=
+
+1   	0.015
+2   	0.016;
+
+
+# New parameters 4
+
+param: Generator_Type := 2;
+
+param: Generator_Invesment_Cost :=
+
+1   	1.48
+2   	1.48;
+
+param: Generator_Min_Out_Put:= 
+
+1   	0.5
+2   	0.8;
+
+param: Generator_Efficiency :=
+
+1   	0.33
+2   	0.32;
+
+param: Low_Heating_Value :=
+
+1   	9890
+2   	9910;
+
+param: Fuel_Cost :=
+
+1   	0.48
+2   	0.20;
+
+
+param: Cost_Increase := 
+
+1   	0.015
+2   	0.015;
+
+param: Generator_Nominal_Capacity := 
+
+1   	10000
+2   	15000;
+
+param: Maintenance_Operation_Cost_Generator := 
+
+1   	0.01
+2   	0.01;
