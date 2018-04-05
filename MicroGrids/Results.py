@@ -456,17 +456,36 @@ def Load_results1_Integer(instance):
     
      
     Lost_Load = instance.Lost_Load.get_values()
-    Renewable_Energy = instance.Total_Renewable_Energy.get_values()
+    Renewable_Energy_Production = instance.Renewable_Energy_Production.extract_values()
+    
+    Renewable_Energy = {}
+    Inverter_Efficiency_Renewable = instance.Inverter_Efficiency_Renewable.extract_values()
+    Renewable_Units = instance.Renewable_Units.get_values()    
+
+
+    for s in range(1, Number_Scenarios + 1):
+        for t in range(1, Number_Periods+1):
+            
+            foo = []
+            for r in range(1,Number_Renewable_Source+1 ):
+                foo.append((s,r,t))
+        
+            Renewable_Energy[s,t] = sum(Renewable_Energy_Production[i]
+                                        *Inverter_Efficiency_Renewable[i[1]]
+                                        *Renewable_Units[i[1]]  
+                                        for i in foo)
+       
+    
     Battery_Flow_Out = instance.Energy_Battery_Flow_Out.get_values()
     Battery_Flow_in = instance.Energy_Battery_Flow_In.get_values()
     Curtailment = instance.Energy_Curtailment.get_values()
     Energy_Demand = instance.Energy_Demand.extract_values()
     SOC = instance.State_Of_Charge_Battery.get_values()
     Generator_Energy = instance.Generator_Total_Period_Energy.get_values() 
-    Gen_Cost = instance.Period_Total_Cost_Generator.get_values()       
+    
     
     Total_Generator_Energy = pd.DataFrame()
-    Gen_Cost_1 = pd.DataFrame()  
+   
     
     for s in range(1, Number_Scenarios + 1):
         for t in range(1, Number_Periods+1):
@@ -474,7 +493,7 @@ def Load_results1_Integer(instance):
             for g in range(1,Number_Generator+1):
                 foo.append((s,g,t))
             Total_Generator_Energy.loc[t,s] = sum(Generator_Energy[i] for i in foo)
-            Gen_Cost_1.loc[t,s] = sum(Gen_Cost[i] for i in foo)       
+           
             
     Scenarios_Periods = [[] for i in range(Number_Scenarios)] 
        
@@ -483,7 +502,7 @@ def Load_results1_Integer(instance):
             Scenarios_Periods[i].append((i+1,j))
     foo=0        
     for i in columns:
-        Information = [[] for i in range(9)]
+        Information = [[] for i in range(8)]
         for j in  Scenarios_Periods[foo]:
             Information[0].append(Lost_Load[j])
             Information[1].append(Renewable_Energy[j]) 
@@ -493,7 +512,7 @@ def Load_results1_Integer(instance):
             Information[5].append(Energy_Demand[j]) 
             Information[6].append(SOC[j])
             Information[7].append(Total_Generator_Energy[j[0]][j[1]])
-            Information[8].append(Gen_Cost_1[j[0]][j[1]])
+            
         
         Scenarios=Scenarios.append(Information)
         foo+=1
@@ -501,14 +520,14 @@ def Load_results1_Integer(instance):
     index=[]  
     for j in range(1, Number_Scenarios+1):   
        index.append('Lost_Load '+str(j))
-       index.append('PV_Energy '+str(j))
+       index.append('Renewable Energy '+str(j))
        index.append('Battery_Flow_Out '+str(j)) 
        index.append('Battery_Flow_in '+str(j))
        index.append('Curtailment '+str(j))
        index.append('Energy_Demand '+str(j))
        index.append('SOC '+str(j))
        index.append('Gen energy '+str(j))
-       index.append('Total Cost Generator'+str(j))
+       
     Scenarios.index= index
      
     
@@ -541,20 +560,15 @@ def Load_results1_Integer(instance):
         columns.append('Scenario_'+str(i))
         
     Scenario_information =[[] for i in range(Number_Scenarios)]
-    Scenario_NPC = instance.Scenario_Net_Present_Cost.get_values()
-    LoL_Cost = instance.Scenario_Lost_Load_Cost.get_values() 
     Scenario_Weight = instance.Scenario_Weight.extract_values()
-    Fuel_Cost = instance.Sceneario_Generator_Total_Cost.get_values()
+    
     
     for i in range(1, Number_Scenarios+1):
-        Scenario_information[i-1].append(Scenario_NPC[i])
-        Scenario_information[i-1].append(LoL_Cost[i])
+        
         Scenario_information[i-1].append(Scenario_Weight[i])
-        Scenario_information[i-1].append(Fuel_Cost[i])
-    
-    
+        
     Scenario_Information = pd.DataFrame(Scenario_information,index=columns)
-    Scenario_Information.columns=['Scenario NPC', 'LoL Cost','Scenario Weight', 'Fuel Cost']
+    Scenario_Information.columns=['Scenario Weight']
     Scenario_Information = Scenario_Information.transpose()
     
     Scenario_Information.to_excel('Results/Scenario_Information.xls')
@@ -564,7 +578,7 @@ def Load_results1_Integer(instance):
     Time_Series.index = Scenarios.index
     
     Time_Series['Lost Load'] = Scenarios['Lost_Load '+str(S)]
-    Time_Series['Energy PV'] = Scenarios['PV_Energy '+str(S)]
+    Time_Series['Renewable Energy'] = Scenarios['Renewable Energy '+str(S)]
     Time_Series['Discharge energy from the Battery'] = Scenarios['Battery_Flow_Out '+str(S)] 
     Time_Series['Charge energy to the Battery'] = Scenarios['Battery_Flow_in '+str(S)]
     Time_Series['Curtailment'] = Scenarios['Curtailment '+str(S)]
@@ -616,12 +630,11 @@ def Load_results1_Integer(instance):
         for g in range(1, Number_Generator + 1):
             column_1 = 'Energy Generator ' + str(s) + ' ' + str(g)
             column_2 = 'Integer Generator ' + str(s) + ' ' + str(g)
-            column_3 = 'Cost Generator ' + str(s) + ' ' + str(g)
+            
             for t in range(1, Number_Periods + 1):
                 Generator_Time_Series.loc[t,column_1] = Generator_Energy[s,g,t]
                 Generator_Time_Series.loc[t,column_2] = Generator_Integer[s,g,t]
-                Generator_Time_Series.loc[t,column_3] = Gen_Cost[s,g,t]
-    
+                
     Generator_Time_Series.to_excel('Results/Generator_time_series.xls')            
     
     
@@ -694,35 +707,8 @@ def Load_results2_Integer(instance):
                                                'Battery efficiency charge','Battery Reposition Cost'])
     Size_variables.to_excel('Results/Size.xls') # Creating an excel file with the values of the variables that does not depend of the periods
     
-    I_Inv = instance.Initial_Inversion.get_values()[None] 
-    O_M = instance.Operation_Maintenance_Cost.get_values()[None] 
-   
-    Data = [I_Inv, O_M]
-    Value_costs = pd.DataFrame(Data, index=['Initial Inversion', 'O & M'])
-
-    Value_costs.to_excel('Results/Partial Costs.xls')    
-
-
-    VOLL = instance.Scenario_Lost_Load_Cost.get_values() 
-    Scenario_Generator_Cost = instance.Sceneario_Generator_Total_Cost.get_values() 
-    NPC_Scenario = instance.Scenario_Net_Present_Cost.get_values() 
-    Battery_Cost_Out =  instance.Battery_Cost_Out.get_values()
-    Battery_Cost_In =  instance.Battery_Cost_In.get_values()
     
-    columns = ['VOLL', 'Scenario Generator Cost', 'NPC Scenario','Battery Cost Out','Battery Cost In']
-    scenarios= range(1,instance.Scenarios.extract_values()[None]+1)
-    Scenario_Costs = pd.DataFrame(columns=columns, index=scenarios)
-    
-    
-    for j in scenarios:
-        Scenario_Costs['VOLL'][j]= VOLL[j] 
-        Scenario_Costs['Scenario Generator Cost'][j]= Scenario_Generator_Cost[j]
-        Scenario_Costs['NPC Scenario'][j]= NPC_Scenario[j]
-        Scenario_Costs['Battery Cost Out'][j]= Battery_Cost_Out[j]
-        Scenario_Costs['Battery Cost In'][j]= Battery_Cost_In[j]
-        
-    Scenario_Costs.to_excel('Results/Scenario Cost.xls')    
-    
+       
     return Size_variables
 
 
@@ -877,8 +863,8 @@ def Plot_Energy_Total(instance, Time_Series, plot):
     
         Plot_Data['Charge energy to the Battery'] = -Plot_Data['Charge energy to the Battery']
  
-        Vec = Plot_Data['Energy PV'] + Plot_Data['Energy Diesel']
-        Vec2 = (Plot_Data['Energy PV'] + Plot_Data['Energy Diesel'] + 
+        Vec = Plot_Data['Renewable Energy'] + Plot_Data['Energy Diesel']
+        Vec2 = (Plot_Data['Renewable Energy'] + Plot_Data['Energy Diesel'] + 
                 Plot_Data['Discharge energy from the Battery'])
         
         
@@ -902,7 +888,7 @@ def Plot_Energy_Total(instance, Time_Series, plot):
         ax6.set_ylabel('Estado de carga de la bateria (W)')
             
             # Define the legends of the plot
-        From_PV = mpatches.Patch(color='blue',alpha=0.3, label='PV')
+        From_PV = mpatches.Patch(color='blue',alpha=0.3, label='Renewable Energy')
         From_Generator = mpatches.Patch(color='red',alpha=0.3, label='Generador')
         From_Battery = mpatches.Patch(color='green',alpha=0.5, label='Energia de la bateria')
         To_Battery = mpatches.Patch(color='magenta',alpha=0.5, label='Energia hacia la bateria')
@@ -919,8 +905,8 @@ def Plot_Energy_Total(instance, Time_Series, plot):
        
         Plot_Data_2['Charge energy to the Battery'] = -Plot_Data_2['Charge energy to the Battery']
         Plot_Data = Plot_Data_2
-        Vec = Plot_Data['Energy PV'] + Plot_Data['Energy Diesel']
-        Vec2 = (Plot_Data['Energy PV'] + Plot_Data['Energy Diesel'] + 
+        Vec = Plot_Data['Renewable Energy'] + Plot_Data['Energy Diesel']
+        Vec2 = (Plot_Data['Renewable Energy'] + Plot_Data['Energy Diesel'] + 
                 Plot_Data['Discharge energy from the Battery'])
         
         
@@ -944,7 +930,7 @@ def Plot_Energy_Total(instance, Time_Series, plot):
         ax6.set_ylabel('Estado de carga de la bateria (W)')
             
             # Define the legends of the plot
-        From_PV = mpatches.Patch(color='blue',alpha=0.3, label='PV')
+        From_PV = mpatches.Patch(color='blue',alpha=0.3, label='Renewable Energy')
         From_Generator = mpatches.Patch(color='red',alpha=0.3, label='Generador')
         From_Battery = mpatches.Patch(color='green',alpha=0.5, label='Energia de la bateria')
         To_Battery = mpatches.Patch(color='magenta',alpha=0.5, label='Energia hacia la bateria')

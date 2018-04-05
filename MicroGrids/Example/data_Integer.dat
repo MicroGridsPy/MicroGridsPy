@@ -8,7 +8,7 @@ param: PlotTime := 1;
 
 param: PlotDay := '06/09/2014 00:00:00';
 
-param: PlotScenario:= 2;
+param: PlotScenario:= 1;
 
 param: Delta_Time := 1;
 
@@ -28,9 +28,9 @@ param: Deep_of_Discharge := 0.2;
 
 param: Value_Of_Lost_Load := 0.0001;
 
-param: Maximun_Battery_Discharge_Time := 5;
+param: Maximun_Battery_Discharge_Time := 1;
 
-param: Maximun_Battery_Charge_Time := 5;
+param: Maximun_Battery_Charge_Time := 1;
 
 # new parameters
 
@@ -42,9 +42,9 @@ param: Battery_Cycles := 4000;
 
 param: Scenario_Weight :=
 
-1   	0.4
-2   	0.3
-3   	0.3;
+1   	0.2
+2	0.4
+3	0.4;
 
 # New parameters 3
 
@@ -54,11 +54,11 @@ param: Renewable_Source := 2;
 param: Renewable_Invesment_Cost :=
 
 1   	1.4
-2   	1.4;
+2   	1.;
 
 param: Inverter_Efficiency_Renewable :=
 
-1   	0.9
+1   	0.92
 2   	0.92;
 
 param: Renewable_Nominal_Capacity :=
@@ -83,8 +83,8 @@ param: Generator_Invesment_Cost :=
 
 param: Generator_Min_Out_Put:= 
 
-1   	0.5
-2   	0.8;
+1   	0.1
+2   	0.1;
 
 param: Generator_Efficiency :=
 

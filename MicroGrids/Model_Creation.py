@@ -82,8 +82,7 @@ def Model_Creation(model):
     model.Energy_Battery_Flow_Out = Var(model.scenario, model.periods, within=NonNegativeReals) # Battery discharge energy in wh
     model.Energy_Battery_Flow_In = Var(model.scenario, model.periods, within=NonNegativeReals) # Battery charge energy in wh
     model.State_Of_Charge_Battery = Var(model.scenario, model.periods, within=NonNegativeReals) # State of Charge of the Battery in wh
-    model.Maximun_Charge_Power= Var() # Maximun charge power in w
-    model.Maximun_Discharge_Power = Var() #Maximun discharge power in w
+  
     
     # Variables associated to the diesel generator
     model.Generator_Nominal_Capacity = Var(within=NonNegativeReals) # Capacity  of the diesel generator in Wh
@@ -318,26 +317,20 @@ def Model_Creation_Integer(model):
     # Variables associated to the solar panels
       
     model.Renewable_Units = Var(model.renewable_source, within=NonNegativeReals)
-    model.Total_Renewable_Energy = Var(model.scenario,model.periods, within=NonNegativeReals)
     
     # Variables associated to the battery bank
     model.Battery_Nominal_Capacity = Var(within=NonNegativeReals) # Capacity of the battery bank in Wh
     model.Energy_Battery_Flow_Out = Var(model.scenario,model.periods, within=NonNegativeReals) # Battery discharge energy in wh
     model.Energy_Battery_Flow_In = Var(model.scenario,model.periods, within=NonNegativeReals) # Battery charge energy in wh
     model.State_Of_Charge_Battery = Var(model.scenario,model.periods, within=NonNegativeReals) # State of Charge of the Battery in wh
-    model.Maximun_Charge_Power= Var() # Maximun charge power in w
-    model.Maximun_Discharge_Power = Var() #Maximun discharge power in w
-    
+        
      # Variables associated to the diesel generator
     
-    model.Period_Total_Cost_Generator = Var(model.scenario,model.generator_type,
-                                            model.periods, within=NonNegativeReals)    
     model.Energy_Generator_Total = Var(model.scenario,model.generator_type,
                                        model.periods, within=NonNegativeReals)
     model.Integer_generator = Var(model.generator_type,
                                   within=NonNegativeIntegers)
-    model.Total_Cost_Generator = Var(model.scenario,
-                                     within=NonNegativeReals)  
+    
     model.Generator_Total_Period_Energy = Var(model.scenario,
                                               model.generator_type,
                                               model.periods, 
@@ -352,15 +345,6 @@ def Model_Creation_Integer(model):
     model.Energy_Curtailment = Var(model.scenario,model.periods, 
                                    within=NonNegativeReals) # Curtailment of solar energy in kWh
     
-    # Variables associated to the project
-    model.Initial_Inversion = Var(within=NonNegativeReals)
-    model.Operation_Maintenance_Cost = Var(within=NonNegativeReals)
-    model.Scenario_Lost_Load_Cost = Var(model.scenario, within=NonNegativeReals) ####  
-    model.Sceneario_Generator_Total_Cost = Var(model.scenario,
-                                               within=NonNegativeReals)
-    model.Battery_Cost_Out = Var(model.scenario, within=NonNegativeReals)
-    model.Battery_Cost_In = Var(model.scenario, within=NonNegativeReals)
-    model.Scenario_Net_Present_Cost = Var(model.scenario, within=NonNegativeReals)
     
     
 def Model_Creation_Dispatch(model):

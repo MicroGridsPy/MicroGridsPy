@@ -8,6 +8,7 @@ from Model_Creation import Model_Creation, Model_Creation_binary, Model_Creation
 from Model_Resolution import Model_Resolution, Model_Resolution_binary, Model_Resolution_Integer, Model_Resolution_Dispatch
 from Economical_Analysis import Levelized_Cost_Of_Energy
 
+#117066.990160517
 
 # Type of problem formulation:
 formulation = 'Integer'

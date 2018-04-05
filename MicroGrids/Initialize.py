@@ -74,23 +74,6 @@ def Marginal_Cost_Generator(model, i):
     
     return (model.Marginal_Cost_Generator_1[i]*model.Generator_Nominal_Capacity[i]-model.Start_Cost_Generator[i])/model.Generator_Nominal_Capacity[i] 
 
-def Max_Power_Battery_Charge(model): 
-    '''
-    This constraint calculates the Maximum power of charge of the battery. Taking in account the 
-    capacity of the battery and a time frame in which the battery has to be fully loaded.
-    
-    :param model: Pyomo model as defined in the Model_creation library.
-    '''
-    return model.Battery_Nominal_Capacity/model.Maximun_Battery_Charge_Time
-
-def Max_Power_Battery_Discharge(model):
-    '''
-    This constraint calculates the Maximum power of discharge of the battery. Taking in account 
-    the capacity of the battery and a time frame in which the battery can be fully discharge.
-    
-    :param model: Pyomo model as defined in the Model_creation library.
-    '''
-    return model.Battery_Nominal_Capacity/model.Maximun_Battery_Discharge_Time
 
 def Capital_Recovery_Factor(model):
    
