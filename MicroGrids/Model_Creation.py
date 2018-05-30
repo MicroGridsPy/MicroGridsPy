@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from pyomo.environ import  Param, RangeSet, NonNegativeReals, Var
-from Initialize import Initialize_years, Initialize_Demand, Initialize_PV_Energy # Import library with initialitation funtions for the parameters
 
 
 def Model_Creation(model):
@@ -13,7 +11,9 @@ def Model_Creation(model):
     :param model: Pyomo model as defined in the Micro-Grids library.
     
     '''
-    
+    from pyomo.environ import  Param, RangeSet, NonNegativeReals, Var
+    from Initialize import Initialize_years, Initialize_Demand, Initialize_PV_Energy, Battery_Reposition_Cost # Import library with initialitation funtions for the parameters
+
     # Time parameters
     model.Periods = Param(within=NonNegativeReals) # Number of periods of analysis of the energy variables
     model.Years = Param() # Number of years of the project
@@ -43,8 +43,11 @@ def Model_Creation(model):
     model.Deep_of_Discharge = Param() # Deep of discharge of the battery (Deep_of_Discharge) in %
     model.Maximun_Battery_Charge_Time = Param(within=NonNegativeReals) # Minimun time of charge of the battery in hours
     model.Maximun_Battery_Discharge_Time = Param(within=NonNegativeReals) # Maximun time of discharge of the battery  in hours                     
-    model.Battery_Reposition_Time = Param(within=NonNegativeReals) # Period of repocition of the battery in years
     model.Battery_Invesment_Cost = Param() # Cost of battery 
+    model.Battery_Cycles = Param(within=NonNegativeReals)
+    model.Unitary_Battery_Reposition_Cost = Param(within=NonNegativeReals, 
+                                          initialize=Battery_Reposition_Cost)
+    
   
     # Parametes of the diesel generator
     model.Generator_Efficiency = Param() # Generator efficiency to trasform heat into electricity %
@@ -61,13 +64,12 @@ def Model_Creation(model):
     
     # Parameters of the proyect
     model.Delta_Time = Param(within=NonNegativeReals) # Time step in hours
-    model.Porcentage_Funded = Param(within=NonNegativeReals) # Porcentaje of the total investment that is Porcentage_Porcentage_Funded by a bank or another entity in %
     model.Project_Years = Param(model.years, initialize= Initialize_years) # Years of the project
     model.Maintenance_Operation_Cost_PV = Param(within=NonNegativeReals) # Percentage of the total investment spend in operation and management of solar panels in each period in %                                             
     model.Maintenance_Operation_Cost_Battery = Param(within=NonNegativeReals) # Percentage of the total investment spend in operation and management of solar panels in each period in %
     model.Maintenance_Operation_Cost_Generator = Param(within=NonNegativeReals) # Percentage of the total investment spend in operation and management of solar panels in each period in %
     model.Discount_Rate = Param() # Discount rate of the project in %
-    model.Interest_Rate_Loan = Param() # Interest rate of the loan in %
+    
     model.Scenario_Weight = Param(model.scenario, within=NonNegativeReals) #########
        
 
@@ -82,8 +84,8 @@ def Model_Creation(model):
     model.Energy_Battery_Flow_Out = Var(model.scenario, model.periods, within=NonNegativeReals) # Battery discharge energy in wh
     model.Energy_Battery_Flow_In = Var(model.scenario, model.periods, within=NonNegativeReals) # Battery charge energy in wh
     model.State_Of_Charge_Battery = Var(model.scenario, model.periods, within=NonNegativeReals) # State of Charge of the Battery in wh
-  
-    
+    model.Maximun_Charge_Power = Var(within=NonNegativeReals)
+    model.Maximun_Discharge_Power = Var(within=NonNegativeReals)
     # Variables associated to the diesel generator
     model.Generator_Nominal_Capacity = Var(within=NonNegativeReals) # Capacity  of the diesel generator in Wh
     model.Diesel_Consume = Var(model.scenario,model.periods, within=NonNegativeReals) # Diesel consumed to produce electric energy in L
@@ -98,12 +100,10 @@ def Model_Creation(model):
     model.Scenario_Lost_Load_Cost = Var(model.scenario, within=NonNegativeReals) ####    
 
     # Variables associated to the project
-    model.Cost_Financial = Var(within=NonNegativeReals) # Financial cost of each period in USD
     model.Scenario_Net_Present_Cost = Var(model.scenario, within=NonNegativeReals) ####
     model.Initial_Inversion = Var(within=NonNegativeReals)
     model.Operation_Maintenance_Cost = Var(within=NonNegativeReals)
-    model.Total_Finalcial_Cost = Var(within=NonNegativeReals)
-    model.Battery_Reposition_Cost = Var(within=NonNegativeReals)
+    model.Battery_Reposition_Cost = Var(model.scenario,within=NonNegativeReals)
 
 
 

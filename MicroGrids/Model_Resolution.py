@@ -17,8 +17,8 @@ def Model_Resolution(model,datapath="Example/data.dat"):
     
     from Constraints import  Net_Present_Cost, Solar_Energy,State_of_Charge,\
     Maximun_Charge, Minimun_Charge, Max_Power_Battery_Charge, Max_Power_Battery_Discharge, Max_Bat_in, Max_Bat_out, \
-    Financial_Cost, Energy_balance, Maximun_Lost_Load,Scenario_Net_Present_Cost, Scenario_Lost_Load_Cost, \
-    Initial_Inversion, Operation_Maintenance_Cost, Total_Finalcial_Cost, Battery_Reposition_Cost, Maximun_Diesel_Energy, Diesel_Comsuption,Diesel_Cost_Total
+    Energy_balance, Maximun_Lost_Load,Scenario_Net_Present_Cost, Scenario_Lost_Load_Cost, \
+    Initial_Inversion, Operation_Maintenance_Cost, Battery_Reposition_Cost, Maximun_Diesel_Energy, Diesel_Comsuption,Diesel_Cost_Total
     
     
     # OBJETIVE FUNTION:
@@ -47,12 +47,10 @@ def Model_Resolution(model,datapath="Example/data.dat"):
     model.DieselCostTotal = Constraint(model.scenario, rule=Diesel_Cost_Total)
     
     # Financial Constraints
-    model.FinancialCost = Constraint(rule=Financial_Cost) # Financial cost
     model.ScenarioNetPresentCost = Constraint(model.scenario, rule=Scenario_Net_Present_Cost)    
     model.InitialInversion = Constraint(rule=Initial_Inversion)
     model.OperationMaintenanceCost = Constraint(rule=Operation_Maintenance_Cost)
-    model.TotalFinalcialCost = Constraint(rule=Total_Finalcial_Cost)
-    model.BatteryRepositionCost = Constraint(rule=Battery_Reposition_Cost) 
+    model.BatteryRepositionCost = Constraint(model.scenario,rule=Battery_Reposition_Cost) 
 
     
     instance = model.create_instance(datapath) # load parameters       

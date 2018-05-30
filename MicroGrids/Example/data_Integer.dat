@@ -36,15 +36,14 @@ param: Maximun_Battery_Charge_Time := 1;
 
 
 
-param: Scenarios :=3;
+param: Scenarios :=2;
 
 param: Battery_Cycles := 4000;
 
 param: Scenario_Weight :=
 
-1   	0.2
-2	0.4
-3	0.4;
+1   	0.5
+2	0.5;
 
 # New parameters 3
 

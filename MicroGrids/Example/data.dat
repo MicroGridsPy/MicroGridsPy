@@ -24,13 +24,11 @@ param: Maintenance_Operation_Cost_Battery:= 0.015;
 
 param: Maintenance_Operation_Cost_Generator := 0.015;
 
-param: Diesel_Unitary_Cost := 0.78;
+param: Diesel_Unitary_Cost := 0.48;
 
 param: Discount_Rate := 0.12;
 
-param: Interest_Rate_Loan := 0.06;
-
-param: Lost_Load_Probability := 0;
+param: Lost_Load_Probability := 0.05;
 
 param: Discharge_Battery_Efficiency := 0.95;
 
@@ -46,24 +44,28 @@ param: Low_Heating_Value := 9890;
 
 param: Value_Of_Lost_Load := 0.0003;
 
-param: Porcentage_Funded := 0.55;
-
 param: Maximun_Battery_Discharge_Time := 5;
 
 param: Maximun_Battery_Charge_Time := 5;
 
-param: PV_Nominal_Capacity := 300;
+param: PV_Nominal_Capacity := 250;
 
-param: Battery_Reposition_Time := 10;
+param: Battery_Cycles := 8000;
 
-param: Scenarios :=3;
+param: Scenarios := 10;
 
 param: Scenario_Weight :=
 
-1   0.33
-2   0.33
-3   0.34;
-
+1   	0.20
+2   	0.15
+3	0.20
+4	0.01
+5	0.04
+6	0.01
+7	0.09
+8	0.05
+9	0.15
+10	0.1;
 
 
 

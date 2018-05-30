@@ -137,19 +137,8 @@ def Diesel_Comsuption(model,i, t): # Diesel comsuption
     :param model: Pyomo model as defined in the Model_creation library.
     '''
     return model.Diesel_Consume[i,t] == model.Generator_Energy[i,t]/(model.Generator_Efficiency*model.Low_Heating_Value)
-
-
-   
     
 ########################################### Economical Constraints ###################################################
-
-def Financial_Cost(model): 
-    '''
-    This constraint calculate the yearly payment for the borrow money.
-    
-    :param model: Pyomo model as defined in the Model_creation library.
-    '''
-    return model.Cost_Financial == ((model.PV_Units*model.PV_invesment_Cost*model.PV_Nominal_Capacity + model.Battery_Nominal_Capacity*model.Battery_Invesment_Cost+model.Generator_Nominal_Capacity*model.Generator_Invesment_Cost)*model.Porcentage_Funded*model.Interest_Rate_Loan)/(1-((1+model.Interest_Rate_Loan)**(-model.Years)))
 
 def Diesel_Cost_Total(model,i):
     '''
@@ -182,7 +171,9 @@ def Initial_Inversion(model):
     
     :param model: Pyomo model as defined in the Model_creation library.
     '''    
-    return model.Initial_Inversion == (model.PV_Units*model.PV_invesment_Cost*model.PV_Nominal_Capacity + model.Battery_Nominal_Capacity*model.Battery_Invesment_Cost + model.Generator_Nominal_Capacity*model.Generator_Invesment_Cost )*(1-model.Porcentage_Funded) 
+    return model.Initial_Inversion == (model.PV_Units*model.PV_invesment_Cost*model.PV_Nominal_Capacity 
+                 + model.Battery_Nominal_Capacity*model.Battery_Invesment_Cost 
+                 + model.Generator_Nominal_Capacity*model.Generator_Invesment_Cost)
 
 def Operation_Maintenance_Cost(model):
     '''
@@ -192,22 +183,24 @@ def Operation_Maintenance_Cost(model):
     '''    
     return model.Operation_Maintenance_Cost == sum(((model.PV_Units*model.PV_invesment_Cost*model.PV_Nominal_Capacity*model.Maintenance_Operation_Cost_PV + model.Battery_Nominal_Capacity*model.Battery_Invesment_Cost*model.Maintenance_Operation_Cost_Battery+model.Generator_Nominal_Capacity*model.Generator_Invesment_Cost*model.Maintenance_Operation_Cost_Generator)/((1+model.Discount_Rate)**model.Project_Years[y])) for y in model.years) 
 
-def Total_Finalcial_Cost(model):
-    '''
-    This funtion calculate the total financial cost of the system. 
     
-    :param model: Pyomo model as defined in the Model_creation library.
-    '''    
-    return model.Total_Finalcial_Cost == sum((model.Cost_Financial/((1+model.Discount_Rate)**model.Project_Years[y])) for y  in model.years) 
-    
-def Battery_Reposition_Cost(model):
+def Battery_Reposition_Cost(model,s):
     '''
     This funtion calculate the reposition of the battery after a stated time of use. 
     
     :param model: Pyomo model as defined in the Model_creation library.
-    ''' 
-    return model.Battery_Reposition_Cost == (model.Battery_Nominal_Capacity*model.Battery_Invesment_Cost)/((1+model.Discount_Rate)**model.Battery_Reposition_Time)
-
+    
+    '''
+    foo=[]
+    for t in range(1,model.Periods+1):
+            foo.append((s,t))    
+            
+    Battery_cost_in = sum(model.Energy_Battery_Flow_In[s,t]*model.Unitary_Battery_Reposition_Cost for s,t in foo)
+    Battery_cost_out = sum(model.Energy_Battery_Flow_Out[s,t]*model.Unitary_Battery_Reposition_Cost for s,t in foo)
+    Battery_Yearly_cost = Battery_cost_in + Battery_cost_out
+    return model.Battery_Reposition_Cost[s] == sum(Battery_Yearly_cost/((1+model.Discount_Rate)**model.Project_Years[y]) for y in model.years) 
+    
+    
 def Scenario_Net_Present_Cost(model, i): 
     '''
     This function computes the Net Present Cost for the life time of the project, taking in account that the 
@@ -215,7 +208,7 @@ def Scenario_Net_Present_Cost(model, i):
     
     :param model: Pyomo model as defined in the Model_creation library.
     '''            
-    return model.Scenario_Net_Present_Cost[i] == model.Initial_Inversion + model.Operation_Maintenance_Cost + model.Total_Finalcial_Cost + model.Battery_Reposition_Cost + model.Scenario_Lost_Load_Cost[i] + model.Diesel_Cost_Total[i]
+    return model.Scenario_Net_Present_Cost[i] == model.Initial_Inversion + model.Operation_Maintenance_Cost + model.Battery_Reposition_Cost[i] + model.Scenario_Lost_Load_Cost[i] + model.Diesel_Cost_Total[i]
                 
     
     
