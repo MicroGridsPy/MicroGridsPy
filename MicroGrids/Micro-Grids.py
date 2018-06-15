@@ -15,8 +15,8 @@ from Economical_Analysis import Levelized_Cost_Of_Energy
 #117066.990160517
 
 # Type of problem formulation:
-formulation = 'LP'
-S = 4 
+formulation = 'Dispatch'
+S = 1 
 
 model = AbstractModel() # define type of optimization problem
 
@@ -56,31 +56,21 @@ elif formulation =='Dispatch':
     instance = Model_Resolution_Dispatch(model)
     Time_Series = Load_results1_Dispatch(instance) # Extract the results of energy from the instance and save it in a excel file 
     Results = Load_results2_Dispatch(instance)
-
     
+
     
 # Post procesing tools
 plot = 'No Average' # 'No Average' or 'Average'
 Plot_Energy_Total(instance, Time_Series, plot)
 
-
+index = pd.DatetimeIndex(start='2017-01-01 00:00:00', periods=len(Time_Series), 
+                                   freq=('H'))
+Start_Date = '2017-01-01 00:00:00'
+end_Date = '2017-06-30 00:00:00'
+Time_Series.index = index
+cost = Time_Series['Total Cost Generator'][Start_Date:end_Date].sum()
+curtailment = Time_Series['Curtailment'][Start_Date:end_Date].sum()/1000000
+print(cost)
+print(curtailment)    
 
     
-#    index = pd.DatetimeIndex(start='2016-01-01 00:00:00', periods=len(Time_Series), 
-#                                       freq=('H'))
-#    Start_Date = '2017-01-01 00:00:00'
-#    end_Date = '2017-06-30 23:55:00'
-#    Time_Series.index = index
-#    cost = Time_Series['Total Cost Generator'][Start_Date:end_Date].sum()
-#PercentageOfUse = Percentage_Of_Use(Time_Series) # Plot the percentage of use 
-#Energy_Flow = Energy_Flow(Time_Series) # Plot the quantity of energy of each technology analized
-#Energy_Participation = Energy_Participation(Energy_Flow)
-#LDR(Time_Series)
-
-
-# Calculation of the Levelized cost of energy
-#LCOE = Levelized_Cost_Of_Energy(Time_Series, Results, instance) # Calculate the Levelized Cost of energy for the system analysis
-
-# messages
-#print 'Net present cost of the project is ' + str(round((instance.ObjectiveFuntion.expr()/1000000),2)) + ' millons of USD' # Print net present cost of the project 
-#print 'The levelized cost of energy of the project is ' + str(round(LCOE, 3)) + ' USD/kWh' # Print the levilez cost of energy

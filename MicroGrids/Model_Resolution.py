@@ -194,7 +194,7 @@ def Model_Resolution_Dispatch(model,datapath="Example/data_Dispatch.dat"):
     Minimun_Charge, Max_Bat_in, Max_Bat_out, \
     Energy_balance, Maximun_Lost_Load, Generator_Cost_1_Integer,  \
     Total_Cost_Generator_Integer, \
-    Scenario_Lost_Load_Cost, \
+    Scenario_Lost_Load_Cost, Max_Power_Battery_Charge, Max_Power_Battery_Discharge, \
      Generator_Bounds_Min_Integer, Generator_Bounds_Max_Integer,Energy_Genarator_Energy_Max_Integer
 
     # OBJETIVE FUNTION:
@@ -209,6 +209,9 @@ def Model_Resolution_Dispatch(model,datapath="Example/data_Dispatch.dat"):
     model.StateOfCharge = Constraint(model.periods, rule=State_of_Charge) # State of Charge of the battery
     model.MaximunCharge = Constraint(model.periods, rule=Maximun_Charge) # Maximun state of charge of the Battery
     model.MinimunCharge = Constraint(model.periods, rule=Minimun_Charge) # Minimun state of charge
+    model.MaxPowerBatteryCharge = Constraint(rule=Max_Power_Battery_Charge)  # Max power battery charge constraint
+    model.MaxPowerBatteryDischarge = Constraint(rule=Max_Power_Battery_Discharge)    # Max power battery discharge constraint
+
     model.MaxBatIn = Constraint(model.periods, rule=Max_Bat_in) # Minimun flow of energy for the charge fase
     model.Maxbatout = Constraint(model.periods, rule=Max_Bat_out) #minimun flow of energy for the discharge fase
    

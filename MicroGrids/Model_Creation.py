@@ -357,7 +357,7 @@ def Model_Creation_Dispatch(model):
     
     '''
     from pyomo.environ import  Param, RangeSet, NonNegativeReals, Var, NonNegativeIntegers
-    from Initialize import Initialize_Demand, Initialize_PV_Energy, Initialize_Demand_Dispatch, Initialize_PV_Energy_Dispatch, Marginal_Cost_Generator, Start_Cost,Marginal_Cost_Generator_1,Max_Power_Battery_Discharge, Max_Power_Battery_Charge # Import library with initialitation funtions for the parameters
+    from Initialize import Initialize_Demand, Initialize_PV_Energy, Initialize_Demand_Dispatch, Initialize_PV_Energy_Dispatch, Marginal_Cost_Generator_Dispatch, Start_Cost_Dispatch,Marginal_Cost_Generator_1_Dispatch # Import library with initialitation funtions for the parameters
 
     # Time parameters
     model.Periods = Param(within=NonNegativeReals) # Number of periods of analysis of the energy variables 
@@ -380,19 +380,17 @@ def Model_Creation_Dispatch(model):
     model.Maximun_Battery_Charge_Time = Param(within=NonNegativeReals) # Minimun time of charge of the battery in hours
     model.Maximun_Battery_Discharge_Time = Param(within=NonNegativeReals) # Maximun time of discharge of the battery  in hours                     
     model.Battery_Nominal_Capacity = Param(within=NonNegativeReals) # Capacity of the battery bank in Wh   
-    model.Maximun_Charge_Power= Param(initialize=Max_Power_Battery_Charge) # Maximun charge power in w
-    model.Maximun_Discharge_Power = Param(initialize=Max_Power_Battery_Discharge) #Maximun discharge power in w
     model.Battery_Initial_SOC = Param(within=NonNegativeReals) 
     # Parametes of the diesel generator
-    model.Generator_Effiency = Param(within=NonNegativeReals)
+    model.Generator_Efficiency = Param(within=NonNegativeReals)
     model.Generator_Min_Out_Put = Param(within=NonNegativeReals)
     model.Low_Heating_Value = Param() # Low heating value of the diesel in W/L
     model.Diesel_Cost = Param(within=NonNegativeReals) # Cost of diesel in USD/L
-    model.Marginal_Cost_Generator_1 = Param(initialize=Marginal_Cost_Generator_1)
+    model.Marginal_Cost_Generator_1 = Param(initialize=Marginal_Cost_Generator_1_Dispatch)
     model.Cost_Increase = Param(within=NonNegativeReals)
     model.Generator_Nominal_Capacity = Param(within=NonNegativeReals)
-    model.Start_Cost_Generator = Param(within=NonNegativeReals, initialize=Start_Cost)  
-    model.Marginal_Cost_Generator = Param(initialize=Marginal_Cost_Generator)
+    model.Start_Cost_Generator = Param(within=NonNegativeReals, initialize=Start_Cost_Dispatch)  
+    model.Marginal_Cost_Generator = Param(initialize=Marginal_Cost_Generator_Dispatch)
     
     # Parameters of the Energy balance                  
     model.Energy_Demand = Param(model.periods, initialize=Initialize_Demand_Dispatch) # Energy Energy_Demand in W 
@@ -409,7 +407,9 @@ def Model_Creation_Dispatch(model):
     model.Energy_Battery_Flow_Out = Var(model.periods, within=NonNegativeReals) # Battery discharge energy in wh
     model.Energy_Battery_Flow_In = Var(model.periods, within=NonNegativeReals) # Battery charge energy in wh
     model.State_Of_Charge_Battery = Var(model.periods, within=NonNegativeReals) # State of Charge of the Battery in wh
-   
+    model.Maximun_Charge_Power= Var(within=NonNegativeReals) # Maximun charge power in w
+    model.Maximun_Discharge_Power = Var(within=NonNegativeReals) #Maximun discharge power in w
+
     
      # Variables associated to the diesel generator
     

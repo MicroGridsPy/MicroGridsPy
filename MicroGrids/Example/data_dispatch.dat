@@ -1,10 +1,10 @@
-param: Periods := 13872;
+param: Periods := 4344;
 
-param: StartDate := '01/01/2016 00:00:00';
+param: StartDate := '01/01/2017 01:00:00';
 
 param: PlotTime := 1;
 
-param: PlotDay := '17/02/2017 00:00:00';
+param: PlotDay := '17/02/2017 01:00:00';
 
 param: Delta_Time := 1;
 
@@ -12,9 +12,9 @@ param: Diesel_Cost := 0.18;
 
 param: Lost_Load_Probability := 0;
 
-param: Discharge_Battery_Efficiency := 0.87;
+param: Discharge_Battery_Efficiency := 0.86;
 
-param: Charge_Battery_Efficiency := 0.87;
+param: Charge_Battery_Efficiency := 0.86;
 
 param: Deep_of_Discharge := 0.5;
 
@@ -28,15 +28,15 @@ param: Maximun_Battery_Charge_Time := 1;
 
 # new parameters
 
-param: Generator_Effiency:= 0.314;
+param: Generator_Efficiency:= 0.3144;
 
-param: Generator_Min_Out_Put:= 0.7; 
+param: Generator_Min_Out_Put:= 0.8; 
 
-param: Cost_Increase := 0.00;
+param: Cost_Increase := 0.005;
 
-param: Generator_Nominal_Capacity := 30000;
+param: Generator_Nominal_Capacity := 58000; # the other result can be obtain changing this value to 30000
 
-param: Battery_Nominal_Capacity := 478000;
+param: Battery_Nominal_Capacity := 464000;
 
-param: Battery_Initial_SOC:= 0.7;
+param: Battery_Initial_SOC:= 0.619;
 

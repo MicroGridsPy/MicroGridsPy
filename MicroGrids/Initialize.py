@@ -101,3 +101,17 @@ def Initialize_Renewable_Energy(model, s,r,t):
     '''
     column = (s-1)*model.Renewable_Source + r 
     return float(PV_Energy[column][t])   
+    
+    
+    
+def Marginal_Cost_Generator_1_Dispatch(model):
+    
+    return model.Diesel_Cost/(model.Low_Heating_Value*model.Generator_Efficiency)
+
+def Start_Cost_Dispatch(model):
+    
+    return model.Marginal_Cost_Generator_1*model.Generator_Nominal_Capacity*model.Cost_Increase
+
+def Marginal_Cost_Generator_Dispatch(model):
+    
+    return (model.Marginal_Cost_Generator_1*model.Generator_Nominal_Capacity-model.Start_Cost_Generator)/model.Generator_Nominal_Capacity 

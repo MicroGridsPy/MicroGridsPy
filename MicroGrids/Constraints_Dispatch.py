@@ -82,6 +82,27 @@ def Minimun_Charge(model, t): # Minimun state of charge
     '''
     return model.State_Of_Charge_Battery[t] >= model.Battery_Nominal_Capacity*model.Deep_of_Discharge
 
+def Max_Power_Battery_Charge(model): 
+    '''
+    This constraint calculates the Maximum power of charge of the battery. Taking in account the 
+    capacity of the battery and a time frame in which the battery has to be fully loaded for 
+    each scenario.
+    
+    :param model: Pyomo model as defined in the Model_creation library.
+    '''
+    return model.Maximun_Charge_Power== model.Battery_Nominal_Capacity/model.Maximun_Battery_Charge_Time
+
+def Max_Power_Battery_Discharge(model):
+    '''
+    This constraint calculates the Maximum power of discharge of the battery. for 
+    each scenario i.
+    
+    :param model: Pyomo model as defined in the Model_creation library.
+    '''
+    return model.Maximun_Discharge_Power == model.Battery_Nominal_Capacity/model.Maximun_Battery_Discharge_Time
+
+
+
 def Max_Bat_in(model, t): # Minimun flow of energy for the charge fase
     '''
     This constraint maintains the energy in to the battery, below the maximum power of charge of the battery.

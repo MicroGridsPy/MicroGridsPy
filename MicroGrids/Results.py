@@ -964,7 +964,7 @@ def Load_results1_Dispatch(instance):
 
     Time_Series_2 = pd.DataFrame()        
     Time_Series_2['Lost Load'] =  Time_Series['Lost_Load']
-    Time_Series_2['Energy PV'] = Time_Series['PV_Energy']
+    Time_Series_2['Renewable Energy'] = Time_Series['PV_Energy']
     Time_Series_2['Discharge energy from the Battery'] = Time_Series['Battery_Flow_Out']
     Time_Series_2['Charge energy to the Battery'] = Time_Series['Battery_Flow_in']
     Time_Series_2['Curtailment'] = Time_Series['Curtailment']
