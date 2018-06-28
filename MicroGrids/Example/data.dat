@@ -6,41 +6,25 @@ param: StartDate := '01/01/2011 00:00:00';
 
 param: PlotTime := 2;
 
-param: PlotDay := '06/13/2011 01:00:00';
+param: PlotDay := '2011-06-03 01:00:00';
 
 param: PlotScenario := 3;
 
 param: Delta_Time := 1.0;
 
-param: PV_invesment_Cost := 1.67;
-
-param: Battery_Invesment_Cost := 0.4;
-
-param: Generator_Invesment_Cost := 1.48;
-
-param: Maintenance_Operation_Cost_PV := 0.015;
+param: Battery_Invesment_Cost := 0.2;
 
 param: Maintenance_Operation_Cost_Battery:= 0.015;
-
-param: Maintenance_Operation_Cost_Generator := 0.015;
-
-param: Diesel_Unitary_Cost := 0.48;
 
 param: Discount_Rate := 0.12;
 
 param: Lost_Load_Probability := 0.05;
 
-param: Discharge_Battery_Efficiency := 0.95;
+param: Discharge_Battery_Efficiency := 0.97;
 
 param: Charge_Battery_Efficiency := 0.95;
 
 param: Deep_of_Discharge := 0.2;
-
-param: Inverter_Efficiency := 0.986;
-
-param: Generator_Efficiency := 0.3;
-
-param: Low_Heating_Value := 9890;
 
 param: Value_Of_Lost_Load := 0.0003;
 
@@ -48,24 +32,75 @@ param: Maximun_Battery_Discharge_Time := 5;
 
 param: Maximun_Battery_Charge_Time := 5;
 
-param: PV_Nominal_Capacity := 250;
-
 param: Battery_Cycles := 8000;
 
-param: Scenarios := 10;
+param: Battery_Initial_SOC := 1;
+
+param: Scenarios := 3;
+
+param: Renewable_Source := 3;
+
+param: Renewable_Nominal_Capacity :=
+
+1	300
+2	300
+3	300;
+
+param: Renewable_Inverter_Efficiency :=
+
+1	0.96
+2	0.96
+3	0.96;
+
+
+param: Renewable_Invesment_Cost :=
+
+1	0.7
+2	0.7
+3	0.7;
+
+param: Maintenance_Operation_Cost_Renewable := 
+
+1	0.015
+2	0.015
+3	0.015;
+
+
+param: Generator_Type := 3;
+
+param: Generator_Invesment_Cost := 
+
+1	1.48
+2	1.48
+3	0.5;
+
+param: Maintenance_Operation_Cost_Generator := 
+
+1	0.045
+2	0.045
+3	0.045;
+
+param: Fuel_Cost := 
+1	0.2
+2	0.8
+3	0.8;
+
+param: Generator_Efficiency := 
+
+1	0.34
+2	0.34
+3	0.34;
+
+param: Low_Heating_Value := 
+1	9890
+2	9890
+3	9890;
 
 param: Scenario_Weight :=
 
-1   	0.20
-2   	0.15
-3	0.20
-4	0.01
-5	0.04
-6	0.01
-7	0.09
-8	0.05
-9	0.15
-10	0.1;
+1   	0.35
+2   	0.30
+3	0.35;
 
 
 

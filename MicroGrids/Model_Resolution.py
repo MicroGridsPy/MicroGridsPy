@@ -15,10 +15,10 @@ def Model_Resolution(model,datapath="Example/data.dat"):
     :return: The solution inside an object call instance.
     '''
     
-    from Constraints import  Net_Present_Cost, Solar_Energy,State_of_Charge,\
+    from Constraints import  Net_Present_Cost, Renewable_Energy,State_of_Charge,\
     Maximun_Charge, Minimun_Charge, Max_Power_Battery_Charge, Max_Power_Battery_Discharge, Max_Bat_in, Max_Bat_out, \
     Energy_balance, Maximun_Lost_Load,Scenario_Net_Present_Cost, Scenario_Lost_Load_Cost, \
-    Initial_Inversion, Operation_Maintenance_Cost, Battery_Reposition_Cost, Maximun_Diesel_Energy, Diesel_Comsuption,Diesel_Cost_Total
+    Initial_Inversion, Operation_Maintenance_Cost, Battery_Reposition_Cost, Maximun_Generator_Energy,  Fuel_Cost_Total
     
     
     # OBJETIVE FUNTION:
@@ -31,7 +31,8 @@ def Model_Resolution(model,datapath="Example/data.dat"):
     model.ScenarioLostLoadCost = Constraint(model.scenario, rule=Scenario_Lost_Load_Cost)
 
     # PV constraints
-    model.SolarEnergy = Constraint(model.scenario, model.periods, rule=Solar_Energy)  # Energy output of the solar panels
+    model.RenewableEnergy = Constraint(model.scenario, model.renewable_source,
+                                       model.periods, rule=Renewable_Energy)  # Energy output of the solar panels
     # Battery constraints
     model.StateOfCharge = Constraint(model.scenario, model.periods, rule=State_of_Charge) # State of Charge of the battery
     model.MaximunCharge = Constraint(model.scenario, model.periods, rule=Maximun_Charge) # Maximun state of charge of the Battery
@@ -42,9 +43,11 @@ def Model_Resolution(model,datapath="Example/data.dat"):
     model.Maxbatout = Constraint(model.scenario, model.periods, rule=Max_Bat_out) #minimun flow of energy for the discharge fase
 
     # Diesel Generator constraints
-    model.MaximunDieselEnergy = Constraint(model.scenario, model.periods, rule=Maximun_Diesel_Energy) # Maximun energy output of the diesel generator
-    model.DieselComsuption = Constraint(model.scenario, model.periods, rule=Diesel_Comsuption)    # Diesel comsuption 
-    model.DieselCostTotal = Constraint(model.scenario, rule=Diesel_Cost_Total)
+    model.MaximunFuelEnergy = Constraint(model.scenario, model.generator_type,
+                                         model.periods, rule=Maximun_Generator_Energy) # Maximun energy output of the diesel generator
+
+    model.FuelCostTotal = Constraint(model.scenario, model.generator_type,
+                                     rule=Fuel_Cost_Total)
     
     # Financial Constraints
     model.ScenarioNetPresentCost = Constraint(model.scenario, rule=Scenario_Net_Present_Cost)    

@@ -12,10 +12,9 @@ from Model_Creation import Model_Creation, Model_Creation_binary, Model_Creation
 from Model_Resolution import Model_Resolution, Model_Resolution_binary, Model_Resolution_Integer, Model_Resolution_Dispatch
 from Economical_Analysis import Levelized_Cost_Of_Energy
 
-#117066.990160517
-
+#
 # Type of problem formulation:
-formulation = 'Dispatch'
+formulation = 'LP'
 S = 1 
 
 model = AbstractModel() # define type of optimization problem
@@ -63,14 +62,14 @@ elif formulation =='Dispatch':
 plot = 'No Average' # 'No Average' or 'Average'
 Plot_Energy_Total(instance, Time_Series, plot)
 
-index = pd.DatetimeIndex(start='2017-01-01 00:00:00', periods=len(Time_Series), 
-                                   freq=('H'))
-Start_Date = '2017-01-01 00:00:00'
-end_Date = '2017-06-30 00:00:00'
-Time_Series.index = index
-cost = Time_Series['Total Cost Generator'][Start_Date:end_Date].sum()
-curtailment = Time_Series['Curtailment'][Start_Date:end_Date].sum()/1000000
-print(cost)
-print(curtailment)    
+#index = pd.DatetimeIndex(start='2017-01-01 00:00:00', periods=len(Time_Series), 
+#                                   freq=('H'))
+##Start_Date = '2017-01-01 00:00:00'
+#end_Date = '2017-06-30 00:00:00'
+#Time_Series.index = index
+#cost = Time_Series['Total Cost Generator'][Start_Date:end_Date].sum()
+#curtailment = Time_Series['Curtailment'][Start_Date:end_Date].sum()/1000000
+#print(cost)
+#print(curtailment)    
 
     

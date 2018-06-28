@@ -12,15 +12,14 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
            
 ##################################################### PV constraints##################################################
 
-def Solar_Energy(model,i, t): # Energy output of the solar panels
+def Renewable_Energy(model,s,r,t): # Energy output of the solar panels
     '''
     This constraint calculates the energy produce by the solar panels taking in 
     account the efficiency of the inverter for each scenario.
     
     :param model: Pyomo model as defined in the Model_creation library.
     '''
-    return model.Total_Energy_PV[i,t] == model.PV_Energy_Production[i,t]*model.Inverter_Efficiency*model.PV_Units
-
+    return model.Total_Energy_Renewable[s,r,t] == model.Renewable_Energy_Production[s,r,t]*model.Renewable_Inverter_Efficiency[r]*model.Renewable_Units[r]
 
 #################################################### Battery constraints #############################################
 
@@ -35,18 +34,18 @@ def State_of_Charge(model,i, t): # State of Charge of the battery
     :param model: Pyomo model as defined in the Model_creation library.
     '''
     if t==1: # The state of charge (State_Of_Charge) for the period 0 is equal to the Battery size.
-        return model.State_Of_Charge_Battery[i,t] == model.Battery_Nominal_Capacity*1 - model.Energy_Battery_Flow_Out[i,t]/model.Discharge_Battery_Efficiency + model.Energy_Battery_Flow_In[i,t]*model.Charge_Battery_Efficiency
+        return model.State_Of_Charge_Battery[i,t] == model.Battery_Nominal_Capacity*model.Battery_Initial_SOC - model.Energy_Battery_Flow_Out[i,t]/model.Discharge_Battery_Efficiency + model.Energy_Battery_Flow_In[i,t]*model.Charge_Battery_Efficiency
     if t>1:  
         return model.State_Of_Charge_Battery[i,t] == model.State_Of_Charge_Battery[i,t-1] - model.Energy_Battery_Flow_Out[i,t]/model.Discharge_Battery_Efficiency + model.Energy_Battery_Flow_In[i,t]*model.Charge_Battery_Efficiency    
 
-def Maximun_Charge(model, i, t): # Maximun state of charge of the Battery
+def Maximun_Charge(model, s, t): # Maximun state of charge of the Battery
     '''
     This constraint keeps the state of charge of the battery equal or under the 
     size of the battery for each scenario i.
     
     :param model: Pyomo model as defined in the Model_creation library.
     '''
-    return model.State_Of_Charge_Battery[i,t] <= model.Battery_Nominal_Capacity
+    return model.State_Of_Charge_Battery[s,t] <= model.Battery_Nominal_Capacity
 
 def Minimun_Charge(model,i, t): # Minimun state of charge
     '''
@@ -98,14 +97,30 @@ def Max_Bat_out(model,i, t): #minimun flow of energy for the discharge fase
 
 ############################################## Energy Constraints ##################################################
 
-def Energy_balance(model, i, t): # Energy balance
+def Energy_balance(model, s, t): # Energy balance
     '''
     This constraint ensures the perfect match between the energy energy demand of the 
     system and the differents sources to meet the energy demand each scenario i.
     
     :param model: Pyomo model as defined in the Model_creation library.
     '''
-    return model.Energy_Demand[i,t] == model.Total_Energy_PV[i,t] + model.Generator_Energy[i,t] - model.Energy_Battery_Flow_In[i,t] + model.Energy_Battery_Flow_Out[i,t] + model.Lost_Load[i,t] - model.Energy_Curtailment[i,t]
+    
+    Foo = []
+    for r in model.renewable_source:
+        Foo.append((s,r,t))
+    
+    Total_Renewable_Energy = sum(model.Total_Energy_Renewable[j] for j in Foo)
+    
+    foo=[]
+    for g in model.generator_type:
+        foo.append((s,g,t))
+    
+    Generator_Energy = sum(model.Generator_Energy[i] for i in foo)  
+    
+    
+    return model.Energy_Demand[s,t] == (Total_Renewable_Energy + Generator_Energy 
+            - model.Energy_Battery_Flow_In[s,t] + model.Energy_Battery_Flow_Out[s,t] 
+            + model.Lost_Load[s,t] - model.Energy_Curtailment[s,t])
 
 def Maximun_Lost_Load(model,i): # Maximum permissible lost load
     '''
@@ -119,28 +134,19 @@ def Maximun_Lost_Load(model,i): # Maximum permissible lost load
 
 ######################################## Diesel generator constraints ############################
 
-def Maximun_Diesel_Energy(model,i, t): # Maximun energy output of the diesel generator
+def Maximun_Generator_Energy(model,s,g,t): # Maximun energy output of the diesel generator
     '''
     This constraint ensures that the generator will not exceed his nominal capacity 
     in each period in each scenario i.
     
     :param model: Pyomo model as defined in the Model_creation library.
     '''
-    return model.Generator_Energy[i,t] <= model.Generator_Nominal_Capacity*model.Delta_Time
+    return model.Generator_Energy[s,g,t] <= model.Generator_Nominal_Capacity[g]*model.Delta_Time
 
-def Diesel_Comsuption(model,i, t): # Diesel comsuption 
-    '''
-    This constraint transforms the energy produce by the diesel generator in to 
-    liters of diesel in each scenario i.This is done using the low heating value
-    of the diesel and the efficiency of the diesel generator.
-    
-    :param model: Pyomo model as defined in the Model_creation library.
-    '''
-    return model.Diesel_Consume[i,t] == model.Generator_Energy[i,t]/(model.Generator_Efficiency*model.Low_Heating_Value)
-    
+
 ########################################### Economical Constraints ###################################################
 
-def Diesel_Cost_Total(model,i):
+def Fuel_Cost_Total(model,s,g):
     '''
     This constraint calculate the total cost due to the used of diesel to generate 
     electricity in the generator in each scenario i. 
@@ -148,9 +154,9 @@ def Diesel_Cost_Total(model,i):
     :param model: Pyomo model as defined in the Model_creation library.
     '''    
     foo=[]
-    for f in range(1,model.Periods+1):
-        foo.append((i,f))
-    return model.Diesel_Cost_Total[i] == sum(((sum(model.Diesel_Consume[i,t]*model.Diesel_Unitary_Cost for i,t in foo))/((1+model.Discount_Rate)**model.Project_Years[y])) for y in model.years) 
+    for t in range(1,model.Periods+1):
+        foo.append((s,g,t))
+    return model.Fuel_Cost_Total[s,g] == sum(((sum(model.Generator_Energy[s,g,t]*model.Marginal_Cost_Generator_1[g] for s,g,t in foo))/((1+model.Discount_Rate)**model.Project_Years[y])) for y in model.years) 
     
 def Scenario_Lost_Load_Cost(model, i):
     '''
@@ -171,9 +177,11 @@ def Initial_Inversion(model):
     
     :param model: Pyomo model as defined in the Model_creation library.
     '''    
-    return model.Initial_Inversion == (model.PV_Units*model.PV_invesment_Cost*model.PV_Nominal_Capacity 
-                 + model.Battery_Nominal_Capacity*model.Battery_Invesment_Cost 
-                 + model.Generator_Nominal_Capacity*model.Generator_Invesment_Cost)
+    
+    Inv_PV = sum(model.Renewable_Units[r]*model.Renewable_Nominal_Capacity[r]*model.Renewable_Invesment_Cost[r] for r in model.renewable_source)
+    Inv_Gen = sum(model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g] for g in model.generator_type)
+    return model.Initial_Inversion == ( Inv_PV + Inv_Gen
+                 + model.Battery_Nominal_Capacity*model.Battery_Invesment_Cost)
 
 def Operation_Maintenance_Cost(model):
     '''
@@ -181,7 +189,9 @@ def Operation_Maintenance_Cost(model):
     
     :param model: Pyomo model as defined in the Model_creation library.
     '''    
-    return model.Operation_Maintenance_Cost == sum(((model.PV_Units*model.PV_invesment_Cost*model.PV_Nominal_Capacity*model.Maintenance_Operation_Cost_PV + model.Battery_Nominal_Capacity*model.Battery_Invesment_Cost*model.Maintenance_Operation_Cost_Battery+model.Generator_Nominal_Capacity*model.Generator_Invesment_Cost*model.Maintenance_Operation_Cost_Generator)/((1+model.Discount_Rate)**model.Project_Years[y])) for y in model.years) 
+    OyM_PV = sum(model.Renewable_Units[r]*model.Renewable_Nominal_Capacity[r]*model.Renewable_Invesment_Cost[r]*model.Maintenance_Operation_Cost_Renewable[r] for r in model.renewable_source)
+    OyM_Gen = sum(model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]*model.Maintenance_Operation_Cost_Generator[g] for g in model.generator_type)
+    return model.Operation_Maintenance_Cost == sum(((OyM_PV + model.Battery_Nominal_Capacity*model.Battery_Invesment_Cost*model.Maintenance_Operation_Cost_Battery+OyM_Gen)/((1+model.Discount_Rate)**model.Project_Years[y])) for y in model.years) 
 
     
 def Battery_Reposition_Cost(model,s):
@@ -201,14 +211,22 @@ def Battery_Reposition_Cost(model,s):
     return model.Battery_Reposition_Cost[s] == sum(Battery_Yearly_cost/((1+model.Discount_Rate)**model.Project_Years[y]) for y in model.years) 
     
     
-def Scenario_Net_Present_Cost(model, i): 
+def Scenario_Net_Present_Cost(model, s): 
     '''
     This function computes the Net Present Cost for the life time of the project, taking in account that the 
     cost are fix for each year.
     
     :param model: Pyomo model as defined in the Model_creation library.
     '''            
-    return model.Scenario_Net_Present_Cost[i] == model.Initial_Inversion + model.Operation_Maintenance_Cost + model.Battery_Reposition_Cost[i] + model.Scenario_Lost_Load_Cost[i] + model.Diesel_Cost_Total[i]
+    foo = []
+    for g in range(1,model.Generator_Type+1):
+            foo.append((s,g))
+            
+    Fuel_Cost = sum(model.Fuel_Cost_Total[s,g] for s,g in foo)
+    
+    return model.Scenario_Net_Present_Cost[s] == (model.Initial_Inversion 
+            + model.Operation_Maintenance_Cost + model.Battery_Reposition_Cost[s] 
+            + model.Scenario_Lost_Load_Cost[s] + Fuel_Cost)
                 
     
     

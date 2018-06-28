@@ -24,6 +24,8 @@ def Load_results1(instance):
     
     Number_Scenarios = int(instance.Scenarios.extract_values()[None])
     Number_Periods = int(instance.Periods.extract_values()[None])
+    Number_Renewable_Source = int(instance.Renewable_Source.extract_values()[None])
+    Number_Generator = int(instance.Generator_Type.extract_values()[None])
     
     #Scenarios = [[] for i in range(Number_Scenarios)]
     
@@ -36,16 +38,41 @@ def Load_results1(instance):
     
      
     Lost_Load = instance.Lost_Load.get_values()
-    PV_Energy = instance.Total_Energy_PV.get_values()
+    Renewable_Energy_1 = instance.Total_Energy_Renewable.get_values()
+    
+    Renewable_Energy = {}
+   
+
+    for s in range(1, Number_Scenarios + 1):
+        for t in range(1, Number_Periods+1):
+            
+            foo = []
+            for r in range(1,Number_Renewable_Source+1 ):
+                foo.append((s,r,t))
+        
+            Renewable_Energy[s,t] = sum(Renewable_Energy_1[i] for i in foo)
+            
     Battery_Flow_Out = instance.Energy_Battery_Flow_Out.get_values()
     Battery_Flow_in = instance.Energy_Battery_Flow_In.get_values()
     Curtailment = instance.Energy_Curtailment.get_values()
     Energy_Demand = instance.Energy_Demand.extract_values()
     SOC = instance.State_Of_Charge_Battery.get_values()
-    Gen_Energy = instance.Generator_Energy.get_values()
-    Diesel = instance.Diesel_Consume.get_values()
-   
+    Generator_Energy = instance.Generator_Energy.get_values()
     
+    
+    Total_Generator_Energy = {}
+    Total_Fuel = {}
+    
+    
+    for s in range(1, Number_Scenarios + 1):
+        for t in range(1, Number_Periods+1):
+            foo = []
+            for g in range(1,Number_Generator+1):
+                foo.append((s,g,t))
+            Total_Generator_Energy[s,t] = sum(Generator_Energy[i] for i in foo)
+            Total_Fuel[s,t] = 0
+            
+            
     Scenarios_Periods = [[] for i in range(Number_Scenarios)]
     
     for i in range(0,Number_Scenarios):
@@ -56,14 +83,14 @@ def Load_results1(instance):
         Information = [[] for i in range(9)]
         for j in  Scenarios_Periods[foo]:
             Information[0].append(Lost_Load[j])
-            Information[1].append(PV_Energy[j]) 
+            Information[1].append(Renewable_Energy[j]) 
             Information[2].append(Battery_Flow_Out[j]) 
             Information[3].append(Battery_Flow_in[j]) 
             Information[4].append(Curtailment[j]) 
             Information[5].append(Energy_Demand[j]) 
             Information[6].append(SOC[j])
-            Information[7].append(Gen_Energy[j])
-            Information[8].append(Diesel[j])
+            Information[7].append(Total_Generator_Energy[j])
+            Information[8].append(Total_Fuel[j])
         
         Scenarios=Scenarios.append(Information)
         foo+=1
@@ -78,7 +105,7 @@ def Load_results1(instance):
        index.append('Energy_Demand '+str(j))
        index.append('SOC '+str(j))
        index.append('Gen energy '+str(j))
-       index.append('Diesel '+str(j))
+       index.append('Fuel '+str(j))
     Scenarios.index= index
      
     
@@ -114,13 +141,23 @@ def Load_results1(instance):
     Scenario_NPC = instance.Scenario_Net_Present_Cost.get_values()
     LoL_Cost = instance.Scenario_Lost_Load_Cost.get_values() 
     Scenario_Weight = instance.Scenario_Weight.extract_values()
-    Diesel_Cost = instance.Diesel_Cost_Total.get_values()
+    Fuel_Cost = instance.Fuel_Cost_Total.get_values()
+    
+    Total_Fuel_Cost = {}
+
+    for s in range(1,Number_Scenarios+1):
+        foo = []
+        for g in range(1, Number_Generator+1):
+            foo.append((s,g))
+        
+        Total_Fuel_Cost[s] = sum(Fuel_Cost[j] for j in foo)
+    
     
     for i in range(1, Number_Scenarios+1):
         Scenario_information[i-1].append(Scenario_NPC[i])
         Scenario_information[i-1].append(LoL_Cost[i])
         Scenario_information[i-1].append(Scenario_Weight[i])
-        Scenario_information[i-1].append(Diesel_Cost[i])
+        Scenario_information[i-1].append(Total_Fuel_Cost[i])
     
     
     Scenario_Information = pd.DataFrame(Scenario_information,index=columns)
@@ -128,6 +165,42 @@ def Load_results1(instance):
     Scenario_Information = Scenario_Information.transpose()
     
     Scenario_Information.to_excel('Results/Scenario_Information.xls')
+    
+    Number_Scenarios = int(instance.Scenarios.extract_values()[None])
+    Number_Renewable_Source = int(instance.Renewable_Source.extract_values()[None])
+    Number_Periods = int(instance.Periods.extract_values()[None])    
+    
+    
+    Renewable_Energy = pd.DataFrame()
+    
+    for s in range(1, Number_Scenarios + 1):
+        for r in range(1, Number_Renewable_Source + 1):
+            column = 'Renewable ' + str(s) + ' ' + str(r)
+            
+            Energy = []
+            for t in range(1, Number_Periods + 1):
+                Energy.append(Renewable_Energy_1[(s,r,t)])
+        
+            Renewable_Energy[column] = Energy
+        
+        
+    Renewable_Energy.index = Scenarios.index
+    Renewable_Energy.to_excel('Results/Renewable_Energy.xls')
+    
+    Generator_Energy
+    
+    Generator_Time_Series = pd.DataFrame()
+    for s in range(1, Number_Scenarios + 1):
+        for g in range(1, Number_Generator + 1):
+            column_1 = 'Energy Generator ' + str(s) + ' ' + str(g)
+            
+            
+            for t in range(1, Number_Periods + 1):
+                Generator_Time_Series.loc[t,column_1] = Generator_Energy[s,g,t]
+                    
+    Generator_Time_Series.index = Scenarios.index           
+    Generator_Time_Series.to_excel('Results/Generator_time_series.xls')          
+    
     
     S = instance.PlotScenario.value
     Time_Series = pd.DataFrame(index=range(0,8760))
@@ -141,7 +214,7 @@ def Load_results1(instance):
     Time_Series['Energy_Demand'] = Scenarios['Energy_Demand '+str(S)]
     Time_Series['State_Of_Charge_Battery'] = Scenarios['SOC '+str(S)]
     Time_Series['Energy Diesel'] = Scenarios['Gen energy '+str(S)]
-    Time_Series['Diesel'] = Scenarios['Diesel '+str(S)]    
+    Time_Series['Diesel'] = Scenarios['Fuel '+str(S)]    
     
     return Time_Series
     
@@ -158,37 +231,71 @@ def Load_results2(instance):
     :return: Data frame called Size_variables with the variables values. 
     '''
     # Load the variables that doesnot depend of the periods in python dyctionarys
-    cb = instance.PV_Units.get_values()
-    cb=instance.PV_Nominal_Capacity.value*cb[None]
+
+    Renewable_Nominal_Capacity = instance.Renewable_Nominal_Capacity.extract_values()
+    Inverter_Efficiency_Renewable = instance.Renewable_Inverter_Efficiency.extract_values()
+    Renewable_Invesment_Cost = instance.Renewable_Invesment_Cost.extract_values()
+    OyM_Renewable = instance.Maintenance_Operation_Cost_Renewable.extract_values()
+    Number_Renewable_Source = int(instance.Renewable_Source.extract_values()[None])
+    Renewable_Units = instance.Renewable_Units.get_values()
+    Data_Renewable = pd.DataFrame()
+    
+    for r in range(1, Number_Renewable_Source + 1):
+        
+        Name = 'Source ' + str(r)
+        Data_Renewable.loc['Units', Name] = Renewable_Units[r]
+        Data_Renewable.loc['Nominal Capacity', Name] = Renewable_Nominal_Capacity[r]
+        Data_Renewable.loc['Inverter Efficiency', Name] = Inverter_Efficiency_Renewable[r]
+        Data_Renewable.loc['Investment Cost', Name] = Renewable_Invesment_Cost[r]
+        Data_Renewable.loc['OyM', Name] = OyM_Renewable[r]
+        
+    Data_Renewable.to_excel('Results/Source_Renewable_Data.xls')    
+    
+    Number_Generator = int(instance.Generator_Type.extract_values()[None])
+ 
+    Generator_Efficiency = instance.Generator_Efficiency.extract_values()
+    Low_Heating_Value = instance.Low_Heating_Value.extract_values()
+    Fuel_Cost = instance.Fuel_Cost.extract_values()
+    Generator_Invesment_Cost = instance.Generator_Invesment_Cost.extract_values()
+    Generator_Nominal_Capacity = instance.Generator_Nominal_Capacity.get_values()
+    Maintenance_Operation_Cost_Generator = instance.Maintenance_Operation_Cost_Generator.extract_values()
+    
+    Generator_Data = pd.DataFrame()
+    
+    for g in range(1, Number_Generator + 1):
+        Name = 'Generator ' + str(g)
+        Generator_Data.loc['Generator Efficiency',Name] = Generator_Efficiency[g]
+        Generator_Data.loc['Low Heating Value',Name] = Low_Heating_Value[g]
+        Generator_Data.loc['Fuel Cost',Name] = Fuel_Cost[g]
+        Generator_Data.loc['Generator Invesment Cost',Name] = Generator_Invesment_Cost[g]
+        Generator_Data.loc['Generator Nominal Capacity',Name] = Generator_Nominal_Capacity[g]
+        Generator_Data.loc['Maintenance Operation Cost Generator', Name] = Maintenance_Operation_Cost_Generator[g]
+        
+    Generator_Data.to_excel('Results/Generator_Data.xls')      
+    
+    
+    
     cc = instance.Battery_Nominal_Capacity.get_values()
     NPC = instance.ObjectiveFuntion.expr()
-    
     DiscountRate = instance.Discount_Rate.value
-    PricePV = instance.PV_invesment_Cost.value
     PriceBattery= instance.Battery_Invesment_Cost.value
-    OM_PV = instance.Maintenance_Operation_Cost_PV.value
     Years=instance.Years.value
-    Gen_cap = instance.Generator_Nominal_Capacity.get_values()[None]
-    Diesel_Cost = instance.Diesel_Unitary_Cost.value
-    Pricegen = instance.Generator_Invesment_Cost.value 
     Initial_Inversion = instance.Initial_Inversion.get_values()[None]
     O_M_Cost = instance.Operation_Maintenance_Cost.get_values()[None]
     Battery_Reposition_Cost = instance.Unitary_Battery_Reposition_Cost.value
     VOLL = instance.Value_Of_Lost_Load.value
     OM_Bat = instance.Maintenance_Operation_Cost_Battery.value
-    OM_Ge = instance.Maintenance_Operation_Cost_Generator.value
-    
-    
-    data3 = np.array([cb,cc[None],NPC, DiscountRate, 
-                      PricePV, PriceBattery, OM_PV, Years, Initial_Inversion,
+    SOC_1 = instance.Battery_Initial_SOC.value
+    Ch_bat_eff = instance.Charge_Battery_Efficiency.value
+    Dis_bat_eff = instance.Discharge_Battery_Efficiency.value
+    data3 = np.array([cc[None],NPC, DiscountRate, 
+                      PriceBattery, Years, Initial_Inversion,
                       O_M_Cost, Battery_Reposition_Cost, VOLL,
-                      Gen_cap, Diesel_Cost, Pricegen,OM_Bat , OM_Ge]) # Loading the values to a numpy array
-    index_values = ['Size of the solar panels', 'Size of the Battery',
-                    'NPC','Discount Rate','Price PV', 'Price Battery', 
-                    'OyM PV', 'Years','Initial Inversion', 'O&M', 
-                    'Battery Unitary Reposition Cost','VOLL', 
-                    'Size Generator', 'Diesel Cost','Price Generator','OyM Bat'
-                    , 'OyM Gen']
+                       OM_Bat, SOC_1, Ch_bat_eff, Dis_bat_eff]) # Loading the values to a numpy array
+    index_values = ['Battery Nominal Capacity','NPC','Discount Rate','Price Battery', 
+                    'Years','Initial Inversion', 'O&M', 
+                    'Battery Unitary Reposition Cost','VOLL', 'OyM Bat', 'Initial SOC',
+                    'Battery charge efficiency', 'Battery discharge efficiency']
     # Create a data frame for the variable that don't depend of the periods of analisys 
     Size_variables = pd.DataFrame(data3,index=index_values)
     Size_variables.to_excel('Results/Size.xls') # Creating an excel file with the values of the variables that does not depend of the periods
@@ -1036,8 +1143,8 @@ def Plot_Energy_Total(instance, Time_Series, plot):
    
     if plot == 'No Average':
         Periods_Day = 24/instance.Delta_Time() # periods in a day
+        foo = pd.DatetimeIndex(start=instance.PlotDay(),periods=1,freq='1h')# Asign the start date of the graphic to a dumb variable
         for x in range(0, instance.Periods()): # Find the position form wich the plot will start in the Time_Series dataframe
-            foo = pd.DatetimeIndex(start=instance.PlotDay(),periods=1,freq='1h') # Asign the start date of the graphic to a dumb variable
             if foo == Time_Series.index[x]: 
                Start_Plot = x # asign the value of x to the position where the plot will start 
         End_Plot = Start_Plot + instance.PlotTime()*Periods_Day # Create the end of the plot position inside the time_series

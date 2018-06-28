@@ -12,7 +12,7 @@ def Model_Creation(model):
     
     '''
     from pyomo.environ import  Param, RangeSet, NonNegativeReals, Var
-    from Initialize import Initialize_years, Initialize_Demand, Initialize_PV_Energy, Battery_Reposition_Cost # Import library with initialitation funtions for the parameters
+    from Initialize import Initialize_years, Initialize_Demand, Battery_Reposition_Cost, Initialize_Renewable_Energy, Marginal_Cost_Generator_1 # Import library with initialitation funtions for the parameters
 
     # Time parameters
     model.Periods = Param(within=NonNegativeReals) # Number of periods of analysis of the energy variables
@@ -22,20 +22,30 @@ def Model_Creation(model):
     model.PlotDay = Param() # Start day for the plot
     model.PlotScenario = Param()
     model.Scenarios = Param() 
-    
+    model.Renewable_Source = Param()
+    model.Generator_Type = Param()
     
     #SETS
     model.periods = RangeSet(1, model.Periods) # Creation of a set from 1 to the number of periods in each year
     model.years = RangeSet(1, model.Years) # Creation of a set from 1 to the number of years of the project
     model.scenario = RangeSet(1, model.Scenarios) # Creation of a set from 1 to the numbero scenarios to analized
-    
+    model.renewable_source = RangeSet(1, model.Renewable_Source)
+    model.generator_type = RangeSet(1, model.Generator_Type)    
+
+
     # PARAMETERS
     
     # Parameters of the PV 
-    model.PV_Nominal_Capacity = Param(within=NonNegativeReals) # Nominal capacity of the PV in W/unit
-    model.Inverter_Efficiency = Param() # Efficiency of the inverter in %
-    model.PV_invesment_Cost = Param(within=NonNegativeReals) # Cost of solar panel in USD/W
-    model.PV_Energy_Production = Param(model.scenario, model.periods, within=NonNegativeReals, initialize=Initialize_PV_Energy) # Energy produccion of a solar panel in W
+   
+
+    model.Renewable_Nominal_Capacity = Param(model.renewable_source,
+                                             within=NonNegativeReals) # Nominal capacity of the PV in W/unit
+    model.Renewable_Inverter_Efficiency = Param(model.renewable_source) # Efficiency of the inverter in %
+    model.Renewable_Invesment_Cost = Param(model.renewable_source,
+                                           within=NonNegativeReals) # Cost of solar panel in USD/W
+    model.Renewable_Energy_Production = Param(model.scenario,model.renewable_source,
+                                              model.periods, within=NonNegativeReals, 
+                                              initialize=Initialize_Renewable_Energy) # Energy produccion of a solar panel in W
     
     # Parameters of the battery bank
     model.Charge_Battery_Efficiency = Param() # Efficiency of the charge of the battery in  %
@@ -47,14 +57,17 @@ def Model_Creation(model):
     model.Battery_Cycles = Param(within=NonNegativeReals)
     model.Unitary_Battery_Reposition_Cost = Param(within=NonNegativeReals, 
                                           initialize=Battery_Reposition_Cost)
-    
+    model.Battery_Initial_SOC = Param(within=NonNegativeReals)
   
     # Parametes of the diesel generator
-    model.Generator_Efficiency = Param() # Generator efficiency to trasform heat into electricity %
-    model.Low_Heating_Value = Param() # Low heating value of the diesel in W/L
-    model.Diesel_Unitary_Cost = Param(within=NonNegativeReals) # Cost of diesel in USD/L
-    model.Generator_Invesment_Cost = Param(within=NonNegativeReals) # Cost of the diesel generator
-    
+    model.Generator_Efficiency = Param(model.generator_type) # Generator efficiency to trasform heat into electricity %
+    model.Low_Heating_Value = Param(model.generator_type) # Low heating value of the diesel in W/L
+    model.Fuel_Cost = Param(model.generator_type,
+                                      within=NonNegativeReals) # Cost of diesel in USD/L
+    model.Generator_Invesment_Cost = Param(model.generator_type,
+                                           within=NonNegativeReals) # Cost of the diesel generator
+    model.Marginal_Cost_Generator_1 = Param(model.generator_type,
+                                            initialize=Marginal_Cost_Generator_1)
         
     # Parameters of the Energy balance                  
     model.Energy_Demand = Param(model.scenario, model.periods, 
@@ -65,32 +78,44 @@ def Model_Creation(model):
     # Parameters of the proyect
     model.Delta_Time = Param(within=NonNegativeReals) # Time step in hours
     model.Project_Years = Param(model.years, initialize= Initialize_years) # Years of the project
-    model.Maintenance_Operation_Cost_PV = Param(within=NonNegativeReals) # Percentage of the total investment spend in operation and management of solar panels in each period in %                                             
+    model.Maintenance_Operation_Cost_Renewable = Param(model.renewable_source,
+                                                       within=NonNegativeReals) # Percentage of the total investment spend in operation and management of solar panels in each period in %                                             
     model.Maintenance_Operation_Cost_Battery = Param(within=NonNegativeReals) # Percentage of the total investment spend in operation and management of solar panels in each period in %
-    model.Maintenance_Operation_Cost_Generator = Param(within=NonNegativeReals) # Percentage of the total investment spend in operation and management of solar panels in each period in %
+    model.Maintenance_Operation_Cost_Generator = Param(model.generator_type,
+                                                       within=NonNegativeReals) # Percentage of the total investment spend in operation and management of solar panels in each period in %
     model.Discount_Rate = Param() # Discount rate of the project in %
     
     model.Scenario_Weight = Param(model.scenario, within=NonNegativeReals) #########
        
 
     # VARIABLES
-    
+   
     # Variables associated to the solar panels
-    model.PV_Units = Var(within=NonNegativeReals) # Number of units of solar panels
-    model.Total_Energy_PV = Var(model.scenario,model.periods, within=NonNegativeReals) # Energy generated for the Pv sistem in Wh
-    
+        
+    model.Renewable_Units = Var(model.renewable_source,
+                                within=NonNegativeReals) # Number of units of solar panels
+    model.Total_Energy_Renewable = Var(model.scenario,model.renewable_source,
+                                model.periods, within=NonNegativeReals) # Energy generated for the Pv sistem in Wh
+
+
     # Variables associated to the battery bank
     model.Battery_Nominal_Capacity = Var(within=NonNegativeReals) # Capacity of the battery bank in Wh
-    model.Energy_Battery_Flow_Out = Var(model.scenario, model.periods, within=NonNegativeReals) # Battery discharge energy in wh
-    model.Energy_Battery_Flow_In = Var(model.scenario, model.periods, within=NonNegativeReals) # Battery charge energy in wh
-    model.State_Of_Charge_Battery = Var(model.scenario, model.periods, within=NonNegativeReals) # State of Charge of the Battery in wh
+    model.Energy_Battery_Flow_Out = Var(model.scenario, model.periods,
+                                        within=NonNegativeReals) # Battery discharge energy in wh
+    model.Energy_Battery_Flow_In = Var(model.scenario, model.periods, 
+                                       within=NonNegativeReals) # Battery charge energy in wh
+    model.State_Of_Charge_Battery = Var(model.scenario, model.periods, 
+                                        within=NonNegativeReals) # State of Charge of the Battery in wh
     model.Maximun_Charge_Power = Var(within=NonNegativeReals)
     model.Maximun_Discharge_Power = Var(within=NonNegativeReals)
     # Variables associated to the diesel generator
-    model.Generator_Nominal_Capacity = Var(within=NonNegativeReals) # Capacity  of the diesel generator in Wh
-    model.Diesel_Consume = Var(model.scenario,model.periods, within=NonNegativeReals) # Diesel consumed to produce electric energy in L
-    model.Generator_Energy = Var(model.scenario, model.periods, within=NonNegativeReals) # Energy generated for the Diesel generator
-    model.Diesel_Cost_Total = Var(model.scenario, within=NonNegativeReals)
+    model.Generator_Nominal_Capacity = Var(model.generator_type,
+                                           within=NonNegativeReals) # Capacity  of the diesel generator in Wh
+
+    model.Generator_Energy = Var(model.scenario,model.generator_type,
+                                 model.periods, within=NonNegativeReals) # Energy generated for the Diesel generator
+    model.Fuel_Cost_Total = Var(model.scenario, model.generator_type,
+                                  within=NonNegativeReals)
     
     
     

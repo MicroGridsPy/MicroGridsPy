@@ -62,9 +62,9 @@ def Initialize_PV_Energy_Dispatch(model, t):
     return float(PV_Energy[1][t])
     
     
-def Marginal_Cost_Generator_1(model,i):
+def Marginal_Cost_Generator_1(model,g):
     
-    return model.Fuel_Cost[i]/(model.Low_Heating_Value[i]*model.Generator_Efficiency[i])
+    return model.Fuel_Cost[g]/(model.Low_Heating_Value[g]*model.Generator_Efficiency[g])
 
 def Start_Cost(model,i):
     
@@ -100,7 +100,7 @@ def Initialize_Renewable_Energy(model, s,r,t):
     :return: The energy yield of one PV for the period t.
     '''
     column = (s-1)*model.Renewable_Source + r 
-    return float(PV_Energy[column][t])   
+    return float(Renewable_Energy[column][t])   
     
     
     
