@@ -42,28 +42,20 @@ param: Renewable_Source := 3;
 
 param: Renewable_Nominal_Capacity :=
 
-1	300
-2	300
-3	300;
+1	250;
 
 param: Renewable_Inverter_Efficiency :=
 
-1	0.96
-2	0.96
-3	0.96;
+1	100;
 
 
 param: Renewable_Invesment_Cost :=
 
-1	0.7
-2	0.7
-3	0.7;
+1	1.48;
 
 param: Maintenance_Operation_Cost_Renewable := 
 
-1	0.015
-2	0.015
-3	0.015;
+1	0.015;
 
 
 param: Generator_Type := 3;

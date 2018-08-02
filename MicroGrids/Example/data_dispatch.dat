@@ -1,4 +1,4 @@
-param: Periods := 4344;
+param: Periods := 175200;
 
 param: StartDate := '01/01/2017 01:00:00';
 
