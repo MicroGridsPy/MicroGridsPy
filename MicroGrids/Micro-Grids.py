@@ -3,7 +3,7 @@
 import pandas as pd
 from pyomo.environ import  AbstractModel
 
-from Results import Plot_Energy_Total, Load_results1, Load_results2, Load_results1_binary, \
+from Results import Plot_Energy_Total, Load_results1,  Load_results1_binary, \
 Load_results2_binary, Percentage_Of_Use, Energy_Flow, Energy_Participation, LDR,  \
 Load_results1_Dispatch, Load_results2_Dispatch, Integer_Scenarios, Integer_Scenario_Information, \
 Integer_Time_Series, integer_Renewable_Energy, Integer_Data_Renewable, Integer_Generator_time_series, \
@@ -15,7 +15,7 @@ from Economical_Analysis import Levelized_Cost_Of_Energy
 #
 # Type of problem formulation:
 formulation = 'LP'
-S = 1 
+
 
 model = AbstractModel() # define type of optimization problem
 
@@ -24,8 +24,8 @@ if formulation == 'LP':
     Model_Creation(model) # Creation of the Sets, parameters and variables.
     instance = Model_Resolution(model) # Resolution of the instance
     ## Upload the resulst from the instance and saving it in excel files
-    Time_Series = Load_results1(instance) # Extract the results of energy from the instance and save it in a excel file 
-    Results = Load_results2(instance) # Save results into a excel file
+    Data = Load_results1(instance) # Extract the results of energy from the instance and save it in a excel file 
+    Scenarios =  Data[3]
     
 elif formulation == 'Binary':
     Model_Creation_binary(model) # Creation of the Sets, parameters and variables.
@@ -43,7 +43,7 @@ elif formulation =='Integer':
     Generator_Time_Series = Integer_Generator_time_series(instance, Scenarios)
     Generator_Data = Integer_Generator_Data(instance)
     Results = Integer_Results(instance)
-    Time_Series = Integer_Time_Series(instance,Scenarios, S)
+    
     NPC,LCOE = Economic_Analysis(Scenarios, Scenario_Information, Renewable_Energy, Data_Renewable,
                       Generator_Time_Series, Generator_Data, Results)
     print(NPC)
@@ -56,8 +56,8 @@ elif formulation =='Dispatch':
     Time_Series = Load_results1_Dispatch(instance) # Extract the results of energy from the instance and save it in a excel file 
     Results = Load_results2_Dispatch(instance)
     
-
-    
+S = 2 
+Time_Series = Integer_Time_Series(instance,Scenarios, S)    
 # Post procesing tools
 plot = 'No Average' # 'No Average' or 'Average'
 Plot_Energy_Total(instance, Time_Series, plot)
