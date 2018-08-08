@@ -1276,21 +1276,7 @@ def Plot_Energy_Total(instance, Time_Series, plot):
                          , alpha=0.3, color='m') # Fill the area of the energy flowing into the battery
         ax6= Plot_Data['State_Of_Charge_Battery'].plot(style='k--', secondary_y=True, linewidth=2, alpha=0.7 ) # Plot the line of the State of charge of the battery
         
-        # Define name  and units of the axis
-        ax1.set_ylabel('Power (kW)')
-        ax1.set_xlabel('Hours)')
-        ax6.set_ylabel('State of charge of the battery (kWh)')
-            
-            # Define the legends of the plot
-        From_PV = mpatches.Patch(color='blue',alpha=0.3, label='Renewable Energy')
-        From_Generator = mpatches.Patch(color='red',alpha=0.3, label='Generador')
-        From_Battery = mpatches.Patch(color='green',alpha=0.5, label='Energia de la bateria')
-        To_Battery = mpatches.Patch(color='magenta',alpha=0.5, label='Energia hacia la bateria')
-        Energy_Demand = mlines.Line2D([], [], color='black',label='Demanda de energia')
-        State_Of_Charge_Battery = mlines.Line2D([], [], color='black',label='Estado de carga de la bateria', linestyle='--',alpha=0.7)
-        plt.legend(handles=[From_Generator, From_PV, From_Battery,
-                            To_Battery, Energy_Demand, State_Of_Charge_Battery],
-                            bbox_to_anchor=(1.83, 1))
+        
     else:   
         start = Time_Series.index[0]
         end = Time_Series.index[instance.Periods()-1]
@@ -1323,17 +1309,7 @@ def Plot_Energy_Total(instance, Time_Series, plot):
         ax1.set_xlabel('Tiempo (Horas)')
         ax6.set_ylabel('Estado de carga de la bateria (W)')
             
-            # Define the legends of the plot
-        From_PV = mpatches.Patch(color='blue',alpha=0.3, label='Renewable Energy')
-        From_Generator = mpatches.Patch(color='red',alpha=0.3, label='Generador')
-        From_Battery = mpatches.Patch(color='green',alpha=0.5, label='Energia de la bateria')
-        To_Battery = mpatches.Patch(color='magenta',alpha=0.5, label='Energia hacia la bateria')
-        Energy_Demand = mlines.Line2D([], [], color='black',label='Demanda de energia')
-        State_Of_Charge_Battery = mlines.Line2D([], [], color='black',label='Estado de carga de la bateria', linestyle='--',alpha=0.7)
-        plt.legend(handles=[From_Generator, From_PV, From_Battery,
-                            To_Battery, Energy_Demand, State_Of_Charge_Battery],
-                            bbox_to_anchor=(1.83, 1))
-            
+                  
           
         plt.savefig('LDR.png', bbox_inches='tight')
 
@@ -1341,9 +1317,9 @@ def Plot_Energy_Total(instance, Time_Series, plot):
 
 
     # Define name  and units of the axis
-    ax1.set_ylabel('Power (W)')
-    ax1.set_xlabel('Time (Hours)')
-    ax6.set_ylabel('Battery State of charge (Wh)')
+    ax1.set_ylabel('Power (kW)')
+    ax1.set_xlabel('hours')
+    ax6.set_ylabel('Battery State of charge (kWh)')
     
     # Define the legends of the plot
     From_PV = mpatches.Patch(color='blue',alpha=0.3, label='From PV')
