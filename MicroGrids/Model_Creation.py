@@ -296,11 +296,12 @@ def Model_Creation_Integer(model):
     model.Deep_of_Discharge = Param() # Deep of discharge of the battery (Deep_of_Discharge) in %
     model.Maximun_Battery_Charge_Time = Param(within=NonNegativeReals) # Minimun time of charge of the battery in hours
     model.Maximun_Battery_Discharge_Time = Param(within=NonNegativeReals) # Maximun time of discharge of the battery  in hours                     
+    model.Battery_Electronic_Invesmente_Cost = Param(within=NonNegativeReals)
     model.Battery_Invesment_Cost = Param(within=NonNegativeReals) # Cost of battery 
     model.Battery_Cycles = Param(within=NonNegativeReals)
     model.Battery_Reposition_Cost = Param(within=NonNegativeReals, 
                                           initialize=Battery_Reposition_Cost)
-    
+   
     
     
     # Parametes of the diesel generator

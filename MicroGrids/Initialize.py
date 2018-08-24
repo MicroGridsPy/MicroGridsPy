@@ -84,8 +84,8 @@ def Capital_Recovery_Factor(model):
     
 def Battery_Reposition_Cost(model):
    
-   
-    return model.Battery_Invesment_Cost/model.Battery_Cycles
+    unitary_battery_cost = model.Battery_Invesment_Cost - model.Battery_Electronic_Invesmente_Cost
+    return unitary_battery_cost/(model.Battery_Cycles*2*(1-model.Deep_of_Discharge))
     
     
 Renewable_Energy = pd.read_excel('Example/Renewable_Energy.xls') # open the PV energy yield file

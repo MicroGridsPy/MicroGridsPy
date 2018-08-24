@@ -12,7 +12,9 @@ param: PlotScenario:= 1;
 
 param: Delta_Time := 1;
 
-param: Battery_Invesment_Cost := 0.6;
+param: Battery_Invesment_Cost := 0.0247;
+
+param: Battery_Electronic_Invesmente_Cost := 0.0222;
 
 param: Maintenance_Operation_Cost_Battery:= 0.015;
 
@@ -38,7 +40,7 @@ param: Maximun_Battery_Charge_Time := 1;
 
 param: Scenarios :=2;
 
-param: Battery_Cycles := 4000;
+param: Battery_Cycles := 10000000;
 
 param: Scenario_Weight :=
 
@@ -52,7 +54,7 @@ param: Renewable_Source := 2;
 
 param: Renewable_Invesment_Cost :=
 
-1   	1.4
+1   	0.5
 2   	1.;
 
 param: Inverter_Efficiency_Renewable :=
