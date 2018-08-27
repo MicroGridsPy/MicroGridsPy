@@ -14,7 +14,7 @@ from Economical_Analysis import Levelized_Cost_Of_Energy
 
 #
 # Type of problem formulation:
-formulation = 'Integer'
+formulation = 'LP'
 
 
 model = AbstractModel() # define type of optimization problem

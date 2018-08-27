@@ -54,6 +54,7 @@ def Model_Creation(model):
     model.Maximun_Battery_Charge_Time = Param(within=NonNegativeReals) # Minimun time of charge of the battery in hours
     model.Maximun_Battery_Discharge_Time = Param(within=NonNegativeReals) # Maximun time of discharge of the battery  in hours                     
     model.Battery_Invesment_Cost = Param() # Cost of battery 
+    model.Battery_Electronic_Invesmente_Cost = Param(within=NonNegativeReals)
     model.Battery_Cycles = Param(within=NonNegativeReals)
     model.Unitary_Battery_Reposition_Cost = Param(within=NonNegativeReals, 
                                           initialize=Battery_Reposition_Cost)
