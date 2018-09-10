@@ -14,7 +14,7 @@ from Economical_Analysis import Levelized_Cost_Of_Energy
 
 
 # Type of problem formulation:
-formulation = 'Integer'
+formulation = 'LP'
 
 # Renewable energy penetrarion
 
@@ -25,7 +25,7 @@ Battery_Independency = 0  # number of days of battery independency
 
 model = AbstractModel() # define type of optimization problem
 
-if formulation == 'Integer':
+if formulation == 'LP':
     # Optimization model
         
     Model_Creation(model, Renewable_Penetration, Battery_Independency) # Creation of the Sets, parameters and variables.
