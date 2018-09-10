@@ -5,7 +5,7 @@ from pyomo.opt import SolverFactory
 from pyomo.environ import Objective, minimize, Constraint
 
 
-def Model_Resolution(model,datapath="Example/data.dat"):   
+def Model_Resolution(model,Renewable_Penetration, Battery_Independency,datapath="Example/data.dat"):   
     '''
     This function creates the model and call Pyomo to solve the instance of the proyect 
     
@@ -17,8 +17,8 @@ def Model_Resolution(model,datapath="Example/data.dat"):
     
     from Constraints import  Net_Present_Cost, Renewable_Energy,State_of_Charge,\
     Maximun_Charge, Minimun_Charge, Max_Power_Battery_Charge, Max_Power_Battery_Discharge, Max_Bat_in, Max_Bat_out, \
-    Energy_balance, Maximun_Lost_Load,Scenario_Net_Present_Cost, Scenario_Lost_Load_Cost, \
-    Initial_Inversion, Operation_Maintenance_Cost, Battery_Reposition_Cost, Maximun_Generator_Energy,  Fuel_Cost_Total
+    Energy_balance, Maximun_Lost_Load,Scenario_Net_Present_Cost, Scenario_Lost_Load_Cost, Renewable_Energy_Penetration,\
+    Initial_Inversion, Operation_Maintenance_Cost, Battery_Reposition_Cost, Maximun_Generator_Energy,  Fuel_Cost_Total,Battery_Min_Capacity
     
     
     # OBJETIVE FUNTION:
@@ -29,7 +29,8 @@ def Model_Resolution(model,datapath="Example/data.dat"):
     model.EnergyBalance = Constraint(model.scenario,model.periods, rule=Energy_balance)
     model.MaximunLostLoad = Constraint(model.scenario, rule=Maximun_Lost_Load) # Maximum permissible lost load
     model.ScenarioLostLoadCost = Constraint(model.scenario, rule=Scenario_Lost_Load_Cost)
-
+    if Renewable_Penetration > 0:
+        model.RenewableEnergyPenetration = Constraint(rule=Renewable_Energy_Penetration)
     # PV constraints
     model.RenewableEnergy = Constraint(model.scenario, model.renewable_source,
                                        model.periods, rule=Renewable_Energy)  # Energy output of the solar panels
@@ -41,6 +42,8 @@ def Model_Resolution(model,datapath="Example/data.dat"):
     model.MaxPowerBatteryDischarge = Constraint(rule=Max_Power_Battery_Discharge)    # Max power battery discharge constraint
     model.MaxBatIn = Constraint(model.scenario, model.periods, rule=Max_Bat_in) # Minimun flow of energy for the charge fase
     model.Maxbatout = Constraint(model.scenario, model.periods, rule=Max_Bat_out) #minimun flow of energy for the discharge fase
+    if Battery_Independency > 0:
+        model.BatteryMinCapacity = Constraint(rule=Battery_Min_Capacity)
 
     # Diesel Generator constraints
     model.MaximunFuelEnergy = Constraint(model.scenario, model.generator_type,
@@ -96,7 +99,6 @@ def Model_Resolution_binary(model,datapath="Example/data_binary.dat"):
     model.MaxPowerBatteryDischarge = Constraint(rule=Max_Power_Battery_Discharge)    # Max power battery discharge constraint
     model.MaxBatIn = Constraint(model.scenario,model.periods, rule=Max_Bat_in) # Minimun flow of energy for the charge fase
     model.Maxbatout = Constraint(model.scenario,model.periods, rule=Max_Bat_out) #minimun flow of energy for the discharge fase
-   
     #Diesel Generator constraints
     model.GeneratorBoundsMin = Constraint(model.scenario,model.periods, rule=Generator_Bounds_Min_binary) 
     model.GeneratorBoundsMax = Constraint(model.scenario,model.periods, rule=Generator_Bounds_Max_binary)
@@ -127,7 +129,8 @@ def Model_Resolution_binary(model,datapath="Example/data_binary.dat"):
     instance.solutions.load_from(results) # Loading solution into instance
     return instance
     
-def Model_Resolution_Integer(model,datapath="Example/data_Integer.dat"):   
+def Model_Resolution_Integer(model,Renewable_Penetration, Battery_Independency,
+                             datapath="Example/data_Integer.dat"):   
     '''
     This function creates the model and call Pyomo to solve the instance of the proyect 
     
@@ -135,8 +138,8 @@ def Model_Resolution_Integer(model,datapath="Example/data_Integer.dat"):
     
     :return: The solution inside an object call instance.
     '''
-    from Constraints_Integer import  Net_Present_Cost, State_of_Charge, Maximun_Charge, \
-    Minimun_Charge, Max_Bat_in, Max_Bat_out, Energy_balance, Maximun_Lost_Load,  \
+    from Constraints_Integer import  Net_Present_Cost, State_of_Charge, Maximun_Charge, Battery_Min_Capacity,\
+    Minimun_Charge, Max_Bat_in, Max_Bat_out, Energy_balance, Maximun_Lost_Load, Renewable_Energy_Penetration, \
     Generator_Bounds_Min_Integer, Generator_Bounds_Max_Integer,Energy_Genarator_Energy_Max_Integer
     
     
@@ -148,6 +151,9 @@ def Model_Resolution_Integer(model,datapath="Example/data_Integer.dat"):
     model.EnergyBalance = Constraint(model.scenario,
                                      model.periods, rule=Energy_balance)  # Energy balance
     model.MaximunLostLoad = Constraint(model.scenario,rule=Maximun_Lost_Load) # Maximum permissible lost load
+    if Renewable_Penetration > 0:
+        model.RenewableEnergyPenetration = Constraint(rule=Renewable_Energy_Penetration)
+
     # PV constraints
       
     # Battery constraints
@@ -161,7 +167,9 @@ def Model_Resolution_Integer(model,datapath="Example/data_Integer.dat"):
                                 rule=Max_Bat_in) # Minimun flow of energy for the charge fase
     model.Maxbatout = Constraint(model.scenario,model.periods, 
                                  rule=Max_Bat_out) #minimun flow of energy for the discharge fase
-   
+    if Battery_Independency > 0:
+        model.BatteryMinCapacity = Constraint(rule=Battery_Min_Capacity)
+
     #Diesel Generator constraints
     model.GeneratorBoundsMin = Constraint(model.scenario,model.generator_type,
                                           model.periods, rule=Generator_Bounds_Min_Integer) 

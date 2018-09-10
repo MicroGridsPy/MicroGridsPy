@@ -135,7 +135,7 @@ def Load_results1(instance):
     
     columns = [] # arreglar varios columns
     for i in range(1, Number_Scenarios+1):
-        columns.append('Scenario_'+str(i))
+        columns.append('Scenario '+str(i))
         
     Scenario_information =[[] for i in range(Number_Scenarios)]
     Scenario_NPC = instance.Scenario_Net_Present_Cost.get_values()
@@ -321,7 +321,7 @@ def Load_results1(instance):
     Scenario_Cost = pd.DataFrame()    
     for s in range(1, Number_Scenarios + 1):
         name_1 = 'Scenario ' + str(s)
-        name_2 = 'Scenario_' + str(s)
+        name_2 = 'Scenario ' + str(s)
         Scenario_Cost.loc['VOLL',name_1] = Cost_Time_Series['Lost_Load ' + str(s)].sum()
         Scenario_Cost.loc['Bat Out',name_1] = Cost_Time_Series['Battery_Flow_Out ' + str(s)].sum()
         Scenario_Cost.loc['Bat In',name_1] = Cost_Time_Series['Battery_Flow_in ' + str(s)].sum()
@@ -397,6 +397,7 @@ def Load_results1(instance):
     Data.append(Size_variables)
     Data.append(Scenarios)
     Data.append(Generator_Data)
+    Data.append(Scenario_Information)
     return Data
    
     
@@ -1282,7 +1283,7 @@ def Plot_Energy_Total(instance, Time_Series, plot):
         end = Time_Series.index[instance.Periods()-1]
         Time_Series = Time_Series.astype('float64')
         Plot_Data_2 = Time_Series[start:end].groupby([Time_Series[start:end].index.hour]).mean()
-       
+        Plot_Data_2 = Plot_Data_2/1000
         Plot_Data_2['Charge energy to the Battery'] = -Plot_Data_2['Charge energy to the Battery']
         Plot_Data = Plot_Data_2
         Vec = Plot_Data['Renewable Energy'] + Plot_Data['Energy Diesel']
@@ -1296,22 +1297,19 @@ def Plot_Energy_Total(instance, Time_Series, plot):
         ax2= Plot_Data['Energy Diesel'].plot(style='r', linewidth=0.5)
         ax2.fill_between(Plot_Data.index, 0, Plot_Data['Energy Diesel'].values, 
                          alpha=0.2, color='r') # Fill the area of the energy produce by the diesel generator
-        ax3 = Plot_Data['Energy_Demand'].plot(style='k', linewidth=0.5)
-        ax3.fill_between(Plot_Data.index, Vec.values , Plot_Data['Energy_Demand'].values,
-                         alpha=0.3, color='g', where= Plot_Data['Energy_Demand']>= Vec,interpolate=True)
+        ax3 = Plot_Data['Energy_Demand'].plot(style='k', linewidth=2)
+        ax3.fill_between(Plot_Data.index, Vec.values , 
+                         Plot_Data['Energy_Demand'].values,
+                         alpha=0.3, color='g', 
+                         where= Plot_Data['Energy_Demand']>= Vec,interpolate=True)
         ax5= Plot_Data['Charge energy to the Battery'].plot(style='m', linewidth=0.5) # Plot the line of the energy flowing into the battery
-        ax5.fill_between(Plot_Data.index, 0, Plot_Data['Charge energy to the Battery'].values
+        ax5.fill_between(Plot_Data.index, 0, 
+                         Plot_Data['Charge energy to the Battery'].values
                          , alpha=0.3, color='m') # Fill the area of the energy flowing into the battery
         ax6= Plot_Data['State_Of_Charge_Battery'].plot(style='k--', secondary_y=True, linewidth=2, alpha=0.7 ) # Plot the line of the State of charge of the battery
         
         # Define name  and units of the axis
-        ax1.set_ylabel('Potencia (W)')
-        ax1.set_xlabel('Tiempo (Horas)')
-        ax6.set_ylabel('Estado de carga de la bateria (W)')
-            
-                  
-          
-        plt.savefig('LDR.png', bbox_inches='tight')
+    
 
 
 
@@ -1320,7 +1318,7 @@ def Plot_Energy_Total(instance, Time_Series, plot):
     ax1.set_ylabel('Power (kW)')
     ax1.set_xlabel('hours')
     ax6.set_ylabel('Battery State of charge (kWh)')
-    
+            
     # Define the legends of the plot
     From_PV = mpatches.Patch(color='blue',alpha=0.3, label='From PV')
     From_Generator = mpatches.Patch(color='red',alpha=0.3, label='From Generator')
@@ -1328,124 +1326,78 @@ def Plot_Energy_Total(instance, Time_Series, plot):
     To_Battery = mpatches.Patch(color='magenta',alpha=0.5, label='To Battery')
     Lost_Load = mpatches.Patch(color='yellow', alpha= 0.3, label= 'Lost Load')
     Energy_Demand = mlines.Line2D([], [], color='black',label='Energy_Demand')
-    State_Of_Charge_Battery = mlines.Line2D([], [], color='black',label='State_Of_Charge_Battery', linestyle='--',alpha=0.7)
-    plt.legend(handles=[From_Generator, From_PV, From_Battery, To_Battery, Lost_Load, Energy_Demand, State_Of_Charge_Battery], bbox_to_anchor=(1.83, 1))
+    State_Of_Charge_Battery = mlines.Line2D([], [], color='black',
+                                            label='State_Of_Charge_Battery', linestyle='--',alpha=0.7)
+    plt.legend(handles=[From_Generator, From_PV, From_Battery, 
+                        To_Battery, Lost_Load, Energy_Demand, 
+                        State_Of_Charge_Battery], bbox_to_anchor=(1.83, 1))
     plt.savefig('Results/Energy_Dispatch.png', bbox_inches='tight')    
     plt.show()    
     
-def Percentage_Of_Use(Time_Series):
-    '''
-    This model creates a plot with the percentage of the time that each technologies is activate during the analized 
-    time.
-    :param Time_series: The results of the optimization model that depend of the periods.
-    '''    
+def Energy_Mix(instance,Scenarios,Scenario_Probability):
     
-    # Creation of the technolgy dictonary    
-    PercentageOfUse= {'Lost Load':0, 'Energy PV':0,'Curtailment':0, 'Energy Diesel':0, 'Discharge energy from the Battery':0, 'Charge energy to the Battery':0}
+    Number_Scenarios = int(instance.Scenarios.extract_values()[None])
+    Energy_Totals = Scenarios.sum()
     
-    # Count the quantity of times each technology has energy production
-    for v in PercentageOfUse.keys():
-        foo = 0
-        for i in range(len(Time_Series)):
-            if Time_Series[v][i]>0: 
-                foo = foo + 1      
-            PercentageOfUse[v] = (round((foo/float(len(Time_Series))), 3))*100 
+    PV_Energy = 0 
+    Generator_Energy = 0
+    Curtailment = 0
     
-    # Create the names in the plot
-    c = ['From Generator', 'Curtailment', 'To Battery', 'From PV', 'From Battery', 'Lost Load']       
+    Energy_Mix = pd.DataFrame()
     
-#     Create the bar plot  
-    plt.figure()
-    plt.bar((1,2,3,4,5,6), PercentageOfUse.values(), color= 'b', alpha=0.5, align='center')
-   
-    plt.xticks((1.2,2.2,3.2,4.2,5.2,6.2), c) # Put the names and position for the ticks in the x axis 
-    plt.xticks(rotation=-30) # Rotate the ticks
-    plt.xlabel('Technology') # Create a label for the x axis
-    plt.tick_params(axis='x', which='both', bottom='off', top='off', labelbottom='on')
-    plt.ylabel('Percentage of use (%)') # Create a label for the y axis
-    plt.savefig('Results/Percentge_of_Use.png', bbox_inches='tight') # Save the plot 
-    plt.show() 
-    
-    return PercentageOfUse
-    
-def Energy_Flow(Time_Series):
+    for j in range(1, Number_Scenarios+1):   
+       
+        index_1 = 'Renewable Energy ' + str(j)    
+        index_2 = 'Gen energy ' + str(j)
+        index_3 = 'Scenario ' + str(j)
+        index_4 =  'Curtailment ' + str(j)
+        PV = Energy_Totals[index_1]
+        Ge = Energy_Totals[index_2]
+        We = Scenario_Probability[index_3]
+        Cu = Energy_Totals[index_4]
+                
 
+        
+        PV_Energy += PV*We
+        Generator_Energy += Ge*We  
+        Curtailment += Cu*We
+        
+        Energy_Mix.loc['PV Penetration',index_3] = PV/(PV+Ge)
+        Energy_Mix.loc['Curtailment Percentage',index_3] = Cu/(PV+Ge)
 
-    Energy_Flow = {'Energy_Demand':0, 'Lost Load':0, 'Energy PV':0,'Curtailment':0, 'Energy Diesel':0, 'Discharge energy from the Battery':0, 'Charge energy to the Battery':0}
-
-    for v in Energy_Flow.keys():
-        if v == 'Energy PV':
-            Energy_Flow[v] = round((Time_Series[v].sum() - Time_Series['Curtailment'].sum()- Time_Series['Charge energy to the Battery'].sum())/1000000, 2)
-        else:
-            Energy_Flow[v] = round((Time_Series[v].sum())/1000000, 2)
-          
+    Renewable_Real_Penetration = PV_Energy/(PV_Energy+Generator_Energy)
+    Renewable_Real_Penetration = round(Renewable_Real_Penetration,4)
+    Curtailment_Percentage = Curtailment/(PV_Energy+Generator_Energy)
+    Curtailment_Percentage = round(Curtailment_Percentage,4)
+    print(str(Renewable_Real_Penetration*100) + ' % Renewable Penetration')
+    print(str(Curtailment_Percentage*100) + ' % of energy curtail')
     
-    c = ['From Generator', 'To Battery', 'Demand', 'From PV', 'From Battery', 'Curtailment', 'Lost Load']       
-    plt.figure()    
-    plt.bar((1,2,3,4,5,6,7), Energy_Flow.values(), color= 'b', alpha=0.3, align='center')
     
-    plt.xticks((1.2,2.2,3.2,4.2,5.2,6.2,7.2), c)
-    plt.xlabel('Technology')
-    plt.ylabel('Energy Flow (MWh)')
-    plt.tick_params(axis='x', which='both', bottom='off', top='off', labelbottom='on')
-    plt.xticks(rotation=-30)
-    plt.savefig('Results/Energy_Flow.png', bbox_inches='tight')
-    plt.show()    
     
-    return Energy_Flow
-
-def Energy_Participation(Energy_Flow):
     
-    Energy_Participation = {'Energy PV':0, 'Energy Diesel':0, 'Discharge energy from the Battery':0, 'Lost Load':0}
-    c = {'Energy Diesel':'Diesel Generator', 'Discharge energy from the Battery':'Battery', 'Energy PV':'From PV', 'Lost Load':'Lost Load'}       
-    labels=[]
     
-    for v in Energy_Participation.keys():
-        if Energy_Flow[v]/Energy_Flow['Energy_Demand'] >= 0.001:
-            Energy_Participation[v] = Energy_Flow[v]/Energy_Flow['Energy_Demand']
-            labels.append(c[v])
-        else:
-            del Energy_Participation[v]
-    Colors=['r','c','b','k']
     
-    plt.figure()                     
-    plt.pie(Energy_Participation.values(), autopct='%1.1f%%', colors=Colors)
     
-    Handles = []
-    for t in range(len(labels)):
-        Handles.append(mpatches.Patch(color=Colors[t], alpha=1, label=labels[t]))
     
-    plt.legend(handles=Handles, bbox_to_anchor=(1.4, 1))   
-    plt.savefig('Results/Energy_Participation.png', bbox_inches='tight')
-    plt.show()
     
-    return Energy_Participation
-
-def LDR(Time_Series):
-
-    columns=['Consume diesel', 'Lost Load', 'Energy PV','Curtailment','Energy Diesel', 
-             'Discharge energy from the Battery', 'Charge energy to the Battery', 
-             'Energy_Demand',  'State_Of_Charge_Battery'  ]
-    Sort_Values = Time_Series.sort('Energy_Demand', ascending=False)
     
-    index_values = []
     
-    for i in range(len(Time_Series)):
-        index_values.append((i+1)/float(len(Time_Series))*100)
     
-    Sort_Values = pd.DataFrame(Sort_Values.values/1000, columns=columns, index=index_values)
     
-    plt.figure() 
-    ax = Sort_Values['Energy_Demand'].plot(style='k-',linewidth=1)
     
-    fmt = '%.0f%%' # Format you want the ticks, e.g. '40%'
-    xticks = mtick.FormatStrFormatter(fmt)
-    ax.xaxis.set_major_formatter(xticks)
-    ax.set_ylabel('Load (kWh)')
-    ax.set_xlabel('Percentage (%)')
     
-    plt.savefig('Results/LDR.png', bbox_inches='tight')
-    plt.show()    
     
-
-
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    

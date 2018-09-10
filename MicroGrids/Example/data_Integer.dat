@@ -4,7 +4,7 @@ param: Years := 20;
 
 param: StartDate := '01/01/2014 01:00:00';
 
-param: PlotTime := 1;
+param: PlotTime :=5;
 
 param: PlotDay := '06/09/2014 00:00:00';
 
@@ -12,7 +12,7 @@ param: PlotScenario:= 1;
 
 param: Delta_Time := 1;
 
-param: Battery_Invesment_Cost := 0.469;
+param: Battery_Invesment_Cost := 0.5;
 
 param: Battery_Electronic_Invesmente_Cost := 0.222;
 
@@ -30,22 +30,29 @@ param: Deep_of_Discharge := 0.2;
 
 param: Value_Of_Lost_Load := 0.0001;
 
-param: Maximun_Battery_Discharge_Time := 1;
+param: Maximun_Battery_Discharge_Time := 4;
 
-param: Maximun_Battery_Charge_Time := 1;
+param: Maximun_Battery_Charge_Time := 4;
 
 # new parameters
 
 
+param: Scenarios :=10;
 
-param: Scenarios :=2;
-
-param: Battery_Cycles := 2000;
+param: Battery_Cycles := 3000; # 1000
 
 param: Scenario_Weight :=
 
-1   	0.5
-2	0.5;
+1	0.05
+2	0.09
+3	0.17
+4	0.22
+5	0.17
+6	0.13
+7	0.09
+8	0.05
+9	0.02
+10	0.01;
 
 # New parameters 3
 
@@ -54,15 +61,15 @@ param: Renewable_Source := 1;
 
 param: Renewable_Invesment_Cost :=
 
-1   	1.3;
+1   	1.5;
 
 param: Inverter_Efficiency_Renewable :=
 
-1   	0.95;
+1   	1;
 
 param: Renewable_Nominal_Capacity :=
 
-1   	300;
+1   	250;
 
 param: Maintenance_Operation_Cost_Renewable :=
 
@@ -100,8 +107,8 @@ param: Cost_Increase :=
 
 param: Generator_Nominal_Capacity := 
 
-1   	10000;
+1   58000;
 
 param: Maintenance_Operation_Cost_Generator := 
 
-1   	0.01;
+1   	0.015;

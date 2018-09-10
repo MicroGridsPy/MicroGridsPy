@@ -146,3 +146,34 @@ def Maximun_Lost_Load(model,s): # Maximum permissible lost load
     
     return model.Lost_Load_Probability >= (sum(model.Lost_Load[s,t] 
                                                for t in model.periods)/sum(model.Energy_Demand[s,t] for t in model.periods))
+
+    
+def Renewable_Energy_Penetration(model):
+    
+    Foo=[]
+    for s in range(1, model.Scenarios + 1):
+        for g in range(1, model.Generator_Type+1):
+            for t in range(1,model.Periods+1):
+                Foo.append((s,g,t))    
+                
+    foo=[]
+    for s in range(1, model.Scenarios + 1):
+        for r in range(1, model.Renewable_Source+1):
+            for t in range(1,model.Periods+1):
+                foo.append((s,r,t))    
+    
+    E_ge = sum(model.Generator_Total_Period_Energy[s,g,t]*model.Scenario_Weight[s]
+                for s,g,t in Foo)
+    
+    E_PV = sum(model.Renewable_Energy_Production[s,r,t]*model.Scenario_Weight[s]
+                for s,r,t in foo)
+        
+    return  (1 - model.Renewable_Penetration)*E_PV >= model.Renewable_Penetration*E_ge   
+
+
+def Battery_Min_Capacity(model):
+    
+       
+    return   model.Battery_Nominal_Capacity >= model.Battery_Min_Capacity
+
+

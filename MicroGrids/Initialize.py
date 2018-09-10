@@ -115,3 +115,28 @@ def Start_Cost_Dispatch(model):
 def Marginal_Cost_Generator_Dispatch(model):
     
     return (model.Marginal_Cost_Generator_1*model.Generator_Nominal_Capacity-model.Start_Cost_Generator)/model.Generator_Nominal_Capacity 
+
+def Min_Bat_Capacity(model):
+        
+    
+    Periods = model.Battery_Independency*24
+    Len = int(model.Periods/Periods)
+    Grouper = 1
+    index = 1
+    for i in range(1, Len+1):
+        for j in range(1,Periods+1):
+            
+            Energy_Demand.loc[index, 'Grouper'] = Grouper
+            index += 1
+            
+        Grouper += 1
+            
+    Period_Energy = Energy_Demand.groupby(['Grouper']).sum()
+    
+    Period_Average_Energy = Period_Energy.mean()
+    
+    Available_Energy = sum(Period_Average_Energy[s]*model.Scenario_Weight[s] 
+        for s in model.scenario) 
+
+    return  Available_Energy/(1-model.Deep_of_Discharge)
+

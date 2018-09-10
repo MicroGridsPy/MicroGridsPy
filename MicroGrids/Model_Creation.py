@@ -3,7 +3,7 @@
 
 
 
-def Model_Creation(model):
+def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     
     '''
     This function creates the instance for the resolution of the optimization in Pyomo.
@@ -12,7 +12,7 @@ def Model_Creation(model):
     
     '''
     from pyomo.environ import  Param, RangeSet, NonNegativeReals, Var
-    from Initialize import Initialize_years, Initialize_Demand, Battery_Reposition_Cost, Initialize_Renewable_Energy, Marginal_Cost_Generator_1 # Import library with initialitation funtions for the parameters
+    from Initialize import Initialize_years, Initialize_Demand, Battery_Reposition_Cost, Initialize_Renewable_Energy, Marginal_Cost_Generator_1,Min_Bat_Capacity # Import library with initialitation funtions for the parameters
 
     # Time parameters
     model.Periods = Param(within=NonNegativeReals) # Number of periods of analysis of the energy variables
@@ -34,7 +34,7 @@ def Model_Creation(model):
 
 
     # PARAMETERS
-    
+    model.Scenario_Weight = Param(model.scenario, within=NonNegativeReals) #########
     # Parameters of the PV 
    
 
@@ -59,6 +59,9 @@ def Model_Creation(model):
     model.Unitary_Battery_Reposition_Cost = Param(within=NonNegativeReals, 
                                           initialize=Battery_Reposition_Cost)
     model.Battery_Initial_SOC = Param(within=NonNegativeReals)
+    if  Battery_Independency > 0:
+        model.Battery_Independency = Battery_Independency
+        model.Battery_Min_Capacity = Param(initialize=Min_Bat_Capacity)
   
     # Parametes of the diesel generator
     model.Generator_Efficiency = Param(model.generator_type) # Generator efficiency to trasform heat into electricity %
@@ -75,7 +78,8 @@ def Model_Creation(model):
                                 initialize=Initialize_Demand) # Energy Energy_Demand in W 
     model.Lost_Load_Probability = Param(within=NonNegativeReals) # Lost load probability in %
     model.Value_Of_Lost_Load = Param(within=NonNegativeReals) # Value of lost load in USD/W
-    
+    if Renewable_Penetration > 0:
+        model.Renewable_Penetration =  Renewable_Penetration
     # Parameters of the proyect
     model.Delta_Time = Param(within=NonNegativeReals) # Time step in hours
     model.Project_Years = Param(model.years, initialize= Initialize_years) # Years of the project
@@ -86,7 +90,7 @@ def Model_Creation(model):
                                                        within=NonNegativeReals) # Percentage of the total investment spend in operation and management of solar panels in each period in %
     model.Discount_Rate = Param() # Discount rate of the project in %
     
-    model.Scenario_Weight = Param(model.scenario, within=NonNegativeReals) #########
+    
        
 
     # VARIABLES
@@ -194,7 +198,7 @@ def Model_Creation_binary(model):
     model.Energy_Demand = Param(model.scenario,model.periods, initialize=Initialize_Demand) # Energy Energy_Demand in W 
     model.Lost_Load_Probability = Param() # Lost load probability in %
     model.Value_Of_Lost_Load = Param(within=NonNegativeReals) # Value of lost load in USD/W
-    
+
     # Parameters of the proyect
     model.Delta_Time = Param(within=NonNegativeReals) # Time step in hours
     model.Porcentage_Funded = Param(within=NonNegativeReals) # Porcentaje of the total investment that is Porcentage_Porcentage_Funded by a bank or another entity in %
@@ -245,7 +249,7 @@ def Model_Creation_binary(model):
     model.Sceneario_Generator_Total_Cost = Var(model.scenario, within=NonNegativeReals)
     model.Scenario_Net_Present_Cost = Var(model.scenario, within=NonNegativeReals)
 
-def Model_Creation_Integer(model):
+def Model_Creation_Integer(model,Renewable_Penetration, Battery_Independency):
     
     '''
     This function creates the instance for the resolution of the optimization in Pyomo.
@@ -255,7 +259,7 @@ def Model_Creation_Integer(model):
     
     '''
     from pyomo.environ import  Param, RangeSet, NonNegativeReals, Var, NonNegativeIntegers
-    from Initialize import Initialize_years, Initialize_Demand, Marginal_Cost_Generator, Start_Cost, Marginal_Cost_Generator_1, Capital_Recovery_Factor,Battery_Reposition_Cost, Initialize_Renewable_Energy # Import library with initialitation funtions for the parameters
+    from Initialize import Initialize_years, Initialize_Demand, Marginal_Cost_Generator, Start_Cost, Marginal_Cost_Generator_1, Capital_Recovery_Factor,Battery_Reposition_Cost, Initialize_Renewable_Energy,Min_Bat_Capacity  # Import library with initialitation funtions for the parameters
    
     # Time parameters
     model.Periods = Param(within=NonNegativeReals) # Number of periods of analysis of the energy variables
@@ -303,7 +307,9 @@ def Model_Creation_Integer(model):
     model.Battery_Reposition_Cost = Param(within=NonNegativeReals, 
                                           initialize=Battery_Reposition_Cost)
    
-    
+    if  Battery_Independency > 0:
+        model.Battery_Independency = Battery_Independency
+        model.Battery_Min_Capacity = Param(initialize=Min_Bat_Capacity)
     
     # Parametes of the diesel generator
     model.Generator_Min_Out_Put = Param(model.generator_type,
@@ -328,7 +334,8 @@ def Model_Creation_Integer(model):
     model.Energy_Demand = Param(model.scenario,model.periods, initialize=Initialize_Demand) # Energy Energy_Demand in W 
     model.Lost_Load_Probability = Param() # Lost load probability in %
     model.Value_Of_Lost_Load = Param(within=NonNegativeReals) # Value of lost load in USD/W
-    
+    if Renewable_Penetration > 0:
+        model.Renewable_Penetration =  Renewable_Penetration
     # Parameters of the proyect
     model.Delta_Time = Param(within=NonNegativeReals) # Time step in hours
     model.Project_Years = Param(model.years, initialize= Initialize_years) # Years of the project
