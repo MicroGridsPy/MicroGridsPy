@@ -165,7 +165,8 @@ def Renewable_Energy_Penetration(model):
     E_ge = sum(model.Generator_Total_Period_Energy[s,g,t]*model.Scenario_Weight[s]
                 for s,g,t in Foo)
     
-    E_PV = sum(model.Renewable_Energy_Production[s,r,t]*model.Scenario_Weight[s]
+    E_PV = sum(model.Renewable_Energy_Production[s,r,t]*model.Inverter_Efficiency_Renewable[r]
+                                                   *model.Renewable_Units[r]*model.Scenario_Weight[s]
                 for s,r,t in foo)
         
     return  (1 - model.Renewable_Penetration)*E_PV >= model.Renewable_Penetration*E_ge   
