@@ -387,10 +387,25 @@ def Load_results1(instance):
 
     NPC.loc['Present Operation Cost Weighted', 'Data'] = operation_cost
 
-
+    
     NPC.loc['NPC', 'Data'] = NPC['Data'].sum()
     NPC.loc['NPC LP', 'Data'] = Size_variables[0]['NPC']
     NPC.loc['Invesment', 'Data'] = NPC.loc['Battery Invesment', 'Data']+NPC.loc['Gen Invesment Cost', 'Data']+NPC.loc['Renewable Investment Cost', 'Data']
+    
+    Demand = pd.DataFrame()
+    NP_Demand = 0
+    for s in range(1, Number_Scenarios + 1):
+        a = 'Energy_Demand ' + str(s)
+        b = 'Scenario ' + str(s)
+        Demand.loc[a,'Total Demand'] = sum(Scenarios[a][i] for i in Scenarios.index)
+        Demand.loc[a,'Present Demand'] = sum((Demand.loc[a,'Total Demand']/(1+Discount_rate)**i) 
+                                                            for i in range(1, Years+1))  
+        Demand.loc[a,'Rate'] = Scenario_Information[b]['Scenario Weight']                                                         
+        Demand.loc[a,'Rated Demand'] = Demand.loc[a,'Rate']*Demand.loc[a,'Present Demand'] 
+        NP_Demand += Demand.loc[a,'Rated Demand']
+    LCOE = (Size_variables[0]['NPC']/NP_Demand)*1000
+
+
     Data = []
     Data.append(NPC)
     Data.append(Scenario_Cost)
@@ -398,6 +413,7 @@ def Load_results1(instance):
     Data.append(Scenarios)
     Data.append(Generator_Data)
     Data.append(Scenario_Information)
+    Data.append(LCOE)
     return Data
    
     
@@ -1327,7 +1343,8 @@ def Plot_Energy_Total(instance, Time_Series, plot):
     Lost_Load = mpatches.Patch(color='yellow', alpha= 0.3, label= 'Lost Load')
     Energy_Demand = mlines.Line2D([], [], color='black',label='Energy_Demand')
     State_Of_Charge_Battery = mlines.Line2D([], [], color='black',
-                                            label='State_Of_Charge_Battery', linestyle='--',alpha=0.7)
+                                            label='State_Of_Charge_Battery',
+                                            linestyle='--',alpha=0.7)
     plt.legend(handles=[From_Generator, From_PV, From_Battery, 
                         To_Battery, Lost_Load, Energy_Demand, 
                         State_Of_Charge_Battery], bbox_to_anchor=(1.83, 1))

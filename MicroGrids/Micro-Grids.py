@@ -18,7 +18,7 @@ formulation = 'LP'
 
 # Renewable energy penetrarion
 
-Renewable_Penetration = 1 # a number from 0 to 1.
+Renewable_Penetration = 0 # a number from 0 to 1.
 Battery_Independency = 0  # number of days of battery independency
 
 
@@ -36,6 +36,7 @@ if formulation == 'LP':
     Data = Load_results1(instance) # Extract the results of energy from the instance and save it in a excel file 
     Scenarios =  Data[3]
     Scenario_Probability = Data[5].loc['Scenario Weight'] 
+    print(str(Data[6]) + ' $/kW')
 
 elif formulation == 'Binary':
     Model_Creation_binary(model) # Creation of the Sets, parameters and variables.
