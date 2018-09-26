@@ -2,17 +2,17 @@ param: Periods := 8760;
 
 param: Years := 20;
 
-param: StartDate := '01/01/2011 00:00:00';
+param: StartDate := '21/03/2017 00:00:00';
 
-param: PlotTime := 3;
+param: PlotTime := 4;
 
-param: PlotDay := '2011-06-03 01:00:00';
+param: PlotDay := '2017-06-03 01:00:00';
 
 param: PlotScenario := 10;
 
 param: Delta_Time := 1.0;
 
-param: Battery_Invesment_Cost := 0.5;
+param: Battery_Invesment_Cost := 0.3;
 
 param: Battery_Electronic_Invesmente_Cost := 0.222;
 
@@ -34,7 +34,7 @@ param: Maximun_Battery_Discharge_Time := 4;
 
 param: Maximun_Battery_Charge_Time := 4;
 
-param: Battery_Cycles := 3000;
+param: Battery_Cycles := 10000;
 
 param: Battery_Initial_SOC := 1;
 
@@ -53,7 +53,7 @@ param: Renewable_Inverter_Efficiency :=
 
 param: Renewable_Invesment_Cost :=
 
-1	1.48;
+1	0.5;
 
 param: Maintenance_Operation_Cost_Renewable := 
 
@@ -71,7 +71,7 @@ param: Maintenance_Operation_Cost_Generator :=
 1	0.045;
 
 param: Fuel_Cost := 
-1	0.58;
+1	0.98;
 
 param: Generator_Efficiency := 
 
@@ -82,11 +82,9 @@ param: Low_Heating_Value :=
 
 param: Scenario_Weight :=
 
-1	0.05
-2	0.20
-3	0.25
-4	0.30
-5	0.20;
-
-
+1	0.4
+2	0.15
+3	0.05
+4	0.1
+5	0.3;
 

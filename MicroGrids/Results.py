@@ -404,8 +404,7 @@ def Load_results1(instance):
         Demand.loc[a,'Rated Demand'] = Demand.loc[a,'Rate']*Demand.loc[a,'Present Demand'] 
         NP_Demand += Demand.loc[a,'Rated Demand']
     LCOE = (Size_variables[0]['NPC']/NP_Demand)*1000
-
-
+    
     Data = []
     Data.append(NPC)
     Data.append(Scenario_Cost)
@@ -1359,7 +1358,8 @@ def Energy_Mix(instance,Scenarios,Scenario_Probability):
     PV_Energy = 0 
     Generator_Energy = 0
     Curtailment = 0
-    
+    Battery_Out = 0
+    Demand = 0
     Energy_Mix = pd.DataFrame()
     
     for j in range(1, Number_Scenarios+1):   
@@ -1367,30 +1367,39 @@ def Energy_Mix(instance,Scenarios,Scenario_Probability):
         index_1 = 'Renewable Energy ' + str(j)    
         index_2 = 'Gen energy ' + str(j)
         index_3 = 'Scenario ' + str(j)
-        index_4 =  'Curtailment ' + str(j)
+        index_4 = 'Curtailment ' + str(j)
+        index_5 = 'Battery_Flow_Out ' + str(j)
+        index_6 = 'Energy_Demand ' + str(j)
+        
         PV = Energy_Totals[index_1]
         Ge = Energy_Totals[index_2]
         We = Scenario_Probability[index_3]
         Cu = Energy_Totals[index_4]
-                
-
+        B_O = Energy_Totals[index_5]        
+        De = Energy_Totals[index_6] 
         
         PV_Energy += PV*We
         Generator_Energy += Ge*We  
         Curtailment += Cu*We
+        Battery_Out += B_O*We
+        Demand += De*We
+        
         
         Energy_Mix.loc['PV Penetration',index_3] = PV/(PV+Ge)
         Energy_Mix.loc['Curtailment Percentage',index_3] = Cu/(PV+Ge)
-
+        Energy_Mix.loc['Battery Usage',index_3] = B_O/De
+        
     Renewable_Real_Penetration = PV_Energy/(PV_Energy+Generator_Energy)
     Renewable_Real_Penetration = round(Renewable_Real_Penetration,4)
     Curtailment_Percentage = Curtailment/(PV_Energy+Generator_Energy)
     Curtailment_Percentage = round(Curtailment_Percentage,4)
+    Battery_Usage = Battery_Out/Demand
+    Battery_Usage = round(Battery_Usage,4)
     print(str(Renewable_Real_Penetration*100) + ' % Renewable Penetration')
     print(str(Curtailment_Percentage*100) + ' % of energy curtail')
+    print(str(Battery_Usage*100) + ' % Battery usage')
     
-    
-    
+    return Energy_Mix    
     
     
     

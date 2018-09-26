@@ -44,15 +44,15 @@ param: Battery_Cycles := 3000; # 1000
 param: Scenario_Weight :=
 
 1	0.05
-2	0.09
-3	0.17
-4	0.22
-5	0.17
-6	0.13
-7	0.09
-8	0.05
-9	0.02
-10	0.01;
+2	0.08
+3	0.18
+4	0.20
+5	0.14
+6	0.103
+7	0.097
+8	0.086
+9	0.042
+10	0.022;
 
 # New parameters 3
 
@@ -90,7 +90,7 @@ param: Generator_Min_Out_Put:=
 
 param: Generator_Efficiency :=
 
-1   	0.33;
+1   	0.314;
 
 param: Low_Heating_Value :=
 
@@ -98,7 +98,7 @@ param: Low_Heating_Value :=
 
 param: Fuel_Cost :=
 
-1   	0.58;
+1   	0.68;
 
 
 param: Cost_Increase := 
@@ -107,7 +107,7 @@ param: Cost_Increase :=
 
 param: Generator_Nominal_Capacity := 
 
-1   58000;
+1   30000;
 
 param: Maintenance_Operation_Cost_Generator := 
 

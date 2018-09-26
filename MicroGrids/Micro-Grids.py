@@ -69,13 +69,13 @@ elif formulation =='Dispatch':
 
 
 # Energy Plot    
-S = 5
+S = 1
 Time_Series = Integer_Time_Series(instance,Scenarios, S)    
-plot = 'Average' # 'No Average' or 'Average'
+plot = 'No Average' # 'No Average' or 'Average'
 Plot_Energy_Total(instance, Time_Series, plot)
 
 
-Energy_Mix(instance,Scenarios,Scenario_Probability)
+Energy_Mix_S = Energy_Mix(instance,Scenarios,Scenario_Probability)
 
 #index = pd.DatetimeIndex(start='2017-01-01 00:00:00', periods=len(Time_Series), 
 #                                   freq=('H'))
