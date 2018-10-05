@@ -18,9 +18,6 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     model.Periods = Param(within=NonNegativeReals) # Number of periods of analysis of the energy variables
     model.Years = Param() # Number of years of the project
     model.StartDate = Param() # Start date of the analisis
-    model.PlotTime = Param() # Quantity of days that are going to be plot
-    model.PlotDay = Param() # Start day for the plot
-    model.PlotScenario = Param()
     model.Scenarios = Param() 
     model.Renewable_Source = Param()
     model.Generator_Type = Param()
@@ -265,10 +262,9 @@ def Model_Creation_Integer(model,Renewable_Penetration, Battery_Independency):
     model.Periods = Param(within=NonNegativeReals) # Number of periods of analysis of the energy variables
     model.Years = Param() # Number of years of the project
     model.StartDate = Param() # Start date of the analisis
-    model.PlotTime = Param() # Quantity of days that are going to be plot
-    model.PlotDay = Param() # Start day for the plot
+
     model.Scenarios = Param()  
-    model.PlotScenario = Param()
+
     model.Renewable_Source = Param()
     model.Generator_Type = Param()
     
@@ -280,7 +276,7 @@ def Model_Creation_Integer(model,Renewable_Penetration, Battery_Independency):
     model.generator_type = RangeSet(1, model.Generator_Type)
     
     # PARAMETERS
-    
+    model.Scenario_Weight = Param(model.scenario, within=NonNegativeReals)
     # Parameters of the PV 
     model.Renewable_Nominal_Capacity = Param(model.renewable_source, 
                                              within=NonNegativeReals)
@@ -344,7 +340,7 @@ def Model_Creation_Integer(model,Renewable_Penetration, Battery_Independency):
     model.Maintenance_Operation_Cost_Generator = Param(model.generator_type,
                                                        within=NonNegativeReals) # Percentage of the total investment spend in operation and management of solar panels in each period in %
     model.Discount_Rate = Param() # Discount rate of the project in %
-    model.Scenario_Weight = Param(model.scenario, within=NonNegativeReals)
+
     model.Capital_Recovery_Factor = Param(within=NonNegativeReals, initialize= Capital_Recovery_Factor) 
     # VARIABLES
     

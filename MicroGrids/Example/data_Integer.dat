@@ -4,12 +4,6 @@ param: Years := 20;
 
 param: StartDate := '01/01/2014 01:00:00';
 
-param: PlotTime :=5;
-
-param: PlotDay := '06/09/2014 00:00:00';
-
-param: PlotScenario:= 1;
-
 param: Delta_Time := 1;
 
 param: Battery_Invesment_Cost := 0.5;
@@ -37,22 +31,13 @@ param: Maximun_Battery_Charge_Time := 4;
 # new parameters
 
 
-param: Scenarios :=10;
+param: Scenarios :=1;
 
-param: Battery_Cycles := 3000; # 1000
+param: Battery_Cycles := 5500; # 1000
 
 param: Scenario_Weight :=
 
-1	0.05
-2	0.08
-3	0.18
-4	0.20
-5	0.14
-6	0.103
-7	0.097
-8	0.086
-9	0.042
-10	0.022;
+1	1;
 
 # New parameters 3
 

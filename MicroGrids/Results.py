@@ -225,6 +225,7 @@ def Load_results1(instance):
         Data_Renewable.loc['OyM', Name] = OyM_Renewable[r]
         Data_Renewable.loc['Invesment', Name] = Renewable_Units[r]*Renewable_Nominal_Capacity[r]*Renewable_Invesment_Cost[r]        
         Data_Renewable.loc['OyM Cost', Name] = Data_Renewable.loc['Invesment', Name]*OyM_Renewable[r]        
+        Data_Renewable.loc['Total Nominal Capacity', Name] = Data_Renewable.loc['Nominal Capacity', Name]*Data_Renewable.loc['Units', Name]    
 
     Data_Renewable.to_excel('Results/Source_Renewable_Data.xls')    
     
@@ -413,6 +414,7 @@ def Load_results1(instance):
     Data.append(Generator_Data)
     Data.append(Scenario_Information)
     Data.append(LCOE)
+    Data.append(Data_Renewable)
     return Data
    
     
@@ -1247,7 +1249,7 @@ def Results_Analysis_3(instance):
     Generator_info.to_excel('Results/Generator.xls')
     
     
-def Plot_Energy_Total(instance, Time_Series, plot):  
+def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):  
     '''
     This function creates a plot of the dispatch of energy of a defined number of days.
     
@@ -1259,40 +1261,80 @@ def Plot_Energy_Total(instance, Time_Series, plot):
    
     if plot == 'No Average':
         Periods_Day = 24/instance.Delta_Time() # periods in a day
-        foo = pd.DatetimeIndex(start=instance.PlotDay(),periods=1,freq='1h')# Asign the start date of the graphic to a dumb variable
+        foo = pd.DatetimeIndex(start=Plot_Date,periods=1,freq='1h')# Asign the start date of the graphic to a dumb variable
         for x in range(0, instance.Periods()): # Find the position form wich the plot will start in the Time_Series dataframe
             if foo == Time_Series.index[x]: 
                Start_Plot = x # asign the value of x to the position where the plot will start 
-        End_Plot = Start_Plot + instance.PlotTime()*Periods_Day # Create the end of the plot position inside the time_series
+        End_Plot = Start_Plot + PlotTime*Periods_Day # Create the end of the plot position inside the time_series
         Time_Series.index=range(1,(len(Time_Series)+1))
         Plot_Data = Time_Series[Start_Plot:int(End_Plot)] # Extract the data between the start and end position from the Time_Series
-        columns = pd.DatetimeIndex(start=instance.PlotDay(), periods=instance.PlotTime()*Periods_Day, freq=('1h'))    
+        columns = pd.DatetimeIndex(start=Plot_Date, 
+                                   periods=PlotTime*Periods_Day, 
+                                    freq=('1h'))    
         Plot_Data.index=columns
     
         Plot_Data = Plot_Data.astype('float64')
         Plot_Data = Plot_Data/1000
         Plot_Data['Charge energy to the Battery'] = -Plot_Data['Charge energy to the Battery']
  
-        Vec = Plot_Data['Renewable Energy'] + Plot_Data['Energy Diesel']
-        Vec2 = (Plot_Data['Renewable Energy'] + Plot_Data['Energy Diesel'] + 
-                Plot_Data['Discharge energy from the Battery'])
+
+        c_d = 'm'
+        c_PV = 'yellow'
+        C_Bat = 'green'
+        C_Cur = 'blue'
         
+        Fill = pd.DataFrame()
         
-        ax1= Vec.plot(style='b-', linewidth=0.5) # Plot the line of the diesel energy plus the PV energy
-        ax1.fill_between(Plot_Data.index, Plot_Data['Energy Diesel'].values, Vec.values,   
-                         alpha=0.3, color = 'b')
-        ax2= Plot_Data['Energy Diesel'].plot(style='r', linewidth=0.5)
-        ax2.fill_between(Plot_Data.index, 0, Plot_Data['Energy Diesel'].values, 
-                         alpha=0.2, color='r') # Fill the area of the energy produce by the diesel generator
-        ax3 = Plot_Data['Energy_Demand'].plot(style='k', linewidth=2)
-        ax3.fill_between(Plot_Data.index, Vec.values , Plot_Data['Energy_Demand'].values,
-                         alpha=0.3, color='g', where= Plot_Data['Energy_Demand']>= Vec,interpolate=True)
+        r = 'Renewable Energy'
+        g = 'Energy Diesel'
+        c = 'Curtailment'
+        for t in Plot_Data.index:
+            if (Plot_Data[r][t] > 0 and  Plot_Data[g][t]>0):
+                curtailment = Plot_Data[c][t]/2
+                Fill.loc[t,r] = Plot_Data[r][t]- curtailment
+                Fill.loc[t,g] = Fill[r][t] + Plot_Data[g][t]-curtailment
+            elif Plot_Data[r][t] > 0:
+                Fill.loc[t,r] = Plot_Data[r][t]-Plot_Data[c][t]
+                Fill.loc[t,g] = 0
+            elif Plot_Data[g][t] > 0:
+                Fill.loc[t,r] = 0
+                Fill.loc[t,g]= (Fill[r][t] + Plot_Data[c][t] )
+            else:
+                 Fill.loc[t,r] = 0
+                 Fill.loc[t,g]= 0
+                
+        b = 'Discharge energy from the Battery'
+        Fill[b] = ( Fill[g] + Plot_Data[b])
+
+
+        ax1 =Fill[r].plot(style='y-', linewidth=0)
+        ax1.fill_between(Plot_Data.index, 0,Fill[r].values,   
+                         alpha=0.6, color = c_PV)
+        # Diesel Plot
+        ax2 = Fill[g].plot(style='c', linewidth=0)
+        ax2.fill_between(Plot_Data.index, Fill[r].values
+                         , Diesel_Fill.values, alpha=0.4, color=c_d ,
+                         edgecolor= c_d , hatch ='\\')
+        
+        alpha_bat = 0.3
+        # Battery discharge
+        ax3 = Battery_Fill.plot(style='b', linewidth=0)
+        ax3.fill_between(Plot_Data.index, Diesel_Fill.values, Battery_Fill.values,   
+                         alpha=alpha_bat, color =C_Bat,edgecolor=C_Bat, hatch ='x')
+        # Demand
+        Plot_Data['Energy_Demand'].plot(style='k', linewidth=2)
+        # Battery Charge        
         ax5= Plot_Data['Charge energy to the Battery'].plot(style='m', linewidth=0.5) # Plot the line of the energy flowing into the battery
-        ax5.fill_between(Plot_Data.index, 0, Plot_Data['Charge energy to the Battery'].values
-                         , alpha=0.3, color='m') # Fill the area of the energy flowing into the battery
-        ax6= Plot_Data['State_Of_Charge_Battery'].plot(style='k--', secondary_y=True, linewidth=2, alpha=0.7 ) # Plot the line of the State of charge of the battery
-        
-        
+        ax5.fill_between(Plot_Data.index, 0, 
+                         Plot_Data['Charge energy to the Battery'].values
+                         , alpha=alpha_bat, color=C_Bat,edgecolor= C_Bat, hatch ='x') 
+        # State of charge of battery
+        ax6= Plot_Data['State_Of_Charge_Battery'].plot(style='k--', 
+                secondary_y=True, linewidth=2, alpha=0.7 ) 
+        # Curtailment
+        ax7 = Curtailment_Fill.plot(style='b-', linewidth=0)
+        ax7.fill_between(Plot_Data.index, PV_Fill.values , Curtailment_Fill.values, 
+                         alpha=0.3, color=C_Cur,edgecolor= C_Cur, hatch ='x') 
     else:   
         start = Time_Series.index[0]
         end = Time_Series.index[instance.Periods()-1]
@@ -1402,7 +1444,47 @@ def Energy_Mix(instance,Scenarios,Scenario_Probability):
     return Energy_Mix    
     
     
+def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE):
     
+    Number_Renewable_Source = int(instance.Renewable_Source.extract_values()[None])
+    Number_Generator = int(instance.Generator_Type.extract_values()[None])
+    
+    for i in range(1, Number_Renewable_Source + 1):
+        index_1 = 'Source ' + str(i)
+        index_2 = 'Total Nominal Capacity'
+    
+        Renewable_Rate = float(Data_Renewable[index_1][index_2]/1000)
+        Renewable_Rate = round(Renewable_Rate, 1)
+        print('Renewable ' + str(i) + ' nomial capacity is ' 
+              + str(Renewable_Rate) +' kW')    
+        
+    for i in range(1, Number_Generator + 1):
+        index_1 = 'Generator ' + str(i)
+        index_2 = 'Generator Nominal Capacity'
+    
+        Generator_Rate = float(Generator_Data[index_1][index_2]/1000)
+        Generator_Rate = round(Generator_Rate, 1)
+        print('Generator ' + str(i) + ' nomial capacity is ' 
+              + str(Generator_Rate) +' kW')    
+        
+    
+    index_2 = 'Battery Nominal Capacity'    
+    Battery_Rate = Results[0][index_2]/1000
+    Battery_Rate = round(Battery_Rate, 1)
+    
+    print('Battery nomial capacity is ' 
+              + str(Battery_Rate) +' kWh') 
+    
+    index_2 = 'NPC'    
+    NPC = Results[0][index_2]/1000
+    NPC = round(NPC, 0)
+    
+    print('NPC is ' + str(NPC) +'Thousand USD') 
+
+
+
+    LCOE = round(LCOE, 3)    
+    print(str(LCOE) + ' $/kW')  
     
     
     

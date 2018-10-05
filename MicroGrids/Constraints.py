@@ -94,7 +94,6 @@ def Max_Bat_out(model,i, t): #minimun flow of energy for the discharge fase
     return model.Energy_Battery_Flow_Out[i,t] <= model.Maximun_Discharge_Power*model.Delta_Time
 
 
-
 ############################################## Energy Constraints ##################################################
 
 def Energy_balance(model, s, t): # Energy balance
