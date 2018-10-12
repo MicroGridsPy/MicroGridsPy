@@ -1276,51 +1276,72 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         Plot_Data = Plot_Data.astype('float64')
         Plot_Data = Plot_Data/1000
         Plot_Data['Charge energy to the Battery'] = -Plot_Data['Charge energy to the Battery']
- 
-
-        c_d = 'm'
-        c_PV = 'yellow'
-        C_Bat = 'green'
-        C_Cur = 'blue'
-        
+                           
         Fill = pd.DataFrame()
         
         r = 'Renewable Energy'
         g = 'Energy Diesel'
         c = 'Curtailment'
+        c2 ='Curtailment min'
+        b = 'Discharge energy from the Battery'
         for t in Plot_Data.index:
             if (Plot_Data[r][t] > 0 and  Plot_Data[g][t]>0):
-                curtailment = Plot_Data[c][t]/2
-                Fill.loc[t,r] = Plot_Data[r][t]- curtailment
+                curtailment = Plot_Data[c][t]
+                Fill.loc[t,r] = Plot_Data[r][t] 
                 Fill.loc[t,g] = Fill[r][t] + Plot_Data[g][t]-curtailment
+                Fill.loc[t,c] = Fill[r][t] + Plot_Data[g][t]
+                Fill.loc[t,c2] = Fill.loc[t,g]
             elif Plot_Data[r][t] > 0:
                 Fill.loc[t,r] = Plot_Data[r][t]-Plot_Data[c][t]
-                Fill.loc[t,g] = 0
+                Fill.loc[t,g] = Fill[r][t] + Plot_Data[g][t]
+                Fill.loc[t,c] = Fill[r][t] + Plot_Data[g][t]+Plot_Data[c][t]
+                Fill.loc[t,c2] = Plot_Data[r][t]-Plot_Data[c][t]
             elif Plot_Data[g][t] > 0:
                 Fill.loc[t,r] = 0
-                Fill.loc[t,g]= (Fill[r][t] + Plot_Data[c][t] )
+                Fill.loc[t,g]= (Fill[r][t] + Plot_Data[g][t] - Plot_Data[c][t] )
+                Fill.loc[t,c] = Fill[r][t] + Plot_Data[g][t]
+                Fill.loc[t,c2] = (Fill[r][t] + Plot_Data[g][t] - Plot_Data[c][t] )
             else:
-                 Fill.loc[t,r] = 0
-                 Fill.loc[t,g]= 0
-                
-        b = 'Discharge energy from the Battery'
+                Fill.loc[t,r] = 0
+                Fill.loc[t,g]= 0
+                if  Plot_Data[g][t] == 0:
+                    Fill.loc[t,c] = Plot_Data[g][t]
+                    Fill.loc[t,c2] = Plot_Data[g][t]
+                else:
+                    if Plot_Data[g][t] > 0:
+                        Fill.loc[t,c] = Plot_Data[g][t]
+                        Fill.loc[t,c2] = Plot_Data['Energy_Demand'][t]
+                    else:
+                        Fill.loc[t,c] = Plot_Data[b][t]
+                        Fill.loc[t,c2] = Plot_Data['Energy_Demand'][t]
+#        for t in Plot_Data.index:
+#            if Plot_Data[r][t] > Plot_Data['Energy_Demand'][t]:
+#                Fill.loc[t,c2] =  Fill.loc[t,r]
+#            else:
+#                Fill.loc[t,c2] = Plot_Data['Energy_Demand'][t]
+        
+        
         Fill[b] = ( Fill[g] + Plot_Data[b])
-
-
+        # Renewable energy
+        c_PV = 'yellow'   
+        Alpha_r = 0.4 
         ax1 =Fill[r].plot(style='y-', linewidth=0)
         ax1.fill_between(Plot_Data.index, 0,Fill[r].values,   
-                         alpha=0.6, color = c_PV)
-        # Diesel Plot
+                         alpha=Alpha_r, color = c_PV)
+        # Genset Plot
+        c_d = 'm'
+        Alpha_g = 0.3 
+        hatch_g = '\\'
         ax2 = Fill[g].plot(style='c', linewidth=0)
-        ax2.fill_between(Plot_Data.index, Fill[r].values
-                         , Diesel_Fill.values, alpha=0.4, color=c_d ,
-                         edgecolor= c_d , hatch ='\\')
-        
-        alpha_bat = 0.3
+        ax2.fill_between(Plot_Data.index, Fill[r].values, Fill[g].values,
+                         alpha=Alpha_g, color=c_d, edgecolor=c_d , hatch =hatch_g)
         # Battery discharge
-        ax3 = Battery_Fill.plot(style='b', linewidth=0)
-        ax3.fill_between(Plot_Data.index, Diesel_Fill.values, Battery_Fill.values,   
-                         alpha=alpha_bat, color =C_Bat,edgecolor=C_Bat, hatch ='x')
+        alpha_bat = 0.3
+        hatch_b ='x'
+        C_Bat = 'green'
+        ax3 = Fill[b].plot(style='b', linewidth=0)
+        ax3.fill_between(Plot_Data.index, Fill[g].values, Fill[b].values,   
+                         alpha=alpha_bat, color =C_Bat,edgecolor=C_Bat, hatch =hatch_b)
         # Demand
         Plot_Data['Energy_Demand'].plot(style='k', linewidth=2)
         # Battery Charge        
@@ -1332,9 +1353,38 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         ax6= Plot_Data['State_Of_Charge_Battery'].plot(style='k--', 
                 secondary_y=True, linewidth=2, alpha=0.7 ) 
         # Curtailment
-        ax7 = Curtailment_Fill.plot(style='b-', linewidth=0)
-        ax7.fill_between(Plot_Data.index, PV_Fill.values , Curtailment_Fill.values, 
-                         alpha=0.3, color=C_Cur,edgecolor= C_Cur, hatch ='x') 
+        alpha_cu = 0.3
+        hatch_cu = '+'
+        C_Cur = 'blue'
+        ax7 = Fill[c].plot(style='b-', linewidth=0)
+        ax7.fill_between(Plot_Data.index, Fill[c2].values , Fill[c].values, 
+                         alpha=alpha_cu, color=C_Cur,edgecolor= C_Cur, 
+                         hatch =hatch_cu,
+                         where=Fill[c].values>Plot_Data['Energy_Demand']) 
+           # Define name  and units of the axis
+        ax1.set_ylabel('Power (kW)')
+        ax1.set_xlabel('Time')
+        ax6.set_ylabel('Battery State of charge (kWh)')
+                
+        # Define the legends of the plot
+        From_PV = mpatches.Patch(color=c_PV,alpha=Alpha_r, label='From PV')
+        From_Generator = mpatches.Patch(color=c_d,alpha=Alpha_g,
+                                        label='From Generator',hatch =hatch_g)
+        Battery = mpatches.Patch(color=C_Bat ,alpha=alpha_bat, 
+                                 label='Battery Energy Flow',hatch =hatch_b)
+        Curtailment = mpatches.Patch(color=C_Cur ,alpha=alpha_cu, 
+                                 label='Curtailment',hatch =hatch_cu)
+
+        Energy_Demand = mlines.Line2D([], [], color='black',label='Energy_Demand')
+        State_Of_Charge_Battery = mlines.Line2D([], [], color='black',
+                                                label='State_Of_Charge_Battery',
+                                                linestyle='--',alpha=0.7)
+        plt.legend(handles=[From_Generator, From_PV, Battery, Curtailment,
+                            Energy_Demand, State_Of_Charge_Battery],
+                            bbox_to_anchor=(1.75, 1))
+        plt.savefig('Results/Energy_Dispatch.png', bbox_inches='tight')    
+        plt.show()    
+        
     else:   
         start = Time_Series.index[0]
         end = Time_Series.index[instance.Periods()-1]
@@ -1371,26 +1421,26 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
 
 
 
-    # Define name  and units of the axis
-    ax1.set_ylabel('Power (kW)')
-    ax1.set_xlabel('hours')
-    ax6.set_ylabel('Battery State of charge (kWh)')
-            
-    # Define the legends of the plot
-    From_PV = mpatches.Patch(color='blue',alpha=0.3, label='From PV')
-    From_Generator = mpatches.Patch(color='red',alpha=0.3, label='From Generator')
-    From_Battery = mpatches.Patch(color='green',alpha=0.5, label='From Battery')
-    To_Battery = mpatches.Patch(color='magenta',alpha=0.5, label='To Battery')
-    Lost_Load = mpatches.Patch(color='yellow', alpha= 0.3, label= 'Lost Load')
-    Energy_Demand = mlines.Line2D([], [], color='black',label='Energy_Demand')
-    State_Of_Charge_Battery = mlines.Line2D([], [], color='black',
-                                            label='State_Of_Charge_Battery',
-                                            linestyle='--',alpha=0.7)
-    plt.legend(handles=[From_Generator, From_PV, From_Battery, 
-                        To_Battery, Lost_Load, Energy_Demand, 
-                        State_Of_Charge_Battery], bbox_to_anchor=(1.83, 1))
-    plt.savefig('Results/Energy_Dispatch.png', bbox_inches='tight')    
-    plt.show()    
+        # Define name  and units of the axis
+        ax1.set_ylabel('Power (kW)')
+        ax1.set_xlabel('hours')
+        ax6.set_ylabel('Battery State of charge (kWh)')
+                
+        # Define the legends of the plot
+        From_PV = mpatches.Patch(color='blue',alpha=0.3, label='From PV')
+        From_Generator = mpatches.Patch(color='red',alpha=0.3, label='From Generator')
+        From_Battery = mpatches.Patch(color='green',alpha=0.5, label='From Battery')
+        To_Battery = mpatches.Patch(color='magenta',alpha=0.5, label='To Battery')
+        Lost_Load = mpatches.Patch(color='yellow', alpha= 0.3, label= 'Lost Load')
+        Energy_Demand = mlines.Line2D([], [], color='black',label='Energy_Demand')
+        State_Of_Charge_Battery = mlines.Line2D([], [], color='black',
+                                                label='State_Of_Charge_Battery',
+                                                linestyle='--',alpha=0.7)
+        plt.legend(handles=[From_Generator, From_PV, From_Battery, 
+                            To_Battery, Lost_Load, Energy_Demand, 
+                            State_Of_Charge_Battery], bbox_to_anchor=(1.83, 1))
+        plt.savefig('Results/Energy_Dispatch.png', bbox_inches='tight')    
+        plt.show()    
     
 def Energy_Mix(instance,Scenarios,Scenario_Probability):
     

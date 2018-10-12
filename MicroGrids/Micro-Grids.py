@@ -72,9 +72,9 @@ elif formulation =='Dispatch':
 
      
 # Energy Plot    
-S = 1 # Plot scenario
-Plot_Date = '25/06/2014 00:00:00' # Day-Month-Year
-PlotTime = 2# Days of the plot
+S = 3 # Plot scenario
+Plot_Date = '25/12/2017 00:00:00' # Day-Month-Year
+PlotTime = 3# Days of the plot
 Time_Series = Integer_Time_Series(instance,Scenarios, S) 
    
 plot = 'No Average' # 'No Average' or 'Average'
