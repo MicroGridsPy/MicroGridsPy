@@ -7,9 +7,9 @@ Sets
 ==========  ==========  =====================================
 Name	    Symbol      Description                       
 ==========  ==========  =====================================
-Years	    n		Year of the project	        
-Periods     t		Period that are divided the years 
-Scenarios   s           Scenarios analalized
+Years	    n		Years of the project	        
+Periods     t		Number of periods (i.e. time-steps) within a year 
+Scenarios   s           Scenarios analised
 ==========  ==========  =====================================
 
 Parameters
