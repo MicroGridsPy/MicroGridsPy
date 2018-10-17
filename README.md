@@ -23,7 +23,7 @@ Sylvain Quoilin <br/>
 University of Liege, Belgium <br/>
 E-mail: squoilin@ulg.ac.be  <br/>
 
-STUDENT VERSION<br/>
+*STUDENT VERSION*<br/>
 Francesco Lombardi <br/>
 Politecnico di Milano, Italy <br/>
 E-mail: francesco.lombardi@polimi.it <br/>
