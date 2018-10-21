@@ -1,9 +1,9 @@
-Micro-Grids
+MicroGridsPy - Student version
 ========================
 
 ### Description
 
-The Micro-Grid library main objective is to provide an open-source alternative to the problem of sizing and dispatch of energy in micro-grids in isolated places. It’s written in python(pyomo) and use excel and text files as input and output data handling and visualisation.
+The MicroGridsPy model main objective is to provide an open-source alternative to the problem of sizing and dispatch of energy in micro-grids in isolated places. It’s written in python(pyomo) and use excel and text files as input and output data handling and visualisation.
 
 Main features:
 
