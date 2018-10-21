@@ -14,14 +14,14 @@ day_start = '04/05/2017 00:00:00'
 day_end = '04/12/2017 23:00:00'
 x = pd.date_range(day_start,day_end, freq = 'H')
 dates = pd.date_range(start='01/01/2017', end='01/01/2018', freq = 'H')[:-1]
-Plot = Time_Series['Renewable Energy']/68.6 #The variable Time_Series must have been previously created as a result of model solving
+Plot = Time_Series['Energy_Demand'] #The variable Time_Series must have been previously created as a result of model solving
 Plot_series = pd.DataFrame(Plot.values, index = dates)
 
 
 
 fig = plt.figure(figsize=(10,5))
 plt.plot(x,Plot_series[day_start:day_end], color='r', alpha=0.8)
-plt.fill_between(x,0,Plot_series[day_start:day_end].values[:,0], facecolor='r', alpha=0.3,label='PV panel output')
+plt.fill_between(x,0,Plot_series[day_start:day_end].values[:,0], facecolor='b', alpha=0.3,label='Load demand')
 plt.xlabel('Time (hours)')
 plt.ylabel('Power (W)')
 plt.ylim(ymin=0)
