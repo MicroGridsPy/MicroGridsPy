@@ -1,9 +1,14 @@
-# -*- coding: utf-8 -*-
-#billy rioja
+#####
+#MicroGridsPy-Student, v.0.1. 2018/2019
+#Based on the original model by Sergio Balderrama and Sylvain Quoilin
+#Student version managed by Francesco Lombardi
+######
 import pandas as pd
 from pyomo.environ import  AbstractModel
 
-from Results import Plot_Energy_Total, Load_results1, Energy_Mix, Print_Results, Economic_Analysis
+from Results import Plot_Energy_Total,  Load_results1, Energy_Mix, Print_Results, Integer_Scenarios, Integer_Scenario_Information, \
+Integer_Time_Series, integer_Renewable_Energy, Integer_Data_Renewable, Integer_Generator_time_series, \
+Integer_Generator_Data, Integer_Results,Economic_Analysis, Integer_Time_Series
 from Model_Creation import Model_Creation
 from Model_Resolution import Model_Resolution
 from Economical_Analysis import Levelized_Cost_Of_Energy
@@ -14,8 +19,8 @@ formulation = 'LP'
 
 # Renewable energy penetrarion
 
-Renewable_Penetration = 0 # a number from 0 to 1.
-Battery_Independency = 0  # number of days of battery independency
+Renewable_Penetration = 0.6 # a number from 0 to 1.
+Battery_Independency = 1  # number of days of battery independency
 
 model = AbstractModel() # define type of optimization problem
 
@@ -40,14 +45,14 @@ if formulation == 'LP':
 else:
     print('Model formulation type not allowed')
 
-     
+
 # Energy Plot    
-S = 3 # Plot scenario
-Plot_Date = '25/12/2017 00:00:00' # Day-Month-Year
-PlotTime = 3# Days of the plot
+S = 1 # Plot scenario
+Plot_Date = '07/11/2017 00:00:00' # Day-Month-Year
+PlotTime = 7# Days of the plot
 Time_Series = Integer_Time_Series(instance,Scenarios, S) 
-   
-plot = 'No Average' # 'No Average' or 'Average'
+
+plot = 'Average' # 'No Average' or 'Average'
 Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime)
 
 

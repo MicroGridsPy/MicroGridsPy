@@ -1027,7 +1027,7 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         ax6.set_ylabel('Battery State of charge (kWh)')
                 
         # Define the legends of the plot
-        From_PV = mpatches.Patch(color=c_PV,alpha=Alpha_r, label='From PV')
+        From_PV = mpatches.Patch(color=c_PV,alpha=Alpha_r, label='From VRES')
         From_Generator = mpatches.Patch(color=c_d,alpha=Alpha_g,
                                         label='From Generator',hatch =hatch_g)
         Battery = mpatches.Patch(color=C_Bat ,alpha=alpha_bat, 
@@ -1087,7 +1087,7 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         ax6.set_ylabel('Battery State of charge (kWh)')
                 
         # Define the legends of the plot
-        From_PV = mpatches.Patch(color='blue',alpha=0.3, label='From PV')
+        From_PV = mpatches.Patch(color='blue',alpha=0.3, label='From VRES')
         From_Generator = mpatches.Patch(color='red',alpha=0.3, label='From Generator')
         From_Battery = mpatches.Patch(color='green',alpha=0.5, label='From Battery')
         To_Battery = mpatches.Patch(color='magenta',alpha=0.5, label='To Battery')
