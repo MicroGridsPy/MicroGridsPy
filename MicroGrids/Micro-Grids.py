@@ -48,7 +48,7 @@ else:
 
 # Energy Plot    
 S = 1 # Plot scenario
-Plot_Date = '07/11/2017 00:00:00' # Day-Month-Year
+Plot_Date = '07/10/2017 00:00:00' # Day-Month-Year
 PlotTime = 7# Days of the plot
 Time_Series = Integer_Time_Series(instance,Scenarios, S) 
 
