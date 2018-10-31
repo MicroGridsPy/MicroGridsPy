@@ -1505,7 +1505,7 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE):
     
         Renewable_Rate = float(Data_Renewable[index_1][index_2]/1000)
         Renewable_Rate = round(Renewable_Rate, 1)
-        print('Renewable ' + str(i) + ' nomial capacity is ' 
+        print('Renewable ' + str(i) + ' nominal capacity is ' 
               + str(Renewable_Rate) +' kW')    
         
     for i in range(1, Number_Generator + 1):
@@ -1514,7 +1514,7 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE):
     
         Generator_Rate = float(Generator_Data[index_1][index_2]/1000)
         Generator_Rate = round(Generator_Rate, 1)
-        print('Generator ' + str(i) + ' nomial capacity is ' 
+        print('Generator ' + str(i) + ' nominal capacity is ' 
               + str(Generator_Rate) +' kW')    
         
     
@@ -1522,7 +1522,7 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE):
     Battery_Rate = Results[0][index_2]/1000
     Battery_Rate = round(Battery_Rate, 1)
     
-    print('Battery nomial capacity is ' 
+    print('Battery nominal capacity is ' 
               + str(Battery_Rate) +' kWh') 
     
     index_2 = 'NPC'    
@@ -1534,7 +1534,7 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE):
 
 
     LCOE = round(LCOE, 3)    
-    print(str(LCOE) + ' $/kW')  
+    print(str(LCOE) + ' $/kWh')  
     
     
     
