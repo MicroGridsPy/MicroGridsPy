@@ -41,7 +41,4 @@ The python libraries needed to run Micro-Grids are the following:
 This is a free software licensed under the “European Union Public Licence" EUPL v1.1. It 
 can be redistributed and/or modified under the terms of this license.
 
-### Getting started
-
-To start using the Micro-Grid library please Go to Documentation/_build/html and double click in the archive index.html. This will open a Documention in html format. Please read carefully the tutorial part of this documentation in order to understand how to setup and use Micro-Grids library.
 
