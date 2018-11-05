@@ -74,31 +74,53 @@ def Load_results1(instance):
             
             
     Scenarios_Periods = [[] for i in range(Number_Scenarios)]
+    Scenarios_Ren =[[] for i in range(Number_Renewable_Source)]
+    Renewable_Energy_2={}
     
-    for i in range(0,Number_Scenarios):
-        for j in range(1, Number_Periods+1):
-            Scenarios_Periods[i].append((i+1,j))
-    foo=0        
+    dum=[]
+    for s in range(0, Number_Scenarios):
+        for r in range(0,Number_Renewable_Source):
+            for t in range(0, Number_Periods):
+                dum.append((s+1,r+1,t+1))
+    
+    for s in range(0,Number_Scenarios):
+        for t in range(0, Number_Periods):
+            Scenarios_Periods[s].append((s+1,t+1))
+    for r in range(0,Number_Renewable_Source ):
+        for t in range(0, Number_Periods):
+            Scenarios_Ren[r].append((r+1,t+1))
+    for i in dum:
+        Renewable_Energy_2.update({i:Renewable_Energy_1[i]}) 
+    
+    foo=0
+        
     for i in columns:
-        Information = [[] for i in range(9)]
+        Information = [[] for i in range(0,9)]
         for j in  Scenarios_Periods[foo]:
             Information[0].append(Lost_Load[j])
-            Information[1].append(Renewable_Energy[j]) 
-            Information[2].append(Battery_Flow_Out[j]) 
-            Information[3].append(Battery_Flow_in[j]) 
-            Information[4].append(Curtailment[j]) 
-            Information[5].append(Energy_Demand[j]) 
-            Information[6].append(SOC[j])
-            Information[7].append(Total_Generator_Energy[j])
-            Information[8].append(Total_Fuel[j])
+            Information[1].append(Battery_Flow_Out[j]) 
+            Information[2].append(Battery_Flow_in[j]) 
+            Information[3].append(Curtailment[j]) 
+            Information[4].append(Energy_Demand[j]) 
+            Information[5].append(SOC[j])
+            Information[6].append(Total_Generator_Energy[j])
+            Information[7].append(Total_Fuel[j])
+            Information[8].append(Renewable_Energy[j])
         
         Scenarios=Scenarios.append(Information)
+        
+        for k in range(0,Number_Renewable_Source):
+            Information_2 = [[] for i in range(0,Number_Renewable_Source)]
+            for t in range(0,Number_Periods):
+                for r in range(0,Number_Renewable_Source):
+                    Information_2[r].append(Renewable_Energy_2[(foo+1,r+1,t+1)]) 
+        Scenarios=Scenarios.append(Information_2)
+        
         foo+=1
     
     index=[]  
     for j in range(1, Number_Scenarios+1):   
        index.append('Lost_Load '+str(j))
-       index.append('Renewable Energy '+str(j))
        index.append('Battery_Flow_Out '+str(j)) 
        index.append('Battery_Flow_in '+str(j))
        index.append('Curtailment '+str(j))
@@ -106,9 +128,10 @@ def Load_results1(instance):
        index.append('SOC '+str(j))
        index.append('Gen energy '+str(j))
        index.append('Fuel '+str(j))
+       index.append('Total Renewable Energy '+str(j))
+       for r in range(1,Number_Renewable_Source+1):
+           index.append('Renewable Energy: s='+str(j)+' r='+str(r))
     Scenarios.index= index
-     
-    
    
    
      # Creation of an index starting in the 'model.StartDate' value with a frequency step equal to 'model.Delta_Time'
@@ -573,16 +596,21 @@ def Integer_Scenario_Information(instance):
 
     return Scenario_Information 
 
-def Integer_Time_Series(instance,Scenarios, S):
+def Integer_Time_Series(instance,Scenarios, S): # S is the scenario that we want to plot
     
     if S == 0:
         S = instance.PlotScenario.value
     
-    Time_Series = pd.DataFrame(index=range(0,8760))
+    Number_Periods = int(instance.Periods.extract_values()[None])
+    Number_Renewable_Source = int(instance.Renewable_Source.extract_values()[None])
+    
+    Time_Series = pd.DataFrame(index=range(0,Number_Periods))
     Time_Series.index = Scenarios.index
     
     Time_Series['Lost Load'] = Scenarios['Lost_Load '+str(S)]
-    Time_Series['Renewable Energy'] = Scenarios['Renewable Energy '+str(S)]
+    Time_Series['Total Renewable Energy'] = Scenarios['Total Renewable Energy '+str(S)]
+    for r in range(1,Number_Renewable_Source+1):
+        Time_Series['Renewable Energy '+str(r)] = Scenarios['Renewable Energy: s='+str(S)+' r='+str(r)]
     Time_Series['Discharge energy from the Battery'] = Scenarios['Battery_Flow_Out '+str(S)] 
     Time_Series['Charge energy to the Battery'] = Scenarios['Battery_Flow_in '+str(S)]
     Time_Series['Curtailment'] = Scenarios['Curtailment '+str(S)]
@@ -918,13 +946,16 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
     
     
     '''
-   
+    Number_Renewable_Source = int(instance.Renewable_Source.extract_values()[None])
+
     if plot == 'No Average':
         Periods_Day = 24/instance.Delta_Time() # periods in a day
-        foo = pd.DatetimeIndex(start=Plot_Date,periods=1,freq='1h')# Asign the start date of the graphic to a dumb variable
-        for x in range(0, instance.Periods()): # Find the position form wich the plot will start in the Time_Series dataframe
+        foo = pd.DatetimeIndex(start=Plot_Date,periods=1,freq='1h')# Assign the start date of the graphic to a dumb variable
+        
+        for x in range(0, instance.Periods()): # Find the position from which the plot will start in the Time_Series dataframe
             if foo == Time_Series.index[x]: 
-               Start_Plot = x # asign the value of x to the position where the plot will start 
+               Start_Plot = x # assign the value of x to the position where the plot will start 
+        
         End_Plot = Start_Plot + PlotTime*Periods_Day # Create the end of the plot position inside the time_series
         Time_Series.index=range(1,(len(Time_Series)+1))
         Plot_Data = Time_Series[Start_Plot:int(End_Plot)] # Extract the data between the start and end position from the Time_Series
@@ -934,35 +965,43 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         Plot_Data.index=columns
     
         Plot_Data = Plot_Data.astype('float64')
-        Plot_Data = Plot_Data/1000
+        Plot_Data = Plot_Data/1000  #from W to kW
         Plot_Data['Charge energy to the Battery'] = -Plot_Data['Charge energy to the Battery']
                            
         Fill = pd.DataFrame()
+        dummy = pd.DataFrame()
         
-        r = 'Renewable Energy'
+        r_tot = 'Total Renewable Energy'
         g = 'Energy Diesel'
         c = 'Curtailment'
         c2 ='Curtailment min'
         b = 'Discharge energy from the Battery'
+        
         for t in Plot_Data.index:
-            if (Plot_Data[r][t] > 0 and  Plot_Data[g][t]>0):
-                curtailment = Plot_Data[c][t]
-                Fill.loc[t,r] = Plot_Data[r][t] 
-                Fill.loc[t,g] = Fill[r][t] + Plot_Data[g][t]-curtailment
-                Fill.loc[t,c] = Fill[r][t] + Plot_Data[g][t]
+            if (Plot_Data[r_tot][t] > 0 and  Plot_Data[g][t] > 0):
+                for r in range(1,Number_Renewable_Source+1):
+                    dummy.loc[t,r] = Plot_Data['Renewable Energy '+str(r)][t]
+                    Fill.loc[t,'Ren ' +str(r)] = pd.Series.to_frame(dummy.sum(1))[0][t]
+                Fill.loc[t,g] = Fill['Ren ' +str(r)][t] + Plot_Data[g][t]
+                Fill.loc[t,c] = Fill.loc[t,g]
                 Fill.loc[t,c2] = Fill.loc[t,g]
-            elif Plot_Data[r][t] > 0:
-                Fill.loc[t,r] = Plot_Data[r][t]-Plot_Data[c][t]
-                Fill.loc[t,g] = Fill[r][t] + Plot_Data[g][t]
-                Fill.loc[t,c] = Fill[r][t] + Plot_Data[g][t]+Plot_Data[c][t]
-                Fill.loc[t,c2] = Plot_Data[r][t]-Plot_Data[c][t]
+            elif Plot_Data[r_tot][t] > 0:
+                Fill.loc[t,'Ren 1'] = Plot_Data['Renewable Energy 1'][t]-Plot_Data[c][t]*Plot_Data['Renewable Energy 1'][t]/Plot_Data[r_tot][t]
+                for r in range(2,Number_Renewable_Source+1):
+                    dummy.loc[t,r] = Plot_Data['Renewable Energy '+str(r)][t]
+                    Fill.loc[t,'Ren ' +str(r)] = Fill.loc[t,'Ren '+str(r-1)]+dummy.loc[t,r]-Plot_Data[c][t]*Plot_Data['Renewable Energy '+str(r)][t]/Plot_Data[r_tot][t]
+                Fill.loc[t,g] = Fill['Ren ' +str(r)][t]
+                Fill.loc[t,c] = Fill.loc[t,g] + Plot_Data[c][t]
+                Fill.loc[t,c2] = Fill.loc[t,g]
             elif Plot_Data[g][t] > 0:
-                Fill.loc[t,r] = 0
-                Fill.loc[t,g]= (Fill[r][t] + Plot_Data[g][t] - Plot_Data[c][t] )
-                Fill.loc[t,c] = Fill[r][t] + Plot_Data[g][t]
-                Fill.loc[t,c2] = (Fill[r][t] + Plot_Data[g][t] - Plot_Data[c][t] )
+                for r in range(1,Number_Renewable_Source+1):
+                    Fill.loc[t,'Ren ' +str(r)] = 0                
+                Fill.loc[t,g] = Plot_Data[g][t]
+                Fill.loc[t,c] = Fill.loc[t,g]
+                Fill.loc[t,c2] = Fill.loc[t,g]
             else:
-                Fill.loc[t,r] = 0
+                for r in range(1,Number_Renewable_Source+1):
+                    Fill.loc[t,'Ren ' +str(r)] = 0
                 Fill.loc[t,g]= 0
                 if  Plot_Data[g][t] == 0:
                     Fill.loc[t,c] = Plot_Data[g][t]
@@ -974,6 +1013,7 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
                     else:
                         Fill.loc[t,c] = Plot_Data[b][t]
                         Fill.loc[t,c2] = Plot_Data['Energy_Demand'][t]
+
 #        for t in Plot_Data.index:
 #            if Plot_Data[r][t] > Plot_Data['Energy_Demand'][t]:
 #                Fill.loc[t,c2] =  Fill.loc[t,r]
@@ -981,67 +1021,93 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
 #                Fill.loc[t,c2] = Plot_Data['Energy_Demand'][t]
         
         
-        Fill[b] = ( Fill[g] + Plot_Data[b])
-        # Renewable energy
-        c_PV = 'yellow'   
-        Alpha_r = 0.4 
-        ax1 =Fill[r].plot(style='y-', linewidth=0)
-        ax1.fill_between(Plot_Data.index, 0,Fill[r].values,   
-                         alpha=Alpha_r, color = c_PV)
+        Fill[b] = Fill[g] + Plot_Data[b] #+ Plot_Data[b_ch]
+
+        # Renewable energy plot (first renewable outside for loop, if >1 renewables the others are plotted in the loop)
+        color_list = ['yellow',(255/255,141/255,14/255),'c','0.6','y']
+        Alpha_r = 0.4
+        ax0 = Fill['Ren 1'].plot(style='y-', linewidth=0)
+        ax0.fill_between(Plot_Data.index, 0, Fill['Ren 1'].values,   
+                             alpha=Alpha_r, color = color_list[0])
+        
+        if Number_Renewable_Source > 1:
+            for r in range(2,Number_Renewable_Source+1):
+                c_ren = color_list[r-1]   
+                ax1 = Fill['Ren ' +str(r)].plot(style='y-', linewidth=0)
+                ax1.fill_between(Plot_Data.index, Fill['Ren ' +str(r-1)], Fill['Ren ' +str(r)].values,   
+                                 alpha=Alpha_r, color = c_ren)
+
         # Genset Plot
         c_d = 'm'
         Alpha_g = 0.3 
         hatch_g = '\\'
         ax2 = Fill[g].plot(style='c', linewidth=0)
-        ax2.fill_between(Plot_Data.index, Fill[r].values, Fill[g].values,
-                         alpha=Alpha_g, color=c_d, edgecolor=c_d , hatch =hatch_g)
+        ax2.fill_between(Plot_Data.index, Fill['Ren ' +str(r)].values, Fill[g].values,
+                         alpha=Alpha_g, color=c_d, edgecolor=c_d, hatch =hatch_g)
+
         # Battery discharge
         alpha_bat = 0.3
         hatch_b ='x'
-        C_Bat = 'green'
+        c_bat = 'g'
         ax3 = Fill[b].plot(style='b', linewidth=0)
         ax3.fill_between(Plot_Data.index, Fill[g].values, Fill[b].values,   
-                         alpha=alpha_bat, color =C_Bat,edgecolor=C_Bat, hatch =hatch_b)
+                         alpha=alpha_bat, color=c_bat, edgecolor=c_bat, hatch =hatch_b)
+
         # Demand
         Plot_Data['Energy_Demand'].plot(style='k', linewidth=2)
+
         # Battery Charge        
         ax5= Plot_Data['Charge energy to the Battery'].plot(style='m', linewidth=0.5) # Plot the line of the energy flowing into the battery
         ax5.fill_between(Plot_Data.index, 0, 
                          Plot_Data['Charge energy to the Battery'].values
-                         , alpha=alpha_bat, color=C_Bat,edgecolor= C_Bat, hatch ='x') 
+                         , alpha=alpha_bat, color=c_bat,edgecolor= c_bat, hatch ='x') 
+
         # State of charge of battery
         ax6= Plot_Data['State_Of_Charge_Battery'].plot(style='k--', 
                 secondary_y=True, linewidth=2, alpha=0.7 ) 
+
         # Curtailment
         alpha_cu = 0.3
         hatch_cu = '+'
-        C_Cur = 'blue'
+        C_Cur = 'b'
         ax7 = Fill[c].plot(style='b-', linewidth=0)
         ax7.fill_between(Plot_Data.index, Fill[c2].values , Fill[c].values, 
                          alpha=alpha_cu, color=C_Cur,edgecolor= C_Cur, 
                          hatch =hatch_cu,
                          where=Fill[c].values>Plot_Data['Energy_Demand']) 
-           # Define name  and units of the axis
-        ax1.set_ylabel('Power (kW)')
-        ax1.set_xlabel('Time')
+        
+        # Define name  and units of the axis
+        ax0.set_ylabel('Power (kW)')
+        ax0.set_xlabel('Time')
         ax6.set_ylabel('Battery State of charge (kWh)')
                 
         # Define the legends of the plot
-        From_PV = mpatches.Patch(color=c_PV,alpha=Alpha_r, label='From VRES')
+        From_Renewables = []
+        for r in range(1,Number_Renewable_Source+1):
+            c_ren = color_list[r-1]
+            From_Renewables.append(mpatches.Patch(color=c_ren,alpha=Alpha_r, label='From Renewable '+str(r)))
+        
         From_Generator = mpatches.Patch(color=c_d,alpha=Alpha_g,
                                         label='From Generator',hatch =hatch_g)
-        Battery = mpatches.Patch(color=C_Bat ,alpha=alpha_bat, 
+        Battery = mpatches.Patch(color=c_bat ,alpha=alpha_bat, 
                                  label='Battery Energy Flow',hatch =hatch_b)
         Curtailment = mpatches.Patch(color=C_Cur ,alpha=alpha_cu, 
                                  label='Curtailment',hatch =hatch_cu)
 
-        Energy_Demand = mlines.Line2D([], [], color='black',label='Energy_Demand')
+        Energy_Demand = mlines.Line2D([], [], color='black',label='Energy Demand')
         State_Of_Charge_Battery = mlines.Line2D([], [], color='black',
-                                                label='State_Of_Charge_Battery',
+                                                label='State Of Charge Battery',
                                                 linestyle='--',alpha=0.7)
-        plt.legend(handles=[From_Generator, From_PV, Battery, Curtailment,
+        
+        plt.legend(handles=[From_Generator, Battery, Curtailment,
                             Energy_Demand, State_Of_Charge_Battery],
                             bbox_to_anchor=(1.75, 1))
+        
+        from matplotlib.legend import Legend
+        leg = Legend(ax0, From_Renewables[:], ['From Renewable '+str(i+1) for i in range(Number_Renewable_Source)],
+             bbox_to_anchor=(1.67, 0.6), frameon=True)
+        ax0.add_artist(leg);
+        
         plt.savefig('Results/Energy_Dispatch.png', bbox_inches='tight')    
         plt.show()    
         
@@ -1049,56 +1115,84 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         start = Time_Series.index[0]
         end = Time_Series.index[instance.Periods()-1]
         Time_Series = Time_Series.astype('float64')
-        Plot_Data_2 = Time_Series[start:end].groupby([Time_Series[start:end].index.hour]).mean()
+        Plot_Data_2 = Time_Series[start:end].groupby([Time_Series[start:end].index.hour]).mean() # Creates a "typical" day by averaging over the time steps
         Plot_Data_2 = Plot_Data_2/1000
         Plot_Data_2['Charge energy to the Battery'] = -Plot_Data_2['Charge energy to the Battery']
         Plot_Data = Plot_Data_2
-        Vec = Plot_Data['Renewable Energy'] + Plot_Data['Energy Diesel']
-        Vec2 = (Plot_Data['Renewable Energy'] + Plot_Data['Energy Diesel'] + 
-                Plot_Data['Discharge energy from the Battery'])
         
+        Vec = pd.DataFrame()
+        Vec.loc[:,'Ren 1'] = Plot_Data['Renewable Energy 1'] + Plot_Data['Energy Diesel']
+
+        if Number_Renewable_Source > 1:
+            dummy = Vec  
+            for r in range(2,Number_Renewable_Source+1):
+                dummy.loc[:,'Ren '+str(r)] = Plot_Data['Renewable Energy '+str(r)]
+                Vec.loc[:,'Ren '+str(r)] = pd.Series.to_frame(dummy.sum(1))[0]                 
         
-        ax1= Vec.plot(style='b-', linewidth=0.5) # Plot the line of the diesel energy plus the PV energy
-        ax1.fill_between(Plot_Data.index, Plot_Data['Energy Diesel'].values, Vec.values,   
-                         alpha=0.3, color = 'b')
-        ax2= Plot_Data['Energy Diesel'].plot(style='r', linewidth=0.5)
+        Vec.loc[:,'Tot'] = Plot_Data['Total Renewable Energy'] + Plot_Data['Energy Diesel']
+        
+        # Renewable energy plot (first renewable outside for loop, if >1 renewables the others are plotted in the loop)
+        color_list = ['yellow',(255/255,141/255,14/255),'c','0.6','y']
+        Alpha_r = 0.4
+        ax0 = Vec['Ren 1'].plot(style='y-', linewidth=0)
+        ax0.fill_between(Plot_Data.index, Plot_Data['Energy Diesel'].values, Vec['Ren 1'].values,   
+                             alpha=Alpha_r, color = color_list[0])
+
+        if Number_Renewable_Source > 1:
+            for r in range(2,Number_Renewable_Source+1):
+                c_ren = color_list[r-1]   
+                ax1 = Vec['Ren ' +str(r)].plot(style='y-', linewidth=0)
+                ax1.fill_between(Plot_Data.index, Vec['Ren ' +str(r-1)], Vec['Ren ' +str(r)].values,   
+                                 alpha=Alpha_r, color = c_ren)
+        
+        ax2= Plot_Data['Energy Diesel'].plot(style='m', linewidth=0.5)
         ax2.fill_between(Plot_Data.index, 0, Plot_Data['Energy Diesel'].values, 
-                         alpha=0.2, color='r') # Fill the area of the energy produce by the diesel generator
+                         alpha=0.2, color='m') # Fill the area of the energy produced by the diesel generator
+        
         ax3 = Plot_Data['Energy_Demand'].plot(style='k', linewidth=2)
-        ax3.fill_between(Plot_Data.index, Vec.values , 
+        ax3.fill_between(Plot_Data.index, Vec['Tot'].values , 
                          Plot_Data['Energy_Demand'].values,
                          alpha=0.3, color='g', 
-                         where= Plot_Data['Energy_Demand']>= Vec,interpolate=True)
-        ax5= Plot_Data['Charge energy to the Battery'].plot(style='m', linewidth=0.5) # Plot the line of the energy flowing into the battery
+                         where= Plot_Data['Energy_Demand']>= Vec['Tot'],interpolate=True)
+        
+        ax5= Plot_Data['Charge energy to the Battery'].plot(style='g', linewidth=0.5) # Plot the line of the energy flowing into the battery
         ax5.fill_between(Plot_Data.index, 0, 
                          Plot_Data['Charge energy to the Battery'].values
-                         , alpha=0.3, color='m') # Fill the area of the energy flowing into the battery
+                         , alpha=0.3, color='g') # Fill the area of the energy flowing into the battery
+
         ax6= Plot_Data['State_Of_Charge_Battery'].plot(style='k--', secondary_y=True, linewidth=2, alpha=0.7 ) # Plot the line of the State of charge of the battery
         
         # Define name  and units of the axis
-    
-
-
-
-
-        # Define name  and units of the axis
-        ax1.set_ylabel('Power (kW)')
-        ax1.set_xlabel('hours')
+        ax0.set_ylabel('Power (kW)')
+        ax0.set_xlabel('hours')
         ax6.set_ylabel('Battery State of charge (kWh)')
                 
         # Define the legends of the plot
-        From_PV = mpatches.Patch(color='blue',alpha=0.3, label='From VRES')
-        From_Generator = mpatches.Patch(color='red',alpha=0.3, label='From Generator')
-        From_Battery = mpatches.Patch(color='green',alpha=0.5, label='From Battery')
-        To_Battery = mpatches.Patch(color='magenta',alpha=0.5, label='To Battery')
-        Lost_Load = mpatches.Patch(color='yellow', alpha= 0.3, label= 'Lost Load')
+        From_Generator = mpatches.Patch(color='m',alpha=0.3, label='From Generator')
+
+        Battery_Flow = mpatches.Patch(color='g',alpha=0.5, label='Battery Energy Flow')
+        
+        Lost_Load = mpatches.Patch(color='grey', alpha= 0.3, label= 'Lost Load')
+        
         Energy_Demand = mlines.Line2D([], [], color='black',label='Energy_Demand')
+        
         State_Of_Charge_Battery = mlines.Line2D([], [], color='black',
                                                 label='State_Of_Charge_Battery',
                                                 linestyle='--',alpha=0.7)
-        plt.legend(handles=[From_Generator, From_PV, From_Battery, 
-                            To_Battery, Lost_Load, Energy_Demand, 
+
+        plt.legend(handles=[From_Generator, Battery_Flow, Lost_Load, Energy_Demand, 
                             State_Of_Charge_Battery], bbox_to_anchor=(1.83, 1))
+
+        From_Renewables = []
+        for r in range(1,Number_Renewable_Source+1):
+            c_ren = color_list[r-1]
+            From_Renewables.append(mpatches.Patch(color=c_ren,alpha=Alpha_r, label='From Renewable '+str(r)))
+
+        from matplotlib.legend import Legend
+        leg = Legend(ax0, From_Renewables[:], ['From Renewable '+str(i+1) for i in range(Number_Renewable_Source)],
+             bbox_to_anchor=(1.73, 0.6), frameon=True)
+        ax0.add_artist(leg);
+
         plt.savefig('Results/Energy_Dispatch.png', bbox_inches='tight')    
         plt.show()    
     
@@ -1107,7 +1201,7 @@ def Energy_Mix(instance,Scenarios,Scenario_Probability):
     Number_Scenarios = int(instance.Scenarios.extract_values()[None])
     Energy_Totals = Scenarios.sum()
     
-    PV_Energy = 0 
+    Renewable_Energy = 0 
     Generator_Energy = 0
     Curtailment = 0
     Battery_Out = 0
@@ -1116,34 +1210,34 @@ def Energy_Mix(instance,Scenarios,Scenario_Probability):
     
     for j in range(1, Number_Scenarios+1):   
        
-        index_1 = 'Renewable Energy ' + str(j)    
+        index_1 = 'Total Renewable Energy ' + str(j)    
         index_2 = 'Gen energy ' + str(j)
         index_3 = 'Scenario ' + str(j)
         index_4 = 'Curtailment ' + str(j)
         index_5 = 'Battery_Flow_Out ' + str(j)
         index_6 = 'Energy_Demand ' + str(j)
         
-        PV = Energy_Totals[index_1]
+        Ren = Energy_Totals[index_1]
         Ge = Energy_Totals[index_2]
         We = Scenario_Probability[index_3]
         Cu = Energy_Totals[index_4]
         B_O = Energy_Totals[index_5]        
         De = Energy_Totals[index_6] 
         
-        PV_Energy += PV*We
+        Renewable_Energy += Ren*We
         Generator_Energy += Ge*We  
         Curtailment += Cu*We
         Battery_Out += B_O*We
         Demand += De*We
         
         
-        Energy_Mix.loc['PV Penetration',index_3] = PV/(PV+Ge)
-        Energy_Mix.loc['Curtailment Percentage',index_3] = Cu/(PV+Ge)
+        Energy_Mix.loc['Renewable Penetration',index_3] = Ren/(Ren+Ge)
+        Energy_Mix.loc['Curtailment Percentage',index_3] = Cu/(Ren+Ge)
         Energy_Mix.loc['Battery Usage',index_3] = B_O/De
         
-    Renewable_Real_Penetration = PV_Energy/(PV_Energy+Generator_Energy)
+    Renewable_Real_Penetration = Renewable_Energy/(Renewable_Energy+Generator_Energy)
     Renewable_Real_Penetration = round(Renewable_Real_Penetration,4)
-    Curtailment_Percentage = Curtailment/(PV_Energy+Generator_Energy)
+    Curtailment_Percentage = Curtailment/(Renewable_Energy+Generator_Energy)
     Curtailment_Percentage = round(Curtailment_Percentage,4)
     Battery_Usage = Battery_Out/Demand
     Battery_Usage = round(Battery_Usage,4)
@@ -1152,7 +1246,7 @@ def Energy_Mix(instance,Scenarios,Scenario_Probability):
     print(str(Battery_Usage*100) + ' % Battery usage')
     
     return Energy_Mix    
-    
+ 
     
 def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE):
     
@@ -1194,7 +1288,7 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE):
 
 
     LCOE = round(LCOE, 3)    
-    print(str(LCOE) + ' $/kWh')  
+    print('LCOE is ' + str(LCOE) + ' $/kW')  
     
     
     
