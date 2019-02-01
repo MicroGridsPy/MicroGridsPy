@@ -8,7 +8,7 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
     :param model: Pyomo model as defined in the Model_creation library.
     '''
             # This element of the objective function represent the part of the total investment that is Porcentage_Funded with the the resources of the project owners.  
-    return model.Scenario_Lost_Load_Cost + model.Total_Cost_Generator
+    return model.Scenario_Lost_Load_Cost + model.Total_Cost_Generator + model.Battery_Yearly_cost
 
 ############################################# Diesel generator constraints ###########################################
 
@@ -118,6 +118,25 @@ def Max_Bat_out(model, t): #minimun flow of energy for the discharge fase
     :param model: Pyomo model as defined in the Model_creation library.
     '''
     return model.Energy_Battery_Flow_Out[t] <= model.Maximun_Discharge_Power*model.Delta_Time
+
+
+def Battery_Reposition_Cost(model):
+    '''
+    This funtion calculate the reposition of the battery after a stated time of use. 
+    
+    :param model: Pyomo model as defined in the Model_creation library.
+    
+    '''
+    foo=[]
+    for t in range(1,model.Periods+1):
+            foo.append((t))    
+            
+    Battery_cost_in = sum(model.Energy_Battery_Flow_In[t]*model.Unitary_Battery_Reposition_Cost for t in range(1,model.Periods+1))
+    Battery_cost_out = sum(model.Energy_Battery_Flow_Out[t]*model.Unitary_Battery_Reposition_Cost for t in range(1,model.Periods+1))
+     
+    return  model.Battery_Yearly_cost == Battery_cost_out + Battery_cost_in 
+  
+
 
 ############################################# Energy Constraints #####################################################
 

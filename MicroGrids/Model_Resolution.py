@@ -201,12 +201,12 @@ def Model_Resolution_Dispatch(model,datapath="Example/data_Dispatch.dat"):
     
     :return: The solution inside an object call instance.
     '''
-    from Constraints_Dispatch import  Net_Present_Cost,  State_of_Charge, Maximun_Charge, \
-    Minimun_Charge, Max_Bat_in, Max_Bat_out, \
+    from Constraints_Dispatch import  Net_Present_Cost,  State_of_Charge,\
+    Maximun_Charge, Minimun_Charge, Max_Bat_in, Max_Bat_out, Battery_Reposition_Cost,\
     Energy_balance, Maximun_Lost_Load, Generator_Cost_1_Integer,  \
-    Total_Cost_Generator_Integer, \
-    Scenario_Lost_Load_Cost, Max_Power_Battery_Charge, Max_Power_Battery_Discharge, \
-     Generator_Bounds_Min_Integer, Generator_Bounds_Max_Integer,Energy_Genarator_Energy_Max_Integer
+    Total_Cost_Generator_Integer, Scenario_Lost_Load_Cost, Max_Power_Battery_Charge, \
+    Max_Power_Battery_Discharge, Generator_Bounds_Min_Integer,\
+    Generator_Bounds_Max_Integer,Energy_Genarator_Energy_Max_Integer
 
     # OBJETIVE FUNTION:
     model.ObjectiveFuntion = Objective(rule=Net_Present_Cost, sense=minimize)  
@@ -225,7 +225,7 @@ def Model_Resolution_Dispatch(model,datapath="Example/data_Dispatch.dat"):
 
     model.MaxBatIn = Constraint(model.periods, rule=Max_Bat_in) # Minimun flow of energy for the charge fase
     model.Maxbatout = Constraint(model.periods, rule=Max_Bat_out) #minimun flow of energy for the discharge fase
-   
+    model.BatteryRepositionCost = Constraint(rule=Battery_Reposition_Cost)
     #Diesel Generator constraints
     model.GeneratorBoundsMin = Constraint(model.periods, rule=Generator_Bounds_Min_Integer) 
     model.GeneratorBoundsMax = Constraint(model.periods, rule=Generator_Bounds_Max_Integer)

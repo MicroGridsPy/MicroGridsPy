@@ -1213,25 +1213,27 @@ def Load_results2_Dispatch(instance):
     '''
     # Load the variables that doesnot depend of the periods in python dyctionarys
     
-    NPC = instance.ObjectiveFuntion.expr()
-    Mge_1 = instance.Marginal_Cost_Generator.value
-    Start_Cost = instance.Start_Cost_Generator.value
-    Min_gen = instance.Generator_Min_Out_Put.value
-    Bat_ef_out = instance.Discharge_Battery_Efficiency.value
-    Bat_ef_in = instance.Charge_Battery_Efficiency.value
-    Bat_cap = instance.Battery_Nominal_Capacity.value
-    Bat_Soc_1 = instance.Battery_Initial_SOC.value
-    VOLL = instance.Value_Of_Lost_Load.value
-    data3 = [NPC,Mge_1, Start_Cost, Min_gen, Bat_ef_out, Bat_ef_in,Bat_cap,
-             Bat_Soc_1, VOLL] # Loading the values to a numpy array  
-    Size_variables = pd.DataFrame(data3,index=['Operation Cost',
-                                               'Marginal cost Partial load', 
-                                               'Start Cost', 'Min gen output',
-                                               'Battery efficiency discharge',
-                                               'Battery efficiency charge',
-                                               'Battery nominal capacity',
-                                               'Battery Initial SOC',
-                                               'Value of lost load'])
+    Generator_Efficiency = instance.Generator_Efficiency.extract_values()
+    Low_Heating_Value = instance.Low_Heating_Value.extract_values()
+    Fuel_Cost = instance.Diesel_Cost.extract_values()
+    Generator_Nominal_Capacity = instance.Generator_Nominal_Capacity._values()
+    Maintenance_Operation_Cost_Generator = instance.Maintenance_Operation_Cost_Generator.extract_values()    
+    
+    
+    Generator_Data = pd.DataFrame()
+    
+    
+    Name = 'Generator 1'
+    Generator_Data.loc['Generator Efficiency',Name] = Generator_Efficiency[g]
+    Generator_Data.loc['Low Heating Value',Name] = Low_Heating_Value[g]
+    Generator_Data.loc['Fuel Cost',Name] = Fuel_Cost[g]
+    Generator_Data.loc['Generator Nominal Capacity',Name] = Generator_Nominal_Capacity[g]
+    Generator_Data.loc['OyM Generator', Name] = Maintenance_Operation_Cost_Generator[g]
+    Generator_Data.loc['OyM Cost', Name] = Generator_Data.loc['Invesment Generator', Name]*Generator_Data.loc['OyM Generator', Name]
+    Generator_Data.loc['Marginal Cost', Name] = Generator_Data.loc['Fuel Cost',Name]/(Generator_Data.loc['Generator Efficiency',Name]*Generator_Data.loc['Low Heating Value',Name])
+    Generator_Data.to_excel('Results/Generator_Data.xls')      
+    
+    
     Size_variables.to_excel('Results/Size.xls') # Creating an excel file with the values of the variables that does not depend of the periods
     
     
