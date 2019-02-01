@@ -7,7 +7,7 @@ import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 import matplotlib.ticker as mtick
 import matplotlib.pylab as pylab
-
+import matplotlib as mpl
 
 
 def Load_results1(instance):
@@ -1319,8 +1319,8 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
 #                Fill.loc[t,c2] =  Fill.loc[t,r]
 #            else:
 #                Fill.loc[t,c2] = Plot_Data['Energy_Demand'][t]
-        
-        
+        size = [20,10]  
+        plt.figure(figsize=size)
         Fill[b] = ( Fill[g] + Plot_Data[b])
         # Renewable energy
         c_PV = 'yellow'   
@@ -1362,10 +1362,15 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
                          hatch =hatch_cu,
                          where=Fill[c].values>Plot_Data['Energy_Demand']) 
            # Define name  and units of the axis
-        ax1.set_ylabel('Power (kW)')
-        ax1.set_xlabel('Time')
-        ax6.set_ylabel('Battery State of charge (kWh)')
-                
+        ax1.set_ylabel('Power (kW)',size=30)
+        ax1.set_xlabel('Time',size=30)
+        ax6.set_ylabel('Battery State of charge (kWh)',size=30)
+        
+        tick_size = 15    
+        mpl.rcParams['xtick.labelsize'] = tick_size    
+        ax1.tick_params(axis='x', which='major', labelsize = tick_size,pad=10 ) 
+        ax1.tick_params(axis='y', which='major', labelsize = tick_size )
+        ax6.tick_params(axis='y', which='major', labelsize = tick_size )       
         # Define the legends of the plot
         From_PV = mpatches.Patch(color=c_PV,alpha=Alpha_r, label='From PV')
         From_Generator = mpatches.Patch(color=c_d,alpha=Alpha_g,
@@ -1375,13 +1380,14 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         Curtailment = mpatches.Patch(color=C_Cur ,alpha=alpha_cu, 
                                  label='Curtailment',hatch =hatch_cu)
 
-        Energy_Demand = mlines.Line2D([], [], color='black',label='Energy_Demand')
+        Energy_Demand = mlines.Line2D([], [], color='black',label='Energy Demand')
         State_Of_Charge_Battery = mlines.Line2D([], [], color='black',
-                                                label='State_Of_Charge_Battery',
+                                                label='State Of Charge Battery',
                                                 linestyle='--',alpha=0.7)
         plt.legend(handles=[From_Generator, From_PV, Battery, Curtailment,
                             Energy_Demand, State_Of_Charge_Battery],
-                            bbox_to_anchor=(1.75, 1))
+                            bbox_to_anchor=(1.025, -0.15),fontsize = 20,
+                            frameon=False,  ncol=4)
         plt.savefig('Results/Energy_Dispatch.png', bbox_inches='tight')    
         plt.show()    
         
@@ -1432,9 +1438,9 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         From_Battery = mpatches.Patch(color='green',alpha=0.5, label='From Battery')
         To_Battery = mpatches.Patch(color='magenta',alpha=0.5, label='To Battery')
         Lost_Load = mpatches.Patch(color='yellow', alpha= 0.3, label= 'Lost Load')
-        Energy_Demand = mlines.Line2D([], [], color='black',label='Energy_Demand')
+        Energy_Demand = mlines.Line2D([], [], color='black',label='Energy Demand')
         State_Of_Charge_Battery = mlines.Line2D([], [], color='black',
-                                                label='State_Of_Charge_Battery',
+                                                label='State Of Charge Battery',
                                                 linestyle='--',alpha=0.7)
         plt.legend(handles=[From_Generator, From_PV, From_Battery, 
                             To_Battery, Lost_Load, Energy_Demand, 
@@ -1494,49 +1500,90 @@ def Energy_Mix(instance,Scenarios,Scenario_Probability):
     return Energy_Mix    
     
     
-def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE):
-    
-    Number_Renewable_Source = int(instance.Renewable_Source.extract_values()[None])
-    Number_Generator = int(instance.Generator_Type.extract_values()[None])
-    
-    for i in range(1, Number_Renewable_Source + 1):
-        index_1 = 'Source ' + str(i)
-        index_2 = 'Total Nominal Capacity'
-    
-        Renewable_Rate = float(Data_Renewable[index_1][index_2]/1000)
-        Renewable_Rate = round(Renewable_Rate, 1)
-        print('Renewable ' + str(i) + ' nominal capacity is ' 
-              + str(Renewable_Rate) +' kW')    
+def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE,formulation):
+    if formulation == 'LP':
+        Number_Renewable_Source = int(instance.Renewable_Source.extract_values()[None])
+        Number_Generator = int(instance.Generator_Type.extract_values()[None])
         
-    for i in range(1, Number_Generator + 1):
-        index_1 = 'Generator ' + str(i)
-        index_2 = 'Generator Nominal Capacity'
-    
-        Generator_Rate = float(Generator_Data[index_1][index_2]/1000)
-        Generator_Rate = round(Generator_Rate, 1)
-        print('Generator ' + str(i) + ' nominal capacity is ' 
-              + str(Generator_Rate) +' kW')    
+        for i in range(1, Number_Renewable_Source + 1):
+            index_1 = 'Source ' + str(i)
+            index_2 = 'Total Nominal Capacity'
         
+            Renewable_Rate = float(Data_Renewable[index_1][index_2]/1000)
+            Renewable_Rate = round(Renewable_Rate, 1)
+            print('Renewable ' + str(i) + ' nominal capacity is ' 
+                  + str(Renewable_Rate) +' kW')    
+            
+        for i in range(1, Number_Generator + 1):
+            index_1 = 'Generator ' + str(i)
+            index_2 = 'Generator Nominal Capacity'
+        
+            Generator_Rate = float(Generator_Data[index_1][index_2]/1000)
+            Generator_Rate = round(Generator_Rate, 1)
+            print('Generator ' + str(i) + ' nominal capacity is ' 
+                  + str(Generator_Rate) +' kW')    
+            
+        
+        index_2 = 'Battery Nominal Capacity'    
+        Battery_Rate = Results[0][index_2]/1000
+        Battery_Rate = round(Battery_Rate, 1)
+        
+        print('Battery nominal capacity is ' 
+                  + str(Battery_Rate) +' kWh') 
+        
+        index_2 = 'NPC'    
+        NPC = Results[0][index_2]/1000
+        NPC = round(NPC, 0)
+        
+        print('NPC is ' + str(NPC) +'Thousand USD') 
     
-    index_2 = 'Battery Nominal Capacity'    
-    Battery_Rate = Results[0][index_2]/1000
-    Battery_Rate = round(Battery_Rate, 1)
     
-    print('Battery nominal capacity is ' 
-              + str(Battery_Rate) +' kWh') 
     
-    index_2 = 'NPC'    
-    NPC = Results[0][index_2]/1000
-    NPC = round(NPC, 0)
-    
-    print('NPC is ' + str(NPC) +'Thousand USD') 
+        LCOE = round(LCOE, 3)    
+        print(str(LCOE) + ' $/kWh')  
 
-
-
-    LCOE = round(LCOE, 3)    
-    print(str(LCOE) + ' $/kWh')  
+    else:
+        Number_Renewable_Source = int(instance.Renewable_Source.extract_values()[None])
+        Number_Generator = int(instance.Generator_Type.extract_values()[None])
+        
+        for i in range(1, Number_Renewable_Source + 1):
+            index_1 = 'Source ' + str(i)
+            index_2 = 'Nominal Capacity'
+            index_3 = 'Units'
+            Total_Capacity = (Data_Renewable[index_1][index_2]
+                              *Data_Renewable[index_1][index_3])
+            Renewable_Rate = float(Total_Capacity/1000)
+            Renewable_Rate = round(Renewable_Rate, 1)
+            print('Renewable ' + str(i) + ' nominal capacity is ' 
+                  + str(Renewable_Rate) +' kW')    
+            
+        for i in range(1, Number_Generator + 1):
+                index_1 = 'Generator ' + str(i)
+                index_2 = 'Generator Nominal Capacity'
+        
+                Generator_Rate = float(Generator_Data[index_1][index_2]/1000)
+                Generator_Rate = round(Generator_Rate, 1)
+                print('Generator ' + str(i) + ' nominal capacity is ' 
+                  + str(Generator_Rate) +' kW')    
+            
+        
+        index_2 = 'Size of the Battery'    
+        Battery_Rate = Results[0][index_2]/1000
+        Battery_Rate = round(Battery_Rate, 1)
+        
+        print('Battery nominal capacity is ' 
+                  + str(Battery_Rate) +' kWh') 
+        
+        index_2 = 'Net Present Cost'    
+        NPC = Results[0][index_2]/1000
+        NPC = round(NPC, 0)
+        
+        print('NPC is ' + str(NPC) +'Thousand USD') 
     
     
+    
+        LCOE = round(LCOE, 3)    
+        print(str(LCOE) + ' $/kWh')  
     
     
     

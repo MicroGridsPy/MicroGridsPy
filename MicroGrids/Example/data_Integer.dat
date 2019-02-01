@@ -2,7 +2,7 @@ param: Periods := 8760;
 
 param: Years := 20;
 
-param: StartDate := '01/01/2014 01:00:00';
+param: StartDate := '01/01/2017 01:00:00';
 
 param: Delta_Time := 1;
 
@@ -92,7 +92,7 @@ param: Cost_Increase :=
 
 param: Generator_Nominal_Capacity := 
 
-1   30000;
+1   15000;
 
 param: Maintenance_Operation_Cost_Generator := 
 

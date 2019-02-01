@@ -10,11 +10,9 @@ Integer_Time_Series, integer_Renewable_Energy, Integer_Data_Renewable, Integer_G
 Integer_Generator_Data, Integer_Results, Economic_Analysis
 from Model_Creation import Model_Creation, Model_Creation_binary, Model_Creation_Integer, Model_Creation_Dispatch
 from Model_Resolution import Model_Resolution, Model_Resolution_binary, Model_Resolution_Integer, Model_Resolution_Dispatch
-from Economical_Analysis import Levelized_Cost_Of_Energy
-
 
 # Type of problem formulation:
-formulation = 'Integer'
+formulation = 'LP'
 
 # Renewable energy penetrarion
 
@@ -73,8 +71,8 @@ elif formulation =='Dispatch':
      
 # Energy Plot    
 S = 3 # Plot scenario
-Plot_Date = '25/12/2017 00:00:00' # Day-Month-Year
-PlotTime = 3# Days of the plot
+Plot_Date = '25/12/2016 00:00:00' # Day-Month-Year
+PlotTime = 5# Days of the plot
 Time_Series = Integer_Time_Series(instance,Scenarios, S) 
    
 plot = 'No Average' # 'No Average' or 'Average'
@@ -82,7 +80,8 @@ Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime)
 
 
 # Data Analisys
-Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE)  
+Print_Results(instance, Generator_Data, Data_Renewable, Results, 
+              LCOE,formulation)  
 Energy_Mix_S = Energy_Mix(instance,Scenarios,Scenario_Probability)
 
 
