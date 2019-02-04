@@ -1211,34 +1211,97 @@ def Load_results2_Dispatch(instance):
     
     :return: Data frame called Size_variables with the variables values. 
     '''
+    Data = []
     # Load the variables that doesnot depend of the periods in python dyctionarys
     
     Generator_Efficiency = instance.Generator_Efficiency.extract_values()
+    Generator_Min_Out_Put = instance.Generator_Min_Out_Put.extract_values()
     Low_Heating_Value = instance.Low_Heating_Value.extract_values()
     Fuel_Cost = instance.Diesel_Cost.extract_values()
-    Generator_Nominal_Capacity = instance.Generator_Nominal_Capacity._values()
-    Maintenance_Operation_Cost_Generator = instance.Maintenance_Operation_Cost_Generator.extract_values()    
-    
+    Marginal_Cost_Generator_1 = instance.Marginal_Cost_Generator_1.extract_values()
+    Cost_Increase = instance.Cost_Increase.extract_values()
+    Generator_Nominal_Capacity = instance.Generator_Nominal_Capacity.extract_values()
+    Start_Cost_Generator = instance.Start_Cost_Generator.extract_values()
+    Marginal_Cost_Generator = instance.Marginal_Cost_Generator.extract_values()
     
     Generator_Data = pd.DataFrame()
-    
-    
-    Name = 'Generator 1'
+    g = None
+    Name = 'Generator ' + str(1)
+    Generator_Data.loc['Generator Min Out Put',Name] = Generator_Min_Out_Put[g]
     Generator_Data.loc['Generator Efficiency',Name] = Generator_Efficiency[g]
     Generator_Data.loc['Low Heating Value',Name] = Low_Heating_Value[g]
     Generator_Data.loc['Fuel Cost',Name] = Fuel_Cost[g]
+    Generator_Data.loc['Marginal cost Full load',Name] = Marginal_Cost_Generator_1[g]
+    Generator_Data.loc['Marginal cost Partial load',Name] = Marginal_Cost_Generator[g]
+    Generator_Data.loc['Cost Increase',Name] = Cost_Increase[g]
     Generator_Data.loc['Generator Nominal Capacity',Name] = Generator_Nominal_Capacity[g]
-    Generator_Data.loc['OyM Generator', Name] = Maintenance_Operation_Cost_Generator[g]
-    Generator_Data.loc['OyM Cost', Name] = Generator_Data.loc['Invesment Generator', Name]*Generator_Data.loc['OyM Generator', Name]
-    Generator_Data.loc['Marginal Cost', Name] = Generator_Data.loc['Fuel Cost',Name]/(Generator_Data.loc['Generator Efficiency',Name]*Generator_Data.loc['Low Heating Value',Name])
-    Generator_Data.to_excel('Results/Generator_Data.xls')      
+    Generator_Data.loc['Start Cost Generator',Name] = Start_Cost_Generator[g]
+    Data.append(Generator_Data) 
+    Generator_Data.to_excel('Results/Generator_Data.xls')  
     
+    Size_Bat = instance.Battery_Nominal_Capacity.extract_values()[None]
+    O_Cost = instance.ObjectiveFuntion.expr() 
+    VOLL= instance.Value_Of_Lost_Load.value
+    Bat_ef_out = instance.Discharge_Battery_Efficiency.value
+    Bat_ef_in = instance.Charge_Battery_Efficiency.value
+    DoD = instance.Deep_of_Discharge.value
+    Inv_Cost_Bat = instance.Battery_Invesment_Cost.value
+    Inv_Cost_elec = instance.Battery_Electronic_Invesmente_Cost.value
+    Bat_Cycles = instance.Battery_Cycles.value
+    Bat_U_C = Inv_Cost_Bat - Inv_Cost_elec
+    Battery_Reposition_Cost= Bat_U_C/(Bat_Cycles*2*(1-DoD))
+    Number_Periods = int(instance.Periods.extract_values()[None])
     
-    Size_variables.to_excel('Results/Size.xls') # Creating an excel file with the values of the variables that does not depend of the periods
+    data3 = [Size_Bat, O_Cost, VOLL, Bat_ef_out, Bat_ef_in, DoD, 
+             Inv_Cost_Bat, Inv_Cost_elec, Bat_Cycles,
+            Battery_Reposition_Cost, Number_Periods] # Loading the values to a numpy array  
+    Results = pd.DataFrame(data3,index = ['Size of the Battery',
+                                          'Operation Cost', 'VOLL',
+                                          'Battery efficiency discharge',
+                                          'Battery efficiency charge',
+                                          'Deep of discharge',
+                                          'Battery unitary invesment cost',
+                                          'Battery electronic unitary cost',
+                                          'Battery max cycles',
+                                          'Battery Reposition Cost',
+                                          'Number of periods'])
+    Results.to_excel('Results/Size.xls') # Creating an excel file with the values of the variables that does not depend of the periods
+    Data.append(Results) 
+    return Data
+
+def Dispatch_Economic_Analysis(Results,Time_Series):
+    Data = []
+    Generator_Data = Results[0]
+    Result = Results[1]
+    Time_Series_Economic = pd.DataFrame()
+    for t in Time_Series.index:
+        name_1 = "Fuel"
+        name_2 = "Discharge energy from the Battery"
+        name_3 = "Charge energy to the Battery"
+        name_4 = 'Battery Reposition Cost'
+        name_5 = 'Battery operation Cost'
+        name_6 = 'VOLL'
+        Power_Bat = Time_Series[name_2][t] + Time_Series[name_3][t]
+        Time_Series_Economic.loc[t,name_5] = Power_Bat*Result[0][name_4]
+        LL = Time_Series['Lost Load'][t]
+        Time_Series_Economic.loc[t,name_6] = LL*Result[0][name_6]
+        
+        if Time_Series['Energy Diesel'][t] > 0.1:
+            a = Generator_Data['Generator 1']['Start Cost Generator']        
+            b = Generator_Data['Generator 1']['Marginal cost Partial load']
+            Time_Series_Economic.loc[t,name_1]=a + b*Time_Series['Energy Diesel'][t]
+            
+        else:
+            Time_Series_Economic.loc[t,name_1]= 0 
+            
+        Operation_Cost = Time_Series_Economic.sum()
+        Operation_Cost['Total Cost'] = Operation_Cost.sum() 
+    Data.append(Time_Series_Economic)
+    Data.append(Operation_Cost)
     
+    return Data
+     
     
-    return Size_variables
-   
 def Results_Analysis_3(instance):
     
     data_4 = instance.Generator_Nominal_Capacity.values()
@@ -1544,7 +1607,7 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE,formul
         LCOE = round(LCOE, 3)    
         print(str(LCOE) + ' $/kWh')  
 
-    else:
+    if formulation == 'Integer':
         Number_Renewable_Source = int(instance.Renewable_Source.extract_values()[None])
         Number_Generator = int(instance.Generator_Type.extract_values()[None])
         
@@ -1587,14 +1650,47 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE,formul
         LCOE = round(LCOE, 3)    
         print(str(LCOE) + ' $/kWh')  
     
+def Print_Results_Dispatch(instance, Economic_Results):
+    Operation_Costs = Economic_Results[1]
+    Fuel_Cost = round(Operation_Costs['Fuel'],2) 
+    
+    print('Diesel cost is ' + str(Fuel_Cost) + ' USD')
+    
+    LL_Cost = round(Operation_Costs['VOLL'],2) 
+    
+    print('Lost load cost is ' + str(LL_Cost) + ' USD')
+    
+    Battery_Cost = round(Operation_Costs['Battery operation Cost'],2) 
+    
+    print('Battery operation cost is ' + str(Battery_Cost) + ' USD')
+    
+    Total_Cost = round(Operation_Costs['Total Cost'],2) 
+    
+    print('Total operation cost is ' + str(Total_Cost) + ' USD')
     
     
+def Energy_Mix_Dispatch(instance,Time_Series):
+    
+    Energy_Totals = Time_Series.sum()
+    
+    PV_Energy = Energy_Totals['Renewable Energy']
+    Generator_Energy = Energy_Totals['Energy Diesel']
+    Curtailment = Energy_Totals['Curtailment']
+    Demand = Energy_Totals['Energy_Demand']
+    Battery_Out = Energy_Totals['Discharge energy from the Battery']
+
+    Renewable_Real_Penetration = PV_Energy/(PV_Energy+Generator_Energy)
+    Renewable_Real_Penetration = round(Renewable_Real_Penetration,4)
+    Curtailment_Percentage = Curtailment/(PV_Energy+Generator_Energy)
+    Curtailment_Percentage = round(Curtailment_Percentage,4)
+    Battery_Usage = Battery_Out/Demand
+    Battery_Usage = round(Battery_Usage,4)
+    print(str(Renewable_Real_Penetration*100) + ' % Renewable Penetration')
+    print(str(Curtailment_Percentage*100) + ' % of energy curtail')
+    print(str(Battery_Usage*100) + ' % Battery usage')
     
     
-    
-    
-    
-    
+           
     
     
     
