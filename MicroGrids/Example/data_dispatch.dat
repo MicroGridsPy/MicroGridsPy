@@ -1,6 +1,6 @@
-param: Periods := 4000;
+param: Periods := 8760;
 
-param: StartDate := '01/01/2017 01:00:00';
+param: StartDate := '21/03/2016 01:00:00';
 
 param: PlotTime := 1;
 
@@ -22,15 +22,15 @@ param: Battery_Invesment_Cost := 0.44;
 
 param: Battery_Electronic_Invesmente_Cost := 0.22;
 
-param: Battery_Cycles := 1200; # 1000
+param: Battery_Cycles := 1200; 
 
 param: Low_Heating_Value := 9890;
 
 param: Value_Of_Lost_Load := 0.0002;
 
-param: Maximun_Battery_Discharge_Time := 1;
+param: Maximun_Battery_Discharge_Time := 4;
 
-param: Maximun_Battery_Charge_Time := 1;
+param: Maximun_Battery_Charge_Time := 4;
 
 # new parameters
 
@@ -44,5 +44,5 @@ param: Generator_Nominal_Capacity := 58000; # the other result can be obtain cha
 
 param: Battery_Nominal_Capacity := 464000;
 
-param: Battery_Initial_SOC:= 0.619;
+param: Battery_Initial_SOC:= 0.55;
 

@@ -388,7 +388,8 @@ def Model_Creation_Dispatch(model):
     '''
     from pyomo.environ import  Param, RangeSet, NonNegativeReals, Var, NonNegativeIntegers
     from Initialize import Initialize_Demand, Initialize_PV_Energy, Initialize_Demand_Dispatch, Initialize_PV_Energy_Dispatch, Marginal_Cost_Generator_Dispatch, Start_Cost_Dispatch,Marginal_Cost_Generator_1_Dispatch, Battery_Reposition_Cost  # Import library with initialitation funtions for the parameters
-
+    
+    
     # Time parameters
     model.Periods = Param(within=NonNegativeReals) # Number of periods of analysis of the energy variables 
     model.StartDate = Param() # Start date of the analisis

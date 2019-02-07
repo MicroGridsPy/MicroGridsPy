@@ -16,14 +16,14 @@ Model_Resolution_Integer, Model_Resolution_Dispatch
 
 # Type of problem formulation:
 formulation = 'Dispatch'
-datapath="Example//data_Dispatch.dat"
+#datapath='Example/Dispatch/'
 # Renewable energy penetrarion
 
 Renewable_Penetration = 0 # a number from 0 to 1.
 Battery_Independency = 0  # number of days of battery independency
 
 S = 1 # Plot scenario
-Plot_Date = '25/04/2017 01:00:00' # Day-Month-Year
+Plot_Date = '25/12/2016 00:00:00' # Day-Month-Year
 PlotTime = 5# Days of the plot
 plot = 'No Average' # 'No Average' or 'Average'
 

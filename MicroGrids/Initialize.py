@@ -12,6 +12,8 @@ def Initialize_years(model, i):
     '''    
     return i
 
+
+
 Energy_Demand = pd.read_excel('Example/Demand.xls') # open the energy demand file
 
 def Initialize_Demand(model, i, t):

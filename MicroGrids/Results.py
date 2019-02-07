@@ -1432,9 +1432,10 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         ax6.set_ylabel('Battery State of charge (kWh)',size=30)
         
         tick_size = 15    
-        mpl.rcParams['xtick.labelsize'] = tick_size    
-        ax1.tick_params(axis='x', which='major', labelsize = tick_size,pad=10 ) 
+        #mpl.rcParams['xtick.labelsize'] = tick_size    
+        ax1.tick_params(axis='x', which='major', labelsize = tick_size,pad=8 ) 
         ax1.tick_params(axis='y', which='major', labelsize = tick_size )
+ #       ax1.tick_params(axis='x', which='major', labelsize = tick_size) 
         ax6.tick_params(axis='y', which='major', labelsize = tick_size )       
         # Define the legends of the plot
         From_PV = mpatches.Patch(color=c_PV,alpha=Alpha_r, label='From PV')
