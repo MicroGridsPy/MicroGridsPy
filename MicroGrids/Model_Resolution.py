@@ -185,7 +185,7 @@ def Model_Resolution_Integer(model,Renewable_Penetration, Battery_Independency,
     opt = SolverFactory('cplex') # Solver use during the optimization    
 #    opt.options['emphasis_memory'] = 'y'
 #    opt.options['node_select'] = 3
-    results = opt.solve(instance, tee=True,options_string="mipgap=0.25") # Solving a model instance 
+    results = opt.solve(instance, tee=True,options_string="mipgap=0.05",warmstart=True) # Solving a model instance 
 
     #    instance.write(io_options={'emphasis_memory':True})
     #options_string="mipgap=0.03", timelimit=1200

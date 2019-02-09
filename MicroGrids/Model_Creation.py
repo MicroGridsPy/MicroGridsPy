@@ -353,20 +353,41 @@ def Model_Creation_Integer(model,Renewable_Penetration, Battery_Independency):
     model.Energy_Battery_Flow_Out = Var(model.scenario,model.periods, within=NonNegativeReals) # Battery discharge energy in wh
     model.Energy_Battery_Flow_In = Var(model.scenario,model.periods, within=NonNegativeReals) # Battery charge energy in wh
     model.State_Of_Charge_Battery = Var(model.scenario,model.periods, within=NonNegativeReals) # State of Charge of the Battery in wh
-        
+    
+
+
+    def gen(model,g):
+        if g == 1:
+            return 2
+        else:
+            return 0
+    
+    def bounds_N(model,g):
+        if g == 1:
+            return (1,2)
+        else:
+            return (0,1)
+    def bounds_E(model,s,g,t):
+        if g == 1:
+            return (0,2)
+        else:
+            return (0,1)    
      # Variables associated to the diesel generator
     
     model.Energy_Generator_Total = Var(model.scenario,model.generator_type,
                                        model.periods, within=NonNegativeReals)
     model.Integer_generator = Var(model.generator_type,
-                                  within=NonNegativeIntegers)
+                                  within=NonNegativeIntegers, 
+                                  initialize=gen, 
+                                  bounds=bounds_N)
     
     model.Generator_Total_Period_Energy = Var(model.scenario,
                                               model.generator_type,
                                               model.periods, 
                                               within=NonNegativeReals)   
     model.Generator_Energy_Integer = Var(model.scenario, model.generator_type,
-                                         model.periods, within=NonNegativeIntegers)
+                                         model.periods, within=NonNegativeIntegers,
+                                         bounds=bounds_E)
     model.Last_Energy_Generator = Var(model.scenario, model.generator_type,
                                       model.periods, within=NonNegativeReals)
     
