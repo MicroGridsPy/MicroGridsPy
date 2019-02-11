@@ -1,0 +1,48 @@
+Elapsed time = 17239.33 sec. (4068521.73 ticks, tree = 6762.66 MB, solutions = 79)
+Nodefile size = 4715.60 MB (2526.21 MB after compression)
+ 324595 180200   233336.1344  3477   238450.6214   226454.6049 22584007    5.03%
+ 325305 182819   232511.4513  3372   238450.6214   226469.9801 22699057    5.02%
+ 325935 182561   235086.6295  3496   238450.6214   226487.7107 22683798    5.02%
+ 326625 184087   233552.6721  3589   238450.6214   226487.7107 22735347    5.02%
+ 327260 185454   233271.2500  3231   238450.6214   226493.7734 22808941    5.01%
+ 328038 185103   234581.6738  3418   238450.6214   226495.2799 22800519    5.01%
+ 328494 185695   233636.2671  3721   238450.6214   226498.3451 22817592    5.01%
+ 328976 186726   234463.5250  3751   238450.6214   226511.0840 22863155    5.01%
+ 329196 186865   235130.3742  3686   238450.6214   226511.8295 22876912    5.01%
+ 329342 186753   234534.0767  3662   238450.6214   226511.8295 22863298    5.01%
+Elapsed time = 17413.37 sec. (4106841.27 ticks, tree = 7042.88 MB, solutions = 79)
+Nodefile size = 4994.98 MB (2679.14 MB after compression)
+
+Clique cuts applied:  1710
+Flow cuts applied:  665
+Mixed integer rounding cuts applied:  16726
+Lift and project cuts applied:  77
+Gomory fractional cuts applied:  8
+
+Root node processing (before b&c):
+  Real time             =  350.34 sec. (400581.42 ticks)
+Parallel b&c, 16 threads:
+  Real time             = 17063.93 sec. (3708396.02 ticks)
+  Sync time (average)   = 4420.15 sec.
+  Wait time (average)   =    0.44 sec.
+                          ------------
+Total (root+branch&cut) = 17414.27 sec. (4108977.44 ticks)
+
+Solution pool: 79 solutions saved.
+
+MIP - Integer optimal, tolerance (0.05/1e-06):  Objective =  2.3845062142e+05
+Current MIP best bound =  2.2653242613e+05 (gap = 11918.2, 5.00%)
+Solution time = 17414.27 sec.  Iterations = 23003354  Nodes = 329346 (189120)
+Deterministic time = 4108977.66 ticks  (235.95 ticks/sec)
+
+
+
+Renewable 1 nominal capacity is 17.3 kW
+Generator 1 nominal capacity is 15.0 kW
+Generator 2 nominal capacity is 30.0 kW
+Battery nominal capacity is 16.9 kWh
+NPC is 238.0Thousand USD
+0.307 $/kWh
+22.18 % Renewable Penetration
+1.81 % of energy curtail
+3.9699999999999998 % Battery usage
