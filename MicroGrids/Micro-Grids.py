@@ -15,7 +15,7 @@ from Model_Resolution import Model_Resolution, Model_Resolution_binary,\
 Model_Resolution_Integer, Model_Resolution_Dispatch
 
 # Type of problem formulation:
-formulation = 'Dispatch'
+formulation = 'Integer'
 #datapath='Example/Dispatch/'
 # Renewable energy penetrarion
 

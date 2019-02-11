@@ -358,13 +358,13 @@ def Model_Creation_Integer(model,Renewable_Penetration, Battery_Independency):
 
     def gen(model,g):
         if g == 1:
-            return 2
+            return 1
         else:
             return 0
     
     def bounds_N(model,g):
         if g == 1:
-            return (1,2)
+            return (0,2)
         else:
             return (0,1)
     def bounds_E(model,s,g,t):

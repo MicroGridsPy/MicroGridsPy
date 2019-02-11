@@ -1583,9 +1583,10 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE,formul
         for i in range(1, Number_Generator + 1):
             index_1 = 'Generator ' + str(i)
             index_2 = 'Generator Nominal Capacity'
-        
+            
             Generator_Rate = float(Generator_Data[index_1][index_2]/1000)
             Generator_Rate = round(Generator_Rate, 1)
+            
             print('Generator ' + str(i) + ' nominal capacity is ' 
                   + str(Generator_Rate) +' kW')    
             
@@ -1606,7 +1607,7 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE,formul
     
     
         LCOE = round(LCOE, 3)    
-        print(str(LCOE) + ' $/kWh')  
+        print('The LCOE is ' + str(LCOE) + ' $/kWh')  
 
     if formulation == 'Integer':
         Number_Renewable_Source = int(instance.Renewable_Source.extract_values()[None])
@@ -1626,9 +1627,10 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE,formul
         for i in range(1, Number_Generator + 1):
                 index_1 = 'Generator ' + str(i)
                 index_2 = 'Generator Nominal Capacity'
-        
+                index_3 = 'Number of Generator'
                 Generator_Rate = float(Generator_Data[index_1][index_2]/1000)
                 Generator_Rate = round(Generator_Rate, 1)
+                Generator_Rate = Generator_Rate*Generator_Data[index_1][index_3]
                 print('Generator ' + str(i) + ' nominal capacity is ' 
                   + str(Generator_Rate) +' kW')    
             
@@ -1649,7 +1651,7 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE,formul
     
     
         LCOE = round(LCOE, 3)    
-        print(str(LCOE) + ' $/kWh')  
+        print('The LCOE is ' +  str(LCOE) + ' $/kWh')  
     
 def Print_Results_Dispatch(instance, Economic_Results):
     Operation_Costs = Economic_Results[1]
