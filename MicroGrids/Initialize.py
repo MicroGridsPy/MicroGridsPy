@@ -90,7 +90,7 @@ def Battery_Reposition_Cost(model):
     return unitary_battery_cost/(model.Battery_Cycles*2*(1-model.Deep_of_Discharge))
     
     
-Renewable_Energy = pd.read_excel('Example/Renewable_Energy.xls') # open the PV energy yield file
+Renewable_Energy = pd.read_excel('Example/Renewable_Energy.xls',index_col=0,Header=None) # open the PV energy yield file
 
 def Initialize_Renewable_Energy(model, s,r,t):
     '''

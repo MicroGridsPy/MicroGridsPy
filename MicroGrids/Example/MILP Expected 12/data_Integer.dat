@@ -2,7 +2,7 @@ param: Periods := 8760;
 
 param: Years := 20;
 
-param: StartDate := '21/03/2017 01:00:00';
+param: StartDate := '21/03/2016 01:00:00';
 
 param: Delta_Time := 1;
 

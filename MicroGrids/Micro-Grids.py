@@ -19,10 +19,10 @@ formulation = 'Integer'
 #datapath='Example/Dispatch/'
 # Renewable energy penetrarion
 
-Renewable_Penetration = 0 # a number from 0 to 1.
+Renewable_Penetration = 0 # a number from 0 to 1.a
 Battery_Independency = 0  # number of days of battery independency
 
-S = 1 # Plot scenario
+S = 3 # Plot scenario
 Plot_Date = '25/12/2016 00:00:00' # Day-Month-Year
 PlotTime = 5# Days of the plot
 plot = 'No Average' # 'No Average' or 'Average'
@@ -71,8 +71,7 @@ elif formulation =='Integer':
     
     NPC,LCOE = Economic_Analysis(Scenarios, Scenario_Information, Renewable_Energy, Data_Renewable,
                       Generator_Time_Series, Generator_Data, Results)
-    print(NPC)
-    print(LCOE)
+
     Scenario_Probability = Scenario_Information.loc['Scenario Weight']  
     # Energy Plot    
 
