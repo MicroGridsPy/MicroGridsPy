@@ -1,0 +1,78 @@
+Renewable 1 nominal capacity is 12.5 kW
+Generator 1 nominal capacity is 33.6 kW
+Battery nominal capacity is 52.3 kWh
+NPC is 259.0Thousand USD
+The LCOE is 0.333 $/kWh
+16.31 % Renewable Penetration
+0.38 % of energy curtail
+0.03 % Battery usage
+
+
+Welcome to IBM(R) ILOG(R) CPLEX(R) Interactive Optimizer 12.8.0.0
+  with Simplex, Mixed Integer & Barrier Optimizers
+5725-A06 5725-A29 5724-Y48 5724-Y49 5724-Y54 5724-Y55 5655-Y21
+Copyright IBM Corp. 1988, 2017.  All Rights Reserved.
+
+Type 'help' for a list of available commands.
+Type 'help' followed by a command name for more
+information on commands.
+
+CPLEX> Logfile 'cplex.log' closed.
+Logfile '/home/ares/Micro-Grids/MicroGrids/tmpu5rv93zp.cplex.log' open.
+CPLEX> Problem '/home/ares/Micro-Grids/MicroGrids/tmpn0o4b7ii.pyomo.lp' read.
+Read time = 1.46 sec. (81.43 ticks)
+CPLEX> Problem name         : /home/ares/Micro-Grids/MicroGrids/tmpn0o4b7ii.pyomo.lp
+Objective sense      : Minimize
+Variables            :  613248
+Objective nonzeros   :      10
+Linear constraints   :  700855  [Less: 438010,  Equal: 262845]
+  Nonzeros           : 2324628
+  RHS nonzeros       :   87601
+
+Variables            : Min LB: 0.000000         Max UB: all infinite   
+Objective nonzeros   : Min   : 0.02200000       Max   : 0.2000000      
+Linear constraints   :
+  Nonzeros           : Min   : 6.684724e-09     Max   : 425.0000       
+  RHS nonzeros       : Min   : 1.000000         Max   : 46712.99       
+CPLEX> Parallel mode: deterministic, using up to 16 threads for concurrent optimization.
+Aggregator has done 46927 substitutions...
+Tried aggregator 1 time.
+LP Presolve eliminated 40718 rows and 128318 columns.
+Aggregator did 46937 substitutions.
+Reduced LP has 613200 rows, 437993 columns, and 1711325 nonzeros.
+Presolve time = 17.04 sec. (46590.25 ticks)
+Initializing dual steep norms . . .
+Elapsed time = 59.68 sec. (78355.63 ticks, 1 iterations)
+
+Iteration log . . .
+Iteration:     1   Dual objective     =             2.662260
+Iteration:   479   Dual objective     =         79620.294794
+Iteration:  1070   Dual objective     =         80857.652998
+Iteration:  2044   Dual objective     =         83155.046711
+Iteration:  2225   Dual objective     =         83556.785502
+Iteration:  3766   Dual objective     =         87531.910549
+Iteration:  3919   Dual objective     =         87935.726007
+Iteration:  5214   Dual objective     =         91454.062534
+Iteration:  5499   Dual objective     =         92180.820143
+Iteration:  6686   Dual objective     =         95744.742926
+Iteration:  7147   Dual objective     =         97117.501444
+Iteration:  8795   Dual objective     =        102108.731218
+Iteration:  9173   Dual objective     =        103256.667362
+Iteration: 10959   Dual objective     =        108657.563221
+Iteration: 11214   Dual objective     =        109499.484162
+Iteration: 12907   Dual objective     =        114739.796556
+Iteration: 13343   Dual objective     =        115978.843932
+Iteration: 14978   Dual objective     =        120807.043816
+Iteration: 15451   Dual objective     =        122234.112020
+Iteration: 16959   Dual objective     =        126305.725249
+Iteration: 17332   Dual objective     =        127292.688892
+Iteration: 18868   Dual objective     =        131069.782864
+Iteration: 19508   Dual objective     =        132528.421563
+Using devex.
+
+Barrier solved model.
+
+
+Primal simplex - Optimal:  Objective =  2.5877109867e+05
+Solution time =   63.43 sec.  Iterations = 0 (0)
+Deterministic time = 84519.74 ticks  (1332.40 ticks/sec)
