@@ -81,13 +81,9 @@ Inputs
 
 The Micro-grids library needs the input files are stored in the folder 'Inputs', these are the needed files:
 
-===============================  =============  =========================================================================
-Name of the file                 type of file   Description                       
-===============================  =============  =========================================================================
 Data.dat                         Txt file 	In this file the value of the parameters are set
 Demand.xls			 Excel file	The demand of energy of the system for each period is set in this file
 PV_Energy.xls			 Excel file	The energy yield in each period from one PV is set in this file				
-===============================  =============  =========================================================================
 
 Data.dat file
 -------------
@@ -111,15 +107,8 @@ Once all the above steps are performed, the easiest way to run the Micro-grids l
 
 python Micro-Grids.py
 
-Aditional parameters can be change in the Micro-Grids.py, they are in explain in the the file. The formulation can be change by changing the variable "formulation" in the Micro-Grids file.
+Aditional parameters can be change in the Micro-Grids.py, they are in explain in the the file. The formulation can be change by changing the variable "formulation" in the Micro-Grids file. if the value is set to LP then the problem will solve with the LP formulation for the sizing problem. If the value is set to MILP then the problem is solve as a MILP formulation for the sizing problem. Finally, if the value is set to  Dispatch then the problem is solver as the  MILP formulation for the dispatch problem.
 
-===============================  ===========================  =========================================================================
-Value of 'formulation'		 Type of optimization                Description
-===============================  ===========================  =========================================================================
-LP                         	 Linear proggraming 	      LP formulation for the sizing problem
-MILP			 	 Mixed integer proggramming   MILP formulation for the sizing problem
-Dispathc			 Mixed integer proggramming   MILP formulation for the dispatch problem
-===============================  ===========================  =========================================================================
 
 
 Outputs

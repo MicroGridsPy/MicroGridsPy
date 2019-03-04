@@ -36,26 +36,7 @@ for i in index_date:
         Data_1.loc[i,'Irradiation'] = Data.loc[i,'Irradiation 2']
         Data_1.loc[i,'PV Temperature'] = Data.loc[i,'PV Temperature 2']
 
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
 
-ax.scatter(Data_1['Irradiation'],Data_1['PV Temperature'] ,
-           Data_1['Efficiency'], c='b')
-
-ax.set_xlabel('Irradiation (W/m^2)')
-ax.set_ylabel('PV Temperature ( C)')
-ax.set_zlabel('efficiency (%)')
-pylab.ylim([0,70])
-pylab.xlim([0,1600])
-ax.set_zlim(0, 0.2)
-ax.view_init(5,65)
-ax.view_init(35,65)
-
-
-a = np.array([200,1600])
-b = np.array([0.187,0.09])
-c = np.array([0,200])
-d = np.array([0.16,0.187])
 
 Delta = 0.045
 
