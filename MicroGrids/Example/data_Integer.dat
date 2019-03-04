@@ -72,38 +72,46 @@ param: Maintenance_Operation_Cost_Renewable :=
 
 # New parameters 4
 
-param: Generator_Type := 1;
+param: Generator_Type := 2;
 
 param: Generator_Invesment_Cost :=
 
-1   	1.48;
+1   	1.48
+2	1.48;
 
 param: Generator_Min_Out_Put:= 
 
-1   	0.5; 
+1   	0.5
+2	0.5; 
 
 param: Generator_Efficiency :=
 
-1   	0.314;
+1   	0.314
+2	0.314;
 
 param: Low_Heating_Value :=
 
-1   	9890;
+1   	9890
+2	9890;
 
 param: Fuel_Cost :=
 
-1   0.68;
+1   0.68
+2   0.68;
 
 
 param: Cost_Increase := 
 
-1   	0.015;
+1   	0.015
+2	0.015;
 
 param: Generator_Nominal_Capacity := 
 
-1   15000;
+1   15000
+2   30000;
 
 
 param: Maintenance_Operation_Cost_Generator := 
 
-1   	0.015;
+1   	0.015
+2	0.015;
