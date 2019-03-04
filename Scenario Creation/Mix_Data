@@ -1,0 +1,177 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Sep  6 20:12:02 2017
+
+@author: Sergio Balderrama
+ULg-UMSS
+"""
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
+import matplotlib.ticker as mtick
+import matplotlib.pylab as pylab
+from scipy.stats import pearsonr
+from mpl_toolkits.mplot3d import Axes3D
+from sklearn import linear_model
+
+
+'2016-01-01 00:00:00'
+
+Mix_Data = pd.read_csv('Mix_Data.csv',index_col=0)
+Power_Data_2 = pd.read_csv('Power_Data_2.csv',index_col=0)
+index_date = pd.DatetimeIndex(start='2016-01-01 00:00:00', periods=166464, 
+                                   freq=('5min'))
+Power_Data_2['Energy Consume'] = (Power_Data_2['Demand Cre']*0.0833)/1000   
+Mix_Data.index = index_date
+Power_Data_2.index = index_date 
+
+Mix_Data = Mix_Data.replace(0,np.nan)
+
+plt.plot(Mix_Data['Ambient Temperature C'][Power_Data_2['Demand Cre']>0],Power_Data_2['Demand Cre'][Power_Data_2['Demand Cre']>0])
+
+
+
+############################### Mensual fittiing Temp vs Power ################
+Mix_Monthly = pd.DataFrame()
+Mix_Monthly['Ambient Temperature C'] = Mix_Data['Ambient Temperature C'][
+'2016-04-01 00:00:00':].groupby(Power_Data_2.index[26208:].month).mean() 
+Mix_Monthly['Demand Cre'] = Power_Data_2['Demand Cre'][
+'2016-04-01 00:00:00':].groupby(Power_Data_2.index[26208:].month).mean()
+
+plt.plot(Mix_Monthly['Ambient Temperature C'], Mix_Monthly['Demand Cre'], 'ro')
+
+axes = plt.gca()
+m, b = np.polyfit(Mix_Monthly['Ambient Temperature C'], Mix_Monthly['Demand Cre'], 1)
+X_plot = np.linspace(axes.get_xlim()[0],axes.get_xlim()[1],100)
+plt.plot(X_plot, m*X_plot + b, '-')
+
+pearsonr(Mix_Monthly['Ambient Temperature C'], Mix_Monthly['Demand Cre'])
+
+#X = pd.DataFrame() 
+#X['Ambient Temperature C'] = Mix_Data_2['Ambient Temperature C']
+#X['hour'] = Mix_Data_2.index.hour
+#
+##X = sm.add_constant(X)
+#y = Power_Data_3['Energy Consume']
+#
+#model = sm.OLS(y, X.astype(float)).fit()
+#predictions = model.predict(X)
+#
+#model.summary()
+
+
+############################### daily fittiing Temp vs Power #################
+Mix_daily = pd.DataFrame()
+
+Power_Data_2['day'] = 0
+s = 1
+
+for i in range(0,166464,288):
+    print(i)
+    for j in range(288):
+        Power_Data_2.iloc[i+j,7] = s
+    s += 1
+
+
+    
+Mix_daily['Ambient Temperature C'] = Mix_Data['Ambient Temperature C'][
+'2016-04-01 00:00:00':].groupby(Power_Data_2['day'][26208:]).mean() 
+Mix_daily['Energy Consume'] = Power_Data_2['Energy Consume'][
+'2016-04-01 00:00:00':].groupby(Power_Data_2['day'][26208:]).sum()
+
+plt.plot(Mix_daily['Ambient Temperature C'], Mix_daily['Energy Consume'], 'ro')
+
+axes = plt.gca()
+m, b = np.polyfit(Mix_daily['Ambient Temperature C'], Mix_daily['Energy Consume'], 1)
+X_plot = np.linspace(axes.get_xlim()[0],axes.get_xlim()[1],100)
+plt.plot(X_plot, m*X_plot + b, '-')
+
+pearsonr(Mix_daily['Ambient Temperature C'], Mix_daily['Energy Consume'])
+
+
+
+############################ Poly Regresition daily ###########################
+
+
+#  linear regresition with Statsmodels
+import statsmodels.api as sm
+
+#replace 0 with nan
+Mix_Data = Mix_Data.replace(np.nan,0)
+
+# removing all 0
+Power_Data_3 = Power_Data_2[Power_Data_2['Demand Cre'] != 0]
+Mix_Data_2 = Mix_Data[Power_Data_2['Demand Cre'] != 0]
+
+# creating the dependent and independent variables
+X = pd.DataFrame() 
+X['Ambient Temperature C'] = Mix_Data_2['Ambient Temperature C'][26208:]
+X['hour'] = Mix_Data_2[26208:].index.hour
+#X = sm.add_constant(X) #uncomment if you want to have an interceptor
+y = Power_Data_3['Energy Consume'][26208:]
+
+# Solving the regretation
+model = sm.OLS(y, X.astype(float)).fit()
+predictions = model.predict(X)
+model.summary()
+
+# Solving with polifit
+
+pearsonr(Power_Data_3['Energy Consume'][26208:],
+         Mix_Data_2['Ambient Temperature C'][26208:])
+
+# Solving regretation for one dependent
+axes = plt.gca()
+m, b = np.polyfit(Mix_Data_2['Ambient Temperature C'][26208:], 
+                   Power_Data_3['Energy Consume'][26208:], 1)
+X_plot = np.linspace(axes.get_xlim()[0],axes.get_xlim()[1],100)
+plt.plot(X_plot, m*X_plot + b, '-')
+
+# ploting the energy vs temperature and time
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+
+xs = X['Ambient Temperature C']
+ys = X['hour'] 
+zs = y
+ax.scatter(xs, ys, zs, c='b')
+
+ax.set_xlabel('Ambient Temperature (C)  ')
+ax.set_ylabel('Hour')
+ax.set_zlabel('Energy Demand')
+pylab.ylim([0,24])
+pylab.xlim([0,50])
+
+#ax.view_init(45, 45)
+plt.tight_layout()
+tmp_planes = ax.zaxis._PLANES 
+ax.zaxis._PLANES = ( tmp_planes[2], tmp_planes[3], 
+                     tmp_planes[0], tmp_planes[1], 
+                     tmp_planes[4], tmp_planes[5])
+
+
+# Using SKLearn
+
+lm = linear_model.LinearRegression(fit_intercept=False)
+model = lm.fit(X,y)
+
+predictions = lm.predict(X)
+print(predictions[0:5])
+lm.score(X,y)
+lm.coef_
+lm.intercept_
+
+############################### temp cell comparation #########################
+Mean_Temperature = pd.DataFrame()
+
+Mean_Temperature['Temperatura ambiente'] =Mix_Data['Ambient Temperature C'].groupby(Mix_Data.index.hour).mean() 
+Mean_Temperature['Temperatura de los modulos'] =Mix_Data['PV Temperature C'].groupby(Mix_Data.index.hour).mean() 
+
+ax = Mean_Temperature.plot()
+
+ax.set_ylabel('Temperatura ( C)')
+ax.set_xlabel('Tiempo (horas)')
+ax.legend(bbox_to_anchor=(1.7, 1.05))

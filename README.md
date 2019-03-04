@@ -1,4 +1,4 @@
-Micro-Grids
+A two-stage linear programming optimization framework for isolated hybrid microgrids in a rural context: the case study of the “El Espino” community.
 ========================
 
 ### Description
