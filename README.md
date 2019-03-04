@@ -56,12 +56,12 @@ Requirements
 The MicroGrid library can be use in Linux or windows and needs different programs and phyton libraries in order to work. 
 
 Python
-~~~~~~
+------------
 
 First of all Micro-Grids needs Python 3 install in the computer. The easiest way to obtain it, is download `anaconda`_ in order to have all the tools needed to run python scripts.
 
 Python libraries
-~~~~~~~~~~~~~~~~
+----------------
  
 The python libraries needed to run Micro-Grids are the following:
 
@@ -70,7 +70,7 @@ The python libraries needed to run Micro-Grids are the following:
 * `matplotlib`_ for plotting
 
 Solver
-~~~~~~
+------
 
 Any of the fallowing solvers can be used during the optimization process in the Micro-Grids library:
 
@@ -90,17 +90,17 @@ PV_Energy.xls			 Excel file	The energy yield in each period from one PV is set i
 ===============================  =============  =========================================================================
 
 Data.dat file
-~~~~~~~~~~~~~
+-------------
 
 This file has to contain all the parameters for the Micro-Grids library to be able to perform an optimization of the nominal capacity of the PV, battery bank and diesel generator. This file has to be write in `AMPL`_ data format. A table of all the parameters with an example of value and how they have to be written in the txt can be seen in the next table.
 
 Demand.xls file
-~~~~~~~~~~~~~~~
+---------------
 
 The Demand.xls file has to have the energy demand of the system in each period of analysis. The excel file must have a column with the periods and another with the demand in W as shown in the following figure.
 
 PV_Energy.xls/Renewable_Energy.xls
-~~~~~~~~~~~~~
+----------------------------------
 
 TheV_Energy.xls/Renewable_Energy.xls file has to have the energy yield for one PV in each period of analysis. The excel file must have a column with the periods and the number of columns equal to the number of scenarios energy yield in W as shown in the following figure.
 
