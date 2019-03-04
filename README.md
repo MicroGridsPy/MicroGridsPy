@@ -65,19 +65,19 @@ Python libraries
  
 The python libraries needed to run Micro-Grids are the following:
 
-* `pyomo`_ Optimization object library, interface to LP solver (e.g. CPLEX)
-* `pandas`_ for input and result data handling 
-* `matplotlib`_ for plotting
+* pyomo: Optimization object library, interface to LP solver (e.g. CPLEX)
+* pandas: for input and result data handling 
+* matplotlib: for plotting
 
 Solver
 ------
 
 Any of the fallowing solvers can be used during the optimization process in the Micro-Grids library:
 
-* `cplex`_
+* cplex
 
-Inputs
-------
+### Inputs
+
 
 The Micro-grids library needs the input files are stored in the folder 'Inputs', these are the needed files:
 
@@ -85,18 +85,17 @@ Data.dat                         Txt file 	In this file the value of the paramet
 Demand.xls			 Excel file	The demand of energy of the system for each period is set in this file
 PV_Energy.xls			 Excel file	The energy yield in each period from one PV is set in this file				
 
-Data.dat file
--------------
+### Data.dat file
 
-This file has to contain all the parameters for the Micro-Grids library to be able to perform an optimization of the nominal capacity of the PV, battery bank and diesel generator. This file has to be write in `AMPL`_ data format. A table of all the parameters with an example of value and how they have to be written in the txt can be seen in the next table.
+This file has to contain all the parameters for the Micro-Grids library to be able to perform an optimization of the nominal capacity of the PV, battery bank and diesel generator. This file has to be write in AMPL data format. A table of all the parameters with an example of value and how they have to be written in the txt can be seen in the next table.
 
-Demand.xls file
----------------
+### Demand.xls file
+
 
 The Demand.xls file has to have the energy demand of the system in each period of analysis. The excel file must have a column with the periods and another with the demand in W as shown in the following figure.
 
-PV_Energy.xls/Renewable_Energy.xls
-----------------------------------
+### PV_Energy.xls/Renewable_Energy.xls
+
 
 TheV_Energy.xls/Renewable_Energy.xls file has to have the energy yield for one PV in each period of analysis. The excel file must have a column with the periods and the number of columns equal to the number of scenarios energy yield in W as shown in the following figure.
 
@@ -111,24 +110,12 @@ Aditional parameters can be change in the Micro-Grids.py, they are in explain in
 
 
 
-Outputs
--------
+### Outputs
+
 
 After the optimization is finish a message will appear with the Levelized cost of energy and the net present value of the system. Addional files will be created in the 'Results' folder.
 
 ### Licence
 This is a free software licensed under the “European Union Public Licence" EUPL v1.1. It 
 can be redistributed and/or modified under the terms of this license.
-
-.. _anaconda: https://www.continuum.io/downloads
-.. _matplotlib: http://matplotlib.org
-.. _pandas: http://pandas.pydata.org
-.. _pyomo: http://www.pyomo.org/
-.. _cplex: http://www-03.ibm.com/software/products/en/ibmilogcpleoptistud/
-.. _Gurobi: http://www.gurobi.com/
-.. _GLPK: https://www.gnu.org/software/glpk/
-.. _AMPL: http://ampl.com/BOOK/CHAPTERS/12-data.pdf
-
-
-
 

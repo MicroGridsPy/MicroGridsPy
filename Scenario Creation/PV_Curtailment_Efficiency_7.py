@@ -37,6 +37,10 @@ for i in index_date:
         Data_1.loc[i,'PV Temperature'] = Data.loc[i,'PV Temperature 2']
 
 
+a = np.array([200,1600])
+b = np.array([0.187,0.09])
+c = np.array([0,200])
+d = np.array([0.16,0.187])
 
 Delta = 0.045
 
@@ -68,17 +72,6 @@ model = lm_2.fit(c,d)
 lm_3 = linear_model.LinearRegression(fit_intercept=True)
 model = lm_3.fit(c, f)
 
-ax1 = plt.scatter(Data_1['Irradiation'], Data_1['Efficiency'])
-ax1 = plt.plot(a,lm.predict(a), c='r') 
-ax1 = plt.plot(c,lm_2.predict(c), c='r')
-
-ax1 = plt.plot(a, lm_1.predict(a), c='g')
-ax1 = plt.plot(c, lm_3.predict(c), c='g')
-
-plt.xlabel('Irradiation (W/m^2)')
-plt.ylabel('Efficiency (%)')
-pylab.ylim([0,0.25])
-pylab.xlim([0,1600])
 
 Data_Paper_1 = pd.DataFrame()
 index_regreation = []
