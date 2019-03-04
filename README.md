@@ -7,9 +7,9 @@ The porpuse of this page is to serve as a permanent repository of the paper:
 
 "A two-stage linear programming optimization framework for isolated hybrid microgrids in a rural context: the case study of the “El Espino” community." 
 
-This repository is diveded in two sections:
+This repository is divided in two sections:
 	Scenario Creation 
-	Optimal sizing and mispatch (Micro-Grids)
+	Optimal sizing and Dispatch (Micro-Grids)
 
 
 In the folder Scenario Creation you can find the following information:
@@ -20,7 +20,7 @@ In the folder Scenario Creation you can find the following information:
 	Mix_Data_2: Contains PV module temperature and solar radiation used in PV_Creation.py and Demand_Creation.py. 
 
 
-The MicroGrid folder contains the scripts and information needed to reproduce the results for the paper: A two-stage linear programming optimization framework for isolated hybrid microgrids in a rural context: the case study of the “El Espino” community. In the example folder, there are folders with the information of all the instances used in the paper.
+The MicroGrid folder contains the scripts and information needed to reproduce the results from the paper: A two-stage linear programming optimization framework for isolated hybrid microgrids in a rural context: the case study of the “El Espino” community. In the example folder, there are folders with the information of all the instances used in the paper.
 
 Main features:
 
@@ -40,6 +40,18 @@ Francesco Lombardi
 Politecnico di milano
 E-mail: francesco.lombardi@polimi.it
 
+Favio Riva
+Politecnico di milano
+E-mail: fabio.riva@polimi.it
+
+Emanuela Colombo
+Politecnico di milano
+E-mail: emanuela.colombo@polimi.it
+
+Walter Canedo
+Universidad Mayor de San Simon
+E-mail:w.canedo@umss.edu.bo 
+
 Sylvain Quoilin
 University of Liege, Belgium.
 E-mail: squoilin@ulg.ac.be 
@@ -58,7 +70,7 @@ The MicroGrid library can be use in Linux or windows and needs different program
 Python
 ------------
 
-First of all Micro-Grids needs Python 3 install in the computer. The easiest way to obtain it, is download `anaconda`_ in order to have all the tools needed to run python scripts.
+First of all Micro-Grids needs Python 3.6 install in the computer. The easiest way to obtain it, is download anaconda in order to have all the tools needed to run python scripts.
 
 Python libraries
 ----------------
@@ -72,7 +84,7 @@ The python libraries needed to run Micro-Grids are the following:
 Solver
 ------
 
-Any of the fallowing solvers can be used during the optimization process in the Micro-Grids library:
+Any of the following solvents can be used during the optimization  process in the Micro-Grids library:
 
 * cplex
 
@@ -83,21 +95,9 @@ The Micro-grids library needs the input files are stored in the folder 'Inputs',
 
 Data.dat                         Txt file 	In this file the value of the parameters are set
 Demand.xls			 Excel file	The demand of energy of the system for each period is set in this file
-PV_Energy.xls			 Excel file	The energy yield in each period from one PV is set in this file				
+PV_Energy.xls			 Excel file	The energy yield in each period from one PV is set in this file,it is used for the dispatch optimization			
+Renewable_Energy.xls		 Excel file	The energy yield in each period from one renewable source is set in this file, it is used for the LP and MILP optimizations	
 
-### Data.dat file
-
-This file has to contain all the parameters for the Micro-Grids library to be able to perform an optimization of the nominal capacity of the PV, battery bank and diesel generator. This file has to be write in AMPL data format. A table of all the parameters with an example of value and how they have to be written in the txt can be seen in the next table.
-
-### Demand.xls file
-
-
-The Demand.xls file has to have the energy demand of the system in each period of analysis. The excel file must have a column with the periods and another with the demand in W as shown in the following figure.
-
-### PV_Energy.xls/Renewable_Energy.xls
-
-
-TheV_Energy.xls/Renewable_Energy.xls file has to have the energy yield for one PV in each period of analysis. The excel file must have a column with the periods and the number of columns equal to the number of scenarios energy yield in W as shown in the following figure.
 
 Run Micro-Grids library
 -----------------------
@@ -106,16 +106,17 @@ Once all the above steps are performed, the easiest way to run the Micro-grids l
 
 python Micro-Grids.py
 
-Aditional parameters can be change in the Micro-Grids.py, they are in explain in the the file. The formulation can be change by changing the variable "formulation" in the Micro-Grids file. if the value is set to LP then the problem will solve with the LP formulation for the sizing problem. If the value is set to MILP then the problem is solve as a MILP formulation for the sizing problem. Finally, if the value is set to  Dispatch then the problem is solver as the  MILP formulation for the dispatch problem.
+Additional parameters can be changed in the Microgrids.py, they are in explain in the the file. The formulation can be change by changing the variable "formulation" in the Micro-Grids file. if the value is set to LP then the problem will solve with the LP formulation for the sizing problem. If the value is set to MILP then the problem is solve as a MILP formulation for the sizing problem. Finally, if the value is set to  Dispatch then the problem is solved as the  MILP formulation for the dispatch problem.
 
-
+To run the instance from the paper, copy the files in the Micro-Grids/MicroGrids/Example/...... folder that you want to reproduce  in the Micro-Grids/MicroGrids/Example and then run the Micro-Grids.py script.
 
 ### Outputs
 
 
 After the optimization is finish a message will appear with the Levelized cost of energy and the net present value of the system. Addional files will be created in the 'Results' folder.
 
-### Licence
+Licence
+=======
 This is a free software licensed under the “European Union Public Licence" EUPL v1.1. It 
 can be redistributed and/or modified under the terms of this license.
 
