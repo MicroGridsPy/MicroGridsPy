@@ -3,7 +3,7 @@ A two-stage linear programming optimization framework for isolated hybrid microg
 
 ### Description
 
-The porpuse of this page is to serve as a permanent repository of the paper:
+The purpuse of this page is to serve as a permanent repository of the paper:
 
 "A two-stage linear programming optimization framework for isolated hybrid microgrids in a rural context: the case study of the “El Espino” community." 
 
@@ -19,6 +19,7 @@ In the folder Scenario Creation you can find the following information:
 	Power_Data_2: It is the energy flows from the microgrid "El Espino", used in PV_Creation.py and Demand_Creation.py.
 	Mix_Data_2: Contains PV module temperature and solar radiation used in PV_Creation.py and Demand_Creation.py. 
 	PV_Data: In this folder there is a excel file with the solar data of the paper.
+	Scenarios: In this folder there is a excel file with the synthetic profiles created with Demand_Creation.py.
 
 
 The MicroGrid folder contains the scripts and information needed to reproduce the results from the paper: A two-stage linear programming optimization framework for isolated hybrid microgrids in a rural context: the case study of the “El Espino” community. In the example folder, there are folders with the information of all the instances used in the paper.
@@ -61,7 +62,7 @@ E-mail: squoilin@ulg.ac.be
 Tutorial
 ========
 
-This section is a walkthrough of how to use the Micro-Grids library in order to obtain the optimal nominal capacity for an isolated micro-grid with a given demand and PV production.
+This section is a walkthrough on how to use the Micro-Grids library in order to obtain the optimal nominal capacity for an isolated micro-grid with a given demand and PV production.
 
 Requirements
 ------------
@@ -92,12 +93,12 @@ Any of the following solvents can be used during the optimization  process in th
 ### Inputs
 
 
-The Micro-grids library needs the input files are stored in the folder 'Inputs', these are the needed files:
+The Micro-grids library needs the following input files:
 
-Data.dat                         Txt file 	In this file the value of the parameters are set
-Demand.xls			 Excel file	The demand of energy of the system for each period is set in this file
-PV_Energy.xls			 Excel file	The energy yield in each period from one PV is set in this file,it is used for the dispatch optimization			
-Renewable_Energy.xls		 Excel file	The energy yield in each period from one renewable source is set in this file, it is used for the LP and MILP optimizations	
+*Data.dat                         Txt file 	In this file the value of the parameters are set
+*Demand.xls			 Excel file	The demand of energy of the system for each period is set in this file
+*PV_Energy.xls			 Excel file	The energy yield in each period from one PV is set in this file,it is used for the dispatch optimization			
+*Renewable_Energy.xls		 Excel file	The energy yield in each period from one renewable source is set in this file, it is used for the LP and MILP optimizations	
 
 
 Run Micro-Grids library

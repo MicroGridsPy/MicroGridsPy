@@ -361,7 +361,7 @@ Demand_Hourly = pd.DataFrame()
 Demand_Hourly['Base Scenario'] = Hourly_Data['Base Scenario']
 
 Demand_Hourly.index = range(1,8761)
-Demand_Hourly.to_excel('Scenarios/Demand_Paper/Base_Scenario.xls')
+Demand_Hourly.to_excel('Scenarios/Base_Scenario.xls')
 
 Base_Sce = pd.DataFrame()
 Base_Sce['Base Scenario'] = Hourly_Data['Base Scenario']
@@ -406,7 +406,7 @@ Demand_Hourly.to_excel('Scenarios/base_Scenarios_10_19_09.xls')
 Hourly_Data_2.index = range(1,8761)
 Hourly_Data_2.columns = range(1,11)
 Hourly_Data_2[3] = list(Base_Sce['Base Scenario'])
-Hourly_Data_2.to_excel('Scenarios/Demand_Paper/Demand.xls')
+Hourly_Data_2.to_excel('Scenarios/Demand.xls')
 
 
 ################### plots Demand profile
