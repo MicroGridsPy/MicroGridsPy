@@ -81,6 +81,7 @@ for i in Data_1.index:
     if Data_1['Irradiation'][i] > 200:
         
             rad =  Data_1['Irradiation'][i]
+            rad = rad.reshape(-1,1)
             Upper_Limit = lm.predict(rad)
             Lower_Limit = lm_1.predict(rad)
             
@@ -95,6 +96,7 @@ for i in Data_1.index:
     else:
         
         rad =  Data_1['Irradiation'][i]
+        rad = rad.reshape(-1,1)
         Upper_Limit = lm_2.predict(rad)
         Lower_Limit = lm_3.predict(rad)
         if Data_1['Efficiency'][i] < Upper_Limit:
@@ -104,18 +106,7 @@ for i in Data_1.index:
                 Data_Paper_1.loc[i,'Efficiency']  = Data_1.loc[i,'Efficiency'] 
                 index_regreation.append(i)
                 
-ax1 = plt.scatter(Data_Paper_1['Irradiation'], Data_Paper_1['Efficiency'])
 
-ax1 = plt.plot(a,lm.predict(a), c='r') 
-ax1 = plt.plot(c,lm_2.predict(c), c='r')
-
-ax1 = plt.plot(a, lm_1.predict(a), c='g')
-ax1 = plt.plot(c, lm_3.predict(c), c='g')
-
-plt.xlabel('Irradiation (W/m^2)')
-plt.ylabel('Efficiency (%)')
-pylab.ylim([0,0.25])
-pylab.xlim([0,1650])
 
 X_4 = pd.DataFrame()
 y_4 = pd.DataFrame()
@@ -186,173 +177,6 @@ index_hourly = pd.DatetimeIndex(start='2016-01-01 01:00:00', periods=13872,
 Hourly_Data.index = index_hourly
 
 Hourly_Data.to_csv('PV_data/PV_Power_Corrected_2.csv')
-
-#################### Plot  Paper 2d #################################
-
-j = 0
-i = 200
-r = 1670
-
-g = [float(lm_2.predict(j))*100, float(lm_2.predict(i))*100] 
-h = [float(lm_1.predict(i))*100, float(lm_1.predict(r))*100]  
-m = [float(lm_2.predict(i))*100, float(lm_3.predict(i))*100]
-f = [float(lm.predict(i))*100, float(lm.predict(r))*100]
-w = [float(lm_3.predict(j))*100, float(lm_3.predict(i))*100]
-     
-fig = plt.figure()
-ax = fig.add_subplot(111)
-ax2 = plt.scatter(Data_1['Irradiation'], Data_1['Efficiency']*100, c='b')
-# lines with slope
-ax.plot([i,r],f, c='g', linewidth = 2) 
-ax.plot([j,i],g, c='g', linewidth = 2)
-ax.plot([i,r], h, c='g',linewidth = 2)
-ax.plot([j,i], w, c='g',linewidth = 2)
-
-# Vertical lines
-ax.plot([j+2,j+2], [g[0],w[0]], c='g',linewidth = 2)
-ax.plot([r, r],[f[1], h[1]] , c='g', linewidth = 2)
-ax.plot([i,i], m, c='g',linewidth = 2)
-
-ax.annotate('1', xy=(100, 13.5), xytext=(400, 20), size= 15,
-            arrowprops=dict(facecolor='black', shrink=0.05),)
-
-ax.annotate('2', xy=(900, 12.5), xytext=(1000, 16), size= 15,
-            arrowprops=dict(facecolor='black', shrink=0.05),)
-
-Limits = mlines.Line2D([], [], color='green',label='Limites')
-plt.legend([(ax2), Limits],["Data", 'Limits'])
-plt.xlabel('Irradiation (W/m^2)')
-plt.ylabel('Efficiency (%)')
-pylab.ylim([0,25])
-pylab.xlim([0,1700])
-
-################## Plot 2d with surface
-   
-fig = plt.figure()
-ax = fig.add_subplot(111)
-ax2 = plt.scatter(Data_1['Irradiation'], Data_1['Efficiency']*100, c='b')
-# lines with slope
-ax.plot([i,r],f, c='g', linewidth = 2) 
-ax.plot([j,i],g, c='g', linewidth = 2)
-ax.plot([i,r], h, c='g',linewidth = 2)
-ax.plot([j,i], w, c='g',linewidth = 2)
-
-# Vertical lines
-ax.plot([j+2,j+2], [g[0],w[0]], c='g',linewidth = 2)
-ax.plot([r, r],[f[1], h[1]] , c='g', linewidth = 2)
-ax.plot([i,i], m, c='g',linewidth = 2)
-
-# Surface
-ax.scatter(Data_Corrected['Radiation'],Data_Corrected['Efficiency']*100,c='y')
-
-Limits = mlines.Line2D([], [], color='green',label='Limites')
-plt.legend([(ax2), Limits],["Data", 'Limits'])
-plt.xlabel('Irradiation (W/m^2)')
-plt.ylabel('Efficiency (%)')
-pylab.ylim([0,25])
-pylab.xlim([0,1700])
-
-################################# Plot Scatter 
-
-Plot_1 = pd.DataFrame()
-
-for i in Data_1.index:
-    if Data_1.loc[i,'Efficiency'] < 0.4:
-        Plot_1.loc[i,'Efficiency'] = Data_1.loc[i,'Efficiency']*100
-        Plot_1.loc[i,'Irradiation'] = Data_1.loc[i,'Irradiation']
-        Plot_1.loc[i,'PV Temperature'] = Data_1.loc[i,'PV Temperature']
-
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-
-ax.scatter(Plot_1['PV Temperature'], Plot_1['Irradiation'],
-           Plot_1['Efficiency'], c='b')
-
-ax.set_xlabel('  PV Temperature ($^\circ$C)')
-ax.set_ylabel('Irradiation (W/m$^{2}$)     ')
-ax.zaxis.set_rotate_label(False)  
-ax.set_zlabel('Efficiency (%)', rotation=90)
-pylab.ylim([0,1600])
-pylab.xlim([0,80])
-ax.set_zlim(0, 40)
-ax.view_init(35,25)
-
-plt.tight_layout()
-
-################################# Plot Scatter + model surface
-
-Paper_Plot = pd.DataFrame()
-for i in Plot_1.index:
-    if    Plot_1['Efficiency'][i] < 25 and Plot_1['Efficiency'][i] > 7:
-        Paper_Plot.loc[i,'Efficiency'] = Plot_1['Efficiency'][i]         
-        Paper_Plot.loc[i,'Irradiation'] = Plot_1['Irradiation'][i]
-        Paper_Plot.loc[i,'PV Temperature'] = Plot_1['PV Temperature'][i]
-
-
-Plot = True
-size = [20,15]
-if Plot == True:    
-    fig = plt.figure(figsize=size)
-    ax = fig.add_subplot(111, projection='3d')
-    
-    ax.scatter(Paper_Plot['PV Temperature'], Paper_Plot['Irradiation'],
-               Paper_Plot['Efficiency'], c='b')
-    
-    
-    b_1 = lm_4.intercept_
-    m1, m2 =lm_4.coef_[0]
-    Ys = range(0,1600,5)
-    Xs = range(0,70,2)
-    Xs, Ys = np.meshgrid(Xs, Ys)
-    Z = b_1 + m1*Ys+ m2*Xs 
-    ax.plot_surface(Xs,Ys,Z*100,color='r')
-    
-    
-
-    ax.tick_params(axis='x', which='major', labelsize=17)
-    ax.tick_params(axis='y', which='major', labelsize=17)
-    ax.tick_params(axis='z', which='major', labelsize=17)
-    ax.set_xlabel('PV Temperature ($^{o}$C)', labelpad=20, size=20 )
-    ax.set_ylabel('Irradiation (W/m$^{2}$)', labelpad=20, size=20)
-    ax.set_zlabel('Efficiency (%)', size=20)
-    pylab.ylim([0,1600])
-    pylab.xlim([0,80])
-    ax.set_zlim(5, 30)
-    ax.view_init(0,25)
-    Surface = mpatches.Patch(color='red',alpha=1, label='Superficie')
-    plt.legend([(ax2),Surface],["Data", 'model'],
-                bbox_to_anchor=(0.85,0.75) ,fontsize = 25)
-    
-    plt.tight_layout()
-
-
-#################################  model surface
-
-Plot = True
-if Plot == True:
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    
-    b_1 = lm_4.intercept_
-    m1, m2 =lm_4.coef_[0]
-    Ys = range(0,1600,5)
-    Xs = range(0,70,2)
-    Xs, Ys = np.meshgrid(Xs, Ys)
-    Z = b_1 + m1*Ys+ m2*Xs 
-    ax.plot_surface(Xs,Ys,Z*100,color='r')
-    
-    ax.set_xlabel('PV Temperature ($^{o}$C)')
-    ax.set_ylabel('Irradiation (W/m$^{2}$)')
-    ax.set_zlabel('Efficiency (%)')
-    pylab.ylim([0,1600])
-    pylab.xlim([0,80])
-    ax.set_zlim(0, 40)
-    ax.view_init(10,15)
-    Surface = mpatches.Patch(color='red',alpha=1, label='Superficie')
-    plt.legend([(ax2),Surface],["Data", 'model'],bbox_to_anchor=(0.9,0.8))
-    
-    plt.tight_layout()
-
 
 
 
@@ -478,7 +302,7 @@ Data_Optimization.index = range(1,8761)
 Data_Optimization.columns = [1,2]
 
 
-Data_Optimization.to_excel('Scenarios/PV_PAPER_01_30.xls')
+Data_Optimization.to_excel('PV_data/PV_PAPER_01_30.xls')
 
 
 #### paper figure

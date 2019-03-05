@@ -9,7 +9,7 @@ The porpuse of this page is to serve as a permanent repository of the paper:
 
 This repository is divided in two sections:
 	Scenario Creation 
-	Optimal sizing and Dispatch (Micro-Grids)
+	and sizing (Micro-Grids)
 
 
 In the folder Scenario Creation you can find the following information:
@@ -18,6 +18,7 @@ In the folder Scenario Creation you can find the following information:
 	PV_Creation.py: It is a script to create two solar power output scenarios.
 	Power_Data_2: It is the energy flows from the microgrid "El Espino", used in PV_Creation.py and Demand_Creation.py.
 	Mix_Data_2: Contains PV module temperature and solar radiation used in PV_Creation.py and Demand_Creation.py. 
+	PV_Data: In this folder there is a excel file with the solar data of the paper.
 
 
 The MicroGrid folder contains the scripts and information needed to reproduce the results from the paper: A two-stage linear programming optimization framework for isolated hybrid microgrids in a rural context: the case study of the “El Espino” community. In the example folder, there are folders with the information of all the instances used in the paper.
@@ -33,27 +34,27 @@ Main features:
 ### Authors
 
 Sergio Balderrana
-University of Liege, Belgium - Universidad Mayor de San Simon, Bolivia
+University of Liege, Belgium - Universidad Mayor de San Simon, Bolivia,
 E-mail: slbalderrama@doct.ulg.ac.be
 
-Francesco Lombardi
-Politecnico di milano
+Francesco Lombardi,
+Politecnico di milano,
 E-mail: francesco.lombardi@polimi.it
 
-Favio Riva
-Politecnico di milano
+Favio Riva,
+Politecnico di milano,
 E-mail: fabio.riva@polimi.it
 
-Emanuela Colombo
-Politecnico di milano
+Emanuela Colombo,
+Politecnico di milano,
 E-mail: emanuela.colombo@polimi.it
 
-Walter Canedo
-Universidad Mayor de San Simon
+Walter Canedo,
+Universidad Mayor de San Simon,
 E-mail:w.canedo@umss.edu.bo 
 
-Sylvain Quoilin
-University of Liege, Belgium.
+Sylvain Quoilin,
+University of Liege, Belgium,
 E-mail: squoilin@ulg.ac.be 
  
 
@@ -113,7 +114,7 @@ To run the instance from the paper, copy the files in the Micro-Grids/MicroGrids
 ### Outputs
 
 
-After the optimization is finish a message will appear with the Levelized cost of energy and the net present value of the system. Addional files will be created in the 'Results' folder.
+After the optimization is finish a message will appear with the Levelized cost of energy and the optimal compostion of the system. Addional files will be created in the 'Results' folder.
 
 Licence
 =======
