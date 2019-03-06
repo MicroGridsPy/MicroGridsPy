@@ -182,12 +182,12 @@ def Model_Resolution_Integer(model,Renewable_Penetration, Battery_Independency,
     
     
     instance = model.create_instance("Example/data_Integer.dat") # load parameters       
-    opt = SolverFactory('cplex') # Solver use during the optimization    
+    opt = SolverFactory('gurobi') # Solver use during the optimization    
 #    opt.options['emphasis_memory'] = 'y'
 #    opt.options['timelimit'] = 20000
 #    opt.options['node_select'] = 3
-    opt.options['emphasis_mip'] = 2
-    results = opt.solve(instance, tee=True,options_string="mipgap=0.05",warmstart=True,keepfiles=True) # Solving a model instance 
+#    opt.options['emphasis_mip'] = 2
+    results = opt.solve(instance, tee=True,options_string="mipgap=0.05",warmstart=True,keepfiles=False) # Solving a model instance 
 
     #    instance.write(io_options={'emphasis_memory':True})
     #options_string="mipgap=0.03", timelimit=1200
