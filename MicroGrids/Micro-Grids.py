@@ -22,7 +22,7 @@ formulation = 'Integer'
 Renewable_Penetration = 0 # a number from 0 to 1.a
 Battery_Independency = 0  # number of days of battery independency
 
-S = 3 # Plot scenario
+S = 1 # Plot scenario
 Plot_Date = '25/12/2016 00:00:00' # Day-Month-Year
 PlotTime = 5# Days of the plot
 plot = 'No Average' # 'No Average' or 'Average'
