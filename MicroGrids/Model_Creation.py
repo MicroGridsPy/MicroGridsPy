@@ -116,22 +116,12 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
 
     model.Generator_Energy = Var(model.scenario,model.generator_type,
                                  model.periods, within=NonNegativeReals) # Energy generated for the Diesel generator
-    model.Fuel_Cost_Total = Var(model.scenario, model.generator_type,
-                                  within=NonNegativeReals)
-    
+
     
     
     # Varialbles associated to the energy balance
     model.Lost_Load = Var(model.scenario, model.periods, within=NonNegativeReals) # Energy not suply by the system kWh
     model.Energy_Curtailment = Var(model.scenario, model.periods, within=NonNegativeReals) # Curtailment of solar energy in kWh
-    model.Scenario_Lost_Load_Cost = Var(model.scenario, within=NonNegativeReals) ####    
-
-    # Variables associated to the project
-    model.Scenario_Net_Present_Cost = Var(model.scenario, within=NonNegativeReals) ####
-    model.Initial_Inversion = Var(within=NonNegativeReals)
-    model.Operation_Maintenance_Cost = Var(within=NonNegativeReals)
-    model.Battery_Reposition_Cost = Var(model.scenario,within=NonNegativeReals)
-
 
 
 

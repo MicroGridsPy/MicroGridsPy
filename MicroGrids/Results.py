@@ -138,31 +138,16 @@ def Load_results1(instance):
         columns.append('Scenario '+str(i))
         
     Scenario_information =[[] for i in range(Number_Scenarios)]
-    Scenario_NPC = instance.Scenario_Net_Present_Cost.get_values()
-    LoL_Cost = instance.Scenario_Lost_Load_Cost.get_values() 
     Scenario_Weight = instance.Scenario_Weight.extract_values()
-    Fuel_Cost = instance.Fuel_Cost_Total.get_values()
-    Battery_Reposition_Cost = instance.Battery_Reposition_Cost.get_values()
-    Total_Fuel_Cost = {}
 
-    for s in range(1,Number_Scenarios+1):
-        foo = []
-        for g in range(1, Number_Generator+1):
-            foo.append((s,g))
-        
-        Total_Fuel_Cost[s] = sum(Fuel_Cost[j] for j in foo)
-    
     
     for i in range(1, Number_Scenarios+1):
-        Scenario_information[i-1].append(Scenario_NPC[i])
-        Scenario_information[i-1].append(LoL_Cost[i])
         Scenario_information[i-1].append(Scenario_Weight[i])
-        Scenario_information[i-1].append(Total_Fuel_Cost[i])
-        Scenario_information[i-1].append(Battery_Reposition_Cost[i])
+        
+
     
     Scenario_Information = pd.DataFrame(Scenario_information,index=columns)
-    Scenario_Information.columns=['Scenario NPC', 'LoL Cost','Scenario Weight', 
-                                  'Diesel Cost','Battery Reposition Cost']
+    Scenario_Information.columns=['Scenario Weight']
     Scenario_Information = Scenario_Information.transpose()
     
     Scenario_Information.to_excel('Results/Scenario_Information.xls')
@@ -260,8 +245,6 @@ def Load_results1(instance):
     DiscountRate = instance.Discount_Rate.value
     PriceBattery= instance.Battery_Invesment_Cost.value
     Years=instance.Years.value
-    Initial_Inversion = instance.Initial_Inversion.get_values()[None]
-    O_M_Cost = instance.Operation_Maintenance_Cost.get_values()[None]
     Battery_Reposition_Cost = instance.Unitary_Battery_Reposition_Cost.value
     VOLL = instance.Value_Of_Lost_Load.value
     OM_Bat = instance.Maintenance_Operation_Cost_Battery.value
@@ -270,11 +253,11 @@ def Load_results1(instance):
     Dis_bat_eff = instance.Discharge_Battery_Efficiency.value
     Year = instance.Years.value
     data3 = np.array([cc[None],NPC, DiscountRate, 
-                      PriceBattery, Years, Initial_Inversion,
-                      O_M_Cost, Battery_Reposition_Cost, VOLL,
+                      PriceBattery, Years, 
+                      Battery_Reposition_Cost, VOLL,
                        OM_Bat, SOC_1, Ch_bat_eff, Dis_bat_eff, Year]) # Loading the values to a numpy array
     index_values = ['Battery Nominal Capacity','NPC','Discount Rate','Price Battery', 
-                    'Years','Initial Inversion', 'O&M', 
+                    'Years',
                     'Battery Unitary Reposition Cost','VOLL', 'OyM Bat', 'Initial SOC',
                     'Battery charge efficiency', 'Battery discharge efficiency',
                     'Project Life Time']
@@ -390,6 +373,7 @@ def Load_results1(instance):
 
     
     NPC.loc['NPC', 'Data'] = NPC['Data'].sum()
+    print(round(NPC.loc['NPC', 'Data'],5) == round(instance.ObjectiveFuntion.expr(), 5))
     NPC.loc['NPC LP', 'Data'] = Size_variables[0]['NPC']
     NPC.loc['Invesment', 'Data'] = NPC.loc['Battery Invesment', 'Data']+NPC.loc['Gen Invesment Cost', 'Data']+NPC.loc['Renewable Investment Cost', 'Data']
     
@@ -1566,7 +1550,7 @@ def Energy_Mix(instance,Scenarios,Scenario_Probability):
     return Energy_Mix    
     
     
-def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE,formulation):
+def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE, formulation):
     if formulation == 'LP':
         Number_Renewable_Source = int(instance.Renewable_Source.extract_values()[None])
         Number_Generator = int(instance.Generator_Type.extract_values()[None])
@@ -1601,6 +1585,8 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE,formul
         index_2 = 'NPC'    
         NPC = Results[0][index_2]/1000
         NPC = round(NPC, 0)
+        
+        
         
         print('NPC is ' + str(NPC) +'Thousand USD') 
     
