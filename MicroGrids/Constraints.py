@@ -8,20 +8,30 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
     :param model: Pyomo model as defined in the Model_creation library.
     '''
     
+    # Generator operation cost
     foo = []
     for g in range(1,model.Generator_Type+1):
         for s in model.scenario:
             for t in range(1,model.Periods+1):
                 foo.append((s,g,t))
 
-    
-    Generator_Cost = sum(model.Generator_Energy[s,g,t]*model.Marginal_Cost_Generator_1[g]
-                         *model.Scenario_Weight[s] for s,g,t in foo)
-    
-    Generator_Cost_Total = sum(Generator_Cost/((1+model.Discount_Rate)**model.Project_Years[y])
-                                                                    for y in model.years) 
-    
-    
+    if model.formulation == 'LP':
+        Generator_Cost = sum(model.Generator_Energy[s,g,t]*model.Marginal_Cost_Generator_1[g]
+                             *model.Scenario_Weight[s] for s,g,t in foo)
+        
+        Generator_Cost_Total = sum(Generator_Cost/((1+model.Discount_Rate)**model.Project_Years[y])
+                                                                        for y in model.years) 
+    if model.formulation == 'MILP':
+       print('Hello World 1')
+       Generator_Cost =  sum(model.Generator_Energy_Integer[s,g,t]*model.Start_Cost_Generator[g]*model.Scenario_Weight[s] + 
+                             model.Marginal_Cost_Generator[g]*model.Generator_Total_Period_Energy[s,g,t]*model.Scenario_Weight[s]
+                             for s,g,t in foo)
+       
+       Generator_Cost_Total = sum(Generator_Cost/((1+model.Discount_Rate)**model.Project_Years[y])
+                                                                        for y in model.years) 
+       
+       
+    # Battery opereation cost
     foo=[]
     for s in model.scenario:
         for t in range(1,model.Periods+1):
@@ -36,13 +46,14 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
     Battery_Reposition_Cost = sum(Battery_Yearly_cost/((1+model.Discount_Rate)**model.Project_Years[y])
                                                                     for y in model.years) 
     
+    # Cost of the Lost load
     Lost_Load_Cost =  sum(model.Lost_Load[s,t]*model.Value_Of_Lost_Load
                           *model.Scenario_Weight[s] for s,t in foo)
     
     Lost_Load_Cost_Total =  sum(Lost_Load_Cost/((1+model.Discount_Rate)**model.Project_Years[y])
                                                                     for y in model.years) 
     
-    
+    # Cost of the operation and maintenece
     
     OyM_PV = sum(model.Renewable_Units[r]*model.Renewable_Nominal_Capacity[r]*model.Renewable_Invesment_Cost[r]
                 *model.Maintenance_Operation_Cost_Renewable[r] for r in model.renewable_source)
@@ -50,32 +61,32 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
                 *model.Maintenance_Operation_Cost_Generator[g] for g in model.generator_type)
     OyM_Bat = model.Battery_Nominal_Capacity*model.Battery_Invesment_Cost*model.Maintenance_Operation_Cost_Battery
     OyM_Cost =  OyM_PV + OyM_Gen + OyM_Bat
-    OyM_Cost_Total = sum(OyM_Cost/((1+model.Discount_Rate)**model.Project_Years[y]) for y in model.years) 
+    OyM_Cost_Total = sum(OyM_Cost/((1+model.Discount_Rate)**model.Project_Years[y]) for y in model.years)
+    
+    # Operation Cost
     Operation_Cost = (OyM_Cost_Total + Generator_Cost_Total + Battery_Reposition_Cost + Lost_Load_Cost_Total) 
     
-
+    # Invesment cost
     Inv_PV = sum(model.Renewable_Units[r]*model.Renewable_Nominal_Capacity[r]*model.Renewable_Invesment_Cost[r]
                  for r in model.renewable_source)
-    Inv_Gen = sum(model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]
+    if model.formulation == 'LP':
+        Inv_Gen = sum(model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]
                  for g in model.generator_type)
+    if model.formulation == 'MILP':
+        print('Hello World 2')
+        Inv_Gen = sum(model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]
+        *model.Integer_generator[g] for g in model.generator_type) 
+        
     Inv_Bat = model.Battery_Nominal_Capacity*model.Battery_Invesment_Cost
     Initial_Inversion =  Inv_PV + Inv_Gen + Inv_Bat
     
            
     return Initial_Inversion + Operation_Cost
            
-##################################################### PV constraints##################################################
-
-def Renewable_Energy(model,s,r,t): # Energy output of the solar panels
-    '''
-    This constraint calculates the energy produce by the solar panels taking in 
-    account the efficiency of the inverter for each scenario.
+##################################################################################################
+#################################################### Battery constraints #########################
+##################################################################################################
     
-    :param model: Pyomo model as defined in the Model_creation library.
-    '''
-    return model.Total_Energy_Renewable[s,r,t] == model.Renewable_Energy_Production[s,r,t]*model.Renewable_Inverter_Efficiency[r]*model.Renewable_Units[r]
-
-#################################################### Battery constraints #############################################
 
 def State_of_Charge(model,i, t): # State of Charge of the battery
     '''
@@ -147,8 +158,11 @@ def Max_Bat_out(model,i, t): #minimun flow of energy for the discharge fase
     '''
     return model.Energy_Battery_Flow_Out[i,t] <= model.Maximun_Discharge_Power*model.Delta_Time
 
+##################################################################################################
+##############                    Energy Constraints                        ######################
+##################################################################################################
+    
 
-############################################## Energy Constraints ##################################################
 
 def Energy_balance(model, s, t): # Energy balance
     '''
@@ -161,8 +175,9 @@ def Energy_balance(model, s, t): # Energy balance
     Foo = []
     for r in model.renewable_source:
         Foo.append((s,r,t))
-    
-    Total_Renewable_Energy = sum(model.Total_Energy_Renewable[j] for j in Foo)
+
+    Total_Renewable_Energy = sum(model.Renewable_Energy_Production[s,r,t]*model.Renewable_Inverter_Efficiency[r]
+                                 *model.Renewable_Units[r] for s,r,t in Foo)
     
     foo=[]
     for g in model.generator_type:
@@ -184,8 +199,11 @@ def Maximun_Lost_Load(model,i): # Maximum permissible lost load
     '''
     return model.Lost_Load_Probability >= (sum(model.Lost_Load[i,t] for t in model.periods)/sum(model.Energy_Demand[i,t] for t in model.periods))
 
-
-######################################## Diesel generator constraints ############################
+##################################################################################################
+#########                          Diesel generator constraints                       ############
+##################################################################################################
+    
+###############################    LP Model        ###############################################
 
 def Maximun_Generator_Energy(model,s,g,t): # Maximun energy output of the diesel generator
     '''
@@ -196,9 +214,36 @@ def Maximun_Generator_Energy(model,s,g,t): # Maximun energy output of the diesel
     '''
     return model.Generator_Energy[s,g,t] <= model.Generator_Nominal_Capacity[g]*model.Delta_Time
 
+###############################    MILP Model        ##############################################
+    
+def Generator_Bounds_Min_Integer(model,s, g,t): # Maximun energy output of the diesel generator
+    ''' 
+    This constraint ensure that each segment of the generator does not pass a 
+    minimun value.
+    :param model: Pyomo model as defined in the Model_creation library.
+    '''
+    return model.Generator_Nominal_Capacity[g]*model.Generator_Min_Out_Put[g] + (model.Generator_Energy_Integer[s,g,t]-1)*model.Generator_Nominal_Capacity[g] <= model.Generator_Energy[s,g,t]                                                                                                
+                                                                                               
+def Generator_Bounds_Max_Integer(model,s, g,t): # Maximun energy output of the diesel generator
+    ''' 
+    This constraint ensure that each segment of the generator does not pass a 
+    minimun value.
+    :param model: Pyomo model as defined in the Model_creation library.
+    '''
+    return model.Generator_Energy[s,g,t] <= model.Generator_Nominal_Capacity[g]*model.Generator_Energy_Integer[s,g,t]                                                                                                
 
-########################################### Economical Constraints ###################################################
 
+def Energy_Genarator_Energy_Max_Integer(model,s,g,t):
+    ''' 
+    This constraint ensure that the total energy in the generators does not  pass
+    a maximun value.
+    :param model: Pyomo model as defined in the Model_creation library.
+    '''
+    return model.Generator_Energy[s,g,t] <= model.Generator_Nominal_Capacity[g]*model.Integer_generator[g]
+
+##################################################################################################
+#########                     Economical Constraints                                ##############
+##################################################################################################
     
 def Renewable_Energy_Penetration(model):
     
@@ -216,9 +261,8 @@ def Renewable_Energy_Penetration(model):
     
     E_ge = sum(model.Generator_Energy[s,g,t]*model.Scenario_Weight[s]
                 for s,g,t in Foo)
-    
-    E_PV = sum(model.Total_Energy_Renewable[s,r,t]*model.Scenario_Weight[s]
-                for s,r,t in foo)
+    E_PV = sum(model.Renewable_Energy_Production[s,r,t]*model.Renewable_Inverter_Efficiency[r]
+                                 *model.Renewable_Units[r]*model.Scenario_Weight[s] for s,r,t in foo)
         
     return  (1 - model.Renewable_Penetration)*E_PV >= model.Renewable_Penetration*E_ge   
 

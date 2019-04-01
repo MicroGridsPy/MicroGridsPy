@@ -11,9 +11,14 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     :param model: Pyomo model as defined in the Micro-Grids library.
     
     '''
-    from pyomo.environ import  Param, RangeSet, NonNegativeReals, Var
-    from Initialize import Initialize_years, Initialize_Demand, Battery_Reposition_Cost, Initialize_Renewable_Energy, Marginal_Cost_Generator_1,Min_Bat_Capacity # Import library with initialitation funtions for the parameters
-
+    from pyomo.environ import  Param, RangeSet, NonNegativeReals, Var, NonNegativeIntegers
+    
+    # Import library with initialitation funtions for the parameters
+    from Initialize import Initialize_years, Initialize_Demand, Battery_Reposition_Cost,\
+    Initialize_Renewable_Energy, Marginal_Cost_Generator_1,Min_Bat_Capacity, Start_Cost,\
+    Marginal_Cost_Generator
+    
+    
     # Time parameters
     model.Periods = Param(within=NonNegativeReals) # Number of periods of analysis of the energy variables
     model.Years = Param() # Number of years of the project
@@ -59,16 +64,32 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     if  Battery_Independency > 0:
         model.Battery_Independency = Battery_Independency
         model.Battery_Min_Capacity = Param(initialize=Min_Bat_Capacity)
-  
     # Parametes of the diesel generator
-    model.Generator_Efficiency = Param(model.generator_type) # Generator efficiency to trasform heat into electricity %
-    model.Low_Heating_Value = Param(model.generator_type) # Low heating value of the diesel in W/L
-    model.Fuel_Cost = Param(model.generator_type,
-                                      within=NonNegativeReals) # Cost of diesel in USD/L
-    model.Generator_Invesment_Cost = Param(model.generator_type,
-                                           within=NonNegativeReals) # Cost of the diesel generator
-    model.Marginal_Cost_Generator_1 = Param(model.generator_type,
+    if model.formulation == 'LP': 
+    
+        model.Generator_Efficiency = Param(model.generator_type) 
+        model.Low_Heating_Value = Param(model.generator_type) 
+        model.Fuel_Cost = Param(model.generator_type,  within=NonNegativeReals) 
+        model.Generator_Invesment_Cost = Param(model.generator_type, within=NonNegativeReals) 
+        model.Marginal_Cost_Generator_1 = Param(model.generator_type, initialize=Marginal_Cost_Generator_1)
+    elif model.formulation == 'MILP':
+        model.Generator_Min_Out_Put = Param(model.generator_type,
+                                        within=NonNegativeReals)
+        model.Generator_Efficiency = Param(model.generator_type) # Generator efficiency to trasform heat into electricity %
+        model.Low_Heating_Value = Param(model.generator_type) # Low heating value of the diesel in W/L
+        model.Fuel_Cost = Param(model.generator_type,
+                              within=NonNegativeReals) # Cost of diesel in USD/L
+        model.Generator_Invesment_Cost = Param(model.generator_type,within=NonNegativeReals) # Cost of the diesel generator  
+        model.Marginal_Cost_Generator_1 = Param(model.generator_type,
                                             initialize=Marginal_Cost_Generator_1)
+        model.Cost_Increase = Param(model.generator_type,
+                                within=NonNegativeReals)
+        model.Generator_Nominal_Capacity = Param(model.generator_type,
+                                             within=NonNegativeReals)
+        model.Start_Cost_Generator = Param(model.generator_type,
+                                       within=NonNegativeReals, initialize=Start_Cost)  
+        model.Marginal_Cost_Generator = Param(model.generator_type,
+                                          initialize=Marginal_Cost_Generator)
         
     # Parameters of the Energy balance                  
     model.Energy_Demand = Param(model.scenario, model.periods, 
@@ -86,9 +107,6 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     model.Maintenance_Operation_Cost_Generator = Param(model.generator_type,
                                                        within=NonNegativeReals) # Percentage of the total investment spend in operation and management of solar panels in each period in %
     model.Discount_Rate = Param() # Discount rate of the project in %
-    
-    
-       
 
     # VARIABLES
    
@@ -96,8 +114,6 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
         
     model.Renewable_Units = Var(model.renewable_source,
                                 within=NonNegativeReals) # Number of units of solar panels
-    model.Total_Energy_Renewable = Var(model.scenario,model.renewable_source,
-                                model.periods, within=NonNegativeReals) # Energy generated for the Pv sistem in Wh
 
 
     # Variables associated to the battery bank
@@ -111,13 +127,50 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     model.Maximun_Charge_Power = Var(within=NonNegativeReals)
     model.Maximun_Discharge_Power = Var(within=NonNegativeReals)
     # Variables associated to the diesel generator
-    model.Generator_Nominal_Capacity = Var(model.generator_type,
-                                           within=NonNegativeReals) # Capacity  of the diesel generator in Wh
-
-    model.Generator_Energy = Var(model.scenario,model.generator_type,
-                                 model.periods, within=NonNegativeReals) # Energy generated for the Diesel generator
-
     
+    if model.formulation == 'LP':
+        model.Generator_Nominal_Capacity = Var(model.generator_type,
+                                               within=NonNegativeReals) # Capacity  of the diesel generator in Wh
+    
+        model.Generator_Energy = Var(model.scenario,model.generator_type,
+                                     model.periods, within=NonNegativeReals) # Energy generated for the Diesel generator
+
+    elif model.formulation == 'MILP':
+        
+        def gen(model,g):
+            if g == 1:
+                return 2
+            else:
+                return 0
+    
+        def bounds_N(model,g):
+            if g == 1:
+                return (0,2)
+            else:
+                return (0,1)
+        
+        def bounds_E(model,s,g,t):
+            if g == 1:
+                return (0,2)
+            else:
+                return (0,1)    
+    
+        model.Generator_Energy = Var(model.scenario, model.generator_type,
+                                           model.periods, within=NonNegativeReals)
+        model.Integer_generator = Var(model.generator_type,
+                                      within=NonNegativeIntegers, 
+                                      initialize=gen, 
+                                      bounds=bounds_N)
+        
+        model.Generator_Total_Period_Energy = Var(model.scenario,
+                                                  model.generator_type,
+                                                  model.periods, 
+                                                  within=NonNegativeReals)   
+        model.Generator_Energy_Integer = Var(model.scenario, model.generator_type,
+                                             model.periods, within=NonNegativeIntegers,
+                                             bounds=bounds_E)
+        model.Last_Energy_Generator = Var(model.scenario, model.generator_type,
+                                          model.periods, within=NonNegativeReals)
     
     # Varialbles associated to the energy balance
     model.Lost_Load = Var(model.scenario, model.periods, within=NonNegativeReals) # Energy not suply by the system kWh

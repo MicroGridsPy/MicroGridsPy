@@ -19,7 +19,7 @@ formulation = 'LP'
 #datapath='Example/Dispatch/'
 # Renewable energy penetrarion
 
-Renewable_Penetration = 0 # a number from 0 to 1.a
+Renewable_Penetration = 0.00 # a number from 0 to 1
 Battery_Independency = 0  # number of days of battery independency
 
 S = 1 # Plot scenario
@@ -29,27 +29,27 @@ plot = 'No Average' # 'No Average' or 'Average'
 
 model = AbstractModel() # define type of optimization problem
 
-if formulation == 'LP':
+if formulation == 'LP' or formulation == 'MILP':
     # Optimization model
-        
-    Model_Creation(model, Renewable_Penetration, Battery_Independency) # Creation of the Sets, parameters and variables.
-    instance = Model_Resolution(model,Renewable_Penetration,
-                                Battery_Independency) # Resolution of the instance
+    model.formulation = formulation    
+    Model_Creation(model, Renewable_Penetration, Battery_Independency)  
+    instance = Model_Resolution(model, Renewable_Penetration, Battery_Independency) 
     ## Upload the resulst from the instance and saving it in excel files
-    Data = Load_results1(instance) # Extract the results of energy from the instance and save it in a excel file 
+    Data = Load_results1(instance) 
     Scenarios =  Data[3]
     Scenario_Probability = Data[5].loc['Scenario Weight'] 
     Generator_Data = Data[4]
-    Data_Renewable = Data[7]
-    Results = Data[2]
-    LCOE = Data[6]
+    Data_Renewable = Data[6]
+    Battery_Data = Data[7]
+    Results = Data[0]
+
     # Energy Plot    
 
     Time_Series = Integer_Time_Series(instance,Scenarios, S) 
     Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime)
     # Data Analisys
-    Print_Results(instance, Generator_Data, Data_Renewable, Results, 
-              LCOE,formulation)  
+    Print_Results(instance, Generator_Data, Data_Renewable, Battery_Data ,Results, 
+             formulation)  
     Energy_Mix_S = Energy_Mix(instance,Scenarios,Scenario_Probability)
 
 elif formulation == 'Binary':
@@ -57,30 +57,30 @@ elif formulation == 'Binary':
     instance = Model_Resolution_binary(model) # Resolution of the instance    
     Time_Series = Load_results1_binary(instance) # Extract the results of energy from the instance and save it in a excel file 
     Results = Load_results2_binary(instance) # Save results into a excel file
-elif formulation =='Integer':
-    Model_Creation_Integer(model, Renewable_Penetration, Battery_Independency)
-    instance = Model_Resolution_Integer(model,Renewable_Penetration, Battery_Independency)
-    Scenarios = Integer_Scenarios(instance) # Extract the results of energy from the instance and save it in a excel file 
-    Scenario_Information = Integer_Scenario_Information(instance)
-    
-    Renewable_Energy = integer_Renewable_Energy(instance, Scenarios)
-    Data_Renewable = Integer_Data_Renewable(instance)
-    Generator_Time_Series = Integer_Generator_time_series(instance, Scenarios)
-    Generator_Data = Integer_Generator_Data(instance)
-    Results = Integer_Results(instance)
-    
-    NPC,LCOE = Economic_Analysis(Scenarios, Scenario_Information, Renewable_Energy, Data_Renewable,
-                      Generator_Time_Series, Generator_Data, Results)
-
-    Scenario_Probability = Scenario_Information.loc['Scenario Weight']  
-    # Energy Plot    
-
-    Time_Series = Integer_Time_Series(instance,Scenarios, S) 
-    Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime)
-    # Data Analisys
-    Print_Results(instance, Generator_Data, Data_Renewable, Results, 
-              LCOE,formulation)  
-    Energy_Mix_S = Energy_Mix(instance,Scenarios,Scenario_Probability)
+#elif formulation =='Integer':
+#    Model_Creation_Integer(model, Renewable_Penetration, Battery_Independency)
+#    instance = Model_Resolution_Integer(model,Renewable_Penetration, Battery_Independency)
+#    Scenarios = Integer_Scenarios(instance) # Extract the results of energy from the instance and save it in a excel file 
+#    Scenario_Information = Integer_Scenario_Information(instance)
+#    
+#    Renewable_Energy = integer_Renewable_Energy(instance, Scenarios)
+#    Data_Renewable = Integer_Data_Renewable(instance)
+#    Generator_Time_Series = Integer_Generator_time_series(instance, Scenarios)
+#    Generator_Data = Integer_Generator_Data(instance)
+#    Results = Integer_Results(instance)
+#    
+#    NPC,LCOE = Economic_Analysis(Scenarios, Scenario_Information, Renewable_Energy, Data_Renewable,
+#                      Generator_Time_Series, Generator_Data, Results)
+#
+#    Scenario_Probability = Scenario_Information.loc['Scenario Weight']  
+#    # Energy Plot    
+#
+#    Time_Series = Integer_Time_Series(instance,Scenarios, S) 
+#    Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime)
+#    # Data Analisys
+#    Print_Results(instance, Generator_Data, Data_Renewable, Results, 
+#              LCOE,formulation)  
+#    Energy_Mix_S = Energy_Mix(instance,Scenarios,Scenario_Probability)
     
 elif formulation =='Dispatch':
     Model_Creation_Dispatch(model)

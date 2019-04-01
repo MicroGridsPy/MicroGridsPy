@@ -15,12 +15,13 @@ def Model_Resolution(model,Renewable_Penetration, Battery_Independency,datapath=
     :return: The solution inside an object call instance.
     '''
     
-    from Constraints import  Net_Present_Cost, Renewable_Energy,State_of_Charge,\
+    from Constraints import  Net_Present_Cost, State_of_Charge,\
     Maximun_Charge, Minimun_Charge, Max_Power_Battery_Charge,\
     Max_Power_Battery_Discharge, Max_Bat_in, Max_Bat_out, \
     Energy_balance, Maximun_Lost_Load, Renewable_Energy_Penetration,\
-    Maximun_Generator_Energy,\
-    Battery_Min_Capacity
+    Maximun_Generator_Energy,Generator_Bounds_Min_Integer,\
+    Battery_Min_Capacity,Generator_Bounds_Max_Integer,Energy_Genarator_Energy_Max_Integer\
+    
     
     
     # OBJETIVE FUNTION:
@@ -34,8 +35,7 @@ def Model_Resolution(model,Renewable_Penetration, Battery_Independency,datapath=
         model.RenewableEnergyPenetration = Constraint(rule=Renewable_Energy_Penetration)
     
     # Renewable constraints
-    model.RenewableEnergy = Constraint(model.scenario, model.renewable_source,
-                                       model.periods, rule=Renewable_Energy)  
+
     # Battery constraints
     model.StateOfCharge = Constraint(model.scenario, model.periods, rule=State_of_Charge) 
     model.MaximunCharge = Constraint(model.scenario, model.periods, rule=Maximun_Charge) 
@@ -48,13 +48,36 @@ def Model_Resolution(model,Renewable_Penetration, Battery_Independency,datapath=
         model.BatteryMinCapacity = Constraint(rule=Battery_Min_Capacity)
 
     # Diesel Generator constraints
-    model.MaximunFuelEnergy = Constraint(model.scenario, model.generator_type,
-                                         model.periods, rule=Maximun_Generator_Energy) 
     
-    instance = model.create_instance(datapath) # load parameters       
-    opt = SolverFactory('cplex') # Solver use during the optimization    
-    results = opt.solve(instance, tee=True) # Solving a model instance 
-    instance.solutions.load_from(results)  # Loading solution into instance
+    
+    if model.formulation == 'LP':
+        model.MaximunFuelEnergy = Constraint(model.scenario, model.generator_type,
+                                         model.periods, rule=Maximun_Generator_Energy) 
+        instance = model.create_instance(datapath) # load parameters       
+        opt = SolverFactory('cplex') # Solver use during the optimization    
+        results = opt.solve(instance, tee=True) # Solving a model instance 
+        instance.solutions.load_from(results)  # Loading solution into instance
+        
+    elif model.formulation == 'MILP':
+        model.GeneratorBoundsMin = Constraint(model.scenario,model.generator_type,
+                                          model.periods, rule=Generator_Bounds_Min_Integer) 
+        model.GeneratorBoundsMax = Constraint(model.scenario,model.generator_type,
+                                          model.periods, rule=Generator_Bounds_Max_Integer)
+   
+        model.EnergyGenaratorEnergyMax = Constraint(model.scenario, model.generator_type,
+                                                model.periods, rule=Energy_Genarator_Energy_Max_Integer)
+        instance = model.create_instance("Example/data_Integer.dat") # load parameters       
+        opt = SolverFactory('cplex') # Solver use during the optimization    
+#       opt.options['emphasis_memory'] = 'y'
+#       opt.options['timelimit'] = 20000
+#       opt.options['node_select'] = 3
+#       opt.options['emphasis_mip'] = 2
+        results = opt.solve(instance, tee=True,options_string="mipgap=0.05",warmstart=True,keepfiles=False) # Solving a model instance 
+
+        #    instance.write(io_options={'emphasis_memory':True})
+        #options_string="mipgap=0.03", timelimit=1200
+        instance.solutions.load_from(results) # Loading solution into instance
+    
     return instance
     
 
@@ -173,12 +196,13 @@ def Model_Resolution_Integer(model,Renewable_Penetration, Battery_Independency,
     
     
     instance = model.create_instance("Example/data_Integer.dat") # load parameters       
-    opt = SolverFactory('gurobi') # Solver use during the optimization    
+    opt = SolverFactory('cplex') # Solver use during the optimization    
 #    opt.options['emphasis_memory'] = 'y'
 #    opt.options['timelimit'] = 20000
 #    opt.options['node_select'] = 3
 #    opt.options['emphasis_mip'] = 2
-    results = opt.solve(instance, tee=True,options_string="mipgap=0.05",warmstart=True,keepfiles=False) # Solving a model instance 
+    results = opt.solve(instance, tee=True,options_string="mipgap=0.10",
+                        warmstart=True,keepfiles=False) # Solving a model instance 
 
     #    instance.write(io_options={'emphasis_memory':True})
     #options_string="mipgap=0.03", timelimit=1200

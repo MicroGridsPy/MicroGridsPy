@@ -7,3 +7,14 @@ The LCOE is 0.261 $/kWh
 47.39 % Renewable Penetration
 4.4799999999999995 % of energy curtail
 6.52 % Battery usage
+
+CPLEX> Incumbent solution written to file '/tmp/tmppmgmbbs5.cplex.sol'.
+CPLEX> Renewable 1 nominal capacity is 31.7 kW
+Generator 1 nominal capacity is 30.0 kW
+Generator 2 nominal capacity is 0.0 kW
+Battery nominal capacity is 28.9 kWh
+NPC is 263.0Thousand USD
+The LCOE is 0.258 $/kWh
+37.87 % Renewable Penetration
+2.64 % of energy curtail
+3.56 % Battery usage
