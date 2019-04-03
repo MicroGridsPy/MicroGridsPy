@@ -24,7 +24,7 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
     if model.formulation == 'MILP':
        print('Hello World 1')
        Generator_Cost =  sum(model.Generator_Energy_Integer[s,g,t]*model.Start_Cost_Generator[g]*model.Scenario_Weight[s] + 
-                             model.Marginal_Cost_Generator[g]*model.Generator_Total_Period_Energy[s,g,t]*model.Scenario_Weight[s]
+                             model.Marginal_Cost_Generator[g]*model.Generator_Energy[s,g,t]*model.Scenario_Weight[s]
                              for s,g,t in foo)
        
        Generator_Cost_Total = sum(Generator_Cost/((1+model.Discount_Rate)**model.Project_Years[y])
@@ -57,8 +57,14 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
     
     OyM_PV = sum(model.Renewable_Units[r]*model.Renewable_Nominal_Capacity[r]*model.Renewable_Invesment_Cost[r]
                 *model.Maintenance_Operation_Cost_Renewable[r] for r in model.renewable_source)
-    OyM_Gen = sum(model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]
+    if model.formulation == 'LP':
+        OyM_Gen = sum(model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]
                 *model.Maintenance_Operation_Cost_Generator[g] for g in model.generator_type)
+    if model.formulation == 'MILP':
+        OyM_Gen = sum(model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]*model.Integer_generator[g]
+                *model.Maintenance_Operation_Cost_Generator[g] for g in model.generator_type)
+    
+    
     OyM_Bat = model.Battery_Nominal_Capacity*model.Battery_Invesment_Cost*model.Maintenance_Operation_Cost_Battery
     OyM_Cost =  OyM_PV + OyM_Gen + OyM_Bat
     OyM_Cost_Total = sum(OyM_Cost/((1+model.Discount_Rate)**model.Project_Years[y]) for y in model.years)
