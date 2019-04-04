@@ -19,16 +19,14 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
         Generator_Cost = sum(model.Generator_Energy[s,g,t]*model.Marginal_Cost_Generator_1[g]
                              *model.Scenario_Weight[s] for s,g,t in foo)
         
-        Generator_Cost_Total = sum(Generator_Cost/((1+model.Discount_Rate)**model.Project_Years[y])
-                                                                        for y in model.years) 
+        Generator_Cost_Total = (Generator_Cost)/model.Capital_Recovery_Factor 
     if model.formulation == 'MILP':
-       print('Hello World 1')
+       
        Generator_Cost =  sum(model.Generator_Energy_Integer[s,g,t]*model.Start_Cost_Generator[g]*model.Scenario_Weight[s] + 
                              model.Marginal_Cost_Generator[g]*model.Generator_Energy[s,g,t]*model.Scenario_Weight[s]
                              for s,g,t in foo)
        
-       Generator_Cost_Total = sum(Generator_Cost/((1+model.Discount_Rate)**model.Project_Years[y])
-                                                                        for y in model.years) 
+       Generator_Cost_Total = Generator_Cost/model.Capital_Recovery_Factor
        
        
     # Battery opereation cost
@@ -43,15 +41,13 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
                            *model.Scenario_Weight[s] for s,t in foo)
     Battery_Yearly_cost = Battery_cost_in + Battery_cost_out
     
-    Battery_Reposition_Cost = sum(Battery_Yearly_cost/((1+model.Discount_Rate)**model.Project_Years[y])
-                                                                    for y in model.years) 
+    Battery_Reposition_Cost = Battery_Yearly_cost/model.Capital_Recovery_Factor
     
     # Cost of the Lost load
     Lost_Load_Cost =  sum(model.Lost_Load[s,t]*model.Value_Of_Lost_Load
                           *model.Scenario_Weight[s] for s,t in foo)
     
-    Lost_Load_Cost_Total =  sum(Lost_Load_Cost/((1+model.Discount_Rate)**model.Project_Years[y])
-                                                                    for y in model.years) 
+    Lost_Load_Cost_Total =  Lost_Load_Cost/model.Capital_Recovery_Factor
     
     # Cost of the operation and maintenece
     
@@ -67,7 +63,7 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
     
     OyM_Bat = model.Battery_Nominal_Capacity*model.Battery_Invesment_Cost*model.Maintenance_Operation_Cost_Battery
     OyM_Cost =  OyM_PV + OyM_Gen + OyM_Bat
-    OyM_Cost_Total = sum(OyM_Cost/((1+model.Discount_Rate)**model.Project_Years[y]) for y in model.years)
+    OyM_Cost_Total = OyM_Cost/model.Capital_Recovery_Factor
     
     # Operation Cost
     Operation_Cost = (OyM_Cost_Total + Generator_Cost_Total + Battery_Reposition_Cost + Lost_Load_Cost_Total) 
@@ -79,7 +75,7 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
         Inv_Gen = sum(model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]
                  for g in model.generator_type)
     if model.formulation == 'MILP':
-        print('Hello World 2')
+
         Inv_Gen = sum(model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]
         *model.Integer_generator[g] for g in model.generator_type) 
         

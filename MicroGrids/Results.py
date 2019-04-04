@@ -1609,7 +1609,6 @@ def Energy_Mix(instance,Scenarios,Scenario_Probability):
     
 def Print_Results(instance, Generator_Data, Data_Renewable, Battery_Data ,Results, 
                   formulation):
-    if formulation == 'LP':
         Number_Renewable_Source = int(instance.Renewable_Source.extract_values()[None])
         Number_Generator = int(instance.Generator_Type.extract_values()[None])
         
@@ -1621,17 +1620,27 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Battery_Data ,Result
             Renewable_Rate = round(Renewable_Rate, 1)
             print('Renewable ' + str(i) + ' nominal capacity is ' 
                   + str(Renewable_Rate) +' kW')    
-            
-        for i in range(1, Number_Generator + 1):
-            index_1 = 'Generator ' + str(i)
-            index_2 = 'Generator Nominal Capacity (W)'
-            
-            Generator_Rate = float(Generator_Data[index_1][index_2]/1000)
-            Generator_Rate = round(Generator_Rate, 1)
-            
-            print('Generator ' + str(i) + ' nominal capacity is ' 
-                  + str(Generator_Rate) +' kW')    
-            
+        if formulation == 'LP':    
+            for i in range(1, Number_Generator + 1):
+                index_1 = 'Generator ' + str(i)
+                index_2 = 'Generator Nominal Capacity (W)'
+                
+                Generator_Rate = float(Generator_Data[index_1][index_2]/1000)
+                Generator_Rate = round(Generator_Rate, 1)
+                
+                print('Generator ' + str(i) + ' nominal capacity is ' 
+                      + str(Generator_Rate) +' kW')  
+        if formulation == 'MILP': 
+             Number_Generator = int(instance.Generator_Type.extract_values()[None])
+             for i in range(1, Number_Generator + 1):
+                index_1 = 'Generator ' + str(i)
+                index_2 = 'Generator Nominal Capacity (W)'
+                index_3 = 'Number of Generators'
+                Generator_Rate = float(Generator_Data[index_1][index_2]/1000)
+                Generator_Rate = round(Generator_Rate, 1)
+                Generator_Rate = Generator_Rate*Generator_Data[index_1][index_3]
+                print('Generator ' + str(i) + ' nominal capacity is ' 
+                  + str(Generator_Rate) +' kW')                
         
         index_2 = 'Nominal Capacity (Wh)'    
         Battery_Rate = Battery_Data['Battery'][index_2]/1000
@@ -1644,8 +1653,6 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Battery_Data ,Result
         NPC = Results['Data'][index_2]/1000
         NPC = round(NPC, 0)
         
-        
-        
         print('NPC is ' + str(NPC) +' Thousand USD') 
     
     
@@ -1655,49 +1662,7 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Battery_Data ,Result
             
         print('The LCOE is ' + str(LCOE) + ' USD/kWh')  
 
-    if formulation == 'Integer':
-        Number_Renewable_Source = int(instance.Renewable_Source.extract_values()[None])
-        Number_Generator = int(instance.Generator_Type.extract_values()[None])
-        
-        for i in range(1, Number_Renewable_Source + 1):
-            index_1 = 'Source ' + str(i)
-            index_2 = 'Nominal Capacity'
-            index_3 = 'Units'
-            Total_Capacity = (Data_Renewable[index_1][index_2]
-                              *Data_Renewable[index_1][index_3])
-            Renewable_Rate = float(Total_Capacity/1000)
-            Renewable_Rate = round(Renewable_Rate, 1)
-            print('Renewable ' + str(i) + ' nominal capacity is ' 
-                  + str(Renewable_Rate) +' kW')    
-            
-        for i in range(1, Number_Generator + 1):
-                index_1 = 'Generator ' + str(i)
-                index_2 = 'Generator Nominal Capacity'
-                index_3 = 'Number of Generator'
-                Generator_Rate = float(Generator_Data[index_1][index_2]/1000)
-                Generator_Rate = round(Generator_Rate, 1)
-                Generator_Rate = Generator_Rate*Generator_Data[index_1][index_3]
-                print('Generator ' + str(i) + ' nominal capacity is ' 
-                  + str(Generator_Rate) +' kW')    
-            
-        
-        index_2 = 'Size of the Battery'    
-        Battery_Rate = Results[0][index_2]/1000
-        Battery_Rate = round(Battery_Rate, 1)
-        
-        print('Battery nominal capacity is ' 
-                  + str(Battery_Rate) +' kWh') 
-        
-        index_2 = 'Net Present Cost'    
-        NPC = Results[0][index_2]/1000
-        NPC = round(NPC, 0)
-        
-        print('NPC is ' + str(NPC) +'Thousand USD') 
-    
-    
-    
-        LCOE = round(LCOE, 3)    
-        print('The LCOE is ' +  str(LCOE) + ' $/kWh')  
+
     
 def Print_Results_Dispatch(instance, Economic_Results):
     Operation_Costs = Economic_Results[1]
