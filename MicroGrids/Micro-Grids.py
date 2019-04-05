@@ -6,7 +6,7 @@ from pyomo.environ import  AbstractModel
 from Results import Plot_Energy_Total, Load_results1,  Load_results1_binary, \
 Load_results2_binary, Energy_Mix, Print_Results,Print_Results_Dispatch, \
 Load_results1_Dispatch, Load_results2_Dispatch, Energy_Mix_Dispatch, \
- Dispatch_Economic_Analysis
+Dispatch_Economic_Analysis, Integer_Time_Series
 from Model_Creation import Model_Creation, Model_Creation_binary,\
 Model_Creation_Dispatch
 from Model_Resolution import Model_Resolution, Model_Resolution_binary,\
@@ -17,10 +17,11 @@ formulation = 'MILP'
 #datapath='Example/Dispatch/'
 # Renewable energy penetrarion
 
-Renewable_Penetration = 0.00 # a number from 0 to 1
-Battery_Independency = 0  # number of days of battery independency
+Renewable_Penetration  =  0   # a number from 0 to 1
+Battery_Independency   =  0   # number of days of battery independency
+Lost_Load_Probability  =  0  # Allowed percentage of unmed demand in the system
 
-S = 1 # Plot scenario
+S = 2 # Plot scenario
 Plot_Date = '25/12/2016 00:00:00' # Day-Month-Year
 PlotTime = 5# Days of the plot
 plot = 'No Average' # 'No Average' or 'Average'
@@ -29,7 +30,8 @@ model = AbstractModel() # define type of optimization problem
 
 if formulation == 'LP' or formulation == 'MILP':
     # Optimization model
-    model.formulation = formulation    
+    model.formulation = formulation
+    model.Lost_Load_Probability =  Lost_Load_Probability  
     Model_Creation(model, Renewable_Penetration, Battery_Independency)  
     instance = Model_Resolution(model, Renewable_Penetration, Battery_Independency) 
     ## Upload the resulst from the instance and saving it in excel files
@@ -55,30 +57,6 @@ elif formulation == 'Binary':
     instance = Model_Resolution_binary(model) # Resolution of the instance    
     Time_Series = Load_results1_binary(instance) # Extract the results of energy from the instance and save it in a excel file 
     Results = Load_results2_binary(instance) # Save results into a excel file
-#elif formulation =='Integer':
-#    Model_Creation_Integer(model, Renewable_Penetration, Battery_Independency)
-#    instance = Model_Resolution_Integer(model,Renewable_Penetration, Battery_Independency)
-#    Scenarios = Integer_Scenarios(instance) # Extract the results of energy from the instance and save it in a excel file 
-#    Scenario_Information = Integer_Scenario_Information(instance)
-#    
-#    Renewable_Energy = integer_Renewable_Energy(instance, Scenarios)
-#    Data_Renewable = Integer_Data_Renewable(instance)
-#    Generator_Time_Series = Integer_Generator_time_series(instance, Scenarios)
-#    Generator_Data = Integer_Generator_Data(instance)
-#    Results = Integer_Results(instance)
-#    
-#    NPC,LCOE = Economic_Analysis(Scenarios, Scenario_Information, Renewable_Energy, Data_Renewable,
-#                      Generator_Time_Series, Generator_Data, Results)
-#
-#    Scenario_Probability = Scenario_Information.loc['Scenario Weight']  
-#    # Energy Plot    
-#
-#    Time_Series = Integer_Time_Series(instance,Scenarios, S) 
-#    Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime)
-#    # Data Analisys
-#    Print_Results(instance, Generator_Data, Data_Renewable, Results, 
-#              LCOE,formulation)  
-#    Energy_Mix_S = Energy_Mix(instance,Scenarios,Scenario_Probability)
     
 elif formulation =='Dispatch':
     Model_Creation_Dispatch(model)

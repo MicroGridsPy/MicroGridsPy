@@ -7,7 +7,7 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
     
     :param model: Pyomo model as defined in the Model_creation library.
     '''
-    
+    # Operation Cost
     # Generator operation cost
     foo = []
     for g in range(1,model.Generator_Type+1):
@@ -18,15 +18,13 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
     if model.formulation == 'LP':
         Generator_Cost = sum(model.Generator_Energy[s,g,t]*model.Marginal_Cost_Generator_1[g]
                              *model.Scenario_Weight[s] for s,g,t in foo)
+        Operation_Cost = (Generator_Cost)/model.Capital_Recovery_Factor
         
-        Generator_Cost_Total = (Generator_Cost)/model.Capital_Recovery_Factor 
     if model.formulation == 'MILP':
-       
        Generator_Cost =  sum(model.Generator_Energy_Integer[s,g,t]*model.Start_Cost_Generator[g]*model.Scenario_Weight[s] + 
                              model.Marginal_Cost_Generator[g]*model.Generator_Energy[s,g,t]*model.Scenario_Weight[s]
                              for s,g,t in foo)
-       
-       Generator_Cost_Total = Generator_Cost/model.Capital_Recovery_Factor
+       Operation_Cost = Generator_Cost/model.Capital_Recovery_Factor
        
        
     # Battery opereation cost
@@ -41,13 +39,13 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
                            *model.Scenario_Weight[s] for s,t in foo)
     Battery_Yearly_cost = Battery_cost_in + Battery_cost_out
     
-    Battery_Reposition_Cost = Battery_Yearly_cost/model.Capital_Recovery_Factor
+    Operation_Cost += Battery_Yearly_cost/model.Capital_Recovery_Factor
     
     # Cost of the Lost load
-    Lost_Load_Cost =  sum(model.Lost_Load[s,t]*model.Value_Of_Lost_Load
-                          *model.Scenario_Weight[s] for s,t in foo)
-    
-    Lost_Load_Cost_Total =  Lost_Load_Cost/model.Capital_Recovery_Factor
+    if model.Lost_Load_Probability > 0:
+        Lost_Load_Cost =  sum(model.Lost_Load[s,t]*model.Value_Of_Lost_Load
+                              *model.Scenario_Weight[s] for s,t in foo)
+        Operation_Cost +=  Lost_Load_Cost/model.Capital_Recovery_Factor
     
     # Cost of the operation and maintenece
     
@@ -63,10 +61,9 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
     
     OyM_Bat = model.Battery_Nominal_Capacity*model.Battery_Invesment_Cost*model.Maintenance_Operation_Cost_Battery
     OyM_Cost =  OyM_PV + OyM_Gen + OyM_Bat
-    OyM_Cost_Total = OyM_Cost/model.Capital_Recovery_Factor
+    Operation_Cost += OyM_Cost/model.Capital_Recovery_Factor
     
-    # Operation Cost
-    Operation_Cost = (OyM_Cost_Total + Generator_Cost_Total + Battery_Reposition_Cost + Lost_Load_Cost_Total) 
+   
     
     # Invesment cost
     Inv_PV = sum(model.Renewable_Units[r]*model.Renewable_Nominal_Capacity[r]*model.Renewable_Invesment_Cost[r]
@@ -101,9 +98,13 @@ def State_of_Charge(model,i, t): # State of Charge of the battery
     :param model: Pyomo model as defined in the Model_creation library.
     '''
     if t==1: # The state of charge (State_Of_Charge) for the period 0 is equal to the Battery size.
-        return model.State_Of_Charge_Battery[i,t] == model.Battery_Nominal_Capacity*model.Battery_Initial_SOC - model.Energy_Battery_Flow_Out[i,t]/model.Discharge_Battery_Efficiency + model.Energy_Battery_Flow_In[i,t]*model.Charge_Battery_Efficiency
+        return model.State_Of_Charge_Battery[i,t] == model.Battery_Nominal_Capacity*model.Battery_Initial_SOC\
+                                                    - model.Energy_Battery_Flow_Out[i,t]/model.Discharge_Battery_Efficiency\
+                                                    + model.Energy_Battery_Flow_In[i,t]*model.Charge_Battery_Efficiency
     if t>1:  
-        return model.State_Of_Charge_Battery[i,t] == model.State_Of_Charge_Battery[i,t-1] - model.Energy_Battery_Flow_Out[i,t]/model.Discharge_Battery_Efficiency + model.Energy_Battery_Flow_In[i,t]*model.Charge_Battery_Efficiency    
+        return model.State_Of_Charge_Battery[i,t] == model.State_Of_Charge_Battery[i,t-1]\
+                                        - model.Energy_Battery_Flow_Out[i,t]/model.Discharge_Battery_Efficiency\
+                                        + model.Energy_Battery_Flow_In[i,t]*model.Charge_Battery_Efficiency    
 
 def Maximun_Charge(model, s, t): # Maximun state of charge of the Battery
     '''
@@ -174,23 +175,27 @@ def Energy_balance(model, s, t): # Energy balance
     :param model: Pyomo model as defined in the Model_creation library.
     '''
     
+    
     Foo = []
     for r in model.renewable_source:
         Foo.append((s,r,t))
 
-    Total_Renewable_Energy = sum(model.Renewable_Energy_Production[s,r,t]*model.Renewable_Inverter_Efficiency[r]
+    Energy_Sources = sum(model.Renewable_Energy_Production[s,r,t]*model.Renewable_Inverter_Efficiency[r]
                                  *model.Renewable_Units[r] for s,r,t in Foo)
     
     foo=[]
     for g in model.generator_type:
         foo.append((s,g,t))
+        
+    Energy_Sources += sum(model.Generator_Energy[i] for i in foo)  
+        
+    if model.Lost_Load_Probability > 0:
+        Energy_Sources += model.Lost_Load[s,t]
+        
     
-    Generator_Energy = sum(model.Generator_Energy[i] for i in foo)  
-    
-    
-    return model.Energy_Demand[s,t] == (Total_Renewable_Energy + Generator_Energy 
+    return model.Energy_Demand[s,t] == (Energy_Sources +
             - model.Energy_Battery_Flow_In[s,t] + model.Energy_Battery_Flow_Out[s,t] 
-            + model.Lost_Load[s,t] - model.Energy_Curtailment[s,t])
+            - model.Energy_Curtailment[s,t])
 
 def Maximun_Lost_Load(model,i): # Maximum permissible lost load
     '''

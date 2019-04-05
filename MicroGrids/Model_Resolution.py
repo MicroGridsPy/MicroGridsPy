@@ -30,7 +30,8 @@ def Model_Resolution(model,Renewable_Penetration, Battery_Independency,datapath=
     # CONSTRAINTS
     #Energy constraints
     model.EnergyBalance = Constraint(model.scenario,model.periods, rule=Energy_balance)
-    model.MaximunLostLoad = Constraint(model.scenario, rule=Maximun_Lost_Load) 
+    if model.Lost_Load_Probability > 0:
+        model.MaximunLostLoad = Constraint(model.scenario, rule=Maximun_Lost_Load) 
     if Renewable_Penetration > 0:
         model.RenewableEnergyPenetration = Constraint(rule=Renewable_Energy_Penetration)
     
@@ -72,7 +73,7 @@ def Model_Resolution(model,Renewable_Penetration, Battery_Independency,datapath=
 #       opt.options['timelimit'] = 20000
 #       opt.options['node_select'] = 3
 #       opt.options['emphasis_mip'] = 2
-        results = opt.solve(instance, tee=True,options_string="mipgap=0.05",warmstart=True,keepfiles=False) # Solving a model instance 
+        results = opt.solve(instance, tee=True,options_string="mipgap=0.06",warmstart=True,keepfiles=False) # Solving a model instance 
 
         #    instance.write(io_options={'emphasis_memory':True})
         #options_string="mipgap=0.03", timelimit=1200

@@ -14,8 +14,6 @@ param: Maintenance_Operation_Cost_Battery:= 0.015;
 
 param: Discount_Rate := 0.12;
 
-param: Lost_Load_Probability := 0.0;
-
 param: Discharge_Battery_Efficiency := 0.95;
 
 param: Charge_Battery_Efficiency := 0.95;

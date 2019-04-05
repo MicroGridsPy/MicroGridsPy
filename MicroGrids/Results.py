@@ -50,10 +50,16 @@ def Load_results1(instance):
     for i in range(1, Number_Scenarios+1):
         columns.append('Scenario_'+str(i))
 
+
+    # Energy Time Series
     Scenarios = pd.DataFrame()
     
-     
-    Lost_Load = instance.Lost_Load.get_values()
+    Number = 7
+    
+    if instance.Lost_Load_Probability > 0: 
+        Lost_Load = instance.Lost_Load.get_values()
+        Number += 1
+    
     Renewable_Energy_1 = instance.Renewable_Energy_Production.extract_values()
     Renewable_Units = instance.Renewable_Units.get_values()
     Renewable_Energy = {}
@@ -91,24 +97,24 @@ def Load_results1(instance):
             Scenarios_Periods[i].append((i+1,j))
     foo=0        
     for i in columns:
-        Information = [[] for i in range(8)]
+        Information = [[] for i in range(Number)]
         for j in  Scenarios_Periods[foo]:
-            Information[0].append(Lost_Load[j])
-            Information[1].append(Renewable_Energy[j]) 
-            Information[2].append(Battery_Flow_Out[j]) 
-            Information[3].append(Battery_Flow_in[j]) 
-            Information[4].append(Curtailment[j]) 
-            Information[5].append(Energy_Demand[j]) 
-            Information[6].append(SOC[j])
-            Information[7].append(Total_Generator_Energy[j])
             
+            Information[0].append(Renewable_Energy[j]) 
+            Information[1].append(Battery_Flow_Out[j]) 
+            Information[2].append(Battery_Flow_in[j]) 
+            Information[3].append(Curtailment[j]) 
+            Information[4].append(Energy_Demand[j]) 
+            Information[5].append(SOC[j])
+            Information[6].append(Total_Generator_Energy[j])
+            if instance.Lost_Load_Probability > 0: 
+                Information[7].append(Lost_Load[j])
         
         Scenarios=Scenarios.append(Information)
         foo+=1
     
     index=[]  
     for j in range(1, Number_Scenarios+1):   
-       index.append('Lost Load '+str(j) + ' (Wh)')
        index.append('Renewable Energy '+str(j) + ' (Wh)')
        index.append('Battery Flow Out '+str(j) + ' (Wh)') 
        index.append('Battery Flow in '+str(j) + ' (Wh)')
@@ -116,7 +122,8 @@ def Load_results1(instance):
        index.append('Energy Demand '+str(j) + ' (Wh)')
        index.append('SOC '+str(j) + ' (Wh)')
        index.append('Gen energy '+str(j) + ' (Wh)')
-       
+       if instance.Lost_Load_Probability > 0: 
+           index.append('Lost Load '+str(j) + ' (Wh)')
     Scenarios.index= index
      
     
@@ -311,15 +318,17 @@ def Load_results1(instance):
 
     Cost_Time_Series = pd.DataFrame()
     for s in range(1, Number_Scenarios + 1):
-        name_1 = 'Lost Load ' + str(s) + ' (Wh)'
-        name_1_1 = 'Lost Load ' + str(s) + ' (USD)'
+        if instance.Lost_Load_Probability > 0:
+            name_1 = 'Lost Load ' + str(s) + ' (Wh)'
+            name_1_1 = 'Lost Load ' + str(s) + ' (USD)'
         name_2 = 'Battery Flow Out ' + str(s) + ' (Wh)' 
         name_2_1 = 'Battery Flow Out ' + str(s) + ' (USD)' 
         name_3 = 'Battery Flow in ' + str(s) + ' (Wh)'  
         name_3_1 = 'Battery Flow In ' + str(s) + ' (USD)' 
         name_4_1 = 'Generator Cost ' + str(s) + ' (USD)' 
         for t in Scenarios.index:
-            Cost_Time_Series.loc[t,name_1_1] = Scenarios[name_1][t]*Project_Data['Value of lost load (USD/Wh)']
+            if instance.Lost_Load_Probability > 0:
+                Cost_Time_Series.loc[t,name_1_1] = Scenarios[name_1][t]*Project_Data['Value of lost load (USD/Wh)']
             Cost_Time_Series.loc[t,name_2_1] = (Scenarios[name_2][t]
                                               *Battery_Data.loc['Unitary Battery Reposition Cost (USD/Wh)','Battery'])
             Cost_Time_Series.loc[t,name_3_1] = (Scenarios[name_3][t]
@@ -334,8 +343,9 @@ def Load_results1(instance):
             
     Scenario_Cost = pd.DataFrame()    
     for s in range(1, Number_Scenarios + 1):
-        name_1_1 = 'Lost Load ' + str(s) + ' (USD)'
-        name_1 ='Lost Load (USD)'
+        if instance.Lost_Load_Probability > 0:
+            name_1_1 = 'Lost Load ' + str(s) + ' (USD)'
+            name_1 ='Lost Load (USD)'
         name_2_1 = 'Battery Flow Out ' + str(s) + ' (USD)'
         name_2 = 'Battery Flow Out (USD)'
         name_3_1 = 'Battery Flow In ' + str(s) + ' (USD)' 
@@ -344,7 +354,8 @@ def Load_results1(instance):
         name_4 = 'Generator Cost (USD)'
         
         name_5 = 'Scenario ' + str(s)
-        Scenario_Cost.loc[name_1,name_5] = Cost_Time_Series[name_1_1].sum()
+        if instance.Lost_Load_Probability > 0:
+            Scenario_Cost.loc[name_1,name_5] = Cost_Time_Series[name_1_1].sum()
         Scenario_Cost.loc[name_2,name_5] = Cost_Time_Series[name_2_1].sum()
         Scenario_Cost.loc[name_3,name_5] = Cost_Time_Series[name_3_1].sum()
         Scenario_Cost.loc[name_4,name_5] = Cost_Time_Series[name_4_1].sum() 
@@ -374,8 +385,9 @@ def Load_results1(instance):
                                         +Scenario_Cost.loc['Battery OyM Cost (USD)',name_5])
         
         Scenario_Cost.loc['Present Gen Cost (USD)',name_5] = sum((Scenario_Cost.loc[name_4,name_5]/(1+Discount_rate)**i) 
-                                                                    for i in range(1, Years+1))  
-        Scenario_Cost.loc['Present Lost Load Cost (USD)',name_5] = sum((Scenario_Cost.loc[name_1,name_5]/(1+Discount_rate)**i) 
+                                                                    for i in range(1, Years+1)) 
+        if instance.Lost_Load_Probability > 0:
+            Scenario_Cost.loc['Present Lost Load Cost (USD)',name_5] = sum((Scenario_Cost.loc[name_1,name_5]/(1+Discount_rate)**i) 
                                                                     for i in range(1, Years+1))  
         Scenario_Cost.loc['Present Bat Out Cost (USD)',name_5] = sum((Scenario_Cost.loc[name_2,name_5]/(1+Discount_rate)**i) 
                                                                     for i in range(1, Years+1)) 
@@ -457,7 +469,25 @@ def Load_results1(instance):
     writer.save()
 
     return Data
-   
+
+def Integer_Time_Series(instance,Scenarios, S):
+    
+    if S == 0:
+        S = instance.PlotScenario.value
+    
+    Time_Series = pd.DataFrame(index=range(0,8760))
+    Time_Series.index = Scenarios.index
+    if instance.Lost_Load_Probability > 0:
+        Time_Series['Lost Load (Wh)'] = Scenarios['Lost Load ' + str(S) + ' (Wh)']
+    Time_Series['Renewable Energy (Wh)'] = Scenarios['Renewable Energy '+str(S) + ' (Wh)']
+    Time_Series['Discharge energy from the Battery (Wh)'] = Scenarios['Battery Flow Out ' + str(S) + ' (Wh)'] 
+    Time_Series['Charge energy to the Battery (Wh)'] = Scenarios['Battery Flow in '+str(S) + ' (Wh)']
+    Time_Series['Curtailment (Wh)'] = Scenarios['Curtailment '+str(S) + ' (Wh)']
+    Time_Series['Energy Demand (Wh)'] = Scenarios['Energy Demand '+str(S) + ' (Wh)']
+    Time_Series['State Of Charge Battery (Wh)'] = Scenarios['SOC '+str(S) + ' (Wh)'] 
+    Time_Series['Generator Energy (Wh)'] = Scenarios['Gen energy '+str(S) + ' (Wh)']
+    
+    return Time_Series   
     
     
 
@@ -1076,6 +1106,7 @@ def Energy_Mix(instance,Scenarios,Scenario_Probability):
     Curtailment = 0
     Battery_Out = 0
     Demand = 0
+    Lost_Load = 0
     Energy_Mix = pd.DataFrame()
     
     for j in range(1, Number_Scenarios+1):   
@@ -1087,31 +1118,37 @@ def Energy_Mix(instance,Scenarios,Scenario_Probability):
         index_5 = 'Battery Flow Out ' + str(j) + ' (Wh)'
         index_6 = 'Energy Demand ' + str(j) + ' (Wh)'
         
+        index_7 = 'Lost Load '+str(j) + ' (Wh)'
+        
         PV = Energy_Totals[index_1]
         Ge = Energy_Totals[index_2]
         We = Scenario_Probability[index_3]
         Cu = Energy_Totals[index_4]
         B_O = Energy_Totals[index_5]        
         De = Energy_Totals[index_6] 
+        LL = Energy_Totals[index_7] 
         
         PV_Energy += PV*We
         Generator_Energy += Ge*We  
         Curtailment += Cu*We
         Battery_Out += B_O*We
         Demand += De*We
-        
+        Lost_Load += LL*We
         
         Energy_Mix.loc['PV Penetration',index_3] = PV/(PV+Ge)
         Energy_Mix.loc['Curtailment Percentage',index_3] = Cu/(PV+Ge)
         Energy_Mix.loc['Battery Usage',index_3] = B_O/De
+        Energy_Mix.loc['Lost Load', index_3] = LL/De
         
     Renewable_Real_Penetration = PV_Energy/(PV_Energy+Generator_Energy)     
     Curtailment_Percentage = Curtailment/(PV_Energy+Generator_Energy)
     Battery_Usage = Battery_Out/Demand
+    Lost_Load_Real = Lost_Load/Demand
     
     print(str(round(Renewable_Real_Penetration*100, 1)) + ' % Renewable Penetration')
     print(str(round(Curtailment_Percentage*100,1)) + ' % of energy curtail')
     print(str(round(Battery_Usage*100,1)) + ' % Battery usage')
+    print(str(round(Lost_Load_Real*100,1)) + ' % Lost load in the system')
     
     return Energy_Mix    
     
