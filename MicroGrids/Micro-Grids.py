@@ -13,7 +13,7 @@ from Model_Resolution import Model_Resolution, Model_Resolution_binary,\
  Model_Resolution_Dispatch
 #21212
 # Type of problem formulation:
-formulation = 'MILP'
+formulation = 'LP'
 #datapath='Example/Dispatch/'
 # Renewable energy penetrarion
 
@@ -21,9 +21,9 @@ Renewable_Penetration  =  0   # a number from 0 to 1
 Battery_Independency   =  0   # number of days of battery independency
 Lost_Load_Probability  =  0  # Allowed percentage of unmed demand in the system
 
-S = 2 # Plot scenario
-Plot_Date = '25/12/2016 00:00:00' # Day-Month-Year
-PlotTime = 5# Days of the plot
+S = 1 # Plot scenario
+Plot_Date = '27/12/2016 00:00:00' # Day-Month-Year
+PlotTime = 1# Days of the plot
 plot = 'No Average' # 'No Average' or 'Average'
 
 model = AbstractModel() # define type of optimization problem

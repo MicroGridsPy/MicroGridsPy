@@ -7,7 +7,7 @@ param: StartDate := '21/03/2016 01:00:00';
 param: Delta_Time := 1;
 
 
-param: Battery_Invesment_Cost := 0.55; # 1
+param: Battery_Invesment_Cost := 0.33; # 1
 
 param: Battery_Electronic_Invesmente_Cost := 0.222;
 
@@ -27,7 +27,7 @@ param: Maximun_Battery_Discharge_Time := 4;
 
 param: Maximun_Battery_Charge_Time := 4;
 
-param: Battery_Cycles := 5500;
+param: Battery_Cycles := 8000;
 
 param: Battery_Initial_SOC := 1;
 
