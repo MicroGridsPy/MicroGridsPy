@@ -17,13 +17,13 @@ formulation = 'LP'
 #datapath='Example/Dispatch/'
 # Renewable energy penetrarion
 
-Renewable_Penetration  =  0   # a number from 0 to 1
-Battery_Independency   =  0   # number of days of battery independency
-Lost_Load_Probability  =  0  # Allowed percentage of unmed demand in the system
+Renewable_Penetration  =  0.60 # a number from 0 to 1
+Battery_Independency   =  0    # number of days of battery independency
+Lost_Load_Probability  =  0    # Allowed percentage of unmed demand in the system
 
 S = 1 # Plot scenario
 Plot_Date = '27/12/2016 00:00:00' # Day-Month-Year
-PlotTime = 1# Days of the plot
+PlotTime = 5 # Days of the plot
 plot = 'No Average' # 'No Average' or 'Average'
 
 model = AbstractModel() # define type of optimization problem
