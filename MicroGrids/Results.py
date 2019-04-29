@@ -7,6 +7,8 @@ import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 from pandas import ExcelWriter
 from numpy import interp
+from decimal import Decimal
+
 
 def Load_results1(instance):
     '''
@@ -974,14 +976,14 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         Fill[SOC] =  Plot_Data[SOC]
         
         Fill.index = columns
+        Fill = round(Fill,2)
         
         New =  pd.DataFrame()
         
         for t in Fill.index[:-1]:
             if Fill[b][t] > Fill[g][t]:
-                
                 if  Fill[r][t+1]>Fill[d][t+1]:
-                    
+                    print(t)
                     t_1 = t
                     t_1 = t_1.replace(minute=30, second=0, microsecond=0)
                     
@@ -997,24 +999,54 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
                                         + Fill[SOC][t])/2
                     New.loc[t_1,ch] = (Fill[ch][t+1] 
                                         + Fill[ch][t])/2
-                    
+                                       
+#        for t in Fill.index[:-1]:
+#            if round(Fill[b][t],4) > round(Fill[d][t],4):
+#                if Fill[b][t+1] > Fill[g][t+1]:
+#                    print(t)
+#                    
+#                    b_d = (Fill[d][t+1] - Fill[d][t])/60
+#                    b_r = (Fill[r][t+1] - Fill[r][t])/60
+#                    
+#                    a_d = Fill[d][t]
+#                    a_r = Fill[r][t]
+#                    
+#                    x = (a_r - a_d)/(b_d - b_r)
+#                    
+#                    x = int(x)
+#                    t_1 = t
+#                    t_1 = t_1.replace(minute=x, second=0, microsecond=0)
+#                    
+#                    xp = [0, 60]
+#                    
+#                    New.loc[t_1,r]   = interp(x,xp,[Fill[r][t],  Fill[r][t+1]])
+#                    New.loc[t_1,g]   = interp(x,xp,[Fill[g][t],  Fill[g][t+1]])
+#                    New.loc[t_1,c]   = interp(x,xp,[Fill[c][t],  Fill[c][t+1]])
+#                    New.loc[t_1,c2]  = interp(x,xp,[Fill[c2][t], Fill[c2][t+1]])
+#                    New.loc[t_1,b]   = interp(x,xp,[Fill[d][t], Fill[d][t+1]])
+#                    New.loc[t_1,d]   = interp(x,xp,[Fill[d][t], Fill[d][t+1]])
+#                    New.loc[t_1,SOC] = interp(x,xp,[Fill[SOC][t], Fill[SOC][t+1]])
+#                    New.loc[t_1,ch]  = interp(x,xp,[Fill[ch][t], Fill[ch][t+1]])
                     
         for t in Fill.index[:-1]:
-            if round(Fill[b][t],4) > round(Fill[d][t],4):
-                if Fill[b][t+1] > Fill[g][t+1]:
-                    
-                    
+            if (Fill[b][t] == Fill[d][t]) and (Fill[g][t+1] > Plot_Data[d][t+1]):
+                if  Fill[b][t] > Fill[g][t]:
+                    print(t)
                     b_d = (Fill[d][t+1] - Fill[d][t])/60
-                    b_r = (Fill[r][t+1] - Fill[r][t])/60
+                    b_g = (Fill[g][t+1] - Fill[g][t])/60
                     
                     a_d = Fill[d][t]
-                    a_r = Fill[r][t]
+                    a_g = Fill[g][t]
                     
-                    x = (a_r - a_d)/(b_d - b_r)
+                    x = (a_g - a_d)/(b_d - b_g)
                     
-                    x = int(x)
+                    minute = int(x)
+                    second = round(x%1,3)
+                    second = second*60
+                    second = int(second)
+                    
                     t_1 = t
-                    t_1 = t_1.replace(minute=x, second=0, microsecond=0)
+                    t_1 = t_1.replace(minute=minute, second=second, microsecond=0)
                     
                     xp = [0, 60]
                     
@@ -1028,6 +1060,8 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
                     New.loc[t_1,ch]  = interp(x,xp,[Fill[ch][t], Fill[ch][t+1]])
                     
                     
+        
+
         Fill = Fill.append(New)
         Fill.sort_index(inplace=True)
 
@@ -1056,7 +1090,7 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         ax3.fill_between(Fill.index, Fill[g].values, Fill[b].values,   
                          alpha=alpha_bat, color =C_Bat,edgecolor=C_Bat, hatch =hatch_b)
         # Demand
-        ax4 = Fill[d].plot(style='k', linewidth=2)
+        ax4 = Fill[d].plot(style='k', linewidth=2, marker= 'o')
         # Battery Charge        
         ax5= Fill[ch].plot(style='m', linewidth=0.5) # Plot the line of the energy flowing into the battery
         ax5.fill_between(Fill.index, 0, 
