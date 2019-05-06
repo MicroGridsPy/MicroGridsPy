@@ -101,6 +101,7 @@ def Initialize_Renewable_Energy(model, s,r,t):
     
     :return: The energy yield of one PV for the period t.
     '''
+
     column = (s-1)*model.Renewable_Source + r 
     return float(Renewable_Energy[column][t])   
     

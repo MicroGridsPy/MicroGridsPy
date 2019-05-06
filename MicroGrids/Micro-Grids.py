@@ -13,17 +13,19 @@ from Model_Resolution import Model_Resolution, Model_Resolution_binary,\
  Model_Resolution_Dispatch
 #21212
 # Type of problem formulation:
-formulation = 'MILP'
+formulation = 'LP'
 #datapath='Example/Dispatch/'
 # Renewable energy penetrarion
 
 Renewable_Penetration  =  0 # a number from 0 to 1
 Battery_Independency   =  0    # number of days of battery independency
 Lost_Load_Probability  =  0    # Allowed percentage of unmed demand in the system
+Curtailment_Unitary_Cost =  0.000 # probando curtailment cost 0
+
 
 S = 1 # Plot scenario
-Plot_Date = '25/12/2016 00:00:00' # Day-Month-Year
-PlotTime = 1 # Days of the plot
+Plot_Date = '31/12/2016 00:00:00' # Day-Month-Year
+PlotTime = 1# Days of the plot
 plot = 'No Average' # 'No Average' or 'Average'
 
 model = AbstractModel() # define type of optimization problem
@@ -32,6 +34,7 @@ if formulation == 'LP' or formulation == 'MILP':
     # Optimization model
     model.formulation = formulation
     model.Lost_Load_Probability =  Lost_Load_Probability  
+    model.Curtailment_Unitary_Cost = Curtailment_Unitary_Cost
     Model_Creation(model, Renewable_Penetration, Battery_Independency)  
     instance = Model_Resolution(model, Renewable_Penetration, Battery_Independency) 
     ## Upload the resulst from the instance and saving it in excel files
@@ -45,7 +48,7 @@ if formulation == 'LP' or formulation == 'MILP':
 
     # Energy Plot    
 
-    Time_Series = Integer_Time_Series(instance,Scenarios, S) 
+    Time_Series = Integer_Time_Series(instance,Scenarios, S, Data) 
     Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime)
     # Data Analisys
     Print_Results(instance, Generator_Data, Data_Renewable, Battery_Data ,Results, 

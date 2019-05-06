@@ -7,8 +7,7 @@ import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 from pandas import ExcelWriter
 from numpy import interp
-from decimal import Decimal
-
+import math
 
 def Load_results1(instance):
     '''
@@ -256,6 +255,9 @@ def Load_results1(instance):
     Project_Data['Discount Rate'] = instance.Discount_Rate.value
     Project_Data['Proyect Life Time (years)'] = instance.Years.value
     Project_Data['Value of lost load (USD/Wh)'] = instance.Value_Of_Lost_Load.value
+    if instance.Curtailment_Unitary_Cost > 0:
+        Project_Data['Curtailment Unitary Cost (USD/Wh)'] = instance.Curtailment_Unitary_Cost
+    
     Project_Data.to_excel(writer, sheet_name='Project Data') 
     
     
@@ -329,6 +331,7 @@ def Load_results1(instance):
         name_3 = 'Battery Flow in ' + str(s) + ' (Wh)'  
         name_3_1 = 'Battery Flow In ' + str(s) + ' (USD)' 
         name_4_1 = 'Generator Cost ' + str(s) + ' (USD)' 
+
         for t in Scenarios.index:
             if instance.Lost_Load_Probability > 0:
                 Cost_Time_Series.loc[t,name_1_1] = Scenarios[name_1][t]*Project_Data['Value of lost load (USD/Wh)']
@@ -341,7 +344,12 @@ def Load_results1(instance):
                 name_5 = 'Fuel Cost ' + str(s) + ' ' + str(g) + ' (USD)'  
                 Fuel_Cost += Generator_Time_Series.loc[t,name_5]
             Cost_Time_Series.loc[t,name_4_1] = Fuel_Cost
- 
+            
+            if instance.Curtailment_Unitary_Cost > 0:
+                name_6 = 'Curtailment ' + str(s) + ' (Wh)'
+                name_6_1 = 'Curtailment Cost ' + str(s) + ' (USD)' 
+                Cost_Time_Series.loc[t,name_6_1] = (Scenarios[name_6][t]*Project_Data['Curtailment Unitary Cost (USD/Wh)'])
+            
     Cost_Time_Series.to_excel(writer, sheet_name='Cost Time Series')
             
     Scenario_Cost = pd.DataFrame()    
@@ -355,6 +363,10 @@ def Load_results1(instance):
         name_3 = 'Battery Flow In (USD)'
         name_4_1 = 'Generator Cost ' + str(s) + ' (USD)'
         name_4 = 'Generator Cost (USD)'
+        if instance.Curtailment_Unitary_Cost > 0:
+                name_6 = 'Curtailment ' + str(s) + ' (Wh)'
+                name_6_1 = 'Curtailment Cost ' + str(s) + ' (USD)' 
+        
         
         name_5 = 'Scenario ' + str(s)
         if instance.Lost_Load_Probability > 0:
@@ -362,6 +374,8 @@ def Load_results1(instance):
         Scenario_Cost.loc[name_2,name_5] = Cost_Time_Series[name_2_1].sum()
         Scenario_Cost.loc[name_3,name_5] = Cost_Time_Series[name_3_1].sum()
         Scenario_Cost.loc[name_4,name_5] = Cost_Time_Series[name_4_1].sum() 
+        if instance.Curtailment_Unitary_Cost > 0:    
+            Scenario_Cost.loc[name_6,name_5] = Cost_Time_Series[name_6_1].sum() 
         
         gen_oym = 0
         for g in range(1, Number_Generator + 1):
@@ -473,7 +487,7 @@ def Load_results1(instance):
 
     return Data
 
-def Integer_Time_Series(instance,Scenarios, S):
+def Integer_Time_Series(instance,Scenarios, S, Data):
     
     if S == 0:
         S = instance.PlotScenario.value
@@ -489,6 +503,15 @@ def Integer_Time_Series(instance,Scenarios, S):
     Time_Series['Energy Demand (Wh)'] = Scenarios['Energy Demand '+str(S) + ' (Wh)']
     Time_Series['State Of Charge Battery (Wh)'] = Scenarios['SOC '+str(S) + ' (Wh)'] 
     Time_Series['Generator Energy (Wh)'] = Scenarios['Gen energy '+str(S) + ' (Wh)']
+    
+    Renewable_Source = instance.Renewable_Source.value
+    if Renewable_Source > 1:
+        Renewable_Energy =  pd.read_excel('Results/Results.xls',index_col=0,Header=None,
+                                          sheet_name='Renewable Energy Time Series')
+        for r in range(1,Renewable_Source+1):
+            name = 'Renewable ' + str(S) + ' ' + str(r) + ' (Wh)'
+            name_1 = 'Renewable '  + str(r) + ' (Wh)'
+            Time_Series[name_1] = Renewable_Energy[name]
     
     return Time_Series   
     
@@ -926,10 +949,11 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         Plot_Data = Plot_Data.astype('float64')
         Plot_Data = Plot_Data/1000
         Plot_Data['Charge energy to the Battery (Wh)'] = -Plot_Data['Charge energy to the Battery (Wh)']
-                           
+        Plot_Data = round(Plot_Data,2)                   
         Fill = pd.DataFrame()
         
         r = 'Renewable Energy (Wh)'
+        
         g = 'Generator Energy (Wh)'
         c = 'Curtailment (Wh)'
         c2 ='Curtailment min (Wh)'
@@ -937,11 +961,15 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         d = 'Energy Demand (Wh)'
         ch =  'Charge energy to the Battery (Wh)'
         SOC = 'State Of Charge Battery (Wh)'
+        Renewable_Source = instance. Renewable_Source.value
         
+
+            
         for t in Plot_Data.index:
             if (Plot_Data[r][t] > 0 and  Plot_Data[g][t]>0):
                 curtailment = Plot_Data[c][t]
                 Fill.loc[t,r] = Plot_Data[r][t] 
+
                 Fill.loc[t,g] = Fill[r][t] + Plot_Data[g][t]-curtailment
                 Fill.loc[t,c] = Fill[r][t] + Plot_Data[g][t]
                 Fill.loc[t,c2] = Fill.loc[t,g]
@@ -969,6 +997,16 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
                         Fill.loc[t,c] = Plot_Data[b][t]
                         Fill.loc[t,c2] = Plot_Data[d][t]
         
+        if Renewable_Source > 1:
+            for R in range(1,Renewable_Source+1):
+                name = 'Renewable ' + str(R) + ' (Wh)'
+                if R == 1:   
+                    Fill[name] = Plot_Data[name]
+                else:
+                    name_1 = 'Renewable ' + str(R-1) + ' (Wh)'
+                    Fill[name] = Fill[name_1] + Plot_Data[name]
+
+
         
         Fill[b] = (Fill[g] + Plot_Data[b])
         Fill[d] =  Plot_Data[d]
@@ -976,57 +1014,48 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         Fill[SOC] =  Plot_Data[SOC]
         
         Fill.index = columns
-        Fill = round(Fill,2)
-        
         New =  pd.DataFrame()
+
         
         for t in Fill.index[:-1]:
             if Fill[b][t] > Fill[g][t]:
                 if  Fill[r][t+1]>Fill[d][t+1]:
                     print(t)
-                    t_1 = t
-                    t_1 = t_1.replace(minute=30, second=0, microsecond=0)
+                    b_d = (Fill[d][t+1] - Fill[d][t])/60
+                    b_g = (Fill[g][t+1] - Fill[g][t])/60
                     
-                    New.loc[t_1,r] = (Fill[r][t+1] + Fill[r][t])/2
-                    New.loc[t_1,g] = (Fill[g][t+1] + Fill[g][t])/2
-                    New.loc[t_1,c] = (Fill[c][t+1] + Fill[c][t])/2
-                    New.loc[t_1,c2] = (Fill[c2][t+1] + Fill[c2][t])/2
-                    New.loc[t_1,b] = (Fill[d][t+1] 
-                                        + Fill[d][t])/2
-                    New.loc[t_1,d] = (Fill[d][t+1] 
-                                        + Fill[d][t])/2
-                    New.loc[t_1,SOC] = (Fill[SOC][t+1] 
-                                        + Fill[SOC][t])/2
-                    New.loc[t_1,ch] = (Fill[ch][t+1] 
-                                        + Fill[ch][t])/2
-                                       
-#        for t in Fill.index[:-1]:
-#            if round(Fill[b][t],4) > round(Fill[d][t],4):
-#                if Fill[b][t+1] > Fill[g][t+1]:
-#                    print(t)
-#                    
-#                    b_d = (Fill[d][t+1] - Fill[d][t])/60
-#                    b_r = (Fill[r][t+1] - Fill[r][t])/60
-#                    
-#                    a_d = Fill[d][t]
-#                    a_r = Fill[r][t]
-#                    
-#                    x = (a_r - a_d)/(b_d - b_r)
-#                    
-#                    x = int(x)
-#                    t_1 = t
-#                    t_1 = t_1.replace(minute=x, second=0, microsecond=0)
-#                    
-#                    xp = [0, 60]
-#                    
-#                    New.loc[t_1,r]   = interp(x,xp,[Fill[r][t],  Fill[r][t+1]])
-#                    New.loc[t_1,g]   = interp(x,xp,[Fill[g][t],  Fill[g][t+1]])
-#                    New.loc[t_1,c]   = interp(x,xp,[Fill[c][t],  Fill[c][t+1]])
-#                    New.loc[t_1,c2]  = interp(x,xp,[Fill[c2][t], Fill[c2][t+1]])
-#                    New.loc[t_1,b]   = interp(x,xp,[Fill[d][t], Fill[d][t+1]])
-#                    New.loc[t_1,d]   = interp(x,xp,[Fill[d][t], Fill[d][t+1]])
-#                    New.loc[t_1,SOC] = interp(x,xp,[Fill[SOC][t], Fill[SOC][t+1]])
-#                    New.loc[t_1,ch]  = interp(x,xp,[Fill[ch][t], Fill[ch][t+1]])
+                    a_d = Fill[d][t]
+                    a_g = Fill[g][t]
+                    
+                    x = (a_g - a_d)/(b_d - b_g)
+                    x = round(x,4)
+                    second, minute = math.modf(x)
+                    minute = int(minute)
+                    second = second*60
+                    second = int(second)
+                    
+                    if x < 60:
+                        t_1 = t
+                        t_1 = t_1.replace(minute=minute, second=second, microsecond=0)
+                        
+                        xp = [0, 60]
+                        
+                        New.loc[t_1,r]   = interp(x,xp,[Fill[r][t],  Fill[r][t+1]])
+                        New.loc[t_1,g]   = interp(x,xp,[Fill[g][t],  Fill[g][t+1]])
+                        New.loc[t_1,c]   = interp(x,xp,[Fill[c][t],  Fill[c][t+1]])
+                        New.loc[t_1,c2]  = interp(x,xp,[Fill[c2][t], Fill[c2][t+1]])
+                        New.loc[t_1,b]   = interp(x,xp,[Fill[d][t], Fill[d][t+1]])
+                        New.loc[t_1,d]   = interp(x,xp,[Fill[d][t], Fill[d][t+1]])
+                        New.loc[t_1,SOC] = interp(x,xp,[Fill[SOC][t], Fill[SOC][t+1]])
+                        New.loc[t_1,ch]  = interp(x,xp,[Fill[ch][t], Fill[ch][t+1]])
+                        if Renewable_Source > 1:
+                            for R in range(1,Renewable_Source+1):
+                                name = 'Renewable ' + str(R) + ' (Wh)'
+                                New.loc[t_1,name]  = interp(x,xp,[Fill[name][t], Fill[name][t+1]])
+
+
+
+                                     
                     
         for t in Fill.index[:-1]:
             if (Fill[b][t] == Fill[d][t]) and (Fill[g][t+1] > Plot_Data[d][t+1]):
@@ -1039,42 +1068,111 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
                     a_g = Fill[g][t]
                     
                     x = (a_g - a_d)/(b_d - b_g)
-                    
-                    minute = int(x)
-                    second = round(x%1,3)
+                    x = round(x,4)
+                    second, minute = math.modf(x)
+                    minute = int(minute)
                     second = second*60
                     second = int(second)
                     
-                    t_1 = t
-                    t_1 = t_1.replace(minute=minute, second=second, microsecond=0)
-                    
-                    xp = [0, 60]
-                    
-                    New.loc[t_1,r]   = interp(x,xp,[Fill[r][t],  Fill[r][t+1]])
-                    New.loc[t_1,g]   = interp(x,xp,[Fill[g][t],  Fill[g][t+1]])
-                    New.loc[t_1,c]   = interp(x,xp,[Fill[c][t],  Fill[c][t+1]])
-                    New.loc[t_1,c2]  = interp(x,xp,[Fill[c2][t], Fill[c2][t+1]])
-                    New.loc[t_1,b]   = interp(x,xp,[Fill[d][t], Fill[d][t+1]])
-                    New.loc[t_1,d]   = interp(x,xp,[Fill[d][t], Fill[d][t+1]])
-                    New.loc[t_1,SOC] = interp(x,xp,[Fill[SOC][t], Fill[SOC][t+1]])
-                    New.loc[t_1,ch]  = interp(x,xp,[Fill[ch][t], Fill[ch][t+1]])
-                    
-                    
+                    if x < 60:
+                        t_1 = t
+                        t_1 = t_1.replace(minute=minute, second=second, microsecond=0)
+                        
+                        xp = [0, 60]
+                        
+                        New.loc[t_1,r]   = interp(x,xp,[Fill[r][t],  Fill[r][t+1]])
+                        New.loc[t_1,g]   = interp(x,xp,[Fill[g][t],  Fill[g][t+1]])
+                        New.loc[t_1,c]   = interp(x,xp,[Fill[c][t],  Fill[c][t+1]])
+                        New.loc[t_1,c2]  = interp(x,xp,[Fill[c2][t], Fill[c2][t+1]])
+                        New.loc[t_1,b]   = interp(x,xp,[Fill[d][t], Fill[d][t+1]])
+                        New.loc[t_1,d]   = interp(x,xp,[Fill[d][t], Fill[d][t+1]])
+                        New.loc[t_1,SOC] = interp(x,xp,[Fill[SOC][t], Fill[SOC][t+1]])
+                        New.loc[t_1,ch]  = interp(x,xp,[Fill[ch][t], Fill[ch][t+1]])
+                        if Renewable_Source > 1:
+                            for R in range(1,Renewable_Source+1):
+                                name = 'Renewable ' + str(R) + ' (Wh)'
+                                New.loc[t_1,name]  = interp(x,xp,[Fill[name][t], Fill[name][t+1]])
+
         
+        # fix the battery if in one step before the energy production is more than demand
+        # and in time t the battery is used            
+        for t in Fill.index[1:-1]:
+            if Fill[g][t] > Plot_Data[d][t] and Fill[b][t+1] == Plot_Data[d][t+1] and Plot_Data[b][t+1] > 0:
+                    print(t)
+                    b_d = (Fill[d][t+1] - Fill[d][t])/60
+                    b_g = (Fill[g][t+1] - Fill[g][t])/60
+                    
+                    a_d = Fill[d][t]
+                    a_g = Fill[g][t]
+                    
+                    x = (a_g - a_d)/(b_d - b_g)
+                    x = round(x,4)
+                    second, minute = math.modf(x)
+                    minute = int(minute)
+                    second = second*60
+                    second = int(second)
+                    
+                    if x < 60:
+                        t_1 = t
+                        t_1 = t_1.replace(minute=minute, second=second, microsecond=0)
+                        
+                        xp = [0, 60]
+                        
+                        New.loc[t_1,r]   = interp(x,xp,[Fill[r][t],  Fill[r][t+1]])
+                        New.loc[t_1,g]   = interp(x,xp,[Fill[g][t],  Fill[g][t+1]])
+                        New.loc[t_1,c]   = interp(x,xp,[Fill[c][t],  Fill[c][t+1]])
+                        New.loc[t_1,c2]  = interp(x,xp,[Fill[c2][t], Fill[c2][t+1]])
+                        New.loc[t_1,b]   = interp(x,xp,[Fill[d][t], Fill[d][t+1]])
+                        New.loc[t_1,d]   = interp(x,xp,[Fill[d][t], Fill[d][t+1]])
+                        New.loc[t_1,SOC] = interp(x,xp,[Fill[SOC][t], Fill[SOC][t+1]])
+                        New.loc[t_1,ch]  = interp(x,xp,[Fill[ch][t], Fill[ch][t+1]])
+                        if Renewable_Source > 1:
+                            for R in range(1,Renewable_Source+1):
+                                name = 'Renewable ' + str(R) + ' (Wh)'
+                                New.loc[t_1,name]  = interp(x,xp,[Fill[name][t], Fill[name][t+1]])
 
         Fill = Fill.append(New)
         Fill.sort_index(inplace=True)
 
-             
         size = [20,10]  
         plt.figure(figsize=size)
 #        Fill[b] = ( Fill[g] + Plot_Data[b])
         # Renewable energy
-        c_PV = 'yellow'   
-        Alpha_r = 0.4 
-        ax1 =Fill[r].plot(style='y-', linewidth=0)
-        ax1.fill_between(Fill.index, 0,Fill[r].values,   
-                         alpha=Alpha_r, color = c_PV)
+        
+        # For 1 energy Source            
+        if Renewable_Source == 1:
+                c_PV = 'yellow'   
+                Alpha_r = 0.4 
+                ax1 =Fill[r].plot(style='y-', linewidth=1)
+                ax1.fill_between(Fill.index, 0,Fill[r].values,   
+                                 alpha=Alpha_r, color = c_PV)        
+        else:
+            c_r = ['aqua', 'chocolate', 'lightcoral', 'lightgreen']
+            for R in range (1,  Renewable_Source+1):
+                name = 'Renewable '  + str(R) + ' (Wh)'
+                print(name)
+                if R == 1:
+                    c_PV_1 = 'yellow'   
+                    Alpha_r = 0.4 
+                    ax1 = Fill[name].plot(style='y-', linewidth=0)
+                    ax1.fill_between(Fill.index, 0, Fill[name].values,   
+                                 alpha=Alpha_r, color = c_PV_1)
+                elif R == Renewable_Source:
+                        name_1 = 'Renewable '  + str(R-1) + ' (Wh)'
+                        c_r_1 = c_r[R-1]    
+                        Alpha_r = 0.4                            
+                        ax1 = Fill[r].plot(style='c-', linewidth=0)
+                        ax1.fill_between(Fill.index, Fill[name_1].values, Fill[r].values, 
+                                     alpha=Alpha_r, color =c_r_1)
+                else:
+                        name_1 = 'Renewable '  + str(R-1) + ' (Wh)'
+                        c_r_1 = c_r[R-1]    
+                        Alpha_r = 0.4                            
+                        ax1 = Fill[r].plot(style='c-', linewidth=0)
+                        ax1.fill_between(Fill.index, Fill[name_1].values, Fill[name].values, 
+                                     alpha=Alpha_r, color =c_r_1)
+        
+        
         # Genset Plot
         c_d = 'm'
         Alpha_g = 0.3 
@@ -1090,7 +1188,7 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         ax3.fill_between(Fill.index, Fill[g].values, Fill[b].values,   
                          alpha=alpha_bat, color =C_Bat,edgecolor=C_Bat, hatch =hatch_b)
         # Demand
-        ax4 = Fill[d].plot(style='k', linewidth=2, marker= 'o')
+        ax4 = Plot_Data[d].plot(style='k', linewidth=2, marker= 'o')
         # Battery Charge        
         ax5= Fill[ch].plot(style='m', linewidth=0.5) # Plot the line of the energy flowing into the battery
         ax5.fill_between(Fill.index, 0, 
@@ -1124,7 +1222,7 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         ax1.set_ylabel('Power (kW)',size=30)
         ax1.set_xlabel('Time',size=30)
         ax6.set_ylabel('Battery State of charge (kWh)',size=30)
-        
+        ax1.set_xlim(Fill.index[0], Fill.index[len(Fill)-1])
         tick_size = 15    
         #mpl.rcParams['xtick.labelsize'] = tick_size    
         ax1.tick_params(axis='x', which='major', labelsize = tick_size,pad=8 ) 
@@ -1132,7 +1230,16 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
  #       ax1.tick_params(axis='x', which='major', labelsize = tick_size) 
         ax6.tick_params(axis='y', which='major', labelsize = tick_size )       
         # Define the legends of the plot
-        From_PV = mpatches.Patch(color=c_PV,alpha=Alpha_r, label='From PV')
+        From_Renewable =[]
+        for R in range(1, Renewable_Source + 1):
+            if R == 1:
+                From_Renewable.append(mpatches.Patch(color='yellow',alpha=Alpha_r, label='Renewable 1'))  
+            else:
+                name = 'From Renewable ' +str(R) 
+                c_r_1 = c_r[R-1] 
+                foo = mpatches.Patch(color=c_r_1,alpha=Alpha_r, label=name)
+                From_Renewable.append(foo)
+            
         From_Generator = mpatches.Patch(color=c_d,alpha=Alpha_g,
                                         label='From Generator',hatch =hatch_g)
         Battery = mpatches.Patch(color=C_Bat ,alpha=alpha_bat, 
@@ -1149,7 +1256,8 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         Legends = []
         
         Legends.append(From_Generator)
-        Legends.append(From_PV)
+        for R in range(Renewable_Source):
+            Legends.append(From_Renewable[R])
         Legends.append(Battery)
         Legends.append(Curtailment)
         Legends.append(Energy_Demand)

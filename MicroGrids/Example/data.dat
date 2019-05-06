@@ -31,57 +31,57 @@ param: Battery_Cycles := 5500;
 
 param: Battery_Initial_SOC := 1;
 
-param: Scenarios := 4; ####
+param: Scenarios := 1; ####
 
-param: Renewable_Source := 1;
+param: Renewable_Source := 3;
 
 param: Renewable_Nominal_Capacity :=
 
-1	250;
+1	250
+2   500
+3   1000;
 
 param: Renewable_Inverter_Efficiency :=
 
-1	1;
+1	1
+2   1
+3   1;
 
 
 param: Renewable_Invesment_Cost :=
 
-1	1.5;
+1	1.5
+2   2.7
+3   2.7;
 
 param: Maintenance_Operation_Cost_Renewable := 
 
-1	0.015;
+1	0.015
+2   0.015
+3   0.015;
 
 
-param: Generator_Type := 2;
+param: Generator_Type := 1;
 
 param: Generator_Invesment_Cost := 
 
-1	1.48
-2   1.3;
+1	1.48;
 
 param: Maintenance_Operation_Cost_Generator := 
 
-1	0.045
-2   0.04;
+1	0.045;
 
 param: Fuel_Cost := 
-1	0.68
-2   0.78;
+1	0.68;
 
 param: Generator_Efficiency := 
 
-1	0.314
-2   0.33;
+1	0.314;
 
 param: Low_Heating_Value := 
-1	9890
-2   9700;
+1	9890;
 
 param: Scenario_Weight :=
 
-1	0.25
-2	0.25
-3	0.25
-4	0.25;
+1	1;
 

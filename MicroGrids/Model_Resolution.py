@@ -73,7 +73,8 @@ def Model_Resolution(model,Renewable_Penetration, Battery_Independency,datapath=
 #       opt.options['timelimit'] = 20000
 #       opt.options['node_select'] = 3
 #       opt.options['emphasis_mip'] = 2
-        results = opt.solve(instance, tee=True,options_string="mipgap=0.06",warmstart=True,keepfiles=False) # Solving a model instance 
+        results = opt.solve(instance, tee=True,options_string="mipgap=0.05",
+                            warmstart=True,keepfiles=False) # Solving a model instance 
 
         #    instance.write(io_options={'emphasis_memory':True})
         #options_string="mipgap=0.03", timelimit=1200

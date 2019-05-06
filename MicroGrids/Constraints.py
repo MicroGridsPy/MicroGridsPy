@@ -46,6 +46,13 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
         Lost_Load_Cost =  sum(model.Lost_Load[s,t]*model.Value_Of_Lost_Load
                               *model.Scenario_Weight[s] for s,t in foo)
         Operation_Cost +=  Lost_Load_Cost/model.Capital_Recovery_Factor
+        
+    # Curtailment cost
+    
+    if model.Curtailment_Unitary_Cost > 0:
+        Curtailment_Cost =  sum(model.Energy_Curtailment[s,t]*model.Curtailment_Unitary_Cost
+                              *model.Scenario_Weight[s] for s,t in foo)
+        Operation_Cost +=  Curtailment_Cost/model.Capital_Recovery_Factor
     
     # Cost of the operation and maintenece
     
