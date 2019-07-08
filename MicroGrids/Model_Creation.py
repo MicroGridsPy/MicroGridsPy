@@ -113,19 +113,20 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     # Variables associated to the solar panels
         
     model.Renewable_Units = Var(model.renewable_source,
-                                within=NonNegativeReals,bounds= (0,500)) # Number of units of solar panels
+                                within=NonNegativeReals,bounds= (0,100)) # Number of units of solar panels
 
 
     # Variables associated to the battery bank
-    model.Battery_Nominal_Capacity = Var(within=NonNegativeReals,bounds= (0,100000)) # Capacity of the battery bank in Wh
+    bat = 150
+    model.Battery_Nominal_Capacity = Var(within=NonNegativeReals,bounds= (0,bat)) # Capacity of the battery bank in Wh
     model.Energy_Battery_Flow_Out = Var(model.scenario, model.periods,
-                                        within=NonNegativeReals) # Battery discharge energy in wh
+                                        within=NonNegativeReals,bounds=(0,bat)) # Battery discharge energy in wh
     model.Energy_Battery_Flow_In = Var(model.scenario, model.periods, 
-                                       within=NonNegativeReals) # Battery charge energy in wh
+                                       within=NonNegativeReals,bounds=(0,bat)) # Battery charge energy in wh
     model.State_Of_Charge_Battery = Var(model.scenario, model.periods, 
                                         within=NonNegativeReals) # State of Charge of the Battery in wh
-    model.Maximun_Charge_Power = Var(within=NonNegativeReals)
-    model.Maximun_Discharge_Power = Var(within=NonNegativeReals)
+    model.Maximun_Charge_Power = Var(within=NonNegativeReals,bounds=(0,bat))
+    model.Maximun_Discharge_Power = Var(within=NonNegativeReals,bounds=(0,bat))
     
     # Variables associated to the diesel generator
     
@@ -177,7 +178,7 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     if model.Lost_Load_Probability > 0:
         model.Lost_Load = Var(model.scenario, model.periods, within=NonNegativeReals) # Energy not suply by the system kWh
     model.Energy_Curtailment = Var(model.scenario, model.periods, within=NonNegativeReals
-                                   ,bounds=(0,500000)) # Curtailment of solar energy in kWh
+                                   ,bounds=(0,100)) # Curtailment of solar energy in kWh
 
 
 

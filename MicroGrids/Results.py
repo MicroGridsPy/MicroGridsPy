@@ -215,6 +215,7 @@ def Load_results1(instance):
             Generator_Data.loc['OyM Cost (USD)', Name] = Generator_Data.loc['Invesment Generator (USD)', Name]*Generator_Data.loc['OyM Generator', Name]
             Generator_Data.loc['Marginal Cost (USD/Wh)', Name] = (Generator_Data.loc['Fuel Cost (USD/l)',Name]/
                                       (Generator_Data.loc['Generator Efficiency',Name]*Generator_Data.loc['Low Heating Value (Wh/l)',Name]))
+            Generator_Data.loc['Marginal Cost (USD/Wh)', Name] = round(Generator_Data.loc['Marginal Cost (USD/Wh)', Name],3)
     
     if instance.formulation == 'MILP':
         Generator_Min_Out_Put = instance.Generator_Min_Out_Put.extract_values()
@@ -237,9 +238,11 @@ def Load_results1(instance):
                 Generator_Data.loc['Generator Invesment Cost (USD/W)',Name] = Generator_Invesment_Cost[g]
                 Generator_Data.loc['Cost Increase',Name] = Cost_Increase[g]
                 M_1 = Fuel_Cost[g]/(Generator_Efficiency[g]*Low_Heating_Value[g])
-                Generator_Data.loc['Marginal cost Full load (USD/Wh)',Name] = M_1
+                Generator_Data.loc['Marginal cost Full load (USD/Wh)',Name] = round(M_1,3)
                 Generator_Data.loc['Start Cost Generator (USD)',Name] = M_1*Generator_Nominal_Capacity[g]*Cost_Increase[g]
+                Generator_Data.loc['Start Cost Generator (USD)',Name] = round(Generator_Data.loc['Start Cost Generator (USD)',Name],3)
                 Generator_Data.loc['Marginal cost Partial load (USD/Wh)',Name] = M_1*(1-Cost_Increase[g])
+                Generator_Data.loc['Marginal cost Partial load (USD/Wh)',Name] = round(Generator_Data.loc['Marginal cost Partial load (USD/Wh)',Name],3)
                 Generator_Data.loc['Number of Generators', Name] = Integer_generator[g]
                 Generator_Data.loc['Maintenance Operation Cost Generator', Name] = Maintenance_Operation_Cost_Generator[g]
                 Generator_Data.loc['Invesment Generator (USD)', Name] = (Generator_Nominal_Capacity[g]
@@ -273,7 +276,7 @@ def Load_results1(instance):
     
     Unitary_Battery_Cost = PriceBattery - Battery_Electronic_Invesmente_Cost
     Battery_Repostion_Cost =  Unitary_Battery_Cost/(Battery_Cycles*2*(1-Deep_of_Discharge))
-    
+    Battery_Repostion_Cost = round(Battery_Repostion_Cost, 3)
     Battery_Data = pd.DataFrame()
     
     Battery_Data.loc['Nominal Capacity (Wh)','Battery'] = Battery_Nominal_Capacity
@@ -468,7 +471,7 @@ def Load_results1(instance):
         Demand.loc[a,'Rate'] = Scenario_Information[b]['Scenario Weight']                                                         
         Demand.loc[a,'Rated Demand (Wh)'] = Demand.loc[a,'Rate']*Demand.loc[a,'Present Demand (Wh)'] 
         NP_Demand += Demand.loc[a,'Rated Demand (Wh)']
-    NPC.loc['LCOE (USD/kWh)', 'Data'] = (Project_Data['Net Present Cost (USD)']/NP_Demand)*1000
+    NPC.loc['LCOE (USD/kWh)', 'Data'] = (Project_Data['Net Present Cost (USD)']/NP_Demand)
     
     
     NPC.to_excel(writer, sheet_name='Results')
@@ -947,7 +950,7 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         Plot_Data.index=columns
     
         Plot_Data = Plot_Data.astype('float64')
-        Plot_Data = Plot_Data/1000
+        Plot_Data = Plot_Data
         Plot_Data['Charge energy to the Battery (Wh)'] = -Plot_Data['Charge energy to the Battery (Wh)']
         Plot_Data = round(Plot_Data,2)                   
         Fill = pd.DataFrame()
@@ -1344,16 +1347,15 @@ def Energy_Mix(instance,Scenarios,Scenario_Probability):
     Lost_Load = 0
     Energy_Mix = pd.DataFrame()
     
-    for j in range(1, Number_Scenarios+1):   
+    for s in range(1, Number_Scenarios+1):   
        
-        index_1 = 'Renewable Energy ' + str(j) + ' (Wh)' 
-        index_2 = 'Gen energy ' + str(j) + ' (Wh)'
-        index_3 = 'Scenario ' + str(j)
-        index_4 = 'Curtailment ' + str(j) + ' (Wh)'
-        index_5 = 'Battery Flow Out ' + str(j) + ' (Wh)'
-        index_6 = 'Energy Demand ' + str(j) + ' (Wh)'
-        
-        index_7 = 'Lost Load '+str(j) + ' (Wh)'
+        index_1 = 'Renewable Energy ' + str(s) + ' (Wh)' 
+        index_2 = 'Gen energy ' + str(s) + ' (Wh)'
+        index_3 = 'Scenario ' + str(s)
+        index_4 = 'Curtailment ' + str(s) + ' (Wh)'
+        index_5 = 'Battery Flow Out ' + str(s) + ' (Wh)'
+        index_6 = 'Energy Demand ' + str(s) + ' (Wh)'
+        index_7 = 'Lost Load '+str(s) + ' (Wh)'
         
         PV = Energy_Totals[index_1]
         Ge = Energy_Totals[index_2]
@@ -1361,8 +1363,6 @@ def Energy_Mix(instance,Scenarios,Scenario_Probability):
         Cu = Energy_Totals[index_4]
         B_O = Energy_Totals[index_5]        
         De = Energy_Totals[index_6] 
-        
-        
         
         PV_Energy += PV*We
         Generator_Energy += Ge*We  
@@ -1376,7 +1376,7 @@ def Energy_Mix(instance,Scenarios,Scenario_Probability):
         Energy_Mix.loc['Battery Usage',index_3] = B_O/De
         
         if instance.Lost_Load_Probability > 0:
-            LL = Energy_Totals[index_7] 
+            LL = Energy_Totals[index_7]*We 
             Lost_Load += LL*We
             Energy_Mix.loc['Lost Load', index_3] = LL/De
         
@@ -1384,13 +1384,17 @@ def Energy_Mix(instance,Scenarios,Scenario_Probability):
     Curtailment_Percentage = Curtailment/(PV_Energy+Generator_Energy)
     Battery_Usage = Battery_Out/Demand
         
-    
     print(str(round(Renewable_Real_Penetration*100, 1)) + ' % Renewable Penetration')
     print(str(round(Curtailment_Percentage*100,1)) + ' % of energy curtail')
     print(str(round(Battery_Usage*100,1)) + ' % Battery usage')
     
     if instance.Lost_Load_Probability > 0:
-        Lost_Load_Real = Lost_Load/Demand
+        foo = []
+        for s in range(1, Number_Scenarios+1):
+            name = 'Scenario ' + str(s)
+            foo.append(name)
+        
+        Lost_Load_Real = sum(Energy_Mix.loc['Lost Load', name] for name in foo)
         print(str(round(Lost_Load_Real*100,1)) + ' % Lost load in the system')
     
     return Energy_Mix    
@@ -1405,7 +1409,7 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Battery_Data ,Result
             index_1 = 'Source ' + str(i)
             index_2 = 'Total Nominal Capacity (W)'
         
-            Renewable_Rate = float(Data_Renewable[index_1][index_2]/1000)
+            Renewable_Rate = float(Data_Renewable[index_1][index_2])
             Renewable_Rate = round(Renewable_Rate, 1)
             print('Renewable ' + str(i) + ' nominal capacity is ' 
                   + str(Renewable_Rate) +' kW')    
@@ -1414,7 +1418,7 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Battery_Data ,Result
                 index_1 = 'Generator ' + str(i)
                 index_2 = 'Generator Nominal Capacity (W)'
                 
-                Generator_Rate = float(Generator_Data[index_1][index_2]/1000)
+                Generator_Rate = float(Generator_Data[index_1][index_2])
                 Generator_Rate = round(Generator_Rate, 1)
                 
                 print('Generator ' + str(i) + ' nominal capacity is ' 
@@ -1425,14 +1429,14 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Battery_Data ,Result
                 index_1 = 'Generator ' + str(i)
                 index_2 = 'Generator Nominal Capacity (W)'
                 index_3 = 'Number of Generators'
-                Generator_Rate = float(Generator_Data[index_1][index_2]/1000)
+                Generator_Rate = float(Generator_Data[index_1][index_2])
                 Generator_Rate = round(Generator_Rate, 1)
                 Generator_Rate = Generator_Rate*Generator_Data[index_1][index_3]
                 print('Generator ' + str(i) + ' nominal capacity is ' 
                   + str(Generator_Rate) +' kW')                
         
         index_2 = 'Nominal Capacity (Wh)'    
-        Battery_Rate = Battery_Data['Battery'][index_2]/1000
+        Battery_Rate = Battery_Data['Battery'][index_2]
         Battery_Rate = round(Battery_Rate, 1)
         
         print('Battery nominal capacity is ' 

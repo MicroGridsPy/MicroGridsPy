@@ -6,8 +6,7 @@ param: StartDate := '21/03/2016 01:00:00';
 
 param: Delta_Time := 1;
 
-
-param: Battery_Invesment_Cost := 0.55; # 1
+param: Battery_Invesment_Cost := 0.44; # 1
 
 param: Battery_Electronic_Invesmente_Cost := 0.222;
 
@@ -19,7 +18,7 @@ param: Discharge_Battery_Efficiency := 0.95;
 
 param: Charge_Battery_Efficiency := 0.95;
 
-param: Deep_of_Discharge := 0.2; #2
+param: Deep_of_Discharge := 0.5; #2
 
 param: Value_Of_Lost_Load := 0.0003;
 
@@ -27,38 +26,30 @@ param: Maximun_Battery_Discharge_Time := 4;
 
 param: Maximun_Battery_Charge_Time := 4;
 
-param: Battery_Cycles := 5500;
+param: Battery_Cycles := 1200;
 
 param: Battery_Initial_SOC := 1;
 
-param: Scenarios := 1; ####
+param: Scenarios := 10; ####
 
-param: Renewable_Source := 3;
+param: Renewable_Source := 1;
 
 param: Renewable_Nominal_Capacity :=
 
-1	250
-2   500
-3   1000;
+1	250;
 
 param: Renewable_Inverter_Efficiency :=
 
-1	1
-2   1
-3   1;
+1	1;
 
 
 param: Renewable_Invesment_Cost :=
 
-1	1.5
-2   2.7
-3   2.7;
+1	1.7;
 
 param: Maintenance_Operation_Cost_Renewable := 
 
-1	0.015
-2   0.015
-3   0.015;
+1	0.015;
 
 
 param: Generator_Type := 1;
@@ -83,5 +74,14 @@ param: Low_Heating_Value :=
 
 param: Scenario_Weight :=
 
-1	1;
+1	0.05
+2	0.08
+3	0.18
+4	0.20
+5	0.14
+6	0.103
+7	0.097
+8	0.086
+9	0.042
+10	0.022;
 
