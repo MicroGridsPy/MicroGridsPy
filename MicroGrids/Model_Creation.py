@@ -72,6 +72,7 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
         model.Fuel_Cost = Param(model.generator_type,  within=NonNegativeReals) 
         model.Generator_Invesment_Cost = Param(model.generator_type, within=NonNegativeReals) 
         model.Marginal_Cost_Generator_1 = Param(model.generator_type, initialize=Marginal_Cost_Generator_1)
+        
     elif model.formulation == 'MILP':
         model.Generator_Min_Out_Put = Param(model.generator_type,
                                         within=NonNegativeReals)
@@ -113,11 +114,11 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     # Variables associated to the solar panels
         
     model.Renewable_Units = Var(model.renewable_source,
-                                within=NonNegativeReals,bounds= (0,100)) # Number of units of solar panels
+                                within=NonNegativeReals,bounds= (0,400)) # Number of units of solar panels
 
 
     # Variables associated to the battery bank
-    bat = 150
+    bat = 600
     model.Battery_Nominal_Capacity = Var(within=NonNegativeReals,bounds= (0,bat)) # Capacity of the battery bank in Wh
     model.Energy_Battery_Flow_Out = Var(model.scenario, model.periods,
                                         within=NonNegativeReals,bounds=(0,bat)) # Battery discharge energy in wh
@@ -147,15 +148,15 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     
         def bounds_N(model,g):
             if g == 1:
-                return (0,2)
+                return (0,3)
             else:
-                return (0,1)
+                return (0,2)
         
         def bounds_E(model,s,g,t):
             if g == 1:
-                return (0,2)
+                return (0,3)
             else:
-                return (0,1)    
+                return (0,2)    
     
         model.Generator_Energy = Var(model.scenario, model.generator_type,
                                            model.periods, within=NonNegativeReals)

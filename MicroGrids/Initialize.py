@@ -16,7 +16,7 @@ def Initialize_years(model, i):
 
 Energy_Demand = pd.read_excel('Example/Demand.xls',index_col=0,Header=None) # open the energy demand file
 Energy_Demand = Energy_Demand/1000
-Energy_Demand = round(Energy_Demand, 2)
+Energy_Demand = round(Energy_Demand, 1)
 
 def Initialize_Demand(model, i, t):
     '''
@@ -98,7 +98,7 @@ def Battery_Reposition_Cost(model):
     
 Renewable_Energy = pd.read_excel('Example/Renewable_Energy.xls',index_col=0,Header=None) # open the PV energy yield file
 Renewable_Energy = Renewable_Energy/1000
-Renewable_Energy = round(Renewable_Energy, 2)
+Renewable_Energy = round(Renewable_Energy, 1)
 
 def Initialize_Renewable_Energy(model, s,r,t):
     '''
