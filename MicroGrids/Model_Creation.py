@@ -1,7 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-
 
 def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     
@@ -43,6 +39,7 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     model.Renewable_Energy_Production = Param(model.scenario,model.renewable_source,
                                               model.periods, within=NonNegativeReals, 
                                               initialize=Initialize_Renewable_Energy) # Energy produccion of a solar panel in W
+    model.RES_Inv_Red_Factor = Param(model.renewable_source, within=NonNegativeReals)
     
     # Parameters of the battery bank
     model.Charge_Battery_Efficiency = Param() # Efficiency of the charge of the battery in  %
@@ -68,8 +65,8 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     model.Generator_Invesment_Cost = Param(model.generator_type,
                                            within=NonNegativeReals) # Cost of the diesel generator
     model.Marginal_Cost_Generator_1 = Param(model.generator_type,
-                                            initialize=Marginal_Cost_Generator_1)
-        
+                                            initialize=Marginal_Cost_Generator_1)    
+    
     # Parameters of the Energy balance                  
     model.Energy_Demand = Param(model.scenario, model.periods, 
                                 initialize=Initialize_Demand) # Energy Energy_Demand in W 

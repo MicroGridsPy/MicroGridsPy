@@ -1,4 +1,4 @@
-# Objective funtion
+
 
 def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
     '''
@@ -131,7 +131,9 @@ def Maximun_Lost_Load(model,i): # Maximum permissible lost load
     return model.Lost_Load_Probability >= (sum(model.Lost_Load[i,t] for t in model.periods)/sum(model.Energy_Demand[i,t] for t in model.periods))
 
 
-######################################## Diesel generator constraints ############################
+######################################## Diesel generator constraints ############################        
+
+
 
 def Maximun_Generator_Energy(model,s,g,t): # Maximun energy output of the diesel generator
     '''

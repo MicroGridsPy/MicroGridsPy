@@ -1,11 +1,9 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 from pyomo.opt import SolverFactory
 from pyomo.environ import Objective, minimize, Constraint
 
 
-def Model_Resolution(model,Renewable_Penetration, Battery_Independency,datapath="Inputs/data.dat"):   
+def Model_Resolution(model, Renewable_Penetration, Battery_Independency,datapath="Inputs/data.dat"):   
     '''
     This function creates the model and call Pyomo to solve the instance of the proyect 
     
