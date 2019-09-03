@@ -114,11 +114,11 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     # Variables associated to the solar panels
         
     model.Renewable_Units = Var(model.renewable_source,
-                                within=NonNegativeReals,bounds= (0,400)) # Number of units of solar panels
+                                within=NonNegativeReals,bounds= (0,300)) # Number of units of solar panels
 
 
     # Variables associated to the battery bank
-    bat = 600
+    bat = 400
     model.Battery_Nominal_Capacity = Var(within=NonNegativeReals,bounds= (0,bat)) # Capacity of the battery bank in Wh
     model.Energy_Battery_Flow_Out = Var(model.scenario, model.periods,
                                         within=NonNegativeReals,bounds=(0,bat)) # Battery discharge energy in wh

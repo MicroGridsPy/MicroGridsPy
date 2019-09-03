@@ -15,16 +15,16 @@ import time
 start = time.time()
 #21212
 # Type of problem formulation:
-formulation = 'MILP'
+formulation = 'Dispatch'
 #datapath='Example/Dispatch/'
 # Renewable energy penetrarion
 
-Renewable_Penetration  =  0 # a number from 0 to 1
-Battery_Independency   =  0    # number of days of battery independency
+Renewable_Penetration  =  0.7 # a number from 0 to 1
+Battery_Independency   =  1    # number of days of battery independency
 Lost_Load_Probability  =  0   # Allowed percentage of unmed demand in the system
 Curtailment_Unitary_Cost =  0 # probando curtailment cost 0
 
-S = 10 # Plot scenario
+S = 1 # Plot scenario
 Plot_Date = '31/12/2016 00:00:00' # Day-Month-Year
 PlotTime = 5# Days of the plot
 plot = 'No Average' # 'No Average' or 'Average'
@@ -49,7 +49,7 @@ if formulation == 'LP' or formulation == 'MILP':
 
     # Energy Plot    
 
-#    Time_Series = Integer_Time_Series(instance,Scenarios, S, Data) 
+    Time_Series = Integer_Time_Series(instance,Scenarios, S, Data) 
 #    Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime)
     # Data Analisys
     Print_Results(instance, Generator_Data, Data_Renewable, Battery_Data ,Results, 
