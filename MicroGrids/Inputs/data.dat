@@ -1,82 +1,82 @@
-param: Periods := 8760;
+param: Periods := 8760;                                     # periods considered in one year (8760h/y in the example)
 
-param: Years := 20;
+param: Years := 5;                                          # total duration of the project
 
-param: StartDate := '01/01/2017 00:00:00';
+param: StartDate := '01/01/2015 00:00:00';                  # start date of the project
 
-param: Delta_Time := 1.0;
+param: Delta_Time := 1.0;                                   # not change 
 
-param: Battery_Invesment_Cost := 0.55; 
+param: Battery_Invesment_Cost := 0.44744;                   # [USD/Wh]
 
-param: Battery_Electronic_Invesmente_Cost := 0.55;
+param: Battery_Electronic_Invesmente_Cost := 0.089488;      # Cost of the non-replaceable part of the battery bank [USD/Wh]
 
-param: Maintenance_Operation_Cost_Battery:= 0.015;
+param: Maintenance_Operation_Cost_Battery:= 0.015;          # O&M cost of the battery bank as a fraction of investment cost [%]
 
-param: Discount_Rate := 0.12;
+param: Discount_Rate := 0.12;                               # Real discount rate accounting also for inflation
 
-param: Lost_Load_Probability := 0.00;
+param: Lost_Load_Probability := 0.00;                       # [%]
 
-param: Discharge_Battery_Efficiency := 0.95;
+param: Discharge_Battery_Efficiency := 0.95;                # [%]
 
-param: Charge_Battery_Efficiency := 0.95;
+param: Charge_Battery_Efficiency := 0.95;                   # [%]
 
-param: Deep_of_Discharge := 0.2; 
+param: Deep_of_Discharge := 0.2;                            # [%]
 
-param: Value_Of_Lost_Load := 0.18;
+param: Value_Of_Lost_Load := 0.0;                           # [USD/Wh]
 
-param: Maximun_Battery_Discharge_Time := 4;
+param: Maximun_Battery_Discharge_Time := 1;                 # [h]
 
-param: Maximun_Battery_Charge_Time := 4;
+param: Maximun_Battery_Charge_Time := 3;                    # [h]
 
-param: Battery_Cycles := 5500; 
+param: Battery_Cycles := 4500;                              # Cycles of the battery
 
-param: Battery_Initial_SOC := 1;
+param: Battery_Initial_SOC := 1;                            # [%]
 
-param: Scenarios := 1; 
+param: Scenarios := 1;                                      # Number of scenarios to consider within the optimisation
 
-param: Renewable_Source := 2;
+param: Renewable_Source := 2;                               # Number of RES types
 
-param: Renewable_Nominal_Capacity :=
+param: Renewable_Nominal_Capacity :=                        # Single unit capacity [W] of each type of RES
 
-1	1000
-2	1000;
+1   1000
+2   20000;
 
-param: Renewable_Inverter_Efficiency := 
-1	0.96
-2	0.96;
+param: Renewable_Inverter_Efficiency :=                     # Efficiency [%] of the inverter connected to each RES (put 1 in case of AC bus)
 
-param: Renewable_Invesment_Cost :=
+1   0.95
+2   1;
 
-1	1.1
-2	2.0;
+param: Renewable_Invesment_Cost :=                          # Investment cost for each type of RES [USD/kW]
 
-param: Maintenance_Operation_Cost_Renewable := 
+1   4.6937
+2   6.59535;
 
-1	0.01
-2	0.02;
+param: Maintenance_Operation_Cost_Renewable :=              # O&M cost for each type of RES as a fraction of investment cost [%]
 
+1	 0.005326
+2   0.006065;
 
-param: Generator_Type := 1;
+param: Generator_Type := 1;                                 # Number of different types of gensets
 
-param: Generator_Invesment_Cost := 
+param: Generator_Invesment_Cost :=                          # Investment cost for each generator type [USD/kW]
 
-1	1.48;
+1	0.4201;
 
-param: Maintenance_Operation_Cost_Generator := 
+param: Maintenance_Operation_Cost_Generator :=              # O&M cost for each generator type as a fraction of investment cost [%]
 
 1	0.045;
 
-param: Fuel_Cost := 
-1	0.68;
+param: Fuel_Cost :=                                         # Fuel cost in [USD/litre] for each genset type
+1	1;
 
-param: Generator_Efficiency := 
+param: Generator_Efficiency :=                              # Average generator efficiency of each generator type [%]
 
-1	0.34;
+1	0.30;
 
-param: Low_Heating_Value := 
-1	9890;
+param: Low_Heating_Value :=                                 # Fuel LHV for each generator type [Wh/lt]
+1	9840;
 
-param: Scenario_Weight :=
+param: Scenario_Weight :=                                   # Occurrence probability of each scenario [%]
 
 1	1;
 

@@ -1,35 +1,87 @@
-#####
-#MicroGridsPy-Student, v.0.1. 2018/2019
-#Based on the original model by Sergio Balderrama and Sylvain Quoilin
-#Student version managed by Francesco Lombardi
-######
-import pandas as pd
+"""
+MicroGridsPy - Multi-year capacity-expansion (MYCE) 2018/2019
+Based on the original model by Sergio Balderrama and Sylvain Quoilin
+Authors: Giulia Guidicini, Lorenzo Rinaldi - Politecnico di Milano
+"""
+
+
+############### MULTI-YEAR CAPACITY-EXPANSION MODEL ###########################
+
+Multi_Year = 'Yes'   #Options: Yes / No
+
 from pyomo.environ import  AbstractModel
 
-from Results import Plot_Energy_Total,  Load_results1, Energy_Mix, Print_Results, Integer_Scenarios, Integer_Scenario_Information, \
-Integer_Time_Series, integer_Renewable_Energy, Integer_Data_Renewable, Integer_Generator_time_series, \
-Integer_Generator_Data, Integer_Results,Economic_Analysis, Integer_Time_Series
-from Model_Creation import Model_Creation
-from Model_Resolution import Model_Resolution
-from Economical_Analysis import Levelized_Cost_Of_Energy
+################################################################################################
+################################## VARIABLE DEMAND MODEL #######################################
+################################################################################################
 
 
-# Type of problem formulation:
-formulation = 'LP'
-
-# Renewable energy penetrarion
-
-Renewable_Penetration = 0.6 # a number from 0 to 1.
-Battery_Independency = 0  # number of days of battery independency
-
-model = AbstractModel() # define type of optimization problem
-
-if formulation == 'LP':
-    # Optimization model
+if Multi_Year == 'Yes':
+    
+    from Results_MY import Plot_Energy_Total, Load_Results, Integer_Time_Series, Print_Results, Energy_Mix
+    from Model_Creation_MY import Model_Creation
+    from Model_Resolution_MY import Model_Resolution
+   
         
+#    Optimization_Goal = 'NPC'  # Options: NPC / Operation cost 
+    
+    Renewable_Penetration = 0  # a number from 0 to 1.
+    Battery_Independency = 0   # number of days of battery independence
+    
+    model = AbstractModel() # define type of optimization problem
+    
+    # Optimization model    
     Model_Creation(model, Renewable_Penetration, Battery_Independency) # Creation of the Sets, parameters and variables.
-    instance = Model_Resolution(model,Renewable_Penetration,
+    instance = Model_Resolution(model, Renewable_Penetration,
                                 Battery_Independency) # Resolution of the instance
+    
+    # Upload the results from the instance and saving it in excel files
+    Data = Load_Results(instance) # Extract the results of energy from the instance and save it in a excel file 
+    NPC = Data[0]
+    Scenarios =  Data[2]
+    Scenario_Probability = Data[4]
+    Generator_Data = Data[3]
+    Data_Renewable = Data[6]
+    Battery_Data = Data[1]
+    LCOE = Data[5]
+    TotVarCost = Data[7]
+    TotInvCost = Data[8]
+    SalvageValue = Data[9]
+         
+    # Energy Plot    
+    S = 1 # Plot scenario
+    Plot_Date = '01/01/2015 00:00:00' # Day-Month-Year ####ACTUALLY IT WILL INTERPRET A DATE PREFERABLY AS MONTH-DAY; IF DEVOID OF MEANING, IT WILL TRY DAY-MONTH
+    PlotTime = 3# Days of the plot
+    Time_Series = Integer_Time_Series(instance,Scenarios, S) 
+       
+    plot = 'No Average' # 'No Average' or 'Average'
+    Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime)
+
+    # Data Analisys    
+    Energy_Mix_S = Energy_Mix(instance,Scenarios,Scenario_Probability)
+    Print_Results(LCOE, NPC, TotVarCost, TotInvCost, SalvageValue)  
+
+    
+################################################################################################    
+################################### FIXED DEMAND MODEL #########################################
+################################################################################################
+
+    
+elif Multi_Year == 'No':   
+    
+    from Results import Plot_Energy_Total,  Load_results1, Energy_Mix, Print_Results, Integer_Time_Series
+    from Model_Creation import Model_Creation
+    from Model_Resolution import Model_Resolution
+    
+           
+    Renewable_Penetration = 0 # a number from 0 to 1.
+    Battery_Independency = 0  # number of days of battery independency
+
+    model = AbstractModel() # define type of optimization problem
+    
+            
+    Model_Creation(model, Renewable_Penetration, Battery_Independency) # Creation of the Sets, parameters and variables.
+    instance = Model_Resolution(model, Renewable_Penetration, Battery_Independency) # Resolution of the instance
 
 
     ## Upload the resulst from the instance and saving it in excel files
@@ -39,34 +91,19 @@ if formulation == 'LP':
     Generator_Data = Data[4]
     Data_Renewable = Data[7]
     Results = Data[2]
-    LCOE = Data[6]
+    LCOE_1 = Data[6]
+
     
-
-else:
-    print('Model formulation type not allowed')
-
-
-# Energy Plot    
-S = 1 # Plot scenario
-Plot_Date = '03/25/2017 00:00:00' # Day-Month-Year ##### MONTH-DAY-YEAR
-PlotTime = 1# Days of the plot
-Time_Series = Integer_Time_Series(instance,Scenarios, S) 
-
-plot = 'No Average' # 'No Average' or 'Average'
-Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime)
-
-
-# Data Analisys
-Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE)  
-Energy_Mix_S = Energy_Mix(instance,Scenarios,Scenario_Probability)
-
-
-#index = pd.DatetimeIndex(start='2017-01-01 00:00:00', periods=len(Time_Series), 
-#                                   freq=('H'))
-##Start_Date = '2017-01-01 00:00:00'
-#end_Date = '2017-06-30 00:00:00'
-#Time_Series.index = index
-#cost = Time_Series['Total Cost Generator'][Start_Date:end_Date].sum()
-#curtailment = Time_Series['Curtailment'][Start_Date:end_Date].sum()/1000000
-#print(cost)
-#print(curtailment)    
+    # Energy Plot    
+    S = 1 # Plot scenario
+    Plot_Date = '07/10/2015 00:00:00' # Day-Month-Year
+    PlotTime = 2# Days of the plot
+    Time_Series = Integer_Time_Series(instance,Scenarios, S) 
+    
+    plot = 'No Average' # 'No Average' or 'Average'
+    Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime)
+    
+    # Data Analisys
+    Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE_1)  
+    Energy_Mix_S = Energy_Mix(instance,Scenarios,Scenario_Probability)
+    

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 import pandas as pd
 import numpy as np
@@ -23,6 +22,7 @@ def Load_results1(instance):
     
     
     Number_Scenarios = int(instance.Scenarios.extract_values()[None])
+    Number_Years = int(instance.Years.extract_values()[None])
     Number_Periods = int(instance.Periods.extract_values()[None])
     Number_Renewable_Source = int(instance.Renewable_Source.extract_values()[None])
     Number_Generator = int(instance.Generator_Type.extract_values()[None])
@@ -154,7 +154,7 @@ def Load_results1(instance):
     Scenarios.columns = columns
     Scenarios = Scenarios.transpose()
     
-    Scenarios.to_excel('Results/Time_Series.xls') # Creating an excel file with the values of the variables that are in function of the periods
+    Scenarios.to_excel('Results/Fixed_Demand/Time_Series.xls') # Creating an excel file with the values of the variables that are in function of the periods
     
     columns = [] # arreglar varios columns
     for i in range(1, Number_Scenarios+1):
@@ -188,7 +188,7 @@ def Load_results1(instance):
                                   'Diesel Cost','Battery Reposition Cost']
     Scenario_Information = Scenario_Information.transpose()
     
-    Scenario_Information.to_excel('Results/Scenario_Information.xls')
+    Scenario_Information.to_excel('Results/Fixed_Demand/Scenario_Information.xls')
     
     Number_Scenarios = int(instance.Scenarios.extract_values()[None])
     Number_Renewable_Source = int(instance.Renewable_Source.extract_values()[None])
@@ -209,7 +209,7 @@ def Load_results1(instance):
         
         
     Renewable_Energy.index = Scenarios.index
-    Renewable_Energy.to_excel('Results/Renewable_Energy.xls')
+    Renewable_Energy.to_excel('Results/Fixed_Demand/Renewable_Energy.xls')
     
     Generator_Energy
     
@@ -223,7 +223,7 @@ def Load_results1(instance):
                 Generator_Time_Series.loc[t,column_1] = Generator_Energy[s,g,t]
                     
     Generator_Time_Series.index = Scenarios.index           
-    Generator_Time_Series.to_excel('Results/Generator_time_series.xls')          
+    Generator_Time_Series.to_excel('Results/Fixed_Demand/Generator_time_series.xls')          
     
     
 
@@ -250,7 +250,7 @@ def Load_results1(instance):
         Data_Renewable.loc['OyM Cost', Name] = Data_Renewable.loc['Invesment', Name]*OyM_Renewable[r]        
         Data_Renewable.loc['Total Nominal Capacity', Name] = Data_Renewable.loc['Nominal Capacity', Name]*Data_Renewable.loc['Units', Name]    
 
-    Data_Renewable.to_excel('Results/Source_Renewable_Data.xls')    
+    Data_Renewable.to_excel('Results/Fixed_Demand/Source_Renewable_Data.xls')    
     
     Number_Generator = int(instance.Generator_Type.extract_values()[None])
  
@@ -274,7 +274,7 @@ def Load_results1(instance):
         Generator_Data.loc['Invesment Generator', Name] = Generator_Invesment_Cost[g]*Generator_Nominal_Capacity[g]
         Generator_Data.loc['OyM Cost', Name] = Generator_Data.loc['Invesment Generator', Name]*Generator_Data.loc['OyM Generator', Name]
         Generator_Data.loc['Marginal Cost', Name] = Generator_Data.loc['Fuel Cost',Name]/(Generator_Data.loc['Generator Efficiency',Name]*Generator_Data.loc['Low Heating Value',Name])
-    Generator_Data.to_excel('Results/Generator_Data.xls')      
+    Generator_Data.to_excel('Results/Fixed_Demand/Generator_Data.xls')      
     
     
     
@@ -303,7 +303,7 @@ def Load_results1(instance):
                     'Project Life Time']
     # Create a data frame for the variable that don't depend of the periods of analisys 
     Size_variables = pd.DataFrame(data3,index=index_values)
-    Size_variables.to_excel('Results/Size.xls') # Creating an excel file with the values of the variables that does not depend of the periods
+    Size_variables.to_excel('Results/Fixed_Demand/Size.xls') # Creating an excel file with the values of the variables that does not depend of the periods
     
 
     Battery_Data = pd.DataFrame()
@@ -323,7 +323,7 @@ def Load_results1(instance):
                 Generator_Time_Series.loc[t,column_2] = Generator_Time_Series.loc[t,column_1]*Generator_Data.loc['Marginal Cost', Name] 
      
     Generator_Time_Series.index = Scenarios.index           
-    Generator_Time_Series.to_excel('Results/Generator_time_series.xls')                
+    Generator_Time_Series.to_excel('Results/Fixed_Demand/Generator_time_series.xls')                
 
     Cost_Time_Series = pd.DataFrame()
     for s in range(1, Number_Scenarios + 1):
@@ -427,7 +427,12 @@ def Load_results1(instance):
         Demand.loc[a,'Rate'] = Scenario_Information[b]['Scenario Weight']                                                         
         Demand.loc[a,'Rated Demand'] = Demand.loc[a,'Rate']*Demand.loc[a,'Present Demand'] 
         NP_Demand += Demand.loc[a,'Rated Demand']
-    LCOE = (Size_variables[0]['NPC']/NP_Demand)*1000
+    LCOE_1 = (Size_variables[0]['NPC']/NP_Demand)*1000
+    
+    
+#    NetPresentCost = instance.ObjectiveFuntion.expr()
+#    CRF = (DiscountRate*(1 + DiscountRate)**Number_Years)/((1+DiscountRate)**Number_Years - 1)
+#    LCOE_2 = NetPresentCost*CRF/Demand.loc[a,'Total Demand']*1000
     
     Data = []
     Data.append(NPC)
@@ -436,8 +441,9 @@ def Load_results1(instance):
     Data.append(Scenarios)
     Data.append(Generator_Data)
     Data.append(Scenario_Information)
-    Data.append(LCOE)
+    Data.append(LCOE_1)
     Data.append(Data_Renewable)
+#    Data.append(LCOE_2)
     return Data
    
     
@@ -1248,7 +1254,7 @@ def Energy_Mix(instance,Scenarios,Scenario_Probability):
     return Energy_Mix    
  
     
-def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE):
+def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE_1): #, LCOE_2):
     
     Number_Renewable_Source = int(instance.Renewable_Source.extract_values()[None])
     Number_Generator = int(instance.Generator_Type.extract_values()[None])
@@ -1287,8 +1293,12 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Results, LCOE):
 
 
 
-    LCOE = round(LCOE, 3)    
-    print('LCOE is ' + str(LCOE) + ' $/kW')  
+    LCOE_1 = round(LCOE_1, 3)    
+    print('LCOE_1 is ' + str(LCOE_1) + ' $/kWh')  
+    
+#    LCOE_2 = round(LCOE_2, 3)    
+#    print('LCOE_2 is ' + str(LCOE_2) + ' $/kWh')  
+
     
     
     
