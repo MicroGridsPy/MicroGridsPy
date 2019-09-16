@@ -114,11 +114,11 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     # Variables associated to the solar panels
         
     model.Renewable_Units = Var(model.renewable_source,
-                                within=NonNegativeReals,bounds= (0,300)) # Number of units of solar panels
+                                within=NonNegativeReals,bounds= (0,150)) # Number of units of solar panels
 
 
     # Variables associated to the battery bank
-    bat = 400
+    bat = 100
     model.Battery_Nominal_Capacity = Var(within=NonNegativeReals,bounds= (0,bat)) # Capacity of the battery bank in Wh
     model.Energy_Battery_Flow_Out = Var(model.scenario, model.periods,
                                         within=NonNegativeReals,bounds=(0,bat)) # Battery discharge energy in wh
@@ -142,21 +142,21 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
         
         def gen(model,g):
             if g == 1:
-                return 2
+                return 1
             else:
                 return 0
     
         def bounds_N(model,g):
             if g == 1:
-                return (0,3)
-            else:
                 return (0,2)
+            else:
+                return (0,1)
         
         def bounds_E(model,s,g,t):
             if g == 1:
-                return (0,3)
+                return (0,2)
             else:
-                return (0,2)    
+                return (0,1)    
     
         model.Generator_Energy = Var(model.scenario, model.generator_type,
                                            model.periods, within=NonNegativeReals)

@@ -1,6 +1,6 @@
 param: Periods := 4000;
 
-param: StartDate := '01/01/2017 01:00:00';
+param: StartDate := '01/01/2016 01:00:00';
 
 param: PlotTime := 1;
 
