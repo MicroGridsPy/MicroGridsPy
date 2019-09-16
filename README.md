@@ -88,7 +88,7 @@ Solver
 
 Any of the following solvents can be used during the optimization  process in the Micro-Grids library:
 
-* cplex
+* Gurubi
 
 ### Inputs
 
