@@ -122,7 +122,7 @@ def Model_Resolution_binary(model,datapath="Example/data_binary.dat"):
     opt = SolverFactory('cplex') # Solver use during the optimization    
 #    opt.options['emphasis_memory'] = 'y'
 #    opt.options['node_select'] = 3
-    results = opt.solve(instance, tee=True,options_string="mipgap=0.07") # Solving a model instance 
+    results = opt.solve(instance, tee=True,options_string="mipgap=0.05") # Solving a model instance 
 
     #    instance.write(io_options={'emphasis_memory':True})
     #options_string="mipgap=0.03", timelimit=1200
