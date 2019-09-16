@@ -14,7 +14,7 @@ def Initialize_years(model, i):
 
 
 
-Energy_Demand = pd.read_excel('Example/Demand.xls') # open the energy demand file
+Energy_Demand = pd.read_excel('Example/Demand.xls',index_col=0,Header=None) # open the energy demand file
 
 def Initialize_Demand(model, i, t):
     '''
@@ -27,7 +27,7 @@ def Initialize_Demand(model, i, t):
     '''
     return float(Energy_Demand[i][t])
 
-PV_Energy = pd.read_excel('Example/PV_Energy.xls') # open the PV energy yield file
+PV_Energy = pd.read_excel('Example/PV_Energy.xls',index_col=0,Header=None) # open the PV energy yield file
 
 def Initialize_PV_Energy(model, i, t):
     '''

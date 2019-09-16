@@ -108,7 +108,7 @@ Once all the above steps are performed, the easiest way to run the Micro-grids l
 
 python Micro-Grids.py
 
-Additional parameters can be changed in the Microgrids.py, they are in explain in the the file. The formulation can be change by changing the variable "formulation" in the Micro-Grids file. if the value is set to LP then the problem will solve with the LP formulation for the sizing problem. If the value is set to MILP then the problem is solve as a MILP formulation for the sizing problem. Finally, if the value is set to  Dispatch then the problem is solved as the  MILP formulation for the dispatch problem.
+Additional parameters can be changed in the Microgrids.py, they are in explain in the the file. The formulation can be change by changing the variable "formulation" in the Micro-Grids file. if the value is set to LP then the problem will solve with the LP formulation for the sizing problem. If the value is set to Integer then the problem is solve as a MILP formulation for the sizing problem. Finally, if the value is set to  Dispatch then the problem is solved as the  MILP formulation for the dispatch problem.
 
 To run the instance from the paper, copy the files in the Micro-Grids/MicroGrids/Example/...... folder that you want to reproduce  in the Micro-Grids/MicroGrids/Example and then run the Micro-Grids.py script.
 
