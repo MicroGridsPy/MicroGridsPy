@@ -8,47 +8,75 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
     :param model: Pyomo model as defined in the Model_creation library.
     '''
             # This element of the objective function represent the part of the total investment that is Porcentage_Funded with the the resources of the project owners.  
-    return model.Scenario_Lost_Load_Cost + model.Total_Cost_Generator + model.Battery_Yearly_cost
+
+    # Operation Cost
+    # Generator operation cost
+    foo = []
+    for g in range(1,model.Generator_Type+1):
+        for s in model.scenario:
+            for t in range(1,model.Periods+1):
+                foo.append((s,g,t))
+
+        
+    Generator_Cost =  sum(model.Generator_Energy_Integer[g,t]*model.Start_Cost_Generator[g] + 
+                             model.Marginal_Cost_Generator[g]*model.Generator_Energy[g,t]
+                             for g,t in foo)     
+    Operation_Cost = Generator_Cost   
+    # Battery opereation cost
+    foo=[]
+    for s in model.scenario:
+        for t in range(1,model.Periods+1):
+            foo.append((s,t))    
+            
+    Battery_cost_in = sum(model.Energy_Battery_Flow_In[s,t]*model.Unitary_Battery_Reposition_Cost
+                          *model.Scenario_Weight[s]  for s,t in foo)
+    Battery_cost_out = sum(model.Energy_Battery_Flow_Out[s,t]*model.Unitary_Battery_Reposition_Cost
+                           *model.Scenario_Weight[s] for s,t in foo)
+    Operation_Cost += Battery_cost_in + Battery_cost_out
+    
+    
+    # Cost of the Lost load
+    if model.Lost_Load_Probability > 0:
+        Lost_Load_Cost =  sum(model.Lost_Load[s,t]*model.Value_Of_Lost_Load
+                              *model.Scenario_Weight[s] for t in model.periods)
+        Operation_Cost +=  Lost_Load_Cost
+        
+    # Curtailment cost
+    
+    if model.Curtailment_Unitary_Cost > 0:
+        Curtailment_Cost =  sum(model.Energy_Curtailment[t]*model.Curtailment_Unitary_Cost
+                                for t in model.periods)
+        Operation_Cost +=  Curtailment_Cost
+    
+    return Operation_Cost
 
 ############################################# Diesel generator constraints ###########################################
 
-def Generator_Bounds_Min_Integer(model,t): # Maximun energy output of the diesel generator
+def Generator_Bounds_Min_Integer(model,s, g,t): # Maximun energy output of the diesel generator
     ''' 
     This constraint ensure that each segment of the generator does not pass a 
     minimun value.
     :param model: Pyomo model as defined in the Model_creation library.
     '''
-    return model.Generator_Total_Period_Energy[t] >= model.Generator_Nominal_Capacity*model.Generator_Min_Out_Put + (model.Generator_Energy_Integer[t]-1)*model.Generator_Nominal_Capacity                                                                                                 
-                                                                                               
-def Generator_Bounds_Max_Integer(model,t): # Maximun energy output of the diesel generator
+    return model.Generator_Nominal_Capacity[g]*model.Generator_Min_Out_Put[g] + (model.Generator_Energy_Integer[s,g,t]-1)*model.Generator_Nominal_Capacity[g] <= model.Generator_Energy[s,g,t]                                                                                                
+                                                                                                                             
+def Generator_Bounds_Max_Integer(model,s, g,t): # Maximun energy output of the diesel generator
     ''' 
     This constraint ensure that each segment of the generator does not pass a 
     minimun value.
     :param model: Pyomo model as defined in the Model_creation library.
     '''
-    return model.Generator_Total_Period_Energy[t] <= model.Generator_Nominal_Capacity*model.Generator_Energy_Integer[t]                                                                                                
+    return model.Generator_Energy[s,g,t] <= model.Generator_Nominal_Capacity[g]*model.Generator_Energy_Integer[s,g,t]                                                                                                
 
-def Generator_Cost_1_Integer(model,t):
-    ''' 
-    This constraint calculate the cost of each generator in the time t.
-    :param model: Pyomo model as defined in the Model_creation library.
-    '''
-    return model.Period_Total_Cost_Generator[t] ==  model.Generator_Energy_Integer[t]*model.Start_Cost_Generator + model.Marginal_Cost_Generator*model.Generator_Total_Period_Energy[t]  
 
-def Energy_Genarator_Energy_Max_Integer(model,t):
+
+def Energy_Genarator_Energy_Max_Integer(model,s,g,t):
     ''' 
     This constraint ensure that the total energy in the generators does not  pass
     a maximun value.
     :param model: Pyomo model as defined in the Model_creation library.
     '''
-    return model.Generator_Total_Period_Energy[t] <= model.Generator_Nominal_Capacity*model.Integer_generator
-        
-def Total_Cost_Generator_Integer(model):
-    ''' 
-    This constraint calculated the total cost of the generator
-    :param model: Pyomo model as defined in the Model_creation library.
-    '''
-    return model.Total_Cost_Generator == sum(model.Period_Total_Cost_Generator[t] for t in model.periods) 
+    return model.Generator_Energy[s,g,t] <= model.Generator_Nominal_Capacity[g]*model.Integer_generator[g]        
 
 
 ############################################# Battery constraints ####################################################
@@ -143,11 +171,29 @@ def Battery_Reposition_Cost(model):
 def Energy_balance(model, t): # Energy balance
     '''
     This constraint ensures the perfect match between the energy energy demand of the 
-    system and the differents sources to meet the energy demand.
+    system and the differents sources to meet the energy demand each scenario i.
     
     :param model: Pyomo model as defined in the Model_creation library.
     '''
-    return model.Energy_Demand[t] == model.Total_Energy_PV[t] + model.Generator_Total_Period_Energy[t] - model.Energy_Battery_Flow_In[t] + model.Energy_Battery_Flow_Out[t] + model.Lost_Load[t] - model.Energy_Curtailment[t]
+    Foo = []
+    for r in model.renewable_source:
+        Foo.append((r,t))
+
+    Energy_Sources = sum(model.Renewable_Energy_Production[r,t]*model.Renewable_Inverter_Efficiency[r]
+                                 *model.Renewable_Units[r] for r,t in Foo)
+    
+    foo=[]
+    for g in model.generator_type:
+        foo.append((g,t))
+        
+    Energy_Sources = sum(model.Generator_Energy[i] for i in foo)  
+        
+    if model.Lost_Load_Probability > 0:
+        Energy_Sources += model.Lost_Load[t]
+    
+    
+    return model.Energy_Demand[t] == (Energy_Sources - model.Energy_Battery_Flow_In[t] 
+                              + model.Energy_Battery_Flow_Out[t] - model.Energy_Curtailment[t])
 
 def Maximun_Lost_Load(model): # Maximum permissible lost load
     '''
@@ -157,14 +203,7 @@ def Maximun_Lost_Load(model): # Maximum permissible lost load
     :param model: Pyomo model as defined in the Model_creation library.
     '''
    
-       
-    return model.Lost_Load_Probability >= (sum(model.Lost_Load[t] for t in model.periods)/sum(model.Energy_Demand[t] for t in model.periods))
-
-
-############################################# Economical Constraints #################################################
-  
-def Scenario_Lost_Load_Cost(model):
-      
-    return model.Scenario_Lost_Load_Cost == (sum(model.Lost_Load[t]*model.Value_Of_Lost_Load for t in model.periods))
-
-
+    Total_Demand = sum(model.Lost_Load[t] for t in model.periods)
+    Total_Lost_Load = sum(model.Energy_Demand[t] for t in model.periods)
+    
+    return model.Lost_Load_Probability >= (Total_Demand/Total_Lost_Load)

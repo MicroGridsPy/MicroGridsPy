@@ -142,7 +142,7 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
         
         def gen(model,g):
             if g == 1:
-                return 1
+                return 2
             else:
                 return 0
     
@@ -150,13 +150,13 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
             if g == 1:
                 return (0,2)
             else:
-                return (0,1)
+                return (0,2)
         
         def bounds_E(model,s,g,t):
             if g == 1:
                 return (0,2)
             else:
-                return (0,1)    
+                return (0,2)    
     
         model.Generator_Energy = Var(model.scenario, model.generator_type,
                                            model.periods, within=NonNegativeReals)
@@ -305,23 +305,29 @@ def Model_Creation_Dispatch(model):
     
     '''
     from pyomo.environ import  Param, RangeSet, NonNegativeReals, Var, NonNegativeIntegers
-    from Initialize import Initialize_Demand, Initialize_PV_Energy, Initialize_Demand_Dispatch, Initialize_PV_Energy_Dispatch, Marginal_Cost_Generator_Dispatch, Start_Cost_Dispatch,Marginal_Cost_Generator_1_Dispatch, Battery_Reposition_Cost  # Import library with initialitation funtions for the parameters
+    from Initialize import Initialize_Demand,Initialize_Renewable_Energy, Initialize_PV_Energy,\
+    Initialize_Demand_Dispatch, Initialize_PV_Energy_Dispatch, Marginal_Cost_Generator_Dispatch,\
+    Start_Cost_Dispatch,Marginal_Cost_Generator_1_Dispatch, Battery_Reposition_Cost  # Import library with initialitation funtions for the parameters
     
     
     # Time parameters
     model.Periods = Param(within=NonNegativeReals) # Number of periods of analysis of the energy variables 
     model.StartDate = Param() # Start date of the analisis
-    model.PlotTime = Param() # Quantity of days that are going to be plot
-    model.PlotDay = Param() # Start day for the plot
-    
+    model.Generator_Type = Param()
+    model.Renewable_Source = Param()
     #SETS
     model.periods = RangeSet(1, model.Periods) # Creation of a set from 1 to the number of periods in each year   
+    model.generator_type = RangeSet(1, model.Generator_Type)    
+    model.renewable_source = RangeSet(1, model.Renewable_Source)
     # PARAMETERS
     
-    # Parameters of the PV 
+    # Parameters of the Renewable energy
+    model.Renewable_Inverter_Efficiency = Param(model.renewable_source) # Efficiency of the inverter in %
+    model.Renewable_Energy_Production = Param(model.scenario,model.renewable_source,
+                                              model.periods, within=NonNegativeReals, 
+                                              initialize=Initialize_Renewable_Energy) # Energy produccion of a solar panel in W
 
-    model.Total_Energy_PV = Param(model.periods, within=NonNegativeReals, 
-                                  initialize=Initialize_PV_Energy_Dispatch) # Energy produccion of a solar panel in W
+    
     
     # Parameters of the battery bank
     model.Charge_Battery_Efficiency = Param() # Efficiency of the charge of the battery in  %
