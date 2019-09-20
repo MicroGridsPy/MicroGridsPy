@@ -15,12 +15,12 @@ from Model_Resolution import Model_Resolution, Model_Resolution_binary,\
 Model_Resolution_Integer, Model_Resolution_Dispatch
 #21212
 # Type of problem formulation:
-formulation = 'Integer' # there are 4 formulations LP, Integer, Binary and Dispatch
+formulation = 'LP' # there are 4 formulations LP, Integer, Binary and Dispatch
 
 # Renewable energy penetrarion
 
-Renewable_Penetration = 0 # a number from 0 to 1.a
-Battery_Independency = 0  # number of days of battery independency
+Renewable_Penetration = 0.7 # a number from 0 to 1.a
+Battery_Independency = 1  # number of days of battery independency
 
 S = 3 # Plot scenario
 Plot_Date = '25/12/2016 00:00:00' # Day-Month-Year
@@ -96,14 +96,3 @@ elif formulation =='Dispatch':
     # Data Analisys
     Print_Results_Dispatch(instance, Economic_Results)
     Energy_Mix_Dispatch(instance,Time_Series)
-
-
-#index = pd.DatetimeIndex(start='2017-01-01 00:00:00', periods=len(Time_Series), 
-#                                   freq=('H'))
-##Start_Date = '2017-01-01 00:00:00'
-#end_Date = '2017-06-30 00:00:00'
-#Time_Series.index = index
-#cost = Time_Series['Total Cost Generator'][Start_Date:end_Date].sum()
-#curtailment = Time_Series['Curtailment'][Start_Date:end_Date].sum()/1000000
-#print(cost)
-#print(curtailment)    

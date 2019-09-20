@@ -349,7 +349,7 @@ def Model_Creation_Integer(model,Renewable_Penetration, Battery_Independency):
     model.Renewable_Units = Var(model.renewable_source, within=NonNegativeReals,bounds= (0,300))
     
     # Variables associated to the battery bank
-    model.Battery_Nominal_Capacity = Var(within=NonNegativeReals,bounds= (0,100000)) # Capacity of the battery bank in Wh
+    model.Battery_Nominal_Capacity = Var(within=NonNegativeReals,bounds= (0,700000)) # Capacity of the battery bank in Wh
     model.Energy_Battery_Flow_Out = Var(model.scenario,model.periods, within=NonNegativeReals) # Battery discharge energy in wh
     model.Energy_Battery_Flow_In = Var(model.scenario,model.periods, within=NonNegativeReals) # Battery charge energy in wh
     model.State_Of_Charge_Battery = Var(model.scenario,model.periods, within=NonNegativeReals) # State of Charge of the Battery in wh

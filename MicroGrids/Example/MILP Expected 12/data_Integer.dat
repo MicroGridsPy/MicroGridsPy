@@ -46,7 +46,7 @@ param: Renewable_Source := 1;
 
 param: Renewable_Invesment_Cost :=
 
-1   	1.5;
+1   	1.7;
 
 param: Inverter_Efficiency_Renewable :=
 
