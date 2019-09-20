@@ -63,7 +63,7 @@ param: Generator_Invesment_Cost :=
 
 param: Maintenance_Operation_Cost_Generator := 
 
-1	0.015;
+1	0.045;
 
 param: Fuel_Cost := 
 1	0.68;

@@ -257,7 +257,6 @@ def Model_Creation_Integer(model,Renewable_Penetration, Battery_Independency):
     '''
     from pyomo.environ import  Param, RangeSet, NonNegativeReals, Var, NonNegativeIntegers
     from Initialize import Initialize_years, Initialize_Demand, Marginal_Cost_Generator, Start_Cost, Marginal_Cost_Generator_1, Capital_Recovery_Factor,Battery_Reposition_Cost, Initialize_Renewable_Energy,Min_Bat_Capacity  # Import library with initialitation funtions for the parameters
-   
     # Time parameters
     model.Periods = Param(within=NonNegativeReals) # Number of periods of analysis of the energy variables
     model.Years = Param() # Number of years of the project

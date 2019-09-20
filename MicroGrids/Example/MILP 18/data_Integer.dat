@@ -113,5 +113,5 @@ param: Generator_Nominal_Capacity :=
 
 param: Maintenance_Operation_Cost_Generator := 
 
-1   	0.015
+1   0.015
 2	0.015;

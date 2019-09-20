@@ -19,8 +19,8 @@ formulation = 'LP' # there are 4 formulations LP, Integer, Binary and Dispatch
 
 # Renewable energy penetrarion
 
-Renewable_Penetration = 0.7 # a number from 0 to 1.a
-Battery_Independency = 1  # number of days of battery independency
+Renewable_Penetration = 0 # a number from 0 to 1.a
+Battery_Independency = 0  # number of days of battery independency
 
 S = 3 # Plot scenario
 Plot_Date = '25/12/2016 00:00:00' # Day-Month-Year
