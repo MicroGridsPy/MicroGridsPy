@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#billy rioja
+
 
 from pyomo.environ import  AbstractModel
 
