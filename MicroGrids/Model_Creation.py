@@ -363,14 +363,14 @@ def Model_Creation_Integer(model,Renewable_Penetration, Battery_Independency):
     
     def bounds_N(model,g):
         if g == 1:
-            return (2,2)
+            return (0,3)
         else:
-            return (0,1)
+            return (0,2)
     def bounds_E(model,s,g,t):
         if g == 1:
-            return (0,2)
+            return (0,3)
         else:
-            return (0,1)    
+            return (0,2)    
      # Variables associated to the diesel generator
     
     model.Energy_Generator_Total = Var(model.scenario,model.generator_type,
