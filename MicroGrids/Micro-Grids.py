@@ -2,7 +2,6 @@
 #billy rioja
 
 from pyomo.environ import  AbstractModel
-
 from Results import Plot_Energy_Total, Load_results1,  Load_results1_binary, \
 Load_results2_binary, Energy_Mix, Print_Results,Print_Results_Dispatch, \
 Load_results1_Dispatch, Load_results2_Dispatch, Energy_Mix_Dispatch, \
@@ -18,9 +17,9 @@ formulation = 'LP'
 # Renewable energy penetrarion
 
 Renewable_Penetration  =  0 # a number from 0 to 1
-Battery_Independency   =  0    # number of days of battery independency
-Lost_Load_Probability  =  0    # Allowed percentage of unmed demand in the system
-Curtailment_Unitary_Cost =  0.000 # probando curtailment cost 0
+Battery_Independency   =  0 # number of days of battery independency
+Lost_Load_Probability  =  0 # Allowed a percentage of unmet demand in the system
+Curtailment_Unitary_Cost = 0 # probando curtailment cost 0
 
 
 S = 1 # Plot scenario

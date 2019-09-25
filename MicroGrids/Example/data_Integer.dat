@@ -30,14 +30,22 @@ param: Battery_Initial_SOC := 1;
 
 # new parameters
 
-param: Scenarios := 2;
+param: Scenarios := 10;
 
 param: Battery_Cycles := 5500; # 1000
 
 param: Scenario_Weight :=
 
-1   0.5	
-2   0.5;
+1   0.1
+2   0.1
+3   0.1
+4   0.1
+5   0.1
+6   0.1
+7   0.1
+8   0.1
+9   0.1
+10  0.1;
 
 # New parameters 3
 
