@@ -49,7 +49,7 @@ if formulation == 'LP' or formulation == 'MILP':
     # Energy Plot    
 
     Time_Series = Integer_Time_Series(instance,Scenarios, S, Data) 
-#    Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime)
+    Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime)
     # Data Analisys
     Print_Results(instance, Generator_Data, Data_Renewable, Battery_Data ,Results, 
              formulation)  
