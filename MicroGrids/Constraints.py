@@ -1,4 +1,5 @@
 # Objective funtion
+import pandas as pd
 
 def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
     '''
@@ -204,14 +205,23 @@ def Energy_balance(model, s, t): # Energy balance
             - model.Energy_Battery_Flow_In[s,t] + model.Energy_Battery_Flow_Out[s,t] 
             - model.Energy_Curtailment[s,t])
 
-def Maximun_Lost_Load(model,i): # Maximum permissible lost load
+def Maximun_Lost_Load(model): # Maximum permissible lost load
     '''
     This constraint ensures that the ratio between the lost load and the energy 
     Demand does not exceeds the value of the permisible lost load each scenario i. 
     
     :param model: Pyomo model as defined in the Model_creation library.
     '''
-    return model.Lost_Load_Probability >= (sum(model.Lost_Load[i,t] for t in model.periods)/sum(model.Energy_Demand[i,t] for t in model.periods))
+    
+    
+    LLP = pd.Series()
+    for s in model.scenario:
+        LL = sum(model.Lost_Load[s,t] for t in model.periods)
+        Demand = sum(model.Energy_Demand[s,t] for t in model.periods)
+        
+        LLP.loc[s] = (LL/Demand)*model.Scenario_Weight[s]
+    
+    return model.Lost_Load_Probability >= sum(LLP[s] for s in model.scenario)
 
 ##################################################################################################
 #########                          Diesel generator constraints                       ############

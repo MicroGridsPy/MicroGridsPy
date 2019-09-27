@@ -14,7 +14,9 @@ def Initialize_years(model, i):
 
 
 
-Energy_Demand = pd.read_excel('Example/Demand.xls') # open the energy demand file
+Energy_Demand = pd.read_excel('Example/Demand.xls',index_col=0,Header=None) # open the energy demand file
+Energy_Demand = Energy_Demand/1000
+Energy_Demand = round(Energy_Demand, 3)
 
 def Initialize_Demand(model, i, t):
     '''
@@ -25,6 +27,7 @@ def Initialize_Demand(model, i, t):
     :return: The energy demand for the period t.     
         
     '''
+    
     return float(Energy_Demand[i][t])
 
 PV_Energy = pd.read_excel('Example/PV_Energy.xls') # open the PV energy yield file
@@ -66,31 +69,36 @@ def Initialize_PV_Energy_Dispatch(model, t):
     
 def Marginal_Cost_Generator_1(model,g):
     
-    return model.Fuel_Cost[g]/(model.Low_Heating_Value[g]*model.Generator_Efficiency[g])
+    a = model.Fuel_Cost[g]/(model.Low_Heating_Value[g]*model.Generator_Efficiency[g])
+    return round(a, 3)
 
 def Start_Cost(model,i):
     
-    return model.Marginal_Cost_Generator_1[i]*model.Generator_Nominal_Capacity[i]*model.Cost_Increase[i]
+    a = model.Marginal_Cost_Generator_1[i]*model.Generator_Nominal_Capacity[i]*model.Cost_Increase[i]
+    return round(a, 3)
 
 def Marginal_Cost_Generator(model, i):
-    
-    return (model.Marginal_Cost_Generator_1[i]*model.Generator_Nominal_Capacity[i]-model.Start_Cost_Generator[i])/model.Generator_Nominal_Capacity[i] 
+    a = (model.Marginal_Cost_Generator_1[i]*model.Generator_Nominal_Capacity[i]-model.Start_Cost_Generator[i])/model.Generator_Nominal_Capacity[i] 
+    return round(a, 3) 
 
 
 def Capital_Recovery_Factor(model):
    
     a = model.Discount_Rate*((1+model.Discount_Rate)**model.Years)
     b = ((1 + model.Discount_Rate)**model.Years)-1
-    return a/b
+    return round(a/b,3)
 
     
 def Battery_Reposition_Cost(model):
    
     unitary_battery_cost = model.Battery_Invesment_Cost - model.Battery_Electronic_Invesmente_Cost
-    return unitary_battery_cost/(model.Battery_Cycles*2*(1-model.Deep_of_Discharge))
+    a = unitary_battery_cost/(model.Battery_Cycles*2*(1-model.Deep_of_Discharge))
+    return round(a,3) 
     
     
 Renewable_Energy = pd.read_excel('Example/Renewable_Energy.xls',index_col=0,Header=None) # open the PV energy yield file
+Renewable_Energy = Renewable_Energy/1000
+Renewable_Energy = round(Renewable_Energy, 3)
 
 def Initialize_Renewable_Energy(model, s,r,t):
     '''
@@ -140,6 +148,7 @@ def Min_Bat_Capacity(model):
     
     Available_Energy = sum(Period_Average_Energy[s]*model.Scenario_Weight[s] 
         for s in model.scenario) 
-
-    return  Available_Energy/(1-model.Deep_of_Discharge)
+    
+    a =  Available_Energy/(1-model.Deep_of_Discharge)
+    return round(a,3) 
 

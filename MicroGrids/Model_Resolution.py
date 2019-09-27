@@ -31,7 +31,7 @@ def Model_Resolution(model,Renewable_Penetration, Battery_Independency,datapath=
     #Energy constraints
     model.EnergyBalance = Constraint(model.scenario,model.periods, rule=Energy_balance)
     if model.Lost_Load_Probability > 0:
-        model.MaximunLostLoad = Constraint(model.scenario, rule=Maximun_Lost_Load) 
+        model.MaximunLostLoad = Constraint(rule=Maximun_Lost_Load) 
     if Renewable_Penetration > 0:
         model.RenewableEnergyPenetration = Constraint(rule=Renewable_Energy_Penetration)
     
@@ -55,7 +55,7 @@ def Model_Resolution(model,Renewable_Penetration, Battery_Independency,datapath=
         model.MaximunFuelEnergy = Constraint(model.scenario, model.generator_type,
                                          model.periods, rule=Maximun_Generator_Energy) 
         instance = model.create_instance(datapath) # load parameters       
-        opt = SolverFactory('cplex') # Solver use during the optimization    
+        opt = SolverFactory('gurobi') # Solver use during the optimization    
         results = opt.solve(instance, tee=True) # Solving a model instance 
         instance.solutions.load_from(results)  # Loading solution into instance
         
@@ -68,12 +68,12 @@ def Model_Resolution(model,Renewable_Penetration, Battery_Independency,datapath=
         model.EnergyGenaratorEnergyMax = Constraint(model.scenario, model.generator_type,
                                                 model.periods, rule=Energy_Genarator_Energy_Max_Integer)
         instance = model.create_instance("Example/data_Integer.dat") # load parameters       
-        opt = SolverFactory('cplex') # Solver use during the optimization    
+        opt = SolverFactory('gurobi') # Solver use during the optimization    
 #       opt.options['emphasis_memory'] = 'y'
 #       opt.options['timelimit'] = 20000
 #       opt.options['node_select'] = 3
 #       opt.options['emphasis_mip'] = 2
-        results = opt.solve(instance, tee=True,options_string="mipgap=0.05",
+        results = opt.solve(instance, tee=True, options_string="mipgap=0.06",
                             warmstart=True,keepfiles=False) # Solving a model instance 
 
         #    instance.write(io_options={'emphasis_memory':True})

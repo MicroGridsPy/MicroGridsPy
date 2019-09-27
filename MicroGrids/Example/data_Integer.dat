@@ -2,13 +2,13 @@ param: Periods := 8760;
 
 param: Years := 20;
 
-param: StartDate := '21/03/2016 01:00:00';
+param: StartDate := '03/21/2016 01:00:00';
 
 param: Delta_Time := 1;
 
-param: Battery_Invesment_Cost := 0.55;  #1
+param: Battery_Invesment_Cost :=440; #1
 
-param: Battery_Electronic_Invesmente_Cost := 0.222;
+param: Battery_Electronic_Invesmente_Cost := 222;
 
 param: Maintenance_Operation_Cost_Battery:= 0.015;
 
@@ -18,7 +18,7 @@ param: Discharge_Battery_Efficiency := 0.95;
 
 param: Charge_Battery_Efficiency := 0.95;
 
-param: Deep_of_Discharge := 0.5;
+param: Deep_of_Discharge := 0.5; #2
 
 param: Value_Of_Lost_Load := 0.0001;
 
@@ -26,16 +26,21 @@ param: Maximun_Battery_Discharge_Time := 4;
 
 param: Maximun_Battery_Charge_Time := 4;
 
-param: Battery_Initial_SOC := 1;
-
 # new parameters
 
+<<<<<<< HEAD
 param: Scenarios := 10;
+=======
+param: Scenarios :=10;
+>>>>>>> NewVersion
 
-param: Battery_Cycles := 5500; # 1000
+param: Battery_Cycles := 1200; # 3
+
+param: Battery_Initial_SOC := 1;
 
 param: Scenario_Weight :=
 
+<<<<<<< HEAD
 1   0.1
 2   0.1
 3   0.1
@@ -46,6 +51,19 @@ param: Scenario_Weight :=
 8   0.1
 9   0.1
 10  0.1;
+=======
+1	0.05
+2	0.08
+3	0.18
+4	0.20
+5	0.14
+6	0.103
+7	0.097
+8	0.086
+9	0.042
+10	0.022;
+
+>>>>>>> NewVersion
 
 # New parameters 3
 
@@ -54,7 +72,7 @@ param: Renewable_Source := 1;
 
 param: Renewable_Invesment_Cost :=
 
-1   	1.5;
+1   	1700 ; #4
 
 param: Renewable_Inverter_Efficiency :=
 
@@ -62,7 +80,7 @@ param: Renewable_Inverter_Efficiency :=
 
 param: Renewable_Nominal_Capacity :=
 
-1   	250;
+1   	0.25;
 
 param: Maintenance_Operation_Cost_Renewable :=
 
@@ -75,33 +93,34 @@ param: Generator_Type := 1;
 
 param: Generator_Invesment_Cost :=
 
-1   1.48;
+1   	1480;
 
 param: Generator_Min_Out_Put:= 
 
-1   	0.5;
+1   	0.5; 
 
 param: Generator_Efficiency :=
 
-1   	0.314;
+1   0.314;
 
 param: Low_Heating_Value :=
 
-1   	9890;
+1   9.89;
 
 param: Fuel_Cost :=
 
-1   	0.68;
+1   0.68;
 
 
 param: Cost_Increase := 
 
-1   	0.015;
+1   0.015;
 
 param: Generator_Nominal_Capacity := 
 
-1   15000;
+1   15;
+
 
 param: Maintenance_Operation_Cost_Generator := 
 
-1   	0.015;
+1   0.015;

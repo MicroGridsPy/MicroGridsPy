@@ -1,0 +1,627 @@
+[1mdiff --git a/MicroGrids/Example/Demand.xls b/MicroGrids/Example/Demand.xls[m
+[1mindex 7699b27..f788d6a 100644[m
+Binary files a/MicroGrids/Example/Demand.xls and b/MicroGrids/Example/Demand.xls differ
+[1mdiff --git a/MicroGrids/Example/Dispatch/Demand.xls b/MicroGrids/Example/Dispatch/Demand.xls[m
+[1mdeleted file mode 100644[m
+[1mindex 1fa1daf..0000000[m
+Binary files a/MicroGrids/Example/Dispatch/Demand.xls and /dev/null differ
+[1mdiff --git a/MicroGrids/Example/Dispatch/PV_Energy.xls b/MicroGrids/Example/Dispatch/PV_Energy.xls[m
+[1mdeleted file mode 100644[m
+[1mindex 9ed28e6..0000000[m
+Binary files a/MicroGrids/Example/Dispatch/PV_Energy.xls and /dev/null differ
+[1mdiff --git a/MicroGrids/Example/Dispatch/data_dispatch.dat b/MicroGrids/Example/Dispatch/data_dispatch.dat[m
+[1mdeleted file mode 100755[m
+[1mindex 8b13a51..0000000[m
+[1m--- a/MicroGrids/Example/Dispatch/data_dispatch.dat[m
+[1m+++ /dev/null[m
+[36m@@ -1,48 +0,0 @@[m
+[31m-param: Periods := 4000;[m
+[31m-[m
+[31m-param: StartDate := '01/01/2017 01:00:00';[m
+[31m-[m
+[31m-param: PlotTime := 1;[m
+[31m-[m
+[31m-param: PlotDay := '17/02/2017 01:00:00';[m
+[31m-[m
+[31m-param: Delta_Time := 1;[m
+[31m-[m
+[31m-param: Diesel_Cost := 0.68;[m
+[31m-[m
+[31m-param: Lost_Load_Probability := 0.00;[m
+[31m-[m
+[31m-param: Discharge_Battery_Efficiency := 0.86;[m
+[31m-[m
+[31m-param: Charge_Battery_Efficiency := 0.86;[m
+[31m-[m
+[31m-param: Deep_of_Discharge := 0.5;[m
+[31m-[m
+[31m-param: Battery_Invesment_Cost := 0.44;[m
+[31m-[m
+[31m-param: Battery_Electronic_Invesmente_Cost := 0.22;[m
+[31m-[m
+[31m-param: Battery_Cycles := 1200; # 1000[m
+[31m-[m
+[31m-param: Low_Heating_Value := 9890;[m
+[31m-[m
+[31m-param: Value_Of_Lost_Load := 0.0002;[m
+[31m-[m
+[31m-param: Maximun_Battery_Discharge_Time := 1;[m
+[31m-[m
+[31m-param: Maximun_Battery_Charge_Time := 1;[m
+[31m-[m
+[31m-# new parameters[m
+[31m-[m
+[31m-param: Generator_Efficiency:= 0.3144;[m
+[31m-[m
+[31m-param: Generator_Min_Out_Put:= 0.8; [m
+[31m-[m
+[31m-param: Cost_Increase := 0.015;[m
+[31m-[m
+[31m-param: Generator_Nominal_Capacity := 58000; # the other result can be obtain changing this value to 30000[m
+[31m-[m
+[31m-param: Battery_Nominal_Capacity := 464000;[m
+[31m-[m
+[31m-param: Battery_Initial_SOC:= 0.619;[m
+[31m-[m
+[1mdiff --git a/MicroGrids/Example/LP 12/Demand.xls b/MicroGrids/Example/LP 12/Demand.xls[m
+[1mdeleted file mode 100644[m
+[1mindex 7699b27..0000000[m
+Binary files a/MicroGrids/Example/LP 12/Demand.xls and /dev/null differ
+[1mdiff --git a/MicroGrids/Example/LP 12/Renewable_Energy.xls b/MicroGrids/Example/LP 12/Renewable_Energy.xls[m
+[1mdeleted file mode 100644[m
+[1mindex 24af0a8..0000000[m
+Binary files a/MicroGrids/Example/LP 12/Renewable_Energy.xls and /dev/null differ
+[1mdiff --git a/MicroGrids/Example/LP 12/data.dat b/MicroGrids/Example/LP 12/data.dat[m
+[1mdeleted file mode 100755[m
+[1mindex 8bea349..0000000[m
+[1m--- a/MicroGrids/Example/LP 12/data.dat[m	
+[1m+++ /dev/null[m
+[36m@@ -1,90 +0,0 @@[m
+[31m-param: Periods := 8760;[m
+[31m-[m
+[31m-param: Years := 20;[m
+[31m-[m
+[31m-param: StartDate := '21/03/2016 01:00:00';[m
+[31m-[m
+[31m-param: Delta_Time := 1;[m
+[31m-[m
+[31m-[m
+[31m-param: Battery_Invesment_Cost := 0.44; # 1[m
+[31m-[m
+[31m-param: Battery_Electronic_Invesmente_Cost := 0.222;[m
+[31m-[m
+[31m-param: Maintenance_Operation_Cost_Battery:= 0.015;[m
+[31m-[m
+[31m-param: Discount_Rate := 0.12;[m
+[31m-[m
+[31m-param: Lost_Load_Probability := 0.00;[m
+[31m-[m
+[31m-param: Discharge_Battery_Efficiency := 0.95;[m
+[31m-[m
+[31m-param: Charge_Battery_Efficiency := 0.95;[m
+[31m-[m
+[31m-param: Deep_of_Discharge := 0.5; #2[m
+[31m-[m
+[31m-param: Value_Of_Lost_Load := 0.0003;[m
+[31m-[m
+[31m-param: Maximun_Battery_Discharge_Time := 4;[m
+[31m-[m
+[31m-param: Maximun_Battery_Charge_Time := 4;[m
+[31m-[m
+[31m-param: Battery_Cycles := 1200;[m
+[31m-[m
+[31m-param: Battery_Initial_SOC := 1;[m
+[31m-[m
+[31m-param: Scenarios := 10; ####[m
+[31m-[m
+[31m-param: Renewable_Source := 1;[m
+[31m-[m
+[31m-param: Renewable_Nominal_Capacity :=[m
+[31m-[m
+[31m-1	250;[m
+[31m-[m
+[31m-param: Renewable_Inverter_Efficiency :=[m
+[31m-[m
+[31m-1	1;[m
+[31m-[m
+[31m-[m
+[31m-param: Renewable_Invesment_Cost :=[m
+[31m-[m
+[31m-1	1.7;[m
+[31m-[m
+[31m-param: Maintenance_Operation_Cost_Renewable := [m
+[31m-[m
+[31m-1	0.015;[m
+[31m-[m
+[31m-[m
+[31m-param: Generator_Type := 1;[m
+[31m-[m
+[31m-param: Generator_Invesment_Cost := [m
+[31m-[m
+[31m-1	1.48;[m
+[31m-[m
+[31m-param: Maintenance_Operation_Cost_Generator := [m
+[31m-[m
+[31m-1	0.045;[m
+[31m-[m
+[31m-param: Fuel_Cost := [m
+[31m-1	0.68;[m
+[31m-[m
+[31m-param: Generator_Efficiency := [m
+[31m-[m
+[31m-1	0.314;[m
+[31m-[m
+[31m-param: Low_Heating_Value := [m
+[31m-1	9890;[m
+[31m-[m
+[31m-param: Scenario_Weight :=[m
+[31m-[m
+[31m-1	0.05[m
+[31m-2	0.08[m
+[31m-3	0.18[m
+[31m-4	0.20[m
+[31m-5	0.14[m
+[31m-6	0.103[m
+[31m-7	0.097[m
+[31m-8	0.086[m
+[31m-9	0.042[m
+[31m-10	0.022;[m
+[31m-[m
+[1mdiff --git a/MicroGrids/Example/MILP 12/Demand.xls b/MicroGrids/Example/MILP 12/Demand.xls[m
+[1mdeleted file mode 100644[m
+[1mindex 7699b27..0000000[m
+Binary files a/MicroGrids/Example/MILP 12/Demand.xls and /dev/null differ
+[1mdiff --git a/MicroGrids/Example/MILP 12/Renewable_Energy.xls b/MicroGrids/Example/MILP 12/Renewable_Energy.xls[m
+[1mdeleted file mode 100644[m
+[1mindex 24af0a8..0000000[m
+Binary files a/MicroGrids/Example/MILP 12/Renewable_Energy.xls and /dev/null differ
+[1mdiff --git a/MicroGrids/Example/MILP 12/data_Integer.dat b/MicroGrids/Example/MILP 12/data_Integer.dat[m
+[1mdeleted file mode 100755[m
+[1mindex 20d6fb7..0000000[m
+[1m--- a/MicroGrids/Example/MILP 12/data_Integer.dat[m	
+[1m+++ /dev/null[m
+[36m@@ -1,117 +0,0 @@[m
+[31m-param: Periods := 8760;[m
+[31m-[m
+[31m-param: Years := 20;[m
+[31m-[m
+[31m-param: StartDate := '03/21/2016 01:00:00';[m
+[31m-[m
+[31m-param: Delta_Time := 1;[m
+[31m-[m
+[31m-param: Battery_Invesment_Cost := 0.44; #1[m
+[31m-[m
+[31m-param: Battery_Electronic_Invesmente_Cost := 0.222;[m
+[31m-[m
+[31m-param: Maintenance_Operation_Cost_Battery:= 0.015;[m
+[31m-[m
+[31m-param: Discount_Rate := 0.12;[m
+[31m-[m
+[31m-param: Lost_Load_Probability := 0.0;[m
+[31m-[m
+[31m-param: Discharge_Battery_Efficiency := 0.95;[m
+[31m-[m
+[31m-param: Charge_Battery_Efficiency := 0.95;[m
+[31m-[m
+[31m-param: Deep_of_Discharge := 0.5; #2[m
+[31m-[m
+[31m-param: Value_Of_Lost_Load := 0.0001;[m
+[31m-[m
+[31m-param: Maximun_Battery_Discharge_Time := 4;[m
+[31m-[m
+[31m-param: Maximun_Battery_Charge_Time := 4;[m
+[31m-[m
+[31m-# new parameters[m
+[31m-[m
+[31m-[m
+[31m-param: Scenarios :=10;[m
+[31m-[m
+[31m-param: Battery_Cycles := 1200; # 3[m
+[31m-[m
+[31m-param: Scenario_Weight :=[m
+[31m-[m
+[31m-1	0.05[m
+[31m-2	0.08[m
+[31m-3	0.18[m
+[31m-4	0.20[m
+[31m-5	0.14[m
+[31m-6	0.103[m
+[31m-7	0.097[m
+[31m-8	0.086[m
+[31m-9	0.042[m
+[31m-10	0.022;[m
+[31m-[m
+[31m-# New parameters 3[m
+[31m-[m
+[31m-[m
+[31m-param: Renewable_Source := 1;[m
+[31m-[m
+[31m-param: Renewable_Invesment_Cost :=[m
+[31m-[m
+[31m-1   	1.7; #4[m
+[31m-[m
+[31m-param: Inverter_Efficiency_Renewable :=[m
+[31m-[m
+[31m-1   	1;[m
+[31m-[m
+[31m-param: Renewable_Nominal_Capacity :=[m
+[31m-[m
+[31m-1   	250;[m
+[31m-[m
+[31m-param: Maintenance_Operation_Cost_Renewable :=[m
+[31m-[m
+[31m-1   	0.015;[m
+[31m-[m
+[31m-[m
+[31m-# New parameters 4[m
+[31m-[m
+[31m-param: Generator_Type := 2;[m
+[31m-[m
+[31m-param: Generator_Invesment_Cost :=[m
+[31m-[m
+[31m-1   	1.48[m
+[31m-2	1.48;[m
+[31m-[m
+[31m-param: Generator_Min_Out_Put:= [m
+[31m-[m
+[31m-1   	0.5[m
+[31m-2	0.5; [m
+[31m-[m
+[31m-param: Generator_Efficiency :=[m
+[31m-[m
+[31m-1   	0.314[m
+[31m-2	0.314;[m
+[31m-[m
+[31m-param: Low_Heating_Value :=[m
+[31m-[m
+[31m-1   	9890[m
+[31m-2	9890;[m
+[31m-[m
+[31m-param: Fuel_Cost :=[m
+[31m-[m
+[31m-1   0.68[m
+[31m-2   0.68;[m
+[31m-[m
+[31m-[m
+[31m-param: Cost_Increase := [m
+[31m-[m
+[31m-1   	0.015[m
+[31m-2	0.015;[m
+[31m-[m
+[31m-param: Generator_Nominal_Capacity := [m
+[31m-[m
+[31m-1   15000[m
+[31m-2   30000;[m
+[31m-[m
+[31m-[m
+[31m-param: Maintenance_Operation_Cost_Generator := [m
+[31m-[m
+[31m-1   	0.015[m
+[31m-2	0.015;[m
+[1mdiff --git a/MicroGrids/Example/MILP 18/Demand.xls b/MicroGrids/Example/MILP 18/Demand.xls[m
+[1mdeleted file mode 100644[m
+[1mindex 7699b27..0000000[m
+Binary files a/MicroGrids/Example/MILP 18/Demand.xls and /dev/null differ
+[1mdiff --git a/MicroGrids/Example/MILP 18/Renewable_Energy.xls b/MicroGrids/Example/MILP 18/Renewable_Energy.xls[m
+[1mdeleted file mode 100644[m
+[1mindex 24af0a8..0000000[m
+Binary files a/MicroGrids/Example/MILP 18/Renewable_Energy.xls and /dev/null differ
+[1mdiff --git a/MicroGrids/Example/MILP 18/data_Integer.dat b/MicroGrids/Example/MILP 18/data_Integer.dat[m
+[1mdeleted file mode 100755[m
+[1mindex 7fa8c30..0000000[m
+[1m--- a/MicroGrids/Example/MILP 18/data_Integer.dat[m	
+[1m+++ /dev/null[m
+[36m@@ -1,117 +0,0 @@[m
+[31m-param: Periods := 8760;[m
+[31m-[m
+[31m-param: Years := 20;[m
+[31m-[m
+[31m-param: StartDate := '03/21/2016 01:00:00';[m
+[31m-[m
+[31m-param: Delta_Time := 1;[m
+[31m-[m
+[31m-param: Battery_Invesment_Cost := 0.55; #1[m
+[31m-[m
+[31m-param: Battery_Electronic_Invesmente_Cost := 0.222;[m
+[31m-[m
+[31m-param: Maintenance_Operation_Cost_Battery:= 0.015;[m
+[31m-[m
+[31m-param: Discount_Rate := 0.12;[m
+[31m-[m
+[31m-param: Lost_Load_Probability := 0.0;[m
+[31m-[m
+[31m-param: Discharge_Battery_Efficiency := 0.95;[m
+[31m-[m
+[31m-param: Charge_Battery_Efficiency := 0.95;[m
+[31m-[m
+[31m-param: Deep_of_Discharge := 0.2; #2[m
+[31m-[m
+[31m-param: Value_Of_Lost_Load := 0.0001;[m
+[31m-[m
+[31m-param: Maximun_Battery_Discharge_Time := 4;[m
+[31m-[m
+[31m-param: Maximun_Battery_Charge_Time := 4;[m
+[31m-[m
+[31m-# new parameters[m
+[31m-[m
+[31m-[m
+[31m-param: Scenarios :=10;[m
+[31m-[m
+[31m-param: Battery_Cycles := 5500; # 3[m
+[31m-[m
+[31m-param: Scenario_Weight :=[m
+[31m-[m
+[31m-1	0.05[m
+[31m-2	0.08[m
+[31m-3	0.18[m
+[31m-4	0.20[m
+[31m-5	0.14[m
+[31m-6	0.103[m
+[31m-7	0.097[m
+[31m-8	0.086[m
+[31m-9	0.042[m
+[31m-10	0.022;[m
+[31m-[m
+[31m-# New parameters 3[m
+[31m-[m
+[31m-[m
+[31m-param: Renewable_Source := 1;[m
+[31m-[m
+[31m-param: Renewable_Invesment_Cost :=[m
+[31m-[m
+[31m-1   	1.5; #4[m
+[31m-[m
+[31m-param: Inverter_Efficiency_Renewable :=[m
+[31m-[m
+[31m-1   	1;[m
+[31m-[m
+[31m-param: Renewable_Nominal_Capacity :=[m
+[31m-[m
+[31m-1   	250;[m
+[31m-[m
+[31m-param: Maintenance_Operation_Cost_Renewable :=[m
+[31m-[m
+[31m-1   	0.015;[m
+[31m-[m
+[31m-[m
+[31m-# New parameters 4[m
+[31m-[m
+[31m-param: Generator_Type := 2;[m
+[31m-[m
+[31m-param: Generator_Invesment_Cost :=[m
+[31m-[m
+[31m-1   	1.48[m
+[31m-2	1.48;[m
+[31m-[m
+[31m-param: Generator_Min_Out_Put:= [m
+[31m-[m
+[31m-1   	0.5[m
+[31m-2	0.5; [m
+[31m-[m
+[31m-param: Generator_Efficiency :=[m
+[31m-[m
+[31m-1   	0.314[m
+[31m-2	0.314;[m
+[31m-[m
+[31m-param: Low_Heating_Value :=[m
+[31m-[m
+[31m-1   	9890[m
+[31m-2	9890;[m
+[31m-[m
+[31m-param: Fuel_Cost :=[m
+[31m-[m
+[31m-1   0.68[m
+[31m-2   0.68;[m
+[31m-[m
+[31m-[m
+[31m-param: Cost_Increase := [m
+[31m-[m
+[31m-1   	0.015[m
+[31m-2	0.015;[m
+[31m-[m
+[31m-param: Generator_Nominal_Capacity := [m
+[31m-[m
+[31m-1   15000[m
+[31m-2   30000;[m
+[31m-[m
+[31m-[m
+[31m-param: Maintenance_Operation_Cost_Generator := [m
+[31m-[m
+[31m-1   	0.015[m
+[31m-2	0.015;[m
+[1mdiff --git a/MicroGrids/Example/MILP Expected 12/Demand.xls b/MicroGrids/Example/MILP Expected 12/Demand.xls[m
+[1mdeleted file mode 100644[m
+[1mindex 3e8a706..0000000[m
+Binary files a/MicroGrids/Example/MILP Expected 12/Demand.xls and /dev/null differ
+[1mdiff --git a/MicroGrids/Example/MILP Expected 12/Renewable_Energy.xls b/MicroGrids/Example/MILP Expected 12/Renewable_Energy.xls[m
+[1mdeleted file mode 100644[m
+[1mindex b285eca..0000000[m
+Binary files a/MicroGrids/Example/MILP Expected 12/Renewable_Energy.xls and /dev/null differ
+[1mdiff --git a/MicroGrids/Example/MILP Expected 12/data_Integer.dat b/MicroGrids/Example/MILP Expected 12/data_Integer.dat[m
+[1mdeleted file mode 100755[m
+[1mindex aa5949c..0000000[m
+[1m--- a/MicroGrids/Example/MILP Expected 12/data_Integer.dat[m	
+[1m+++ /dev/null[m
+[36m@@ -1,107 +0,0 @@[m
+[31m-param: Periods := 8760;[m
+[31m-[m
+[31m-param: Years := 20;[m
+[31m-[m
+[31m-param: StartDate := '21/03/2016 01:00:00';[m
+[31m-[m
+[31m-param: Delta_Time := 1;[m
+[31m-[m
+[31m-param: Battery_Invesment_Cost := 0.44;  #1[m
+[31m-[m
+[31m-param: Battery_Electronic_Invesmente_Cost := 0.222;[m
+[31m-[m
+[31m-param: Maintenance_Operation_Cost_Battery:= 0.015;[m
+[31m-[m
+[31m-param: Discount_Rate := 0.12;[m
+[31m-[m
+[31m-param: Lost_Load_Probability := 0.0;[m
+[31m-[m
+[31m-param: Discharge_Battery_Efficiency := 0.95;[m
+[31m-[m
+[31m-param: Charge_Battery_Efficiency := 0.95;[m
+[31m-[m
+[31m-param: Deep_of_Discharge := 0.5;[m
+[31m-[m
+[31m-param: Value_Of_Lost_Load := 0.0001;[m
+[31m-[m
+[31m-param: Maximun_Battery_Discharge_Time := 4;[m
+[31m-[m
+[31m-param: Maximun_Battery_Charge_Time := 4;[m
+[31m-[m
+[31m-# new parameters[m
+[31m-[m
+[31m-[m
+[31m-param: Scenarios :=1;[m
+[31m-[m
+[31m-param: Battery_Cycles := 1200; # 1000[m
+[31m-[m
+[31m-param: Scenario_Weight :=[m
+[31m-[m
+[31m-1	1;[m
+[31m-[m
+[31m-# New parameters 3[m
+[31m-[m
+[31m-[m
+[31m-param: Renewable_Source := 1;[m
+[31m-[m
+[31m-param: Renewable_Invesment_Cost :=[m
+[31m-[m
+[31m-1   	1.5;[m
+[31m-[m
+[31m-param: Inverter_Efficiency_Renewable :=[m
+[31m-[m
+[31m-1   	1;[m
+[31m-[m
+[31m-param: Renewable_Nominal_Capacity :=[m
+[31m-[m
+[31m-1   	250;[m
+[31m-[m
+[31m-param: Maintenance_Operation_Cost_Renewable :=[m
+[31m-[m
+[31m-1   	0.015;[m
+[31m-[m
+[31m-[m
+[31m-# New parameters 4[m
+[31m-[m
+[31m-param: Generator_Type := 2;[m
+[31m-[m
+[31m-param: Generator_Invesment_Cost :=[m
+[31m-[m
+[31m-1   	1.48[m
+[31m-2	1.48;[m
+[31m-[m
+[31m-param: Generator_Min_Out_Put:= [m
+[31m-[m
+[31m-1   	0.5[m
+[31m-2	0.5;[m
+[31m-[m
+[31m-param: Generator_Efficiency :=[m
+[31m-[m
+[31m-1   	0.314[m
+[31m-2	0.314;[m
+[31m-[m
+[31m-param: Low_Heating_Value :=[m
+[31m-[m
+[31m-1   	9890[m
+[31m-2	9890;[m
+[31m-[m
+[31m-param: Fuel_Cost :=[m
+[31m-[m
+[31m-1   	0.68[m
+[31m-2	0.68;[m
+[31m-[m
+[31m-[m
+[31m-param: Cost_Increase := [m
+[31m-[m
+[31m-1   	0.015[m
+[31m-2	0.015;[m
+[31m-[m
+[31m-param: Generator_Nominal_Capacity := [m
+[31m-[m
+[31m-1   15000[m
+[31m-2   30000;[m
+[31m-[m
+[31m-param: Maintenance_Operation_Cost_Generator := [m
+[31m-[m
+[31m-1   	0.015[m
+[31m-2	0.015;[m
+[1mdiff --git a/MicroGrids/Example/Renewable_Energy.xls b/MicroGrids/Example/Renewable_Energy.xls[m
+[1mindex 24af0a8..5cfe0d1 100644[m
+Binary files a/MicroGrids/Example/Renewable_Energy.xls and b/MicroGrids/Example/Renewable_Energy.xls differ
+[1mdiff --git a/MicroGrids/Example/data_Integer.dat b/MicroGrids/Example/data_Integer.dat[m
+[1mindex a781b73..09adcac 100755[m
+[1m--- a/MicroGrids/Example/data_Integer.dat[m
+[1m+++ b/MicroGrids/Example/data_Integer.dat[m
+[36m@@ -28,7 +28,11 @@[m [mparam: Maximun_Battery_Charge_Time := 4;[m
+ [m
+ # new parameters[m
+ [m
+[32m+[m[32m<<<<<<< HEAD[m
+[32m+[m[32mparam: Scenarios := 10;[m
+[32m+[m[32m=======[m
+ param: Scenarios :=10;[m
+[32m+[m[32m>>>>>>> NewVersion[m
+ [m
+ param: Battery_Cycles := 1200; # 3[m
+ [m
+[36m@@ -36,6 +40,18 @@[m [mparam: Battery_Initial_SOC := 1;[m
+ [m
+ param: Scenario_Weight :=[m
+ [m
+[32m+[m[32m<<<<<<< HEAD[m
+[32m+[m[32m1   0.1[m
+[32m+[m[32m2   0.1[m
+[32m+[m[32m3   0.1[m
+[32m+[m[32m4   0.1[m
+[32m+[m[32m5   0.1[m
+[32m+[m[32m6   0.1[m
+[32m+[m[32m7   0.1[m
+[32m+[m[32m8   0.1[m
+[32m+[m[32m9   0.1[m
+[32m+[m[32m10  0.1;[m
+[32m+[m[32m=======[m
+ 1	0.05[m
+ 2	0.08[m
+ 3	0.18[m
+[36m@@ -47,6 +63,7 @@[m [mparam: Scenario_Weight :=[m
+ 9	0.042[m
+ 10	0.022;[m
+ [m
+[32m+[m[32m>>>>>>> NewVersion[m
+ [m
+ # New parameters 3[m
+ [m
+[1mdiff --git a/MicroGrids/Micro-Grids.py b/MicroGrids/Micro-Grids.py[m
+[1mindex d47fda4..9e6d06a 100755[m
+[1m--- a/MicroGrids/Micro-Grids.py[m
+[1m+++ b/MicroGrids/Micro-Grids.py[m
+[36m@@ -1,7 +1,6 @@[m
+ # -*- coding: utf-8 -*-[m
+ [m
+ from pyomo.environ import  AbstractModel[m
+[31m-[m
+ from Results import Plot_Energy_Total, Load_results1,  Load_results1_binary, \[m
+ Load_results2_binary, Energy_Mix, Print_Results,Print_Results_Dispatch, \[m
+ Load_results1_Dispatch, Load_results2_Dispatch, Energy_Mix_Dispatch, \[m
+[36m@@ -19,9 +18,16 @@[m [mformulation = 'MILP'[m
+ # Renewable energy penetrarion[m
+ [m
+ Renewable_Penetration  =  0 # a number from 0 to 1[m
+[32m+[m[32m<<<<<<< HEAD[m
+[32m+[m[32mBattery_Independency   =  0 # number of days of battery independency[m
+[32m+[m[32mLost_Load_Probability  =  0 # Allowed a percentage of unmet demand in the system[m
+[32m+[m[32mCurtailment_Unitary_Cost = 0 # probando curtailment cost 0[m
+[32m+[m
+[32m+[m[32m=======[m
+ Battery_Independency   =  0    # number of days of battery independency[m
+ Lost_Load_Probability  =  0   # Allowed percentage of unmed demand in the system[m
+ Curtailment_Unitary_Cost =  0 # probando curtailment cost 0[m
+[32m+[m[32m>>>>>>> NewVersion[m
+ [m
+ S = 1 # Plot scenario[m
+ Plot_Date = '31/01/2016 00:00:00' # Day-Month-Year[m
