@@ -13,7 +13,7 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     
     '''
     from pyomo.environ import Param, RangeSet, NonNegativeReals, Var, Set 
-    from Initialize_MY import Initialize_Demand, Initialize_Fuel_Cost, Unitary_Battery_Reposition_Cost, Initialize_Renewable_Energy, Generator_Marginal_Cost, Min_Bat_Capacity, Initialize_YearUpgrade_Tuples, Initialize_Upgrades_Number # Import library with initialitation funtions for the parameters
+    from Initialize_MY import Initialize_Demand, Unitary_Battery_Reposition_Cost, Initialize_Renewable_Energy, Generator_Marginal_Cost, Min_Bat_Capacity, Initialize_YearUpgrade_Tuples, Initialize_Upgrades_Number # Import library with initialitation funtions for the parameters
 
     # Time parameters
     model.Periods = Param(within=NonNegativeReals) # Number of periods of analysis of the energy variables
@@ -72,7 +72,7 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     model.Generator_Efficiency = Param(model.generator_types) # Generator efficiency to trasform heat into electricity %
     model.Lower_Heating_Value = Param(model.generator_types) # Low heating value of the diesel in W/L
 
-    model.Fuel_Cost = Param(model.scenarios, model.years, model.generator_types, initialize=Initialize_Fuel_Cost)
+    model.Fuel_Cost = Param(model.generator_types, within=NonNegativeReals)
     model.Generator_Investment_Cost = Param(model.generator_types,
                                            within=NonNegativeReals) # Cost of the diesel generator
     model.Generator_Marginal_Cost = Param(model.scenarios, model.years, model.generator_types,

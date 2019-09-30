@@ -65,24 +65,24 @@ def Initialize_Demand(model, s, y, t):
 This section creates a pd.DataFrame which stores the multi-year evolution of fuel cost for each scenario
 in a different column (other parameters could be modelled in this way)
 '''
-FuelCost = pd.read_excel('Inputs/Fuel_Cost.xls')
-Fuel_Cost_Series = pd.Series()
+#FuelCost = pd.read_excel('Inputs/Fuel_Cost.xls')
+#Fuel_Cost_Series = pd.Series()
 
-for i in range(1,n_years*n_scenarios+1):
-    dum = FuelCost[i][:]
-    Fuel_Cost_Series = pd.concat([Fuel_Cost_Series,dum])
-
-Fuel_Cost = pd.DataFrame(Fuel_Cost_Series) 
-frame = [scenario,year,generator]
-index = pd.MultiIndex.from_product(frame, names=['scenario','year','generator'])
-Fuel_Cost.index = index 
-
-def Initialize_Fuel_Cost(model,s,y,g):
-    return float(Fuel_Cost.loc[s,y,g])
+#for i in range(1,n_years*n_scenarios+1):
+#    dum = FuelCost[i][:]
+#    Fuel_Cost_Series = pd.concat([Fuel_Cost_Series,dum])
+#
+#Fuel_Cost = pd.DataFrame(Fuel_Cost_Series) 
+#frame = [scenario,year,generator]
+#index = pd.MultiIndex.from_product(frame, names=['scenario','year','generator'])
+#Fuel_Cost.index = index 
+#
+#def Initialize_Fuel_Cost(model,s,y,g):
+#    return float(Fuel_Cost.loc[s,y,g])
 
 
 def Generator_Marginal_Cost(model,s,y,g):
-    return model.Fuel_Cost[s,y,g]/(model.Lower_Heating_Value[g]*model.Generator_Efficiency[g])
+    return model.Fuel_Cost[g]/(model.Lower_Heating_Value[g]*model.Generator_Efficiency[g])
   
     
 def Capital_Recovery_Factor(model):

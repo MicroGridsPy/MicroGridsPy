@@ -80,9 +80,11 @@ def Model_Resolution(model, Renewable_Penetration, Battery_Independency,datapath
 
     print('Model_Resolution: Instance created')
     
-    opt = SolverFactory('cplex') # Solver use during the optimization    
+    opt = SolverFactory('cplex') # Solver use during the optimization
     
-    print('Model_Resolution: cplex called')
+#    opt.set_options('Method=2 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000') # !! only works with GUROBI solver   
+    
+    print('Model_Resolution: solver called')
     
     results = opt.solve(instance, tee=True) # Solving a model instance 
     

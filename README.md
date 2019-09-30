@@ -23,8 +23,8 @@ Sylvain Quoilin <br/>
 University of Liege, Belgium <br/>
 E-mail: squoilin@ulg.ac.be  <br/>
 
-*STUDENT VERSION*<br/>
-Francesco Lombardi <br/>
+*TEACHING VERSION*<br/>
+Francesco Lombardi, Giulia Guidicini, Lorenzo Rinaldi, Nicolò Stevanato <br/>
 Politecnico di Milano, Italy <br/>
 E-mail: francesco.lombardi@polimi.it <br/>
  

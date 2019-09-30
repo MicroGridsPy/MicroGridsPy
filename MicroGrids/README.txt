@@ -1,7 +1,6 @@
-ESEMPIO:
+PROPOSED EXAMPLE:
 
-5 years
-1 scenario
+Time horizon: 5 years
+Scenarios: 1
 Constant demand
-Constant fuel cost
-2 technologies (solar: 1 kW/unit, wind: 30 kW/unit)
+Renewable technologies: 2 (solar: 1 kW/unit, wind: 30 kW/unit)

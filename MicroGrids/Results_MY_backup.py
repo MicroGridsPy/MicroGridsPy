@@ -125,15 +125,6 @@ def Load_Results(instance):
                     for r in range(0,Number_Renewable_Sources):
                         Information_2[r].append(Renewable_Energy_1[(foo+1,y+1,r+1,t+1)]) 
         Scenarios=Scenarios.append(Information_2)        
-
-        for k in range(0,Number_Generators):
-            Information_3 = [[] for i in range(0,Number_Generators)]
-            for y in range(0, Number_Years):
-                for t in range(0,Number_Periods):
-                    for g in range(0,Number_Generators):
-                        Information_3[g].append(Generator_Energy[(foo+1,y+1,g+1,t+1)]) 
-        Scenarios=Scenarios.append(Information_3)        
-
         foo+=1
     
     index=[]  
@@ -149,9 +140,6 @@ def Load_Results(instance):
        index.append('Total Renewable Energy '+str(j))
        for r in range(1,Number_Renewable_Sources+1):
            index.append('Renewable Energy: s='+str(j)+' r='+str(r))
-       for g in range(1,Number_Generators+1):
-           index.append('Generator: s='+str(j)+' g='+str(g))
-          
     Scenarios.index = index
     Scenarios_2 = Scenarios.transpose() 
     
@@ -390,10 +378,7 @@ def Load_Results(instance):
     for u in range(1, Number_Upgrades+1):
         
         Project_Info_2.loc['Battery Nominal Capacity [kWh]', 'Upgrade '+str(u)] = Battery_Nominal_Capacity[u]/1000
-        
-        for g in range(1, Number_Generators+1):
-            Project_Info_2.loc['Generator '+str(g)+' Nominal Capacity [kW]', 'Upgrade '+str(u)] = Generator_Nominal_Capacity[u,g]/1000        
-        
+        Project_Info_2.loc['Generator Nominal Capacity [kW]', 'Upgrade '+str(u)] = sum(Generator_Nominal_Capacity[u,g] for g in range(1, Number_Generators +1))/1000
         for r in range(1, Number_Renewable_Sources+1):
             Project_Info_2.loc['Renewable '+str(r)+' Nominal Capacity [kW]', 'Upgrade '+str(u)] = Renewable_Nominal_Capacity[r]*Renewable_Units[u,r]/1000
     
@@ -401,11 +386,10 @@ def Load_Results(instance):
         if u != 1:
             Project_Info_2.loc['Battery Investment [USD]', 'Upgrade '+str(u)] = (Battery_Nominal_Capacity[u]-Battery_Nominal_Capacity[u-1])*PriceBattery   
         
-        for g in range(1, Number_Generators+1):
-            Project_Info_2.loc['Generator '+str(g)+' Investment [USD]', 'Upgrade '+str(1)] = Generator_Nominal_Capacity[1,g]*Generator_Investment_Cost[g]
-            if u != 1:
-                Project_Info_2.loc['Generator '+str(g)+' Investment [USD]', 'Upgrade '+str(u)] = (Generator_Nominal_Capacity[u,g]-Generator_Nominal_Capacity[u-1,g])*Generator_Investment_Cost[g]
-       
+        Project_Info_2.loc['Generator Investment [USD]', 'Upgrade '+str(1)] = sum(Generator_Nominal_Capacity[1,g]*Generator_Investment_Cost[g] for g in range(1, Number_Generators+1))
+        if u != 1:
+            Project_Info_2.loc['Generator Investment [USD]', 'Upgrade '+str(u)] = sum((Generator_Nominal_Capacity[u,g]-Generator_Nominal_Capacity[u-1,g])*Generator_Investment_Cost[g] for g in range(1, Number_Generators+1))
+        
         for r in range(1, Number_Renewable_Sources+1):
             Project_Info_2.loc['Renewable '+str(r)+' Investment [USD]', 'Upgrade '+str(1)] = Renewable_Nominal_Capacity[r]*Renewable_Units[1,r]*Renewable_Investment_Cost[r]
             if u != 1:
@@ -438,18 +422,15 @@ def Load_Results(instance):
         Curtailment = sum(Scenarios_2['Curtailment '+str(s)][k:k+Number_Periods].sum()*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))       
         Tot_Ren_En = sum(Scenarios_2['Total Renewable Energy '+str(s)][k:k+Number_Periods].sum()*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))
         Tot_Gen_En = sum(Scenarios_2['Gen energy '+str(s)][k:k+Number_Periods].sum()*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))
+        Generator_Share = Tot_Gen_En / (Tot_Ren_En + Tot_Gen_En)
+
+        
+        Batt_Flow_Out = sum(Scenarios_2['Battery_Flow_Out '+str(s)][k:k+Number_Periods].sum()*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))
         Demand = sum(Scenarios_2['Energy_Demand '+str(s)][k:k+Number_Periods].sum()*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))
         
-        for g in range(1, Number_Generators+1):
-            Generator_Share = sum(Scenarios_2['Generator: s='+str(j)+' g='+str(g)][k:k+Number_Periods].sum()*Scenario_Weight[s] for s in range(1, Number_Scenarios+1)) / Demand
-            Project_Info_4.loc['Year '+str(y), 'Load served by Generator '+str(g)+' %'] = Generator_Share*100
-        
-#        for r in range(1, Number_Renewable_Sources+1):
-#            Ren_Share = sum(Scenarios_2['Renewable Energy: s='+str(j)+' r='+str(r)][k:k+Number_Periods].sum()*Scenario_Weight[s] for s in range(1, Number_Scenarios+1)) / Demand
-#            Project_Info_4.loc['Year '+str(y), 'Load served by RES '+str(r)+' %'] = Ren_Share*100
-
-        Project_Info_4.loc['Year '+str(y), 'Load served by total RES %'] = (Tot_Ren_En - Curtailment) / Demand * 100       
-        Project_Info_4.loc['Year '+str(y), 'Curtailment %'] = Curtailment / (Tot_Ren_En + Tot_Gen_En) * 100
+        Project_Info_4.loc['Year '+str(y), 'Energy production share from Generator'] = Generator_Share
+        Project_Info_4.loc['Year '+str(y), 'Curtailment %'] = Curtailment / (Tot_Ren_En + Tot_Gen_En)
+        Project_Info_4.loc['Year '+str(y), 'Battery Usage'] = Batt_Flow_Out / Demand
         
         k += Number_Periods
 
