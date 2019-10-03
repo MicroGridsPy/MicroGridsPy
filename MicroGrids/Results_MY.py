@@ -295,7 +295,7 @@ def Load_Results(instance, Optimization_Goal):
 
     Battery_Nominal_Capacity = instance.Battery_Nominal_Capacity.get_values()
     PriceBattery= instance.Battery_Investment_Cost.value
-    Unitary_Battery_Reposition_Cost = instance.Unitary_Battery_Reposition_Cost.value
+    Unitary_Battery_Replacement_Cost = instance.Unitary_Battery_Replacement_Cost.value
     OM_Bat = instance.Battery_Operation_Maintenance_Cost.value
     BRC_Act = instance.Battery_Replacement_Cost_Act.get_values()
 
@@ -315,7 +315,7 @@ def Load_Results(instance, Optimization_Goal):
     for u in range(1, Number_Upgrades +1):
         Battery_Data.loc['Yearly O&M Cost at upgrade '+str(u),0] = Battery_Nominal_Capacity[u]*PriceBattery*OM_Bat
         
-    Battery_Data.loc['Total actualized Battery Reposition Cost', 0] = sum(BRC_Act[(s)]*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))
+    Battery_Data.loc['Total actualized Battery Replacement Cost', 0] = sum(BRC_Act[(s)]*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))
     
     Battery_Data.to_excel(Bat_data, sheet_name = 'Battery_Data') # Creating an excel file with the values of the variables that does not depend of the periods
     
@@ -325,10 +325,10 @@ def Load_Results(instance, Optimization_Goal):
         for y in range(1, Number_Years+1):
             Yearly_BRC = 0
                
-            Battery_cost_in = sum(Battery_Flow_in[s,y,t]*Unitary_Battery_Reposition_Cost for t in range(1, Number_Periods+1))
-            Battery_cost_out = sum(Battery_Flow_Out[s,y,t]*Unitary_Battery_Reposition_Cost for t in range(1, Number_Periods+1))           
+            Battery_cost_in = sum(Battery_Flow_in[s,y,t]*Unitary_Battery_Replacement_Cost for t in range(1, Number_Periods+1))
+            Battery_cost_out = sum(Battery_Flow_Out[s,y,t]*Unitary_Battery_Replacement_Cost for t in range(1, Number_Periods+1))           
             Yearly_BRC += Battery_cost_in + Battery_cost_out
-            Battery_Data_2.loc['Battery Reposition Cost at y = '+str(y),'Scenario '+str(s)] = Yearly_BRC
+            Battery_Data_2.loc['Battery Replacement Cost at y = '+str(y),'Scenario '+str(s)] = Yearly_BRC
 
     Battery_Data_2.to_excel(Bat_data, sheet_name = 'Yearly BRC')    
     Bat_data.save()
@@ -431,7 +431,7 @@ def Load_Results(instance, Optimization_Goal):
         Project_Info_3.loc['Year '+str(y), 'Total O&M Cost'] =  Project_Info_3.loc['Year '+str(y), 'Battery O&M Cost'] + Project_Info_3.loc['Year '+str(y), 'Generator O&M Cost'] + Project_Info_3.loc['Year '+str(y), 'Renewable O&M Cost']
         
         Project_Info_3.loc['Year '+str(y), 'Fuel Cost'] = sum(sum(sum(Generator_Energy[s,y,g,t]*Marginal_Cost_Gen[s,y,g]*Scenario_Weight[s] for t in range(1, Number_Periods+1)) for g in range(1, Number_Generators+1))for s in range(1, Number_Scenarios+1))
-        Project_Info_3.loc['Year '+str(y), 'Battery Reposition Cost'] = sum(sum((Battery_Flow_in[s,y,t]+Battery_Flow_Out[s,y,t])*Unitary_Battery_Reposition_Cost*Scenario_Weight[s] for t in range(1, Number_Periods+1)) for s in range(1, Number_Scenarios+1))
+        Project_Info_3.loc['Year '+str(y), 'Battery Replacement Cost'] = sum(sum((Battery_Flow_in[s,y,t]+Battery_Flow_Out[s,y,t])*Unitary_Battery_Replacement_Cost*Scenario_Weight[s] for t in range(1, Number_Periods+1)) for s in range(1, Number_Scenarios+1))
         Project_Info_3.loc['Year '+str(y), 'Lost Load Cost'] = sum(sum(Lost_Load[s,y,t]*VOLL*Scenario_Weight[s] for t in range(1, Number_Periods+1)) for s in range(1, Number_Scenarios+1))
     
     Project_Info_3.to_excel(PRJ_Info, sheet_name = 'Yearly Costs Info')

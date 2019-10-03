@@ -13,7 +13,7 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     
     '''
     from pyomo.environ import Param, RangeSet, NonNegativeReals, Var, Set 
-    from Initialize_MY import Initialize_Demand, Unitary_Battery_Reposition_Cost, Initialize_Renewable_Energy, Generator_Marginal_Cost, Min_Bat_Capacity, Initialize_YearUpgrade_Tuples, Initialize_Upgrades_Number # Import library with initialitation funtions for the parameters
+    from Initialize_MY import Initialize_Demand, Unitary_Battery_Replacement_Cost, Initialize_Renewable_Energy, Generator_Marginal_Cost, Min_Bat_Capacity, Initialize_YearUpgrade_Tuples, Initialize_Upgrades_Number # Import library with initialitation funtions for the parameters
 
     # Time parameters
     model.Periods = Param(within=NonNegativeReals) # Number of periods of analysis of the energy variables
@@ -61,8 +61,8 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     model.Battery_Investment_Cost = Param() # Cost of battery 
     model.Battery_Electronic_Investment_Cost = Param(within=NonNegativeReals)
     model.Battery_Cycles = Param(within=NonNegativeReals)
-    model.Unitary_Battery_Reposition_Cost = Param(within=NonNegativeReals, 
-                                          initialize=Unitary_Battery_Reposition_Cost)
+    model.Unitary_Battery_Replacement_Cost = Param(within=NonNegativeReals, 
+                                          initialize=Unitary_Battery_Replacement_Cost)
     model.Battery_Initial_SOC = Param(within=NonNegativeReals)
     if  Battery_Independency > 0:
         model.Battery_Independency = Battery_Independency
@@ -71,7 +71,7 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     # Parameters of the diesel generator
     model.Generator_Efficiency = Param(model.generator_types) # Generator efficiency to trasform heat into electricity %
     model.Lower_Heating_Value = Param(model.generator_types) # Low heating value of the diesel in W/L
-
+    model.Yearly_Fuel_Limit = Param(model.generator_types, within=NonNegativeReals)  #Yearly limit on fuel availability in liters
     model.Fuel_Cost = Param(model.generator_types, within=NonNegativeReals)
     model.Generator_Investment_Cost = Param(model.generator_types,
                                            within=NonNegativeReals) # Cost of the diesel generator

@@ -85,6 +85,10 @@ def Total_Fuel_Cost_NonAct(model,s,g):
         Fuel_Cost_Tot += Num
     return model.Total_Fuel_Cost_NonAct[s,g] == Fuel_Cost_Tot
 
+
+def Yearly_Fuel_Limit(model,s,y,g):
+    return sum((model.Total_Generator_Energy[s,y,g,t]/(model.Lower_Heating_Value[g]*model.Generator_Efficiency[g])) for t in model.periods) <= model.Yearly_Fuel_Limit[g]
+
     
 def Scenario_Lost_Load_Cost_Act(model,s):    
     Cost_Lost_Load = 0         
@@ -223,8 +227,8 @@ def Battery_Replacement_Cost_Act(model,s):
     Battery_cost_out = [0 for y in model.years]
     Battery_Yearly_cost = [0 for y in model.years]    
     for y in range(1,model.Years+1):    
-        Battery_cost_in[y-1] = sum(model.Energy_Battery_Flow_In[s,y,t]*model.Unitary_Battery_Reposition_Cost for t in model.periods)
-        Battery_cost_out[y-1] = sum(model.Energy_Battery_Flow_Out[s,y,t]*model.Unitary_Battery_Reposition_Cost for t in model.periods)
+        Battery_cost_in[y-1] = sum(model.Energy_Battery_Flow_In[s,y,t]*model.Unitary_Battery_Replacement_Cost for t in model.periods)
+        Battery_cost_out[y-1] = sum(model.Energy_Battery_Flow_Out[s,y,t]*model.Unitary_Battery_Replacement_Cost for t in model.periods)
         Battery_Yearly_cost[y-1] = Battery_cost_in[y-1] + Battery_cost_out[y-1]
     return model.Battery_Replacement_Cost_Act[s] == sum(Battery_Yearly_cost[y-1]/((1+model.Discount_Rate)**y) for y in model.years) 
     
@@ -233,8 +237,8 @@ def Battery_Replacement_Cost_NonAct(model,s):
     Battery_cost_out = [0 for y in model.years]
     Battery_Yearly_cost = [0 for y in model.years]    
     for y in range(1,model.Years+1):    
-        Battery_cost_in[y-1] = sum(model.Energy_Battery_Flow_In[s,y,t]*model.Unitary_Battery_Reposition_Cost for t in model.periods)
-        Battery_cost_out[y-1] = sum(model.Energy_Battery_Flow_Out[s,y,t]*model.Unitary_Battery_Reposition_Cost for t in model.periods)
+        Battery_cost_in[y-1] = sum(model.Energy_Battery_Flow_In[s,y,t]*model.Unitary_Battery_Replacement_Cost for t in model.periods)
+        Battery_cost_out[y-1] = sum(model.Energy_Battery_Flow_Out[s,y,t]*model.Unitary_Battery_Replacement_Cost for t in model.periods)
         Battery_Yearly_cost[y-1] = Battery_cost_in[y-1] + Battery_cost_out[y-1]
     return model.Battery_Replacement_Cost_NonAct[s] == sum(Battery_Yearly_cost[y-1] for y in model.years) 
 

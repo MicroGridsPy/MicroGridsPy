@@ -1,6 +1,6 @@
 param: Periods := 8760;                                     # periods considered in one year (8760h/y in the example)
 
-param: Years := 5;                                          # total duration of the project
+param: Years := 2;                                          # total duration of the project
 
 param: Step_Duration := 5;                                  # duration (in years) of each investment decision step in which the project lifetime will be split
 
@@ -38,7 +38,7 @@ param: Battery_Initial_SOC := 1;                            # [%]
 
 param: Scenarios := 1;                                      # Number of scenarios to consider within the optimisation
 
-param: Investment_Cost_Limit := 1000000;                    # This value is taken as input in case of O&M-costs-oriented optimization[USD]
+param: Investment_Cost_Limit := 1000000;                    # [USD]
 
 param: Renewable_Sources := 2;                              # Number of RES types
 
@@ -70,11 +70,11 @@ param: Generator_Types := 2;                                # Number of differen
 
 param: Generator_Investment_Cost :=                         # Investment cost for each generator type [USD/W]
 1	0.4201                                              
-2   0.3;
+2  0.3;
 
 param: Generator_Operation_Maintenance_Cost :=              # O&M cost for each generator type as a fraction of investment cost [%]
 1	0.10
-2   0.09;                                                   
+2  0.09;                                                   
 
 param: Generator_Lifetime :=
 1 5
@@ -82,15 +82,20 @@ param: Generator_Lifetime :=
 
 param: Generator_Efficiency :=                              # Average generator efficiency of each generator type [%]
 1	0.30
-2   0.4;                                                   
+2  0.4;                                                   
 
 param: Lower_Heating_Value :=                               # Fuel LHV for each generator type [Wh/lt]
 1	9840
-2   9000;
+2  9000;
 
-param: Fuel_Cost :=
-1   1.24
-2   1.6;                                                    # Fuel cost for each generator type [USD/lt]
+param: Fuel_Cost :=                                         # Fuel cost for each generator type [USD/lt]
+1  1.24
+2  1.6;
+
+param: Yearly_Fuel_Limit :=                                   # Yearly limit on fuel availability [lt]
+1  99999999999
+2  99999999999;
+
 
 param: Scenario_Weight :=                                   # Occurrence probability of each scenario [%]
-1   1;
+1  1;

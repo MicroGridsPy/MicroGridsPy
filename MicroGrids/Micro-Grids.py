@@ -19,7 +19,8 @@ from Model_Creation_MY import Model_Creation
 from Model_Resolution_MY import Model_Resolution
    
     
-Optimization_Goal = 'NPC'  # Options: NPC / Operation cost 
+Optimization_Goal = 'NPC'  # Options: NPC / Operation cost. 
+                           # It allows to switch between a NPC-oriented optimization and a NON-ACTUALIZED Operation Cost-oriented optimization 
 
 Renewable_Penetration = 0  # a number from 0 to 1.
 Battery_Independency = 0   # number of days of battery independence
