@@ -1,6 +1,6 @@
 param: Periods := 8760;                                     # periods considered in one year (8760h/y in the example)
 
-param: Years := 2;                                          # total duration of the project
+param: Years := 5;                                          # total duration of the project
 
 param: Step_Duration := 5;                                  # duration (in years) of each investment decision step in which the project lifetime will be split
 
@@ -37,6 +37,8 @@ param: Battery_Cycles := 4500;                              # [-]
 param: Battery_Initial_SOC := 1;                            # [%]
 
 param: Scenarios := 1;                                      # Number of scenarios to consider within the optimisation
+
+param: Investment_Cost_Limit := 1000000;                    # This value is taken as input in case of O&M-costs-oriented optimization[USD]
 
 param: Renewable_Sources := 2;                              # Number of RES types
 

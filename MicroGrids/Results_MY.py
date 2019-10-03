@@ -10,7 +10,7 @@ import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 from pandas import ExcelWriter
 
-def Load_Results(instance):
+def Load_Results(instance, Optimization_Goal):
     
     from win32com.client import Dispatch
     import os
@@ -242,7 +242,7 @@ def Load_Results(instance):
     Generator_Nominal_Capacity = instance.Generator_Nominal_Capacity.get_values()
     Generator_Operation_Maintenance_Cost = instance.Generator_Operation_Maintenance_Cost.extract_values()
     Marginal_Cost_Gen = instance.Generator_Marginal_Cost.extract_values()
-    FCT = instance.Total_Fuel_Cost.extract_values()
+    FCT_Act = instance.Total_Fuel_Cost_Act.extract_values()
     
     Gen_data = ExcelWriter('Results/Generator_Data.xlsx')
     
@@ -264,7 +264,7 @@ def Load_Results(instance):
         for u in range(1, Number_Upgrades +1):        
             Generator_Data.loc['Yearly O&M Cost at upgrade ' + str(u), Name] = Generator_Investment_Cost[g]*Generator_Nominal_Capacity[u,g]*Generator_Operation_Maintenance_Cost[g]
                
-        Generator_Data.loc['Total actualized Fuel Cost', Name] = sum(FCT[(s,g)]*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))
+        Generator_Data.loc['Total actualized Fuel Cost', Name] = sum(FCT_Act[(s,g)]*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))
                 
     Generator_Data.to_excel(Gen_data, sheet_name = 'Generator Data')      
 
@@ -297,7 +297,7 @@ def Load_Results(instance):
     PriceBattery= instance.Battery_Investment_Cost.value
     Unitary_Battery_Reposition_Cost = instance.Unitary_Battery_Reposition_Cost.value
     OM_Bat = instance.Battery_Operation_Maintenance_Cost.value
-    BRC = instance.Battery_Reposition_Cost.get_values()
+    BRC_Act = instance.Battery_Replacement_Cost_Act.get_values()
 
     Bat_data = ExcelWriter('Results/Battery_Data.xlsx')
     
@@ -315,7 +315,7 @@ def Load_Results(instance):
     for u in range(1, Number_Upgrades +1):
         Battery_Data.loc['Yearly O&M Cost at upgrade '+str(u),0] = Battery_Nominal_Capacity[u]*PriceBattery*OM_Bat
         
-    Battery_Data.loc['Total actualized Battery Reposition Cost', 0] = sum(BRC[(s)]*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))
+    Battery_Data.loc['Total actualized Battery Reposition Cost', 0] = sum(BRC_Act[(s)]*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))
     
     Battery_Data.to_excel(Bat_data, sheet_name = 'Battery_Data') # Creating an excel file with the values of the variables that does not depend of the periods
     
@@ -346,9 +346,13 @@ def Load_Results(instance):
 
 #################################### RESULTS SUMMARY ####################################
 
-    NPC = instance.ObjectiveFuntion.expr()
+    if Optimization_Goal == 'NPC': 
+        NPC = instance.ObjectiveFuntion.expr()
+    elif Optimization_Goal == 'Operation cost':
+        TotVarCostNonAct = instance.ObjectiveFunction.expr()
+        NPC = instance.Net_Present_Cost.value
     
-    TotVarCost = instance.Total_Variable_Cost.value
+    TotVarCostAct = instance.Total_Variable_Cost_Act.value
     SalvageValue = instance.Salvage_Value.value
     TotInvCost = instance.Investment_Cost.value
     VOLL = instance.Value_Of_Lost_Load.value
@@ -360,7 +364,10 @@ def Load_Results(instance):
 
     Project_Info_1.loc['NPC [USD]', 0] = NPC
     
-    Project_Info_1.loc['Total actualized Operation cost [USD]', 0] = TotVarCost
+    Project_Info_1.loc['Total actualized Operation cost [USD]', 0] = TotVarCostAct
+
+    if Optimization_Goal == 'Operation cost':
+        Project_Info_1.loc['Total non-actualized Operation cost [USD]', 0] = TotVarCostNonAct
     
     Project_Info_1.loc['Total actualized Investment cost [USD]', 0] = TotInvCost
     
@@ -479,7 +486,10 @@ def Load_Results(instance):
     Data.append(Scenario_Weight)
     Data.append(LCOE)
     Data.append(Data_Renewable)
-    Data.append(TotVarCost)
+    if Optimization_Goal == 'NPC':
+        Data.append(TotVarCostAct)
+    elif Optimization_Goal == 'Operation cost':
+        Data.append(TotVarCostNonAct)    
     Data.append(TotInvCost)
     Data.append(SalvageValue)
     
@@ -821,10 +831,13 @@ def Energy_Mix(instance,Scenarios,Scenario_Probability):
     return Energy_Mix    
     
     
-def Print_Results(LCOE, NPC, TotVarCost, TotInvCost, SalvageValue):
+def Print_Results(LCOE, NPC, TotVarCost, TotInvCost, SalvageValue, Optimization_Goal):
     
     print('\nProject NPC = '+str(round(NPC,2))+' USD')
-    print('Project Total actualized Operation Cost = '+str(round(TotVarCost,2))+' USD')
+    if Optimization_Goal == 'NPC':
+        print('Project Total actualized Operation Cost = '+str(round(TotVarCost,2))+' USD')
+    elif Optimization_Goal == 'Operation cost':
+        print('Project Total non-actualized Operation Cost = '+str(round(TotVarCost,2))+' USD')
     print('Project Total Investment Cost = '+str(round(TotInvCost,2))+' USD')
     print('Project LCOE = '+str(round(LCOE,4))+' USD/kWh')
     print('Project Salvage Value = '+str(round(SalvageValue,2))+' USD')

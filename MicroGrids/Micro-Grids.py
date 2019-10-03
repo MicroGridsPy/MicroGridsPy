@@ -19,7 +19,7 @@ from Model_Creation_MY import Model_Creation
 from Model_Resolution_MY import Model_Resolution
    
     
-#    Optimization_Goal = 'NPC'  # Options: NPC / Operation cost 
+Optimization_Goal = 'NPC'  # Options: NPC / Operation cost 
 
 Renewable_Penetration = 0  # a number from 0 to 1.
 Battery_Independency = 0   # number of days of battery independence
@@ -28,11 +28,10 @@ model = AbstractModel() # define type of optimization problem
 
 # Optimization model    
 Model_Creation(model, Renewable_Penetration, Battery_Independency) # Creation of the Sets, parameters and variables.
-instance = Model_Resolution(model, Renewable_Penetration,
-                            Battery_Independency) # Resolution of the instance
+instance = Model_Resolution(model, Optimization_Goal, Renewable_Penetration, Battery_Independency) # Resolution of the instance
 
 # Upload the results from the instance and saving it in excel files
-Data = Load_Results(instance) # Extract the results of energy from the instance and save it in a excel file 
+Data = Load_Results(instance, Optimization_Goal) # Extract the results of energy from the instance and save it in a excel file 
 NPC = Data[0]
 Scenarios =  Data[2]
 Scenario_Probability = Data[4]
@@ -55,4 +54,4 @@ Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime)
 
 # Data Analisys    
 Energy_Mix_S = Energy_Mix(instance,Scenarios,Scenario_Probability)
-Print_Results(LCOE, NPC, TotVarCost, TotInvCost, SalvageValue)  
+Print_Results(LCOE, NPC, TotVarCost, TotInvCost, SalvageValue, Optimization_Goal)  
