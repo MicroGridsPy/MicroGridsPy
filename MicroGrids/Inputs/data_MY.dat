@@ -93,8 +93,8 @@ param: Fuel_Cost :=                                         # Fuel cost for each
 2  1.6;
 
 param: Yearly_Fuel_Limit :=                                   # Yearly limit on fuel availability [lt]
-1  99999999999
-2  99999999999;
+1  9999999
+2  9999999;
 
 
 param: Scenario_Weight :=                                   # Occurrence probability of each scenario [%]

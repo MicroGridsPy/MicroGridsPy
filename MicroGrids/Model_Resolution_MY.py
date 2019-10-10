@@ -93,7 +93,7 @@ def Model_Resolution(model, Optimization_Goal, Renewable_Penetration, Battery_In
     
     opt = SolverFactory('gurobi') # Solver use during the optimization
     
-    opt.set_options('Method=2 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000') # !! only works with GUROBI solver   
+    opt.set_options('Method=2 BarHomogeneous=1 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000') # !! only works with GUROBI solver   
     
     print('Model_Resolution: solver called')
     
