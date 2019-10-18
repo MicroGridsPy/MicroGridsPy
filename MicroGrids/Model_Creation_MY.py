@@ -44,8 +44,6 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     model.Renewable_Inverter_Efficiency = Param(model.renewable_sources) # Efficiency of the inverter in %
     model.Renewable_Investment_Cost = Param(model.renewable_sources,
                                            within=NonNegativeReals) # Cost of RES in USD/W
-    model.Renewable_Inv_Cost_Reduction = Param(model.renewable_sources,
-                                           within=NonNegativeReals) # Cost of RES in USD/W
     model.Renewable_Lifetime = Param(model.renewable_sources,
                                              within=NonNegativeReals)
     model.Renewable_Energy_Production = Param(model.scenarios,model.renewable_sources,
@@ -71,7 +69,6 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     # Parameters of the diesel generator
     model.Generator_Efficiency = Param(model.generator_types) # Generator efficiency to trasform heat into electricity %
     model.Lower_Heating_Value = Param(model.generator_types) # Low heating value of the diesel in W/L
-    model.Yearly_Fuel_Limit = Param(model.generator_types, within=NonNegativeReals)  #Yearly limit on fuel availability in liters
     model.Fuel_Cost = Param(model.generator_types, within=NonNegativeReals)
     model.Generator_Investment_Cost = Param(model.generator_types,
                                            within=NonNegativeReals) # Cost of the diesel generator

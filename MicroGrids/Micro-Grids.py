@@ -46,7 +46,7 @@ SalvageValue = Data[9]
      
 # Energy Plot    
 S = 1 # Plot scenario
-Plot_Date = '01/01/2015 00:00:00' # Day-Month-Year ####ACTUALLY IT WILL INTERPRET A DATE PREFERABLY AS MONTH-DAY; IF DEVOID OF MEANING, IT WILL TRY DAY-MONTH
+Plot_Date = '01/01/2020 00:00:00' # Day-Month-Year ####ACTUALLY IT WILL INTERPRET A DATE PREFERABLY AS MONTH-DAY; IF DEVOID OF MEANING, IT WILL TRY DAY-MONTH
 PlotTime = 3# Days of the plot
 Time_Series = Integer_Time_Series(instance,Scenarios, S) 
    

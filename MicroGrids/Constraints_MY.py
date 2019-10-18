@@ -86,10 +86,6 @@ def Total_Fuel_Cost_NonAct(model,s,g):
     return model.Total_Fuel_Cost_NonAct[s,g] == Fuel_Cost_Tot
 
 
-def Yearly_Fuel_Limit(model,s,y,g):
-    return sum((model.Total_Generator_Energy[s,y,g,t]/(model.Lower_Heating_Value[g]*model.Generator_Efficiency[g])) for t in model.periods) <= model.Yearly_Fuel_Limit[g]
-
-    
 def Scenario_Lost_Load_Cost_Act(model,s):    
     Cost_Lost_Load = 0         
     for y in range(1, model.Years +1):
@@ -123,7 +119,7 @@ def Investment_Cost(model):
         tup_list[i] = yu_tuples_list[model.Step_Duration*i + model.Step_Duration]      
   
     Inv_Ren = sum((model.Renewable_Units[1,r]*model.Renewable_Nominal_Capacity[r]*model.Renewable_Investment_Cost[r])
-                    + sum((((model.Renewable_Units[ut,r] - model.Renewable_Units[ut-1,r])*model.Renewable_Nominal_Capacity[r]*model.Renewable_Investment_Cost[r]*model.Renewable_Inv_Cost_Reduction[r]))/((1+model.Discount_Rate)**(yt-1))
+                    + sum((((model.Renewable_Units[ut,r] - model.Renewable_Units[ut-1,r])*model.Renewable_Nominal_Capacity[r]*model.Renewable_Investment_Cost[r]))/((1+model.Discount_Rate)**(yt-1))
                     for (yt,ut) in tup_list) for r in model.renewable_sources)  
     Inv_Gen = sum((model.Generator_Nominal_Capacity[1,g]*model.Generator_Investment_Cost[g])
                     + sum((((model.Generator_Nominal_Capacity[ut,g] - model.Generator_Nominal_Capacity[ut-1,g])*model.Generator_Investment_Cost[g]))/((1+model.Discount_Rate)**(yt-1))

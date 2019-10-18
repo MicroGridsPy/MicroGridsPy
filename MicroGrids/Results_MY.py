@@ -202,7 +202,6 @@ def Load_Results(instance, Optimization_Goal):
     Renewable_Investment_Cost = instance.Renewable_Investment_Cost.extract_values()
     OyM_Renewable = instance.Renewable_Operation_Maintenance_Cost.extract_values()
     Renewable_Units = instance.Renewable_Units.get_values()
-    Renewable_Investment_Cost_Reduction = instance.Renewable_Inv_Cost_Reduction.extract_values()
     
     Data_Renewable = pd.DataFrame()
     for r in range(1, Number_Renewable_Sources + 1):
@@ -218,7 +217,7 @@ def Load_Results(instance, Optimization_Goal):
             if u == 1:
                 Data_Renewable.loc['Investment at upgrade '+ str(u), Name] = Renewable_Units[u,r]*Renewable_Nominal_Capacity[r]*Renewable_Investment_Cost[r]        
             else:
-                Data_Renewable.loc['Investment at upgrade '+ str(u), Name] = (Renewable_Units[u,r] - Renewable_Units[u-1,r])*Renewable_Nominal_Capacity[r]*Renewable_Investment_Cost[r]*Renewable_Investment_Cost_Reduction[r]
+                Data_Renewable.loc['Investment at upgrade '+ str(u), Name] = (Renewable_Units[u,r] - Renewable_Units[u-1,r])*Renewable_Nominal_Capacity[r]*Renewable_Investment_Cost[r]
 
         for u in range(1, Number_Upgrades +1):
             Data_Renewable.loc['Yearly O&M Cost at upgrade ' +str(u), Name] = Renewable_Units[u,r]*Renewable_Nominal_Capacity[r]*Renewable_Investment_Cost[r]*OyM_Renewable[r]
@@ -387,7 +386,7 @@ def Load_Results(instance, Optimization_Goal):
         NP_Demand += Weighted_Present_Demand
    
     LCOE = NPC/NP_Demand*1000
-    Project_Info_1.loc['LCOE [USD/kWh', 0] = LCOE
+    Project_Info_1.loc['LCOE [USD/kWh]', 0] = LCOE
 
     Project_Info_1.to_excel(PRJ_Info, sheet_name = 'Project Total Costs')
 
@@ -416,7 +415,7 @@ def Load_Results(instance, Optimization_Goal):
         for r in range(1, Number_Renewable_Sources+1):
             Project_Info_2.loc['Renewable '+str(r)+' Investment [USD]', 'Upgrade '+str(1)] = Renewable_Nominal_Capacity[r]*Renewable_Units[1,r]*Renewable_Investment_Cost[r]
             if u != 1:
-                Project_Info_2.loc['Renewable '+str(r)+' Investment [USD]', 'Upgrade '+str(u)] = (Renewable_Units[u,r]-Renewable_Units[u-1,r])*Renewable_Nominal_Capacity[r]*Renewable_Investment_Cost[r] *Renewable_Investment_Cost_Reduction[r]
+                Project_Info_2.loc['Renewable '+str(r)+' Investment [USD]', 'Upgrade '+str(u)] = (Renewable_Units[u,r]-Renewable_Units[u-1,r])*Renewable_Nominal_Capacity[r]*Renewable_Investment_Cost[r]
         
         Project_Info_2.loc['Total Investment [USD]', 'Upgrade '+str(u)] = Project_Info_2['Upgrade '+str(u)]['Battery Investment [USD]':].sum()
         

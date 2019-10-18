@@ -21,9 +21,9 @@ def Model_Resolution(model, Optimization_Goal, Renewable_Penetration, Battery_In
     Maximun_Charge, Minimun_Charge, Max_Power_Battery_Charge, Max_Power_Battery_Discharge, Max_Bat_in, Max_Bat_out, \
     Energy_balance, Maximun_Lost_Load,Scenario_Net_Present_Cost, Scenario_Lost_Load_Cost_Act, Scenario_Lost_Load_Cost_NonAct, Renewable_Energy_Penetration,\
     Investment_Cost, Operation_Maintenance_Cost_Act, Operation_Maintenance_Cost_NonAct, Battery_Replacement_Cost_Act, Battery_Replacement_Cost_NonAct, Maximun_Generator_Energy, Total_Fuel_Cost_Act, Total_Fuel_Cost_NonAct,\
-    Battery_Min_Capacity, Battery_Min_Step_Capacity, Renewables_Min_Step_Units, Generator_Min_Step_Capacity, Salvage_Value, Net_Present_Cost_Obj, Yearly_Fuel_Limit,\
-    Total_Variable_Cost_Act, Scenario_Variable_Cost_Act, Scenario_Variable_Cost_NonAct,Total_Variable_Cost_Obj, Net_Present_Cost, Investment_Cost_Limit    
-
+    Battery_Min_Capacity, Battery_Min_Step_Capacity, Renewables_Min_Step_Units, Generator_Min_Step_Capacity, Salvage_Value, Net_Present_Cost_Obj,Total_Variable_Cost_Act, Scenario_Variable_Cost_Act, Scenario_Variable_Cost_NonAct,Total_Variable_Cost_Obj, Net_Present_Cost, Investment_Cost_Limit
+      
+   
     
     # OBJETIVE FUNTION:
     if Optimization_Goal == 'NPC':
@@ -64,7 +64,6 @@ def Model_Resolution(model, Optimization_Goal, Renewable_Penetration, Battery_In
     model.MaximunFuelEnergy = Constraint(model.scenarios, model.yu_tup, model.generator_types,
                                                model.periods, rule=Maximun_Generator_Energy) # Maximun energy output of the diesel generator
     model.GeneratorMinStepCapacity = Constraint(model.yu_tup, model.generator_types, rule = Generator_Min_Step_Capacity)
-    model.YearlyFuelLimit = Constraint(model.scenarios, model.years, model.generator_types, rule = Yearly_Fuel_Limit)
     
     # Financial Constraints
     model.ScenarioNetPresentCost = Constraint(model.scenarios, rule=Scenario_Net_Present_Cost)    
@@ -92,8 +91,10 @@ def Model_Resolution(model, Optimization_Goal, Renewable_Penetration, Battery_In
     print('Model_Resolution: Instance created')
     
     opt = SolverFactory('gurobi') # Solver use during the optimization
-    
-    opt.set_options('Method=2 BarHomogeneous=1 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000') # !! only works with GUROBI solver   
+
+    opt.set_options('Method=2 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000') # !! only works with GUROBI solver   
+#    opt.set_options('Method=2 BarHomogeneous=1 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000') # !! only works with GUROBI solver   
+
     
     print('Model_Resolution: solver called')
     
