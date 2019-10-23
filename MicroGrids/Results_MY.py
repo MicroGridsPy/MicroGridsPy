@@ -12,14 +12,14 @@ from pandas import ExcelWriter
 
 def Load_Results(instance, Optimization_Goal):
     
-    from win32com.client import Dispatch
-    import os
+#    from win32com.client import Dispatch
+#    import os
 
     import warnings
     warnings.simplefilter(action='ignore', category=FutureWarning)
     
-    cwd = os.getcwd()
-    excel = Dispatch('Excel.Application')
+#    cwd = os.getcwd()
+#    excel = Dispatch('Excel.Application')
 
     Number_Scenarios = int(instance.Scenarios.extract_values()[None])
     Number_Periods = int(instance.Periods.extract_values()[None])
@@ -187,12 +187,12 @@ def Load_Results(instance, Optimization_Goal):
     Time_Series.save()
     print('Results: Time_Series.xlsx exported')
     
-    wb = excel.Workbooks.Open(cwd+"\\Results\\Time_Series.xlsx")
-    for y in range(1,Number_Years+1):
-        excel.Worksheets(y).Activate()
-        excel.ActiveSheet.Columns.AutoFit()
-    wb.Save()
-    wb.Close()
+#    wb = excel.Workbooks.Open(cwd+"\\Results\\Time_Series.xlsx")
+#    for y in range(1,Number_Years+1):
+#        excel.Worksheets(y).Activate()
+#        excel.ActiveSheet.Columns.AutoFit()
+#    wb.Save()
+#    wb.Close()
 
         
 #################################### RENEWABLE SOURCE DATA ####################################
@@ -225,12 +225,12 @@ def Load_Results(instance, Optimization_Goal):
     Data_Renewable.to_excel('Results/Renewable_Sources_Data.xlsx')    
     print('Results: Renewable_Sources_Data.xlsx exported')
 
-    wb = excel.Workbooks.Open(cwd+"\\Results\\Renewable_Sources_Data.xlsx")
-    excel.Worksheets(1).Activate()
-    excel.ActiveSheet.Columns.AutoFit()
-    wb.Save()
-    wb.Close()
-
+#    wb = excel.Workbooks.Open(cwd+"\\Results\\Renewable_Sources_Data.xlsx")
+#    excel.Worksheets(1).Activate()
+#    excel.ActiveSheet.Columns.AutoFit()
+#    wb.Save()
+#    wb.Close()
+#
 
 #################################### GENERATOR DATA ####################################
 
@@ -281,13 +281,13 @@ def Load_Results(instance, Optimization_Goal):
     Gen_data.save()
     print('Results: Generator_Data.xlsx exported')
 
-    wb = excel.Workbooks.Open(cwd+"\\Results\\Generator_Data.xlsx")
-    excel.Worksheets(1).Activate()
-    excel.ActiveSheet.Columns.AutoFit()
-    excel.Worksheets(2).Activate()
-    excel.ActiveSheet.Columns.AutoFit()
-    wb.Save()
-    wb.Close()
+#    wb = excel.Workbooks.Open(cwd+"\\Results\\Generator_Data.xlsx")
+#    excel.Worksheets(1).Activate()
+#    excel.ActiveSheet.Columns.AutoFit()
+#    excel.Worksheets(2).Activate()
+#    excel.ActiveSheet.Columns.AutoFit()
+#    wb.Save()
+#    wb.Close()
     
     
 #################################### BATTERY DATA ####################################
@@ -334,13 +334,13 @@ def Load_Results(instance, Optimization_Goal):
         
     print('Results: Battery_Data.xlsx exported')    
     
-    wb = excel.Workbooks.Open(cwd+"\\Results\\Battery_Data.xlsx")
-    excel.Worksheets(1).Activate()
-    excel.ActiveSheet.Columns.AutoFit()
-    excel.Worksheets(2).Activate()
-    excel.ActiveSheet.Columns.AutoFit()
-    wb.Save()
-    wb.Close()
+#    wb = excel.Workbooks.Open(cwd+"\\Results\\Battery_Data.xlsx")
+#    excel.Worksheets(1).Activate()
+#    excel.ActiveSheet.Columns.AutoFit()
+#    excel.Worksheets(2).Activate()
+#    excel.ActiveSheet.Columns.AutoFit()
+#    wb.Save()
+#    wb.Close()
     
 
 #################################### RESULTS SUMMARY ####################################
@@ -386,7 +386,7 @@ def Load_Results(instance, Optimization_Goal):
         NP_Demand += Weighted_Present_Demand
    
     LCOE = NPC/NP_Demand*1000
-    Project_Info_1.loc['LCOE [USD/kWh]', 0] = LCOE
+    Project_Info_1.loc['LCOE [USD/kWh', 0] = LCOE
 
     Project_Info_1.to_excel(PRJ_Info, sheet_name = 'Project Total Costs')
 
@@ -464,17 +464,17 @@ def Load_Results(instance, Optimization_Goal):
     PRJ_Info.save()
     print('Results: Results_Summary.xlsx exported')    
     
-    wb = excel.Workbooks.Open(cwd+"\\Results\\Results_Summary.xlsx")
-    excel.Worksheets(1).Activate()
-    excel.ActiveSheet.Columns.AutoFit()
-    excel.Worksheets(2).Activate()
-    excel.ActiveSheet.Columns.AutoFit()
-    excel.Worksheets(3).Activate()
-    excel.ActiveSheet.Columns.AutoFit()
-    excel.Worksheets(4).Activate()
-    excel.ActiveSheet.Columns.AutoFit()
-    wb.Save()
-    wb.Close()
+#    wb = excel.Workbooks.Open(cwd+"\\Results\\Results_Summary.xlsx")
+#    excel.Worksheets(1).Activate()
+#    excel.ActiveSheet.Columns.AutoFit()
+#    excel.Worksheets(2).Activate()
+#    excel.ActiveSheet.Columns.AutoFit()
+#    excel.Worksheets(3).Activate()
+#    excel.ActiveSheet.Columns.AutoFit()
+#    excel.Worksheets(4).Activate()
+#    excel.ActiveSheet.Columns.AutoFit()
+#    wb.Save()
+#    wb.Close()
     
     
     Data = []
