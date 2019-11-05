@@ -55,8 +55,8 @@ param: Renewable_Investment_Cost :=                         # Investment cost fo
 2  4.59535;   
 
 param: Renewable_Lifetime :=                                # Component lifetime [y]
-1 20
-2 20;
+1 5
+2 5;
  
 param: Renewable_Operation_Maintenance_Cost :=              # O&M cost for each type of RES as a fraction of investment cost [%]
 1  0.02                                                       
