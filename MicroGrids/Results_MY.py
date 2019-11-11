@@ -10,16 +10,16 @@ import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 from pandas import ExcelWriter
 
-def Load_Results(instance, Optimization_Goal):
+def Load_Results(instance):
     
-#    from win32com.client import Dispatch
-#    import os
+    from win32com.client import Dispatch
+    import os
 
     import warnings
     warnings.simplefilter(action='ignore', category=FutureWarning)
     
-#    cwd = os.getcwd()
-#    excel = Dispatch('Excel.Application')
+    cwd = os.getcwd()
+    excel = Dispatch('Excel.Application')
 
     Number_Scenarios = int(instance.Scenarios.extract_values()[None])
     Number_Periods = int(instance.Periods.extract_values()[None])
@@ -125,15 +125,6 @@ def Load_Results(instance, Optimization_Goal):
                     for r in range(0,Number_Renewable_Sources):
                         Information_2[r].append(Renewable_Energy_1[(foo+1,y+1,r+1,t+1)]) 
         Scenarios=Scenarios.append(Information_2)        
-
-        for k in range(0,Number_Generators):
-            Information_3 = [[] for i in range(0,Number_Generators)]
-            for y in range(0, Number_Years):
-                for t in range(0,Number_Periods):
-                    for g in range(0,Number_Generators):
-                        Information_3[g].append(Generator_Energy[(foo+1,y+1,g+1,t+1)]) 
-        Scenarios=Scenarios.append(Information_3)        
-
         foo+=1
     
     index=[]  
@@ -149,9 +140,6 @@ def Load_Results(instance, Optimization_Goal):
        index.append('Total Renewable Energy '+str(j))
        for r in range(1,Number_Renewable_Sources+1):
            index.append('Renewable Energy: s='+str(j)+' r='+str(r))
-       for g in range(1,Number_Generators+1):
-           index.append('Generator: s='+str(j)+' g='+str(g))
-          
     Scenarios.index = index
     Scenarios_2 = Scenarios.transpose() 
     
@@ -177,7 +165,7 @@ def Load_Results(instance, Optimization_Goal):
     
     Scenarios_yearly = pd.DataFrame()
     t_0 = 0
-    Time_Series = ExcelWriter('Results/Time_Series.xlsx')
+    Time_Series = ExcelWriter('Results/Multi_Year/Time_Series.xlsx')
     
     for y in range(1,Number_Years+1):
         Scenarios_yearly = Scenarios.iloc[[t for t in range(t_0, y*Number_Periods)]]
@@ -187,68 +175,77 @@ def Load_Results(instance, Optimization_Goal):
     Time_Series.save()
     print('Results: Time_Series.xlsx exported')
     
-#    wb = excel.Workbooks.Open(cwd+"\\Results\\Time_Series.xlsx")
-#    for y in range(1,Number_Years+1):
-#        excel.Worksheets(y).Activate()
-#        excel.ActiveSheet.Columns.AutoFit()
-#    wb.Save()
-#    wb.Close()
+    wb = excel.Workbooks.Open(cwd+"\\Results\\Multi_Year\\Time_Series.xlsx")
+    for y in range(1,Number_Years+1):
+        excel.Worksheets(y).Activate()
+        excel.ActiveSheet.Columns.AutoFit()
+    wb.Save()
+    wb.Close()
 
         
 #################################### RENEWABLE SOURCE DATA ####################################
     
     Renewable_Nominal_Capacity = instance.Renewable_Nominal_Capacity.extract_values()
-#    Inverter_Efficiency_Renewable = instance.Renewable_Inverter_Efficiency.extract_values()
+    Inverter_Efficiency_Renewable = instance.Renewable_Inverter_Efficiency.extract_values()
     Renewable_Investment_Cost = instance.Renewable_Investment_Cost.extract_values()
     OyM_Renewable = instance.Renewable_Operation_Maintenance_Cost.extract_values()
     Renewable_Units = instance.Renewable_Units.get_values()
+    Renewable_Investment_Cost_Reduction = instance.Renewable_Inv_Cost_Reduction.extract_values()
     
     Data_Renewable = pd.DataFrame()
     for r in range(1, Number_Renewable_Sources + 1):
         Name = 'Source ' + str(r)
+        Data_Renewable.loc['Unitary Nominal Capacity [W]', Name] = Renewable_Nominal_Capacity[r]
+        Data_Renewable.loc['Inverter Efficiency', Name] = Inverter_Efficiency_Renewable[r]
+        Data_Renewable.loc['Investment Cost [USD/W]', Name] = Renewable_Investment_Cost[r]
+        Data_Renewable.loc['O&M Cost [%]', Name] = OyM_Renewable[r]
 
         for u in range(1, Number_Upgrades +1):
             Data_Renewable.loc['Units at upgrade ' +str(u), Name] = Renewable_Units[u,r]
         
         for u in range(1, Number_Upgrades +1):
-            Data_Renewable.loc['Total Nominal Capacity at upgrade ' +str(u), Name] = Renewable_Nominal_Capacity[r]*Data_Renewable.loc['Units at upgrade ' +str(u), Name]            
+            Data_Renewable.loc['Total Nominal Capacity at upgrade ' +str(u), Name] = Data_Renewable.loc['Unitary Nominal Capacity [W]', Name]*Data_Renewable.loc['Units at upgrade ' +str(u), Name]            
         
         for u in range(1, Number_Upgrades +1):
             if u == 1:
                 Data_Renewable.loc['Investment at upgrade '+ str(u), Name] = Renewable_Units[u,r]*Renewable_Nominal_Capacity[r]*Renewable_Investment_Cost[r]        
             else:
-                Data_Renewable.loc['Investment at upgrade '+ str(u), Name] = (Renewable_Units[u,r] - Renewable_Units[u-1,r])*Renewable_Nominal_Capacity[r]*Renewable_Investment_Cost[r]
+                Data_Renewable.loc['Investment at upgrade '+ str(u), Name] = (Renewable_Units[u,r] - Renewable_Units[u-1,r])*Renewable_Nominal_Capacity[r]*Renewable_Investment_Cost[r]*Renewable_Investment_Cost_Reduction[r]
 
         for u in range(1, Number_Upgrades +1):
             Data_Renewable.loc['Yearly O&M Cost at upgrade ' +str(u), Name] = Renewable_Units[u,r]*Renewable_Nominal_Capacity[r]*Renewable_Investment_Cost[r]*OyM_Renewable[r]
 
-    Data_Renewable.to_excel('Results/Renewable_Sources_Data.xlsx')    
+    Data_Renewable.to_excel('Results/Multi_Year/Renewable_Sources_Data.xlsx')    
     print('Results: Renewable_Sources_Data.xlsx exported')
 
-#    wb = excel.Workbooks.Open(cwd+"\\Results\\Renewable_Sources_Data.xlsx")
-#    excel.Worksheets(1).Activate()
-#    excel.ActiveSheet.Columns.AutoFit()
-#    wb.Save()
-#    wb.Close()
-#
+    wb = excel.Workbooks.Open(cwd+"\\Results\\Multi_Year\\Renewable_Sources_Data.xlsx")
+    excel.Worksheets(1).Activate()
+    excel.ActiveSheet.Columns.AutoFit()
+    wb.Save()
+    wb.Close()
+
 
 #################################### GENERATOR DATA ####################################
 
-#    Generator_Efficiency = instance.Generator_Efficiency.extract_values()
-#    Lower_Heating_Value = instance.Lower_Heating_Value.extract_values()
+    Generator_Efficiency = instance.Generator_Efficiency.extract_values()
+    Lower_Heating_Value = instance.Lower_Heating_Value.extract_values()
 #    Fuel_Cost = instance.Fuel_Cost.extract_values()
     Generator_Investment_Cost = instance.Generator_Investment_Cost.extract_values()
     Generator_Nominal_Capacity = instance.Generator_Nominal_Capacity.get_values()
     Generator_Operation_Maintenance_Cost = instance.Generator_Operation_Maintenance_Cost.extract_values()
     Marginal_Cost_Gen = instance.Generator_Marginal_Cost.extract_values()
-    FCT_Act = instance.Total_Fuel_Cost_Act.extract_values()
+    FCT = instance.Total_Fuel_Cost.extract_values()
     
-    Gen_data = ExcelWriter('Results/Generator_Data.xlsx')
+    Gen_data = ExcelWriter('Results/Multi_Year/Generator_Data.xlsx')
     
     Generator_Data = pd.DataFrame()
     for g in range(1, Number_Generators + 1):
         Name = 'Generator ' + str(g)
+        Generator_Data.loc['Efficiency',Name] = Generator_Efficiency[g]
+        Generator_Data.loc['Lower Heating Value [Wh/Lt]',Name] = Lower_Heating_Value[g]
 #        Generator_Data.loc['Fuel Cost [USD/Lt]',Name] = Fuel_Cost[g]
+        Generator_Data.loc['Investment Cost [USD/W]',Name] = Generator_Investment_Cost[g]
+        Generator_Data.loc['O&M Cost [%]', Name] = Generator_Operation_Maintenance_Cost[g]
 #        Generator_Data.loc['Marginal Cost [USD/Wh]', Name] = Marginal_Cost_Gen[g]
         
         for u in range(1, Number_Upgrades +1):
@@ -261,9 +258,9 @@ def Load_Results(instance, Optimization_Goal):
                 Generator_Data.loc['Investment at upgrade ' + str(u), Name] = Generator_Investment_Cost[g]*(Generator_Nominal_Capacity[u,g] - Generator_Nominal_Capacity[u-1,g])
         
         for u in range(1, Number_Upgrades +1):        
-            Generator_Data.loc['Yearly O&M Cost at upgrade ' + str(u), Name] = Generator_Investment_Cost[g]*Generator_Nominal_Capacity[u,g]*Generator_Operation_Maintenance_Cost[g]
+            Generator_Data.loc['Yearly O&M Cost at upgrade ' + str(u), Name] = Generator_Investment_Cost[g]*Generator_Nominal_Capacity[u,g]*Generator_Data.loc['O&M Cost [%]', Name]
                
-        Generator_Data.loc['Total actualized Fuel Cost', Name] = sum(FCT_Act[(s,g)]*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))
+        Generator_Data.loc['Total actualized Fuel Cost', Name] = sum(FCT[(s,g)]*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))
                 
     Generator_Data.to_excel(Gen_data, sheet_name = 'Generator Data')      
 
@@ -281,26 +278,29 @@ def Load_Results(instance, Optimization_Goal):
     Gen_data.save()
     print('Results: Generator_Data.xlsx exported')
 
-#    wb = excel.Workbooks.Open(cwd+"\\Results\\Generator_Data.xlsx")
-#    excel.Worksheets(1).Activate()
-#    excel.ActiveSheet.Columns.AutoFit()
-#    excel.Worksheets(2).Activate()
-#    excel.ActiveSheet.Columns.AutoFit()
-#    wb.Save()
-#    wb.Close()
+    wb = excel.Workbooks.Open(cwd+"\\Results\\Multi_Year\\Generator_Data.xlsx")
+    excel.Worksheets(1).Activate()
+    excel.ActiveSheet.Columns.AutoFit()
+    excel.Worksheets(2).Activate()
+    excel.ActiveSheet.Columns.AutoFit()
+    wb.Save()
+    wb.Close()
     
     
 #################################### BATTERY DATA ####################################
 
     Battery_Nominal_Capacity = instance.Battery_Nominal_Capacity.get_values()
     PriceBattery= instance.Battery_Investment_Cost.value
-    Unitary_Battery_Replacement_Cost = instance.Unitary_Battery_Replacement_Cost.value
+    Unitary_Battery_Reposition_Cost = instance.Unitary_Battery_Reposition_Cost.value
     OM_Bat = instance.Battery_Operation_Maintenance_Cost.value
-    BRC_Act = instance.Battery_Replacement_Cost_Act.get_values()
+    BRC = instance.Battery_Reposition_Cost.get_values()
 
-    Bat_data = ExcelWriter('Results/Battery_Data.xlsx')
+    Bat_data = ExcelWriter('Results/Multi_Year/Battery_Data.xlsx')
     
     Battery_Data = pd.DataFrame()
+    Battery_Data.loc['Unitary Investment Cost [USD/Wh]',0] = PriceBattery
+    Battery_Data.loc['O&M Cost [%]',0] = OM_Bat
+    Battery_Data.loc['Unitary Battery Reposition Cost [USD/Wh]',0] = Unitary_Battery_Reposition_Cost
     
     for u in range(1, Number_Upgrades +1):
         Battery_Data.loc['Nominal Capacity at upgrade '+str(u),0] = Battery_Nominal_Capacity[u]   
@@ -314,7 +314,7 @@ def Load_Results(instance, Optimization_Goal):
     for u in range(1, Number_Upgrades +1):
         Battery_Data.loc['Yearly O&M Cost at upgrade '+str(u),0] = Battery_Nominal_Capacity[u]*PriceBattery*OM_Bat
         
-    Battery_Data.loc['Total actualized Battery Replacement Cost', 0] = sum(BRC_Act[(s)]*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))
+    Battery_Data.loc['Total actualized Battery Reposition Cost', 0] = sum(BRC[(s)]*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))
     
     Battery_Data.to_excel(Bat_data, sheet_name = 'Battery_Data') # Creating an excel file with the values of the variables that does not depend of the periods
     
@@ -324,54 +324,44 @@ def Load_Results(instance, Optimization_Goal):
         for y in range(1, Number_Years+1):
             Yearly_BRC = 0
                
-            Battery_cost_in = sum(Battery_Flow_in[s,y,t]*Unitary_Battery_Replacement_Cost for t in range(1, Number_Periods+1))
-            Battery_cost_out = sum(Battery_Flow_Out[s,y,t]*Unitary_Battery_Replacement_Cost for t in range(1, Number_Periods+1))           
+            Battery_cost_in = sum(Battery_Flow_in[s,y,t]*Unitary_Battery_Reposition_Cost for t in range(1, Number_Periods+1))
+            Battery_cost_out = sum(Battery_Flow_Out[s,y,t]*Unitary_Battery_Reposition_Cost for t in range(1, Number_Periods+1))           
             Yearly_BRC += Battery_cost_in + Battery_cost_out
-            Battery_Data_2.loc['Battery Replacement Cost at y = '+str(y),'Scenario '+str(s)] = Yearly_BRC
+            Battery_Data_2.loc['Battery Reposition Cost at y = '+str(y),'Scenario '+str(s)] = Yearly_BRC
 
     Battery_Data_2.to_excel(Bat_data, sheet_name = 'Yearly BRC')    
     Bat_data.save()
         
     print('Results: Battery_Data.xlsx exported')    
     
-#    wb = excel.Workbooks.Open(cwd+"\\Results\\Battery_Data.xlsx")
-#    excel.Worksheets(1).Activate()
-#    excel.ActiveSheet.Columns.AutoFit()
-#    excel.Worksheets(2).Activate()
-#    excel.ActiveSheet.Columns.AutoFit()
-#    wb.Save()
-#    wb.Close()
+    wb = excel.Workbooks.Open(cwd+"\\Results\\Multi_Year\\Battery_Data.xlsx")
+    excel.Worksheets(1).Activate()
+    excel.ActiveSheet.Columns.AutoFit()
+    excel.Worksheets(2).Activate()
+    excel.ActiveSheet.Columns.AutoFit()
+    wb.Save()
+    wb.Close()
     
 
-#################################### RESULTS SUMMARY ####################################
+#################################### PROJECT INFORMATION ####################################
 
-    if Optimization_Goal == 'NPC': 
-        NPC = instance.ObjectiveFuntion.expr()
-    elif Optimization_Goal == 'Operation cost':
-        TotVarCostNonAct = instance.ObjectiveFunction.expr()
-        NPC = instance.Net_Present_Cost.value
+    NPC = instance.ObjectiveFuntion.expr()
     
-    TotVarCostAct = instance.Total_Variable_Cost_Act.value
+    TotVarCost = instance.Total_Variable_Cost.value
     SalvageValue = instance.Salvage_Value.value
     TotInvCost = instance.Investment_Cost.value
     VOLL = instance.Value_Of_Lost_Load.value
     Renewable_Units = instance.Renewable_Units.get_values()
     
-    PRJ_Info = ExcelWriter('Results/Results_Summary.xlsx')
+    PRJ_Info = ExcelWriter('Results/Multi_Year/Project_Information.xlsx')
 
     Project_Info_1 = pd.DataFrame()
 
-    Project_Info_1.loc['NPC [USD]', 0] = NPC
+    Project_Info_1.loc['NPC', 0] = NPC
     
-    Project_Info_1.loc['Total actualized Operation cost [USD]', 0] = TotVarCostAct
-
-    if Optimization_Goal == 'Operation cost':
-        Project_Info_1.loc['Total non-actualized Operation cost [USD]', 0] = TotVarCostNonAct
-    
-    Project_Info_1.loc['Total actualized Investment cost [USD]', 0] = TotInvCost
-    
-    Project_Info_1.loc['Salvage Value at year '+str(Number_Years)+' [USD]', 0] = SalvageValue    
+    Project_Info_1.loc['Total actualized Operation cost', 0] = TotVarCost
         
+
     Demand = pd.DataFrame()
     NP_Demand = 0
     for s in range(1, Number_Scenarios + 1):
@@ -386,9 +376,9 @@ def Load_Results(instance, Optimization_Goal):
         NP_Demand += Weighted_Present_Demand
    
     LCOE = NPC/NP_Demand*1000
-    Project_Info_1.loc['LCOE [USD/kWh', 0] = LCOE
+    Project_Info_1.loc['LCOE', 0] = LCOE
 
-    Project_Info_1.to_excel(PRJ_Info, sheet_name = 'Project Total Costs')
+    Project_Info_1.to_excel(PRJ_Info, sheet_name = 'Project Info')
 
 
     Project_Info_2 = pd.DataFrame()
@@ -396,10 +386,7 @@ def Load_Results(instance, Optimization_Goal):
     for u in range(1, Number_Upgrades+1):
         
         Project_Info_2.loc['Battery Nominal Capacity [kWh]', 'Upgrade '+str(u)] = Battery_Nominal_Capacity[u]/1000
-        
-        for g in range(1, Number_Generators+1):
-            Project_Info_2.loc['Generator '+str(g)+' Nominal Capacity [kW]', 'Upgrade '+str(u)] = Generator_Nominal_Capacity[u,g]/1000        
-        
+        Project_Info_2.loc['Generator Nominal Capacity [kW]', 'Upgrade '+str(u)] = sum(Generator_Nominal_Capacity[u,g] for g in range(1, Number_Generators +1))/1000
         for r in range(1, Number_Renewable_Sources+1):
             Project_Info_2.loc['Renewable '+str(r)+' Nominal Capacity [kW]', 'Upgrade '+str(u)] = Renewable_Nominal_Capacity[r]*Renewable_Units[u,r]/1000
     
@@ -407,19 +394,18 @@ def Load_Results(instance, Optimization_Goal):
         if u != 1:
             Project_Info_2.loc['Battery Investment [USD]', 'Upgrade '+str(u)] = (Battery_Nominal_Capacity[u]-Battery_Nominal_Capacity[u-1])*PriceBattery   
         
-        for g in range(1, Number_Generators+1):
-            Project_Info_2.loc['Generator '+str(g)+' Investment [USD]', 'Upgrade '+str(1)] = Generator_Nominal_Capacity[1,g]*Generator_Investment_Cost[g]
-            if u != 1:
-                Project_Info_2.loc['Generator '+str(g)+' Investment [USD]', 'Upgrade '+str(u)] = (Generator_Nominal_Capacity[u,g]-Generator_Nominal_Capacity[u-1,g])*Generator_Investment_Cost[g]
-       
+        Project_Info_2.loc['Generator Investment [USD]', 'Upgrade '+str(1)] = sum(Generator_Nominal_Capacity[1,g]*Generator_Investment_Cost[g] for g in range(1, Number_Generators+1))
+        if u != 1:
+            Project_Info_2.loc['Generator Investment [USD]', 'Upgrade '+str(u)] = sum((Generator_Nominal_Capacity[u,g]-Generator_Nominal_Capacity[u-1,g])*Generator_Investment_Cost[g] for g in range(1, Number_Generators+1))
+        
         for r in range(1, Number_Renewable_Sources+1):
             Project_Info_2.loc['Renewable '+str(r)+' Investment [USD]', 'Upgrade '+str(1)] = Renewable_Nominal_Capacity[r]*Renewable_Units[1,r]*Renewable_Investment_Cost[r]
             if u != 1:
-                Project_Info_2.loc['Renewable '+str(r)+' Investment [USD]', 'Upgrade '+str(u)] = (Renewable_Units[u,r]-Renewable_Units[u-1,r])*Renewable_Nominal_Capacity[r]*Renewable_Investment_Cost[r]
+                Project_Info_2.loc['Renewable '+str(r)+' Investment [USD]', 'Upgrade '+str(u)] = (Renewable_Units[u,r]-Renewable_Units[u-1,r])*Renewable_Nominal_Capacity[r]*Renewable_Investment_Cost[r] *Renewable_Investment_Cost_Reduction[r]
         
         Project_Info_2.loc['Total Investment [USD]', 'Upgrade '+str(u)] = Project_Info_2['Upgrade '+str(u)]['Battery Investment [USD]':].sum()
         
-    Project_Info_2.to_excel(PRJ_Info, sheet_name = 'Components Capacity and Cost')
+    Project_Info_2.to_excel(PRJ_Info, sheet_name = 'Upgrades Info')
 
 
     Project_Info_3 = pd.DataFrame()
@@ -430,7 +416,7 @@ def Load_Results(instance, Optimization_Goal):
         Project_Info_3.loc['Year '+str(y), 'Total O&M Cost'] =  Project_Info_3.loc['Year '+str(y), 'Battery O&M Cost'] + Project_Info_3.loc['Year '+str(y), 'Generator O&M Cost'] + Project_Info_3.loc['Year '+str(y), 'Renewable O&M Cost']
         
         Project_Info_3.loc['Year '+str(y), 'Fuel Cost'] = sum(sum(sum(Generator_Energy[s,y,g,t]*Marginal_Cost_Gen[s,y,g]*Scenario_Weight[s] for t in range(1, Number_Periods+1)) for g in range(1, Number_Generators+1))for s in range(1, Number_Scenarios+1))
-        Project_Info_3.loc['Year '+str(y), 'Battery Replacement Cost'] = sum(sum((Battery_Flow_in[s,y,t]+Battery_Flow_Out[s,y,t])*Unitary_Battery_Replacement_Cost*Scenario_Weight[s] for t in range(1, Number_Periods+1)) for s in range(1, Number_Scenarios+1))
+        Project_Info_3.loc['Year '+str(y), 'Battery Reposition Cost'] = sum(sum((Battery_Flow_in[s,y,t]+Battery_Flow_Out[s,y,t])*Unitary_Battery_Reposition_Cost*Scenario_Weight[s] for t in range(1, Number_Periods+1)) for s in range(1, Number_Scenarios+1))
         Project_Info_3.loc['Year '+str(y), 'Lost Load Cost'] = sum(sum(Lost_Load[s,y,t]*VOLL*Scenario_Weight[s] for t in range(1, Number_Periods+1)) for s in range(1, Number_Scenarios+1))
     
     Project_Info_3.to_excel(PRJ_Info, sheet_name = 'Yearly Costs Info')
@@ -440,41 +426,38 @@ def Load_Results(instance, Optimization_Goal):
     k = 0
     
     for y in range(1, Number_Years+1):
-
-        Curtailment = sum(Scenarios_2['Curtailment '+str(s)][k:k+Number_Periods].sum()*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))       
+        
         Tot_Ren_En = sum(Scenarios_2['Total Renewable Energy '+str(s)][k:k+Number_Periods].sum()*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))
         Tot_Gen_En = sum(Scenarios_2['Gen energy '+str(s)][k:k+Number_Periods].sum()*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))
+        Renewable_Real_Penetration = Tot_Ren_En / (Tot_Ren_En + Tot_Gen_En)
+
+        Curtailment = sum(Scenarios_2['Curtailment '+str(s)][k:k+Number_Periods].sum()*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))
+        
+        Batt_Flow_Out = sum(Scenarios_2['Battery_Flow_Out '+str(s)][k:k+Number_Periods].sum()*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))
         Demand = sum(Scenarios_2['Energy_Demand '+str(s)][k:k+Number_Periods].sum()*Scenario_Weight[s] for s in range(1, Number_Scenarios+1))
         
-        for g in range(1, Number_Generators+1):
-            Generator_Share = sum(Scenarios_2['Generator: s='+str(j)+' g='+str(g)][k:k+Number_Periods].sum()*Scenario_Weight[s] for s in range(1, Number_Scenarios+1)) / Demand
-            Project_Info_4.loc['Year '+str(y), 'Load served by Generator '+str(g)+' %'] = Generator_Share*100
-        
-#        for r in range(1, Number_Renewable_Sources+1):
-#            Ren_Share = sum(Scenarios_2['Renewable Energy: s='+str(j)+' r='+str(r)][k:k+Number_Periods].sum()*Scenario_Weight[s] for s in range(1, Number_Scenarios+1)) / Demand
-#            Project_Info_4.loc['Year '+str(y), 'Load served by RES '+str(r)+' %'] = Ren_Share*100
-
-        Project_Info_4.loc['Year '+str(y), 'Load served by total RES %'] = (Tot_Ren_En - Curtailment) / Demand * 100       
-        Project_Info_4.loc['Year '+str(y), 'Curtailment %'] = Curtailment / (Tot_Ren_En + Tot_Gen_En) * 100
+        Project_Info_4.loc['Year '+str(y), 'Renewable Real Penetration'] = Renewable_Real_Penetration
+        Project_Info_4.loc['Year '+str(y), 'Curtailment %'] = Curtailment / (Tot_Ren_En + Tot_Gen_En)
+        Project_Info_4.loc['Year '+str(y), 'Battery Usage'] = Batt_Flow_Out / Demand
         
         k += Number_Periods
 
     Project_Info_4.to_excel(PRJ_Info, sheet_name = 'Yearly Energy Averages')
 
     PRJ_Info.save()
-    print('Results: Results_Summary.xlsx exported')    
+    print('Results: Project_Information.xlsx exported')    
     
-#    wb = excel.Workbooks.Open(cwd+"\\Results\\Results_Summary.xlsx")
-#    excel.Worksheets(1).Activate()
-#    excel.ActiveSheet.Columns.AutoFit()
-#    excel.Worksheets(2).Activate()
-#    excel.ActiveSheet.Columns.AutoFit()
-#    excel.Worksheets(3).Activate()
-#    excel.ActiveSheet.Columns.AutoFit()
-#    excel.Worksheets(4).Activate()
-#    excel.ActiveSheet.Columns.AutoFit()
-#    wb.Save()
-#    wb.Close()
+    wb = excel.Workbooks.Open(cwd+"\\Results\\Multi_Year\\Project_Information.xlsx")
+    excel.Worksheets(1).Activate()
+    excel.ActiveSheet.Columns.AutoFit()
+    excel.Worksheets(2).Activate()
+    excel.ActiveSheet.Columns.AutoFit()
+    excel.Worksheets(3).Activate()
+    excel.ActiveSheet.Columns.AutoFit()
+    excel.Worksheets(4).Activate()
+    excel.ActiveSheet.Columns.AutoFit()
+    wb.Save()
+    wb.Close()
     
     
     Data = []
@@ -485,10 +468,7 @@ def Load_Results(instance, Optimization_Goal):
     Data.append(Scenario_Weight)
     Data.append(LCOE)
     Data.append(Data_Renewable)
-    if Optimization_Goal == 'NPC':
-        Data.append(TotVarCostAct)
-    elif Optimization_Goal == 'Operation cost':
-        Data.append(TotVarCostNonAct)    
+    Data.append(TotVarCost)
     Data.append(TotInvCost)
     Data.append(SalvageValue)
     
@@ -665,6 +645,7 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         From_Renewables = []
         for r in range(1,Number_Renewable_Sources+1):
             c_ren = color_list[r-1]
+        
             From_Renewables.append(mpatches.Patch(color=c_ren,alpha=Alpha_r, label='From Renewable '+str(r)))
         
         From_Generator = mpatches.Patch(color=c_d,alpha=Alpha_g,
@@ -830,13 +811,10 @@ def Energy_Mix(instance,Scenarios,Scenario_Probability):
     return Energy_Mix    
     
     
-def Print_Results(LCOE, NPC, TotVarCost, TotInvCost, SalvageValue, Optimization_Goal):
+def Print_Results(LCOE, NPC, TotVarCost, TotInvCost, SalvageValue):
     
     print('\nProject NPC = '+str(round(NPC,2))+' USD')
-    if Optimization_Goal == 'NPC':
-        print('Project Total actualized Operation Cost = '+str(round(TotVarCost,2))+' USD')
-    elif Optimization_Goal == 'Operation cost':
-        print('Project Total non-actualized Operation Cost = '+str(round(TotVarCost,2))+' USD')
+    print('Project Total actualized Operation Cost = '+str(round(TotVarCost,2))+' USD')
     print('Project Total Investment Cost = '+str(round(TotInvCost,2))+' USD')
     print('Project LCOE = '+str(round(LCOE,4))+' USD/kWh')
     print('Project Salvage Value = '+str(round(SalvageValue,2))+' USD')

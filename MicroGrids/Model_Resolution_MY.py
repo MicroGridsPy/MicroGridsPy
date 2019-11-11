@@ -4,11 +4,12 @@ Based on the original model by Sergio Balderrama and Sylvain Quoilin
 Authors: Giulia Guidicini, Lorenzo Rinaldi - Politecnico di Milano
 """
 
+import pyomo.environ
 from pyomo.opt import SolverFactory
 from pyomo.environ import Objective, minimize, Constraint
 
 
-def Model_Resolution(model, Optimization_Goal, Renewable_Penetration, Battery_Independency,datapath="Inputs/data_MY.dat"):   
+def Model_Resolution(model, Renewable_Penetration, Battery_Independency,datapath="Inputs/data_MY.dat"):   
     '''
     This function creates the model and call Pyomo to solve the instance of the proyect 
     
@@ -19,18 +20,15 @@ def Model_Resolution(model, Optimization_Goal, Renewable_Penetration, Battery_In
     '''
     from Constraints_MY import  Renewable_Energy,State_of_Charge,\
     Maximun_Charge, Minimun_Charge, Max_Power_Battery_Charge, Max_Power_Battery_Discharge, Max_Bat_in, Max_Bat_out, \
-    Energy_balance, Maximun_Lost_Load,Scenario_Net_Present_Cost, Scenario_Lost_Load_Cost_Act, Scenario_Lost_Load_Cost_NonAct, Renewable_Energy_Penetration,\
-    Investment_Cost, Operation_Maintenance_Cost_Act, Operation_Maintenance_Cost_NonAct, Battery_Replacement_Cost_Act, Battery_Replacement_Cost_NonAct, Maximun_Generator_Energy, Total_Fuel_Cost_Act, Total_Fuel_Cost_NonAct,\
-    Battery_Min_Capacity, Battery_Min_Step_Capacity, Renewables_Min_Step_Units, Generator_Min_Step_Capacity, Salvage_Value, Net_Present_Cost_Obj,Total_Variable_Cost_Act, Scenario_Variable_Cost_Act, Scenario_Variable_Cost_NonAct,Total_Variable_Cost_Obj, Net_Present_Cost, Investment_Cost_Limit
-      
-   
+    Energy_balance, Maximun_Lost_Load,Scenario_Net_Present_Cost, Scenario_Lost_Load_Cost, Renewable_Energy_Penetration,\
+    Investment_Cost, Operation_Maintenance_Cost, Battery_Reposition_Cost, Maximun_Generator_Energy, Total_Fuel_Cost,\
+    Battery_Min_Capacity, Battery_Min_Step_Capacity, Renewables_Min_Step_Units, Generator_Min_Step_Capacity, Salvage_Value, Net_Present_Cost_Obj, \
+    Total_Variable_Cost, Scenario_Variable_Cost
+#    , Battery_Replacement    
+
     
     # OBJETIVE FUNTION:
-    if Optimization_Goal == 'NPC':
-        model.ObjectiveFuntion = Objective(rule=Net_Present_Cost_Obj, sense=minimize)  
-    elif Optimization_Goal == 'Operation cost':
-        model.ObjectiveFunction = Objective(rule=Total_Variable_Cost_Obj, sense=minimize)
-        model.NetPresentCost = Constraint(rule=Net_Present_Cost)
+    model.ObjectiveFuntion = Objective(rule=Net_Present_Cost_Obj, sense=minimize)  
     
     # CONSTRAINTS
     
@@ -69,20 +67,13 @@ def Model_Resolution(model, Optimization_Goal, Renewable_Penetration, Battery_In
     model.ScenarioNetPresentCost = Constraint(model.scenarios, rule=Scenario_Net_Present_Cost)    
     model.InitialInvestment = Constraint(rule=Investment_Cost)
     model.SalvageValue = Constraint(rule=Salvage_Value)
-    model.OperationMaintenanceCostAct = Constraint(rule=Operation_Maintenance_Cost_Act)
-    model.ScenarioLostLoadCostAct = Constraint(model.scenarios, rule=Scenario_Lost_Load_Cost_Act)
-    model.FuelCostTotalAct = Constraint(model.scenarios, model.generator_types, rule=Total_Fuel_Cost_Act)
-    model.BatteryReplacementCostAct = Constraint(model.scenarios,rule=Battery_Replacement_Cost_Act) 
-    model.ScenarioVariableCostAct = Constraint(model.scenarios,rule=Scenario_Variable_Cost_Act)    
-    model.TotalVariableCostAct = Constraint(rule=Total_Variable_Cost_Act)
-
-    if Optimization_Goal == 'Operation cost':
-        model.InvestmentCostLimit = Constraint(rule=Investment_Cost_Limit)
-        model.OperationMaintenanceCostNonAct = Constraint(rule=Operation_Maintenance_Cost_NonAct)
-        model.ScenarioLostLoadCostNonAct = Constraint(model.scenarios, rule=Scenario_Lost_Load_Cost_NonAct)
-        model.FuelCostTotalNonAct = Constraint(model.scenarios, model.generator_types, rule=Total_Fuel_Cost_NonAct)
-        model.BatteryReplacementCostNonAct = Constraint(model.scenarios,rule=Battery_Replacement_Cost_NonAct) 
-        model.ScenarioVariableCostNonAct = Constraint(model.scenarios,rule=Scenario_Variable_Cost_NonAct)     
+    model.OperationMaintenanceCost = Constraint(rule=Operation_Maintenance_Cost)
+    model.ScenarioLostLoadCost = Constraint(model.scenarios, rule=Scenario_Lost_Load_Cost)
+    model.FuelCostTotal = Constraint(model.scenarios, model.generator_types, rule=Total_Fuel_Cost)
+    model.BatteryRepositionCost = Constraint(model.scenarios,rule=Battery_Reposition_Cost) 
+#    model.BatteryReplacement = Constraint(model.scenarios,rule=Battery_Replacement)     
+    model.ScenarioVariableCost = Constraint(model.scenarios,rule=Scenario_Variable_Cost)    
+    model.TotalVariableCost = Constraint(rule=Total_Variable_Cost)
     
     print('Model_Resolution: Constraints imported')
     
@@ -90,15 +81,12 @@ def Model_Resolution(model, Optimization_Goal, Renewable_Penetration, Battery_In
 
     print('Model_Resolution: Instance created')
     
-    opt = SolverFactory('gurobi') # Solver use during the optimization
-
-    opt.set_options('Method=2 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000') # !! only works with GUROBI solver   
-#    opt.set_options('Method=2 BarHomogeneous=1 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000') # !! only works with GUROBI solver   
-
-    
+    opt = SolverFactory('gurobi')# # Solver use during the optimization    
+    opt.set_options('Method=2 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4')
+	
     print('Model_Resolution: solver called')
     
-    results = opt.solve(instance, tee=True) # Solving a model instance 
+    results = opt.solve(instance, tee=True)#, options="Method=2")# BarConvTol=1e-4") # Solving a model instance 
     
     print('Model_Resolution: instance solved')
 
