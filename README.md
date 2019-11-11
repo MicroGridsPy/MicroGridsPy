@@ -1,4 +1,4 @@
-MicroGridsPy - Teaching version
+MicroGridsPy - Multi Year Capacity Expansion version
 ========================
 
 ### Description
@@ -13,7 +13,7 @@ Main features:
     Determination of the LCOE for the optimal system.
 
 
-### Main developpers
+### Main developers
 
 Sergio Balderrana <br/>
 University of Liege, Belgium - Universidad Mayor de San Simon, Bolivia <br/>
@@ -23,8 +23,13 @@ Sylvain Quoilin <br/>
 University of Liege, Belgium <br/>
 E-mail: squoilin@ulg.ac.be  <br/>
 
+*MYCE VERSION*<br/>
+Giulia Guidicini, Lorenzo Rinaldi, Nicolò Stevanato, Francesco Lombardi <br/>
+Politecnico di Milano, Italy <br/>
+E-mail: nicolo.stevanato@polimi.it <br/>
+
 *TEACHING VERSION*<br/>
-Francesco Lombardi, Giulia Guidicini, Lorenzo Rinaldi, Nicolò Stevanato <br/>
+Francesco Lombardi, Giulia Guidicini, Lorenzo Rinaldi <br/>
 Politecnico di Milano, Italy <br/>
 E-mail: francesco.lombardi@polimi.it <br/>
  
