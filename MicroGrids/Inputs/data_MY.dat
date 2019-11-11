@@ -2,7 +2,7 @@ param: Periods := 8760;                                     # periods considered
 
 param: Years := 20;                                         # total duration of the project
 
-param: Step_Duration := 5;                                 # duration (in years) of each investment decision step in which the project lifetime will be split
+param: Step_Duration := 20;                                 # duration (in years) of each investment decision step in which the project lifetime will be split
 
 param: Min_Last_Step_Duration := 1;                         # minimum duration (in years) of the last investment decision step, in case of non-homogeneous divisions of the project lifetime 
 
@@ -10,9 +10,9 @@ param: StartDate := '01/01/2015 00:00:00';                  # start date of the 
 
 param: Delta_Time := 1.0;                                   # not change 
 
-param: Battery_Investment_Cost := 1;                     # [USD/Wh]
+param: Battery_Investment_Cost := 0.55;                     # [USD/Wh]
 
-param: Battery_Electronic_Investment_Cost := 0.5;         # Cost of the non-replaceable part of the battery bank [USD/Wh]
+param: Battery_Electronic_Investment_Cost := 0.275;         # Cost of the non-replaceable part of the battery bank [USD/Wh]
 
 param: Battery_Operation_Maintenance_Cost:= 0.02;           # O&M cost of the battery bank as a fraction of investment cost [%]
 
@@ -36,7 +36,7 @@ param: Battery_Cycles := 4500;                              # [-]
 
 param: Battery_Initial_SOC := 1;                            # [%]
 
-param: Scenarios := 5;                                      # Number of scenarios to consider within the optimisation
+param: Scenarios := 1;                                      # Number of scenarios to consider within the optimisation
 
 param: Renewable_Sources := 2;                              # Number of RES types
 
@@ -82,8 +82,4 @@ param: Lower_Heating_Value :=                               # Fuel LHV for each 
 1	9840;
 
 param: Scenario_Weight :=                                   # Occurrence probability of each scenario [%]
-1   0.2
-2   0.2
-3   0.2
-4   0.2
-5   0.2;
+1   1;
