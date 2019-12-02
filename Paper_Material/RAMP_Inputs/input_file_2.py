@@ -705,7 +705,7 @@ EC_outdoor_bulb.windows([0,430],[1130,1440],0.1)
 EC_pc = EC.Appliance(EC,5,70,1,720,0.2,60)
 EC_pc.windows([450,1230],[0,0],0.1)
 
-EC_printer = EC.Appliance(EC,1,10,1,720,0.2,1)
+EC_printer = EC.Appliance(EC,1,10,1,10,0.2,1)
 EC_printer.windows([450,1230],[0,0],0.1)
 
 EC_modem = EC.Appliance(EC,1,5,1,1440,0,1440, flat = 'yes')
