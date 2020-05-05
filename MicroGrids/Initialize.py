@@ -12,11 +12,10 @@ def Initialize_years(model, i):
     '''    
     return i
 
-
-
 Energy_Demand = pd.read_excel('Example/Demand.xls',index_col=0,Header=None) # open the energy demand file
 Energy_Demand = Energy_Demand/1000
 Energy_Demand = round(Energy_Demand, 3)
+
 
 def Initialize_Demand(model, i, t):
     '''
