@@ -239,9 +239,9 @@ def Load_results1(instance):
                 Generator_Data.loc['Cost Increase',Name] = Cost_Increase[g]
                 M_1 = Fuel_Cost[g]/(Generator_Efficiency[g]*Low_Heating_Value[g])
                 Generator_Data.loc['Marginal cost Full load (USD/Wh)',Name] = round(M_1,3)
-                Generator_Data.loc['Start Cost Generator (USD)',Name] = M_1*Generator_Nominal_Capacity[g]*Cost_Increase[g]
+                Generator_Data.loc['Start Cost Generator (USD)',Name] = Generator_Data.loc['Marginal cost Full load (USD/Wh)',Name]*Generator_Nominal_Capacity[g]*Cost_Increase[g]
                 Generator_Data.loc['Start Cost Generator (USD)',Name] = round(Generator_Data.loc['Start Cost Generator (USD)',Name],3)
-                Generator_Data.loc['Marginal cost Partial load (USD/Wh)',Name] = M_1*(1-Cost_Increase[g])
+                Generator_Data.loc['Marginal cost Partial load (USD/Wh)',Name] = Generator_Data.loc['Marginal cost Full load (USD/Wh)',Name]*(1-Cost_Increase[g])
                 Generator_Data.loc['Marginal cost Partial load (USD/Wh)',Name] = round(Generator_Data.loc['Marginal cost Partial load (USD/Wh)',Name],3)
                 Generator_Data.loc['Number of Generators', Name] = Integer_generator[g]
                 Generator_Data.loc['Maintenance Operation Cost Generator', Name] = Maintenance_Operation_Cost_Generator[g]
