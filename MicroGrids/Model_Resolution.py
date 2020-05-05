@@ -70,11 +70,13 @@ def Model_Resolution(model,Renewable_Penetration, Battery_Independency,datapath=
         instance = model.create_instance("Example/data_Integer.dat") # load parameters       
         opt = SolverFactory('gurobi') # Solver use during the optimization    
 #       opt.options['emphasis_memory'] = 'y'
-#       opt.options['timelimit'] = 20000
-#       opt.options['node_select'] = 3
+        opt.options['timelimit'] = 1800
+#        opt.options['StartNodeLimit'] = 10 # 500 Default
 #       opt.options['emphasis_mip'] = 2
-        results = opt.solve(instance, tee=True, options_string="mipgap=0.06",
-                            warmstart=True,keepfiles=False) # Solving a model instance 
+#        opt.options['Presolve'] = 2
+        results = opt.solve(instance, tee=True, options_string="mipgap=0.01",
+                            warmstart=False,keepfiles=False,
+                            load_solutions=False) # Solving a model instance 
 
         #    instance.write(io_options={'emphasis_memory':True})
         #options_string="mipgap=0.03", timelimit=1200

@@ -14,7 +14,7 @@ import time
 start = time.time()
 
 # Type of problem formulation:
-formulation = 'MILP'
+formulation = 'LP'
 #datapath='Example/Dispatch/'
 # Renewable energy penetrarion
 
@@ -48,8 +48,13 @@ if formulation == 'LP' or formulation == 'MILP':
 
     # Energy Plot    
 
+<<<<<<< HEAD
     Time_Series = Integer_Time_Series(instance,Scenarios, S, Data) 
     Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime)
+=======
+#    Time_Series = Integer_Time_Series(instance,Scenarios, S, Data) 
+#    Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime)
+>>>>>>> NewVersion
     # Data Analisys
     Print_Results(instance, Generator_Data, Data_Renewable, Battery_Data ,Results, 
              formulation)  
@@ -78,3 +83,6 @@ elif formulation =='Dispatch':
 
 end = time.time()
 print('The optimization take ' + str(round(end - start,0)) + ' segundos')
+
+
+
