@@ -85,7 +85,7 @@ def Capital_Recovery_Factor(model):
    
     a = model.Discount_Rate*((1+model.Discount_Rate)**model.Years)
     b = ((1 + model.Discount_Rate)**model.Years)-1
-    return round(a/b,3)
+    return a/b
 
     
 def Battery_Reposition_Cost(model):

@@ -114,11 +114,11 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     # Variables associated to the solar panels
         
     model.Renewable_Units = Var(model.renewable_source,
-                                within=NonNegativeReals,bounds= (0,500)) # Number of units of solar panels
+                                within=NonNegativeReals,bounds= (10,50000)) # Number of units of solar panels
 
 
     # Variables associated to the battery bank
-    bat = 700
+    bat = 700000
     model.Battery_Nominal_Capacity = Var(within=NonNegativeReals,bounds= (0,bat)) # Capacity of the battery bank in Wh
     model.Energy_Battery_Flow_Out = Var(model.scenario, model.periods,
                                         within=NonNegativeReals,bounds=(0,bat)) # Battery discharge energy in wh
@@ -144,17 +144,17 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
             if g == 1:
                 return 1
             else:
-                return 0
+                return 1
     
         def bounds_N(model,g):
             if g == 1:
-                return (0,1)
+                return (1,2)
             else:
-                return (0,2)
+                return (1,2)
         
         def bounds_E(model,s,g,t):
             if g == 1:
-                return (0,1)
+                return (0,2)
             else:
                 return (0,2)    
     
@@ -179,7 +179,7 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     if model.Lost_Load_Probability > 0:
         model.Lost_Load = Var(model.scenario, model.periods, within=NonNegativeReals) # Energy not suply by the system kWh
     model.Energy_Curtailment = Var(model.scenario, model.periods, within=NonNegativeReals
-                                   ,bounds=(0,100)) # Curtailment of solar energy in kWh
+                                   ,bounds=(0,100000)) # Curtailment of solar energy in kWh
 
 
 

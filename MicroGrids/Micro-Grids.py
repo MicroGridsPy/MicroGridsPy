@@ -5,7 +5,7 @@ from pyomo.environ import  AbstractModel
 from Results import Plot_Energy_Total, Load_results1,  Load_results1_binary, \
 Load_results2_binary, Energy_Mix, Print_Results,Print_Results_Dispatch, \
 Load_results1_Dispatch, Load_results2_Dispatch, Energy_Mix_Dispatch, \
-Dispatch_Economic_Analysis, Integer_Time_Series
+Dispatch_Economic_Analysis, Integer_Time_Series, energy_check
 from Model_Creation import Model_Creation, Model_Creation_binary,\
 Model_Creation_Dispatch
 from Model_Resolution import Model_Resolution, Model_Resolution_binary,\
@@ -20,7 +20,7 @@ formulation = 'MILP'
 
 Renewable_Penetration  =  0 # a number from 0 to 1
 Battery_Independency   =  0    # number of days of battery independency
-Lost_Load_Probability  =  0   # Allowed percentage of unmed demand in the system
+Lost_Load_Probability  =  0  # Allowed percentage of unmed demand in the system
 Curtailment_Unitary_Cost =  0 # probando curtailment cost 0
 
 S = 1 # Plot scenario
@@ -48,8 +48,8 @@ if formulation == 'LP' or formulation == 'MILP':
 
     # Energy Plot    
 
-#    Time_Series = Integer_Time_Series(instance,Scenarios, S, Data) 
-#    Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime)
+    Time_Series = Integer_Time_Series(instance,Scenarios, S, Data) 
+    Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime)
 
     # Data Analisys
     Print_Results(instance, Generator_Data, Data_Renewable, Battery_Data ,Results, 
@@ -80,5 +80,5 @@ elif formulation =='Dispatch':
 end = time.time()
 print('The optimization take ' + str(round(end - start,0)) + ' segundos')
 
-
+energy_check(instance)
 
