@@ -95,7 +95,8 @@ Any of the following solvents can be used during the optimization  process in th
 
 The Micro-grids library needs the following input files:
 
-*Data.dat                         Txt file 	In this file the value of the parameters are set
+*Data.dat                        Txt file 	In this file the value of the parameters are set for the LP problems
+*Data_Integer.dat                Txt file 	In this file the value of the parameters are set for the MILP problems
 *Demand.xls			 Excel file	The demand of energy of the system for each period is set in this file
 *PV_Energy.xls			 Excel file	The energy yield in each period from one PV is set in this file,it is used for the dispatch optimization			
 *Renewable_Energy.xls		 Excel file	The energy yield in each period from one renewable source is set in this file, it is used for the LP and MILP optimizations	
