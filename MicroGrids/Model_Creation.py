@@ -345,7 +345,7 @@ def Model_Creation_Integer(model,Renewable_Penetration, Battery_Independency):
     
     # Variables associated to the solar panels
       
-    model.Renewable_Units = Var(model.renewable_source, within=NonNegativeReals,bounds= (0,300))
+    model.Renewable_Units = Var(model.renewable_source, within=NonNegativeReals,bounds= (0,1000))
     
     # Variables associated to the battery bank
     model.Battery_Nominal_Capacity = Var(within=NonNegativeReals,bounds= (0,700000)) # Capacity of the battery bank in Wh

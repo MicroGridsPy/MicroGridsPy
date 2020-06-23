@@ -111,7 +111,7 @@ python Micro-Grids.py
 
 Additional parameters can be changed in the Microgrids.py, they are in explain in the the file. The formulation can be change by changing the variable "formulation" in the Micro-Grids file. if the value is set to LP then the problem is solved with the LP formulation for the sizing problem. If the value is set to Integer then the problem is solved as a MILP formulation for the sizing problem. 
 
-To run the instance from the paper, copy the files in the Micro-Grids/MicroGrids/Example/...... folder that you want to reproduce  in the Micro-Grids/MicroGrids/Example and then run the Micro-Grids.py script. It is important to note that solving the MILP models requiere high computational capacity, ideally a computer with more than 32 GB of ram should be used. For Help on how to improve the computational efficiency or any other kind of support, please contact Sergio Balderrama. 
+To run the instance from the paper, copy the files in the Micro-Grids/MicroGrids/Example/...... folder that you want to reproduce  in the Micro-Grids/MicroGrids/Example and then run the Micro-Grids.py script. It is important to note that solving the MILP models requiere high computational capacity, ideally a computer with more than 32 GB of ram should be used. For Help on how to improve the computational efficiency or any other kind of support, please contact Sergio Balderrama. For a newer version of the model visit : https://github.com/MicroGridsPy/Micro-Grids.
 
 ### Outputs
 
