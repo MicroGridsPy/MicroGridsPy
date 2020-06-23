@@ -95,11 +95,11 @@ Any of the following solvents can be used during the optimization  process in th
 
 The Micro-grids library needs the following input files:
 
-*Data.dat                        Txt file 	In this file the value of the parameters are set for the LP problems
-*Data_Integer.dat                Txt file 	In this file the value of the parameters are set for the MILP problems
-*Demand.xls			 Excel file	The demand of energy of the system for each period is set in this file
-*PV_Energy.xls			 Excel file	The energy yield in each period from one PV is set in this file,it is used for the dispatch optimization			
-*Renewable_Energy.xls		 Excel file	The energy yield in each period from one renewable source is set in this file, it is used for the LP and MILP optimizations	
+* Data.dat: In this file the value of the parameters are set for the LP problems
+* Data_Integer.dat: In this file the value of the parameters are set for the MILP problems
+* Demand.xls: The demand of energy of the system for each period is set in this file
+* PV_Energy.xls: The energy yield in each period from one PV is set in this file,it is used for the dispatch optimization			
+* Renewable_Energy.xls: The energy yield in each period from one renewable source is set in this file, it is used for the LP and MILP optimizations	
 
 
 Run Micro-Grids library
@@ -111,7 +111,7 @@ python Micro-Grids.py
 
 Additional parameters can be changed in the Microgrids.py, they are in explain in the the file. The formulation can be change by changing the variable "formulation" in the Micro-Grids file. if the value is set to LP then the problem is solved with the LP formulation for the sizing problem. If the value is set to Integer then the problem is solved as a MILP formulation for the sizing problem. 
 
-To run the instance from the paper, copy the files in the Micro-Grids/MicroGrids/Example/...... folder that you want to reproduce  in the Micro-Grids/MicroGrids/Example and then run the Micro-Grids.py script. It is important to note that solving the MILP models requiere high computational capacity, ideally a computer with more than 32 GB of ram should be used. For Help on how to improve the computational efficiency, please contact Sergio Balderrama. 
+To run the instance from the paper, copy the files in the Micro-Grids/MicroGrids/Example/...... folder that you want to reproduce  in the Micro-Grids/MicroGrids/Example and then run the Micro-Grids.py script. It is important to note that solving the MILP models requiere high computational capacity, ideally a computer with more than 32 GB of ram should be used. For Help on how to improve the computational efficiency or any other kind of support, please contact Sergio Balderrama. 
 
 ### Outputs
 
