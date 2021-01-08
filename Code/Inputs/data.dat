@@ -1,0 +1,79 @@
+param: Periods := 8760;                                     # Periods considered in one year (8760h/y in the example)
+param: Years := 2;                                         # Total duration of the project
+param: Step_Duration := 20;                                 # Duration (in years) of each investment decision step in which the project lifetime will be split
+param: Min_Last_Step_Duration := 1;                         # Minimum duration (in years) of the last investment decision step, in case of non-homogeneous divisions of the project lifetime 
+param: StartDate := '01/01/2019 00:00:00';                  # Start date of the project
+param: Delta_Time := 1.0;                                   # Time step in hours [do not change]
+param: Scenarios := 1;                                      # Number of scenarios to consider within the optimisation
+param: Scenario_Weight :=                                   # Occurrence probability of each scenario [%]
+1      1;
+
+
+param: Discount_Rate := 0.1;                                  # Real discount rate accounting also for inflation
+param: Investment_Cost_Limit := 500000;                     # Upper limit to investment cost [USD] (considered only in case Optimization_Goal='Operation cost')
+
+
+param: RES_Sources := 2;                                    # Number of Renewable Energy Sources (RES) types
+param: RES_Names :=                                         # Renewable Energy Sources (RES) names
+1      'PV panels'
+2      'Wind turbines';
+param: RES_Nominal_Capacity :=                              # Single unit capacity of each type of Renewable Energy Source (RES) [W] 
+1      800
+2      25000;                                                                                                
+param: RES_Inverter_Efficiency :=                           # Efficiency [%] of the inverter connected to each Renewable Energy Source (RES) (put 1 in case of AC bus)
+1	   0.96
+2      1;
+param: RES_Specific_Investment_Cost :=                      # Specific investment cost for each type of Renewable Energy Source (RES) [USD/W]
+1      4
+2      5;   
+param: RES_Specific_OM_Cost :=                              # O&M cost for each type of Renewable Energy Source (RES) as a fraction of specific investment cost [%]
+1      0.02                                                       
+2      0.02;                                                         
+param: RES_Lifetime :=                                      # Lifetime of each Renewable Energy Source (RES) [y]
+1      20
+2      20;
+
+
+param: Battery_Specific_Investment_Cost := 0.40;            # Specific investment cost of the battery bank [USD/Wh]
+param: Battery_Specific_Electronic_Investment_Cost := 0.20; # Specific investment cost of non-replaceable parts (electronics) of the battery bank [USD/Wh]
+param: Battery_Specific_OM_Cost:= 0.02;                     # O&M cost of the battery bank as a fraction of specific investment cost [%]
+param: Battery_Discharge_Battery_Efficiency := 0.96;        # Discharge efficiency of the battery bank [%]
+param: Battery_Charge_Battery_Efficiency := 0.96;           # Charge efficiency of the battery bank [%]
+param: Battery_Depth_of_Discharge := 0.2;                   # Depth of discharge of the battery bank [%]
+param: Maximum_Battery_Discharge_Time := 5;                 # Maximum time to discharge the battery bank [h]
+param: Maximum_Battery_Charge_Time := 5;                    # Maximum time to charge the battery bank [h]
+param: Battery_Cycles := 5000;                              # Maximum number of cycles before degradation of the battery [-]
+param: Battery_Initial_SOC := 1;                            # Battery initial state of charge [%]
+
+
+param: Generator_Types := 1;                                # Number of different types of gensets 
+param: Generator_Names :=                                   # Generator names
+1      'Diesel Genset';
+param: Generator_Efficiency :=                              # Average generator efficiency of each generator type [%]
+1      0.30;                                                   
+param: Generator_Specific_Investment_Cost :=                # Specific investment cost for each generator type [USD/W]
+1      0.3;
+param: Generator_Specific_OM_Cost :=                        # O&M cost for each generator type as a fraction of specific investment cost [%]
+1	   0.05;                                                   
+param: Generator_Lifetime :=
+1      20;
+param: Fuel_Names :=                                        # Fuel names (to be specified for each generator, even if they use the same fuel)
+1      'Diesel';
+param: Fuel_Specific_Cost :=                                # Specific fuel cost for each generator type [USD/lt]
+1      1.1;
+param: Fuel_LHV :=                                          # Fuel lower heating value (LHV) for each generator type [Wh/lt]
+1	   9840;
+
+
+param: Lost_Load_Fraction := 0.0;                           # Maximum admittable loss of load [%]
+param: Lost_Load_Specific_Cost := 0.0;                      # Value of the unmet load [USD/Wh]
+
+
+param: RES_Colors :=                                        # HEX color code for RES in the plots
+1      'FF8800'
+2      '43AA8B';
+param: Battery_Color := '4CC9F0';                           # HEX color code for the battery bank in the plots 
+param: Generator_Colors :=                                  # HEX color code for generators in the plots
+1      '00509D';
+param: Lost_Load_Color := 'F21B3F';                         # HEX color code for lost load in the plots
+param: Curtailment_Color := 'FFD500';                       # HEX color code for curtailment in the plots
