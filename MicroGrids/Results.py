@@ -1593,7 +1593,7 @@ def energy_check(instance):
         print(comparation_4)
     
         # geset test
-        
+        print('Gen test')
         gen_ene = pd.read_excel('Results/Results.xls',sheet_name= 'Generator Time Series'
                                   ,index_col=0,Header=None)
        
@@ -1605,7 +1605,7 @@ def energy_check(instance):
             Generator_Total_Energy[0] +=   gen_ene[name]
                 
         comparation_5 = Energy_Demand[ge] == Generator_Total_Energy[0]
-        comparation_5 = pd.Series(comparation_3).all()
+        comparation_5 = pd.Series(comparation_5).all()
         comparation_6 = round(Energy_Demand[ge].sum(),3) == round(Generator_Total_Energy[0].sum(),3)
         print(comparation_5)
         print(comparation_6)
