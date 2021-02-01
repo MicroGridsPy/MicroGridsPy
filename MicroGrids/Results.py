@@ -423,29 +423,29 @@ def Load_results1(instance):
                                         +Scenario_Cost.loc['PV OyM Cost (USD)',name_5]
                                         +Scenario_Cost.loc['Battery OyM Cost (USD)',name_5])
 # Present values with capital recovery factor        
-#        Scenario_Cost.loc['Present Gen Cost (USD)',name_5] = Scenario_Cost.loc[name_4,name_5]/Project_Data['Capital Recovery Factor']
-#        if instance.Lost_Load_Probability > 0:
-#            Scenario_Cost.loc['Present Lost Load Cost (USD)',name_5] = Scenario_Cost.loc[name_1,name_5]/Project_Data['Capital Recovery Factor']
-#        Scenario_Cost.loc['Present Bat Out Cost (USD)',name_5] = Scenario_Cost.loc[name_2,name_5]/Project_Data['Capital Recovery Factor']
-#        Scenario_Cost.loc['Present Bat In Cost (USD)',name_5] = Scenario_Cost.loc[name_3,name_5]/Project_Data['Capital Recovery Factor']
-#        Scenario_Cost.loc['Present Bat Reposition Cost (USD)',name_5] = (Scenario_Cost.loc[name_2,name_5] + Scenario_Cost.loc[name_3,name_5])/Project_Data['Capital Recovery Factor']
-#        Scenario_Cost.loc['Present OyM Cost (USD)',name_5] = Scenario_Cost.loc['OyM (USD)',name_5]/Project_Data['Capital Recovery Factor']
-#        Scenario_Cost.loc['Present Operation Cost (USD)',name_5] = Scenario_Cost[name_5]['Operation Cost (USD)']/Project_Data['Capital Recovery Factor']
-#        Scenario_Cost.loc['Present Operation Cost Weighted (USD)',name_5] = (Scenario_Cost[name_5]['Present Operation Cost (USD)']
-#                                                                    *Scenario_Information[name_5]['Scenario Weight'])
-#        
-# Present values with sum of the different years
-        
-        Scenario_Cost.loc['Present Gen Cost (USD)',name_5] = sum((Scenario_Cost.loc[name_4,name_5]/((1+Discount_rate)**period) for period in range(1,Years+1)))
+        Scenario_Cost.loc['Present Gen Cost (USD)',name_5] = Scenario_Cost.loc[name_4,name_5]/Project_Data['Capital Recovery Factor']
         if instance.Lost_Load_Probability > 0:
-            Scenario_Cost.loc['Present Lost Load Cost (USD)',name_5] = sum((Scenario_Cost.loc[name_1,name_5]/((1+Discount_rate)**period) for period in range(1,Years+1)))
-        Scenario_Cost.loc['Present Bat Out Cost (USD)',name_5] = sum((Scenario_Cost.loc[name_2,name_5]/((1+Discount_rate)**period) for period in range(1,Years+1)))
-        Scenario_Cost.loc['Present Bat In Cost (USD)',name_5] = sum((Scenario_Cost.loc[name_2,name_5]/((1+Discount_rate)**period) for period in range(1,Years+1)))
-        Scenario_Cost.loc['Present Bat Reposition Cost (USD)',name_5] = sum(((Scenario_Cost.loc[name_2,name_5] + Scenario_Cost.loc[name_3,name_5])/((1+Discount_rate)**period) for period in range(1,Years+1)))
-        Scenario_Cost.loc['Present OyM Cost (USD)',name_5] = sum((Scenario_Cost.loc['OyM (USD)',name_5]/((1+Discount_rate)**period) for period in range(1,Years+1)))
-        Scenario_Cost.loc['Present Operation Cost (USD)',name_5] = sum((Scenario_Cost[name_5]['Operation Cost (USD)']/((1+Discount_rate)**period) for period in range(1,Years+1)))
+            Scenario_Cost.loc['Present Lost Load Cost (USD)',name_5] = Scenario_Cost.loc[name_1,name_5]/Project_Data['Capital Recovery Factor']
+        Scenario_Cost.loc['Present Bat Out Cost (USD)',name_5] = Scenario_Cost.loc[name_2,name_5]/Project_Data['Capital Recovery Factor']
+        Scenario_Cost.loc['Present Bat In Cost (USD)',name_5] = Scenario_Cost.loc[name_3,name_5]/Project_Data['Capital Recovery Factor']
+        Scenario_Cost.loc['Present Bat Reposition Cost (USD)',name_5] = (Scenario_Cost.loc[name_2,name_5] + Scenario_Cost.loc[name_3,name_5])/Project_Data['Capital Recovery Factor']
+        Scenario_Cost.loc['Present OyM Cost (USD)',name_5] = Scenario_Cost.loc['OyM (USD)',name_5]/Project_Data['Capital Recovery Factor']
+        Scenario_Cost.loc['Present Operation Cost (USD)',name_5] = Scenario_Cost[name_5]['Operation Cost (USD)']/Project_Data['Capital Recovery Factor']
         Scenario_Cost.loc['Present Operation Cost Weighted (USD)',name_5] = (Scenario_Cost[name_5]['Present Operation Cost (USD)']
                                                                     *Scenario_Information[name_5]['Scenario Weight'])
+        
+# Present values with sum of the different years
+        
+        # Scenario_Cost.loc['Present Gen Cost (USD)',name_5] = sum((Scenario_Cost.loc[name_4,name_5]/((1+Discount_rate)**period) for period in range(1,Years+1)))
+        # if instance.Lost_Load_Probability > 0:
+        #     Scenario_Cost.loc['Present Lost Load Cost (USD)',name_5] = sum((Scenario_Cost.loc[name_1,name_5]/((1+Discount_rate)**period) for period in range(1,Years+1)))
+        # Scenario_Cost.loc['Present Bat Out Cost (USD)',name_5] = sum((Scenario_Cost.loc[name_2,name_5]/((1+Discount_rate)**period) for period in range(1,Years+1)))
+        # Scenario_Cost.loc['Present Bat In Cost (USD)',name_5] = sum((Scenario_Cost.loc[name_2,name_5]/((1+Discount_rate)**period) for period in range(1,Years+1)))
+        # Scenario_Cost.loc['Present Bat Reposition Cost (USD)',name_5] = sum(((Scenario_Cost.loc[name_2,name_5] + Scenario_Cost.loc[name_3,name_5])/((1+Discount_rate)**period) for period in range(1,Years+1)))
+        # Scenario_Cost.loc['Present OyM Cost (USD)',name_5] = sum((Scenario_Cost.loc['OyM (USD)',name_5]/((1+Discount_rate)**period) for period in range(1,Years+1)))
+        # Scenario_Cost.loc['Present Operation Cost (USD)',name_5] = sum((Scenario_Cost[name_5]['Operation Cost (USD)']/((1+Discount_rate)**period) for period in range(1,Years+1)))
+        # Scenario_Cost.loc['Present Operation Cost Weighted (USD)',name_5] = (Scenario_Cost[name_5]['Present Operation Cost (USD)']
+        #                                                             *Scenario_Information[name_5]['Scenario Weight'])
     
     Scenario_Cost.to_excel(writer, sheet_name='Scenario Costs')
     
