@@ -78,7 +78,7 @@ elif formulation =='Dispatch':
     Energy_Mix_Dispatch(instance,Time_Series)
 
 end = time.time()
-print('The optimization taok ' + str(round(end - start,0)) + ' segundos')
+print('The optimization taok ' + str(round(end - start,0)) + ' seconds')
 
-energy_check(instance)
+# energy_check(instance)
 
