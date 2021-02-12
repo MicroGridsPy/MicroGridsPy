@@ -1,4 +1,4 @@
-MicroGridsPy - Teaching version
+MicroGridsPy - Multi Year Capacity Expansion
 ========================
 
 ### Description
@@ -23,19 +23,18 @@ Sylvain Quoilin <br/>
 University of Liege, Belgium <br/>
 E-mail: squoilin@ulg.ac.be  <br/>
 
-*TEACHING VERSION*<br/>
-Francesco Lombardi, Giulia Guidicini, Lorenzo Rinaldi, Nicolò Stevanato <br/>
+*Current Version*<br/>
+Lorenzo Rinaldi, Giulia Guidicini, Nicolò Stevanato, Francesco Lombardi <br/>
 Politecnico di Milano, Italy <br/>
 E-mail: lorenzo.rinaldi@polimi.it <br/>
         francesco.lombardi@polimi.it <br/>
  
 ### Required libraries
 
-The python libraries needed to run Micro-Grids are the following:
+To run the model the ad-hoc environmens are available as a branch of this repository
 
-    -Pyomo Optimization object library, interface to LP solver (e.g. CPLEX)
-    -Pandas for input and result data handling
-    -Matplotlib for plotting
+ - mgp.yml
+ - mgp_mac.yml
 
 
 ### Licence
