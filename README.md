@@ -1,5 +1,6 @@
 MicroGridsPy - Multi Year Capacity Expansion
 ========================
+https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MYCE/Logo.png
 
 ### Description
 
