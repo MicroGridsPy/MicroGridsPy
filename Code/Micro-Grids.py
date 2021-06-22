@@ -26,6 +26,7 @@ start = time.time()         # Start time counter
 model = AbstractModel()     # Define type of optimization problem
 
 
+
 #%% Input parameters
 Optimization_Goal = 'NPC'   # Options: NPC / Operation cost. It allows to switch between a NPC-oriented optimization and a NON-ACTUALIZED Operation Cost-oriented optimization
 Renewable_Penetration = 0   # Fraction of electricity produced by renewable sources. Number from 0 to 1.
