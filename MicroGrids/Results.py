@@ -777,7 +777,7 @@ def Load_results1_Dispatch(instance):
     :return: A dataframe called Time_series with the values of the variables 
     that depend of the periods.    
     '''
-    path = 'Results/Results.xls'
+    path = 'Results/Results_Dispatch.xls'
     writer = ExcelWriter(path, engine='xlsxwriter')
     
     # Load the variables that does not depend of the periods in python dyctionarys
@@ -925,6 +925,8 @@ def Load_results1_Dispatch(instance):
         Project_Data['Lost Load Probability (%)'] = instance.Lost_Load_Probability*100
     else:
         Project_Data['Lost Load Probability (%)'] = instance.Lost_Load_Probability
+    
+    Project_Data['Curtailment Unitary Cost (USD/kWh)'] = instance.Curtailment_Unitary_Cost
         
     Project_Data.to_excel(writer, sheet_name='Project Data') 
 
@@ -998,8 +1000,8 @@ def Load_results1_Dispatch(instance):
             Cost_Time_Series.loc[t,name_4_1] = Fuel_Cost
             
             if instance.Curtailment_Unitary_Cost > 0:
-                name_6 = 'Curtailment ' + str(s) + ' (kWh)'
-                name_6_1 = 'Curtailment Cost ' + str(s) + ' (USD)' 
+                name_6 = 'Curtailment (kWh)'
+                name_6_1 = 'Curtailment Cost (USD)' 
                 Cost_Time_Series.loc[t,name_6_1] = (Scenarios[name_6][t]*Project_Data['Curtailment Unitary Cost (USD/kWh)'])
             
     Cost_Time_Series.to_excel(writer, sheet_name='Cost Time Series')    

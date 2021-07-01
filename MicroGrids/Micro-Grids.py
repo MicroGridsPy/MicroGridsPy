@@ -21,7 +21,7 @@ formulation = 'Dispatch'
 Renewable_Penetration  =  0 # a number from 0 to 1
 Battery_Independency   =  0    # number of days of battery independency
 Lost_Load_Probability  =  0.1  # Allowed percentage of unmed demand in the system
-Curtailment_Unitary_Cost =  0 # probando curtailment cost 0
+Curtailment_Unitary_Cost =  1 # probando curtailment cost 0
 
 S = 1 # Plot scenario
 Plot_Date = '31/01/2016 00:00:00' # Day-Month-Year
