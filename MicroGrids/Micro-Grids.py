@@ -14,13 +14,13 @@ import time
 start = time.time()
 
 # Type of problem formulation:
-formulation = 'MILP'
+formulation = 'Dispatch'
 #datapath='Example/Dispatch/'
 # Renewable energy penetrarion
 
 Renewable_Penetration  =  0 # a number from 0 to 1
 Battery_Independency   =  0    # number of days of battery independency
-Lost_Load_Probability  =  0  # Allowed percentage of unmed demand in the system
+Lost_Load_Probability  =  0.1  # Allowed percentage of unmed demand in the system
 Curtailment_Unitary_Cost =  0 # probando curtailment cost 0
 
 S = 1 # Plot scenario
@@ -63,22 +63,17 @@ elif formulation == 'Binary':
     Results = Load_results2_binary(instance) # Save results into a excel file
     
 elif formulation =='Dispatch':
+    
+    model.Lost_Load_Probability =  Lost_Load_Probability  
+    model.Curtailment_Unitary_Cost = Curtailment_Unitary_Cost
     Model_Creation_Dispatch(model)
     instance = Model_Resolution_Dispatch(model)
     # Extract the results of energy from the instance and save it in a excel file 
-    Time_Series = Load_results1_Dispatch(instance) 
-    Results = Load_results2_Dispatch(instance)     
-    # Energy Plot
-    Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime)
-    # Economic analysis
-    Time_Series = Load_results1_Dispatch(instance) 
-    Economic_Results = Dispatch_Economic_Analysis(Results,Time_Series)
-    # Data Analisys
-    Print_Results_Dispatch(instance, Economic_Results)
-    Energy_Mix_Dispatch(instance,Time_Series)
+    Data = Load_results1_Dispatch(instance) 
+
 
 end = time.time()
-print('The optimization taok ' + str(round(end - start,0)) + ' seconds')
+print('The optimization took ' + str(round(end - start,0)) + ' seconds')
 
 # energy_check(instance)
 

@@ -305,9 +305,9 @@ def Model_Creation_Dispatch(model):
     
     '''
     from pyomo.environ import  Param, RangeSet, NonNegativeReals, Var, NonNegativeIntegers
-    from Initialize import Initialize_Demand,Initialize_Renewable_Energy, Initialize_PV_Energy,\
-    Initialize_Demand_Dispatch, Initialize_PV_Energy_Dispatch, Marginal_Cost_Generator_Dispatch,\
-    Start_Cost_Dispatch,Marginal_Cost_Generator_1_Dispatch, Battery_Reposition_Cost  # Import library with initialitation funtions for the parameters
+    from Initialize import Initialize_Demand, \
+    Initialize_Demand_Dispatch, Initialize_Renewable_Energy_Dispatch, Marginal_Cost_Generator,\
+    Start_Cost, Marginal_Cost_Generator_1, Battery_Reposition_Cost  # Import library with initialitation funtions for the parameters
     
     
     # Time parameters
@@ -325,7 +325,7 @@ def Model_Creation_Dispatch(model):
     model.Renewable_Inverter_Efficiency = Param(model.renewable_source) # Efficiency of the inverter in %
     model.Renewable_Energy_Production = Param(model.renewable_source,
                                               model.periods, within=NonNegativeReals, 
-                                              initialize=Initialize_Renewable_Energy) # Energy produccion of a solar panel in W
+                                              initialize=Initialize_Renewable_Energy_Dispatch) # Energy produccion of a solar panel in W
 
     
     
@@ -344,19 +344,19 @@ def Model_Creation_Dispatch(model):
     model.Unitary_Battery_Reposition_Cost = Param(within=NonNegativeReals, 
                                           initialize=Battery_Reposition_Cost)
     # Parametes of the diesel generator
-    model.Generator_Efficiency = Param(within=NonNegativeReals)
-    model.Generator_Min_Out_Put = Param(within=NonNegativeReals)
-    model.Low_Heating_Value = Param() # Low heating value of the diesel in W/L
-    model.Diesel_Cost = Param(within=NonNegativeReals) # Cost of diesel in USD/L
-    model.Marginal_Cost_Generator_1 = Param(initialize=Marginal_Cost_Generator_1_Dispatch)
-    model.Cost_Increase = Param(within=NonNegativeReals)
-    model.Generator_Nominal_Capacity = Param(within=NonNegativeReals)
-    model.Start_Cost_Generator = Param(within=NonNegativeReals, initialize=Start_Cost_Dispatch)  
-    model.Marginal_Cost_Generator = Param(initialize=Marginal_Cost_Generator_Dispatch)
+    model.Generator_Efficiency = Param(model.generator_type, within=NonNegativeReals)
+    model.Generator_Min_Out_Put = Param(model.generator_type, within=NonNegativeReals)
+    model.Low_Heating_Value = Param(model.generator_type) # Low heating value of the diesel in W/L
+    model.Fuel_Cost = Param(model.generator_type, within=NonNegativeReals) # Cost of diesel in USD/L
+    model.Marginal_Cost_Generator_1 = Param(model.generator_type, initialize=Marginal_Cost_Generator_1)
+    model.Cost_Increase = Param(model.generator_type, within=NonNegativeReals)
+    model.Generator_Nominal_Capacity = Param(model.generator_type, within=NonNegativeReals)
+    model.Start_Cost_Generator = Param(model.generator_type, within=NonNegativeReals, initialize=Start_Cost)  
+    model.Marginal_Cost_Generator = Param(model.generator_type, initialize=Marginal_Cost_Generator)
     
     # Parameters of the Energy balance                  
     model.Energy_Demand = Param(model.periods, initialize=Initialize_Demand_Dispatch) # Energy Energy_Demand in W 
-    model.Lost_Load_Probability = Param() # Lost load probability in %
+
     model.Value_Of_Lost_Load = Param(within=NonNegativeReals) # Value of lost load in USD/W
     
     # Parameters of the proyect
@@ -371,25 +371,16 @@ def Model_Creation_Dispatch(model):
     model.State_Of_Charge_Battery = Var(model.periods, within=NonNegativeReals) # State of Charge of the Battery in wh
     model.Maximun_Charge_Power= Var(within=NonNegativeReals) # Maximun charge power in w
     model.Maximun_Discharge_Power = Var(within=NonNegativeReals) #Maximun discharge power in w
-    model.Battery_Yearly_cost = Var(within=NonNegativeReals)
+
     
      # Variables associated to the diesel generator
     
-    model.Period_Total_Cost_Generator = Var(model.periods, within=NonNegativeReals)    
-    model.Energy_Generator_Total = Var(model.periods, within=NonNegativeReals)
-    model.Integer_generator = Var(within=NonNegativeIntegers)
-    model.Total_Cost_Generator = Var(within=NonNegativeReals)  
-    model.Generator_Total_Period_Energy = Var(model.periods, within=NonNegativeReals)   
-    model.Generator_Energy_Integer = Var(model.periods, within=NonNegativeIntegers)
-    model.Last_Energy_Generator = Var(model.periods, within=NonNegativeReals)
+
+    model.Generator_Energy = Var(model.generator_type, model.periods, within=NonNegativeReals)
+    model.Generator_Energy_Integer = Var(model.generator_type, model.periods, within=NonNegativeIntegers)
     
     # Varialbles associated to the energy balance
     model.Lost_Load = Var(model.periods, within=NonNegativeReals) # Energy not suply by the system kWh
     model.Energy_Curtailment = Var(model.periods, within=NonNegativeReals) # Curtailment of solar energy in kWh
     
-    # Variables associated to the project
-    
-    
-    model.Scenario_Lost_Load_Cost = Var(within=NonNegativeReals) ####  
-   
 

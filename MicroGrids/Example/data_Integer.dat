@@ -20,7 +20,7 @@ param: Charge_Battery_Efficiency := 0.98;
 
 param: Deep_of_Discharge := 0.1; #2
 
-param: Value_Of_Lost_Load := 0.0001;
+param: Value_Of_Lost_Load := 0.03;
 
 param: Maximun_Battery_Discharge_Time := 4;
 

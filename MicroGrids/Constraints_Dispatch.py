@@ -13,9 +13,8 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
     # Generator operation cost
     foo = []
     for g in range(1,model.Generator_Type+1):
-        for s in model.scenario:
-            for t in range(1,model.Periods+1):
-                foo.append((s,g,t))
+         for t in range(1,model.Periods+1):
+                foo.append((g,t))
 
         
     Generator_Cost =  sum(model.Generator_Energy_Integer[g,t]*model.Start_Cost_Generator[g] + 
@@ -23,22 +22,19 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
                              for g,t in foo)     
     Operation_Cost = Generator_Cost   
     # Battery opereation cost
-    foo=[]
-    for s in model.scenario:
-        for t in range(1,model.Periods+1):
-            foo.append((s,t))    
-            
-    Battery_cost_in = sum(model.Energy_Battery_Flow_In[s,t]*model.Unitary_Battery_Reposition_Cost
-                          *model.Scenario_Weight[s]  for s,t in foo)
-    Battery_cost_out = sum(model.Energy_Battery_Flow_Out[s,t]*model.Unitary_Battery_Reposition_Cost
-                           *model.Scenario_Weight[s] for s,t in foo)
+    
+                
+    Battery_cost_in = sum(model.Energy_Battery_Flow_In[t]*model.Unitary_Battery_Reposition_Cost
+                           for t in range(1,model.Periods+1))
+    Battery_cost_out = sum(model.Energy_Battery_Flow_Out[t]*model.Unitary_Battery_Reposition_Cost
+                            for t in range(1,model.Periods+1))
     Operation_Cost += Battery_cost_in + Battery_cost_out
     
     
     # Cost of the Lost load
     if model.Lost_Load_Probability > 0:
-        Lost_Load_Cost =  sum(model.Lost_Load[s,t]*model.Value_Of_Lost_Load
-                              *model.Scenario_Weight[s] for t in model.periods)
+        Lost_Load_Cost =  sum(model.Lost_Load[t]*model.Value_Of_Lost_Load
+                               for t in model.periods)
         Operation_Cost +=  Lost_Load_Cost
         
     # Curtailment cost
@@ -52,31 +48,31 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
 
 ############################################# Diesel generator constraints ###########################################
 
-def Generator_Bounds_Min_Integer(model,s, g,t): # Maximun energy output of the diesel generator
+def Generator_Bounds_Min_Integer(model, g,t): # Maximun energy output of the diesel generator
     ''' 
     This constraint ensure that each segment of the generator does not pass a 
     minimun value.
     :param model: Pyomo model as defined in the Model_creation library.
     '''
-    return model.Generator_Nominal_Capacity[g]*model.Generator_Min_Out_Put[g] + (model.Generator_Energy_Integer[s,g,t]-1)*model.Generator_Nominal_Capacity[g] <= model.Generator_Energy[s,g,t]                                                                                                
+    return model.Generator_Nominal_Capacity[g]*model.Generator_Min_Out_Put[g] + (model.Generator_Energy_Integer[g,t]-1)*model.Generator_Nominal_Capacity[g] <= model.Generator_Energy[g,t]                                                                                                
                                                                                                                              
-def Generator_Bounds_Max_Integer(model,s, g,t): # Maximun energy output of the diesel generator
+def Generator_Bounds_Max_Integer(model, g,t): # Maximun energy output of the diesel generator
     ''' 
     This constraint ensure that each segment of the generator does not pass a 
     minimun value.
     :param model: Pyomo model as defined in the Model_creation library.
     '''
-    return model.Generator_Energy[s,g,t] <= model.Generator_Nominal_Capacity[g]*model.Generator_Energy_Integer[s,g,t]                                                                                                
+    return model.Generator_Energy[g,t] <= model.Generator_Nominal_Capacity[g]*model.Generator_Energy_Integer[g,t]                                                                                                
 
 
 
-def Energy_Genarator_Energy_Max_Integer(model,s,g,t):
+def Energy_Genarator_Energy_Max_Integer(model,g,t):
     ''' 
     This constraint ensure that the total energy in the generators does not  pass
     a maximun value.
     :param model: Pyomo model as defined in the Model_creation library.
     '''
-    return model.Generator_Energy[s,g,t] <= model.Generator_Nominal_Capacity[g]*model.Integer_generator[g]        
+    return model.Generator_Energy[g,t] <= model.Generator_Nominal_Capacity[g]        
 
 
 ############################################# Battery constraints ####################################################
@@ -148,21 +144,6 @@ def Max_Bat_out(model, t): #minimun flow of energy for the discharge fase
     return model.Energy_Battery_Flow_Out[t] <= model.Maximun_Discharge_Power*model.Delta_Time
 
 
-def Battery_Reposition_Cost(model):
-    '''
-    This funtion calculate the reposition of the battery after a stated time of use. 
-    
-    :param model: Pyomo model as defined in the Model_creation library.
-    
-    '''
-    foo=[]
-    for t in range(1,model.Periods+1):
-            foo.append((t))    
-            
-    Battery_cost_in = sum(model.Energy_Battery_Flow_In[t]*model.Unitary_Battery_Reposition_Cost for t in range(1,model.Periods+1))
-    Battery_cost_out = sum(model.Energy_Battery_Flow_Out[t]*model.Unitary_Battery_Reposition_Cost for t in range(1,model.Periods+1))
-     
-    return  model.Battery_Yearly_cost == Battery_cost_out + Battery_cost_in 
   
 
 
@@ -180,13 +161,13 @@ def Energy_balance(model, t): # Energy balance
         Foo.append((r,t))
 
     Energy_Sources = sum(model.Renewable_Energy_Production[r,t]*model.Renewable_Inverter_Efficiency[r]
-                                 *model.Renewable_Units[r] for r,t in Foo)
+                                  for r,t in Foo)
     
     foo=[]
     for g in model.generator_type:
         foo.append((g,t))
         
-    Energy_Sources = sum(model.Generator_Energy[i] for i in foo)  
+    Energy_Sources += sum(model.Generator_Energy[i] for i in foo)  
         
     if model.Lost_Load_Probability > 0:
         Energy_Sources += model.Lost_Load[t]
