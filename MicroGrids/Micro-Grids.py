@@ -5,7 +5,7 @@ from pyomo.environ import  AbstractModel
 from Results import Plot_Energy_Total, Load_results1,  Load_results1_binary, \
 Load_results2_binary, Energy_Mix, Print_Results,Print_Results_Dispatch, \
 Load_results1_Dispatch, Load_results2_Dispatch, Energy_Mix_Dispatch, \
-Dispatch_Economic_Analysis, Integer_Time_Series, energy_check
+Dispatch_Economic_Analysis, Integer_Time_Series, energy_check, Plot_Energy_Total_Dispatch
 from Model_Creation import Model_Creation, Model_Creation_binary,\
 Model_Creation_Dispatch
 from Model_Resolution import Model_Resolution, Model_Resolution_binary,\
@@ -20,11 +20,11 @@ formulation = 'Dispatch'
 
 Renewable_Penetration  =  0 # a number from 0 to 1
 Battery_Independency   =  0    # number of days of battery independency
-Lost_Load_Probability  =  0.1  # Allowed percentage of unmed demand in the system
-Curtailment_Unitary_Cost =  1 # probando curtailment cost 0
+Lost_Load_Probability  =  0  # Allowed percentage of unmed demand in the system, from 0 to 1.
+Curtailment_Unitary_Cost =  0 # probando curtailment cost 0
 
 S = 1 # Plot scenario
-Plot_Date = '31/01/2016 00:00:00' # Day-Month-Year
+Plot_Date = '31/01/2017 00:00:00' # Day-Month-Year
 PlotTime = 5# Days of the plot
 plot = 'No Average' # 'No Average' or 'Average'
 
@@ -70,7 +70,9 @@ elif formulation =='Dispatch':
     instance = Model_Resolution_Dispatch(model)
     # Extract the results of energy from the instance and save it in a excel file 
     Data = Load_results1_Dispatch(instance) 
-
+    Time_Series = Data[1]
+    
+    Plot_Energy_Total_Dispatch(instance, Time_Series, plot, Plot_Date, PlotTime)
 
 end = time.time()
 print('The optimization took ' + str(round(end - start,0)) + ' seconds')
