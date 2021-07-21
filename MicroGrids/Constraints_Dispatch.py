@@ -74,10 +74,19 @@ def Energy_Genarator_Energy_Max_Integer(model,g,t):
     '''
     return model.Generator_Energy[g,t] <= model.Generator_Nominal_Capacity[g]        
 
-def equation_1(model, g, t):
+def Generator_Thermal_Energy(model,g,t): #JVS Thermal energy that can be recovered
     
-    return model.Generator_Energy[g,t]*model.Cogenaration_Efficiency[g]  == model.Energy_Battery_Flow_In[t]
+  # foo = []
+   # for g in range(1,model.Generator_Type+1):
+     #    for t in range(1,model.Periods+1):
+     #           foo.append((g,t))
+                
+    #if model.Generator_Energy[g,t] == 0:
+     #   model.Thermal_Energy[g,t] = 0
+    #else:
     
+    return model.Thermal_Energy[g,t] == (model.Generator_Nominal_Capacity[g]*model.Cogeneration_Efficiency[g])/model.Generator_Efficiency[g] - model.Generator_Energy[g,t]
+
 ############################################# Battery constraints ####################################################
 
 def State_of_Charge(model,t): # State of Charge of the battery

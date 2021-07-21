@@ -93,6 +93,11 @@ def Battery_Reposition_Cost(model):
     unitary_battery_cost = model.Battery_Invesment_Cost - model.Battery_Electronic_Invesmente_Cost
     a = unitary_battery_cost/(model.Battery_Cycles*2*(1-model.Deep_of_Discharge))
     return round(a,3) 
+
+#def CHP_Capacity(model,g):
+    
+    #a = (model.Generator_Nominal_Capacity[g]*model.Cogeneration_Efficiency[g])/model.Generator_Efficiency[g] 
+    #return round(a,3)
     
     
 Renewable_Energy = pd.read_excel('Example/Renewable_Energy.xls',index_col=0,Header=None) # open the PV energy yield file

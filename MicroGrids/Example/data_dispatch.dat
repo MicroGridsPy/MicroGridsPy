@@ -45,7 +45,7 @@ param: Cost_Increase :=
 param: Generator_Nominal_Capacity :=
 1   58; # the other result can be obtain changing this value to 30
 
-param: Cogenaration_Efficiency :=
+param: Cogeneration_Efficiency :=
 
 1   0.8;
 

@@ -307,7 +307,7 @@ def Model_Creation_Dispatch(model):
     from pyomo.environ import  Param, RangeSet, NonNegativeReals, Var, NonNegativeIntegers
     from Initialize import Initialize_Demand, \
     Initialize_Demand_Dispatch, Initialize_Renewable_Energy_Dispatch, Marginal_Cost_Generator,\
-    Start_Cost, Marginal_Cost_Generator_1, Battery_Reposition_Cost  # Import library with initialitation funtions for the parameters
+    Start_Cost, Marginal_Cost_Generator_1, Battery_Reposition_Cost # Import library with initialitation funtions for the parameters
     
     
     # Time parameters
@@ -353,7 +353,10 @@ def Model_Creation_Dispatch(model):
     model.Generator_Nominal_Capacity = Param(model.generator_type, within=NonNegativeReals)
     model.Start_Cost_Generator = Param(model.generator_type, within=NonNegativeReals, initialize=Start_Cost)  
     model.Marginal_Cost_Generator = Param(model.generator_type, initialize=Marginal_Cost_Generator)
-    model.Cogenaration_Efficiency = Param(model.generator_type)
+    model.Cogeneration_Efficiency = Param(model.generator_type,within=NonNegativeReals)
+    
+    #model.CHP_Capacity = Param(model.generator_type, within=NonNegativeReals)
+    
     # Parameters of the Energy balance                  
     model.Energy_Demand = Param(model.periods, initialize=Initialize_Demand_Dispatch) # Energy Energy_Demand in W 
 
@@ -378,6 +381,8 @@ def Model_Creation_Dispatch(model):
 
     model.Generator_Energy = Var(model.generator_type, model.periods, within=NonNegativeReals)
     model.Generator_Energy_Integer = Var(model.generator_type, model.periods, within=NonNegativeIntegers)
+    model.Thermal_Energy = Var(model.generator_type, model.periods, within=NonNegativeReals)
+    
     
     # Varialbles associated to the energy balance
     model.Lost_Load = Var(model.periods, within=NonNegativeReals) # Energy not suply by the system kWh

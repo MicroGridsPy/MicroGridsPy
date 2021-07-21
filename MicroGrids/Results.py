@@ -823,7 +823,10 @@ def Load_results1_Dispatch(instance):
     Energy_Demand = instance.Energy_Demand.extract_values()
     SOC = instance.State_Of_Charge_Battery.get_values()
     Generator_Energy = instance.Generator_Energy.get_values()
+    Thermal_Energy = instance.Thermal_Energy.get_values()    #JVS for thermal energy
+    
     Total_Generator_Energy = {}
+    Total_Thermal_Energy = {}       #JVS thermal energy
     
                 
 
@@ -831,7 +834,8 @@ def Load_results1_Dispatch(instance):
                 foo = []
                 for g in range(1,Number_Generator+1):
                     foo.append((g,t))
-                Total_Generator_Energy[t] = sum(Generator_Energy[i] for i in foo)    
+                Total_Generator_Energy[t] = sum(Generator_Energy[i] for i in foo) 
+                Total_Thermal_Energy[t] = sum(Thermal_Energy[i] for i in foo) 
     
     for t in range(1, Number_Periods+1):
     
@@ -841,7 +845,8 @@ def Load_results1_Dispatch(instance):
         Scenarios.loc[t,'Curtailment (kWh)']          =  Curtailment[t]
         Scenarios.loc[t,'Energy Demand (kWh)']        =  Energy_Demand[t]
         Scenarios.loc[t,'SOC (kWh)']                  =  SOC[t]
-        Scenarios.loc[t,'Gen energy (kWh)']           =  Total_Generator_Energy[t]
+        Scenarios.loc[t,'Gen energy (kWh)']           =  Total_Generator_Energy[t]     #JVS electric was added
+        Scenarios.loc[t,'Gen thermal energy (kWh)']           =  Total_Thermal_Energy[t]        #JVS for thermal energy
 
 
         if instance.Lost_Load_Probability > 0: 
@@ -894,13 +899,15 @@ def Load_results1_Dispatch(instance):
     Fuel_Cost = instance.Fuel_Cost.extract_values()
     Cost_Increase = instance.Cost_Increase.extract_values()       
     Generator_Nominal_Capacity = instance.Generator_Nominal_Capacity.extract_values()
+    Cogeneration_Efficiency = instance.Cogeneration_Efficiency.extract_values()     #JVS added for CHP efficiency
 
 
     for g in range(1, Number_Generator + 1):
                 Name = 'Generator ' + str(g)
                 Generator_Data.loc['Generator Nominal Capacity (kW)',Name] = Generator_Nominal_Capacity[g]
                 Generator_Data.loc['Generator Min Out Put',Name] = Generator_Min_Out_Put[g]
-                Generator_Data.loc['Generator Efficiency',Name] = Generator_Efficiency[g]
+                Generator_Data.loc['Generator Electric Efficiency',Name] = Generator_Efficiency[g]  #JVS changed the name added Electric
+                Generator_Data.loc['Generator CHP Efficiency',Name] = Cogeneration_Efficiency[g]    #JVS added CHP efficiency 
                 Generator_Data.loc['Low Heating Value (kWh/l)',Name] = Low_Heating_Value[g]
                 Generator_Data.loc['Fuel Cost (USD/l)',Name] = Fuel_Cost[g]
                 Generator_Data.loc['Cost Increase',Name] = Cost_Increase[g]
@@ -965,13 +972,15 @@ def Load_results1_Dispatch(instance):
          column_1 = 'Energy Generator ' + str(g)  + ' (kWh)' 
          column_2 = 'Integer Generator '  + str(g)
          column_3 = 'Fuel Cost '  + str(g) + ' (USD)' 
+         column_4 = 'Thermal Energy '  + str(g) + ' (kWh)' 
          Name =  'Generator ' + str(g)
          for t in range(1, Number_Periods + 1):
              Generator_Time_Series.loc[t,column_1] = Generator_Energy[g,t]
              Generator_Time_Series.loc[t,column_2] = Generator_Integer[g,t]
              Generator_Time_Series.loc[t,column_3] = (Generator_Integer[g,t]*Generator_Data.loc['Start Cost Generator (USD)',Name] 
                                         + Generator_Energy[g,t]*Generator_Data.loc['Marginal cost Partial load (USD/kWh)',Name] )
-            
+             Generator_Time_Series.loc[t,column_4] = Thermal_Energy[g,t]
+             
     Generator_Time_Series.index = Scenarios.index           
     Generator_Time_Series.to_excel(writer, sheet_name='Generator Time Series')       
     
@@ -1046,8 +1055,12 @@ def Load_results1_Dispatch(instance):
     
     Total_Fuel_Cost = Cost_Time_Series['Generator Cost (USD)'].sum()
     Total_Fuel_Cost = round(Total_Fuel_Cost,0)
-    
     print('The cost for fuel is ' + str(Total_Fuel_Cost) + ' USD')
+    
+    Total_Thermal_Energy = Generator_Time_Series['Thermal Energy '  + str(g) + ' (kWh)'].sum()
+    Total_Thermal_Energy = round(Total_Thermal_Energy,0)
+    
+    print('The total thermal energy is ' + str(Total_Thermal_Energy) + ' kWh')
     
     Total_Battery_Cost = Cost_Time_Series['Battery Flow Out (USD)'].sum() + Cost_Time_Series['Battery Flow In (USD)'].sum()
     Total_Battery_Cost = round(Total_Battery_Cost,0)

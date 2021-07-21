@@ -158,7 +158,7 @@ def Model_Resolution_Dispatch(model,datapath="Example/data_Dispatch.dat"):
     from Constraints_Dispatch import  Net_Present_Cost,  State_of_Charge,\
     Maximun_Charge, Minimun_Charge, Max_Bat_in, Max_Bat_out, \
     Energy_balance, Maximun_Lost_Load, \
-    Max_Power_Battery_Charge, equation_1, \
+    Max_Power_Battery_Charge, Generator_Thermal_Energy, \
     Max_Power_Battery_Discharge, Generator_Bounds_Min_Integer,\
     Generator_Bounds_Max_Integer,Energy_Genarator_Energy_Max_Integer
 
@@ -182,7 +182,7 @@ def Model_Resolution_Dispatch(model,datapath="Example/data_Dispatch.dat"):
     #Diesel Generator constraints
     model.GeneratorBoundsMin = Constraint(model.generator_type, model.periods, rule=Generator_Bounds_Min_Integer) 
     model.GeneratorBoundsMax = Constraint(model.generator_type, model.periods, rule=Generator_Bounds_Max_Integer)
-    model.equation1 = Constraint(model.generator_type, model.periods, rule = equation_1)
+    model.GeneratorThermalEnergy = Constraint(model.generator_type, model.periods, rule =Generator_Thermal_Energy)
     
     instance = model.create_instance("Example/data_dispatch.dat") # load parameters       
     opt = SolverFactory('gurobi') # Solver use during the optimization    
