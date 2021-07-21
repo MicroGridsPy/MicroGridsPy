@@ -74,7 +74,10 @@ def Energy_Genarator_Energy_Max_Integer(model,g,t):
     '''
     return model.Generator_Energy[g,t] <= model.Generator_Nominal_Capacity[g]        
 
-
+def equation_1(model, g, t):
+    
+    return model.Generator_Energy[g,t]*model.Cogenaration_Efficiency[g]  == model.Energy_Battery_Flow_In[t]
+    
 ############################################# Battery constraints ####################################################
 
 def State_of_Charge(model,t): # State of Charge of the battery

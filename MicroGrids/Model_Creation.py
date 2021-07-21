@@ -353,7 +353,7 @@ def Model_Creation_Dispatch(model):
     model.Generator_Nominal_Capacity = Param(model.generator_type, within=NonNegativeReals)
     model.Start_Cost_Generator = Param(model.generator_type, within=NonNegativeReals, initialize=Start_Cost)  
     model.Marginal_Cost_Generator = Param(model.generator_type, initialize=Marginal_Cost_Generator)
-    
+    model.Cogenaration_Efficiency = Param(model.generator_type)
     # Parameters of the Energy balance                  
     model.Energy_Demand = Param(model.periods, initialize=Initialize_Demand_Dispatch) # Energy Energy_Demand in W 
 
