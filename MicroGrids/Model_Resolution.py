@@ -183,6 +183,7 @@ def Model_Resolution_Dispatch(model,datapath="Example/data_Dispatch.dat"):
     model.GeneratorBoundsMin = Constraint(model.generator_type, model.periods, rule=Generator_Bounds_Min_Integer) 
     model.GeneratorBoundsMax = Constraint(model.generator_type, model.periods, rule=Generator_Bounds_Max_Integer)
     model.GeneratorThermalEnergy = Constraint(model.generator_type, model.periods, rule =Generator_Thermal_Energy)
+    #model.GeneratorThermalEnergyinactive = Constraint(model.generator_type, model.periods, rule =Generator_Thermal_Energy_inactive)
     
     instance = model.create_instance("Example/data_dispatch.dat") # load parameters       
     opt = SolverFactory('gurobi') # Solver use during the optimization    
