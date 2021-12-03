@@ -53,6 +53,37 @@ def Initialize_Demand_Dispatch(model, t):
     '''
     return float(Energy_Demand[1][t])
 
+# Thermal Energy Demand (JVS)
+    
+Thermal_Demand = pd.read_excel('Example/Thermal_Demand_Test.xls',index_col=0,Header=None) # open thermal demand file
+Thermal_Demand = Thermal_Demand/1000
+Thermal_Demand = round(Thermal_Demand, 3)
+
+def Initialize_Thermal_Demand(model, i, t):
+    '''
+    This function returns the value of thermal demand from a system for each period of analysis from a excel file.
+    
+    :param model: Pyomo model as defined in the Model_Creation script.
+        
+    :return: Thermal demand for the period t.     
+        
+    '''
+    
+    return float(Thermal_Demand[i][t])
+
+def Initialize_Thermal_Dispatch(model, t):
+    '''
+     This function returns the value of thermal demand from a system for each period of analysis from a excel file.
+    
+    :param model: Pyomo model as defined in the Model_Creation script.
+        
+    :return: Thermal demand for the period t.     
+        
+    '''
+    return float(Thermal_Demand[1][t])
+
+# Thermal Energy Demand (JVS)--------------------------
+
 
 # def Initialize_PV_Energy_Dispatch(model, t):
 #     '''
@@ -94,12 +125,8 @@ def Battery_Reposition_Cost(model):
     a = unitary_battery_cost/(model.Battery_Cycles*2*(1-model.Deep_of_Discharge))
     return round(a,3) 
 
-#def CHP_Capacity(model,g):
-    
-    #a = (model.Generator_Nominal_Capacity[g]*model.Cogeneration_Efficiency[g])/model.Generator_Efficiency[g] 
-    #return round(a,3)
-    
-    
+ 
+   
 Renewable_Energy = pd.read_excel('Example/Renewable_Energy.xls',index_col=0,Header=None) # open the PV energy yield file
 Renewable_Energy = Renewable_Energy/1000
 Renewable_Energy = round(Renewable_Energy, 3)

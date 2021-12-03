@@ -824,6 +824,9 @@ def Load_results1_Dispatch(instance):
     SOC = instance.State_Of_Charge_Battery.get_values()
     Generator_Energy = instance.Generator_Energy.get_values()
     Thermal_Energy = instance.Thermal_Energy.get_values()    #JVS for thermal energy
+    Thermal_Demand = instance.Thermal_Demand.extract_values()    #JVS for thermal energy
+    Fuel_FlowCHP = instance.Fuel_FlowCHP.get_values()    #JVS for fuel flow required by CHP
+#    Generator_EffCo = instance.Generator_EffCo.get_values()    #JVS corrected Electric Efficiency
     
     Total_Generator_Energy = {}
     Total_Thermal_Energy = {}       #JVS thermal energy
@@ -845,8 +848,11 @@ def Load_results1_Dispatch(instance):
         Scenarios.loc[t,'Curtailment (kWh)']          =  Curtailment[t]
         Scenarios.loc[t,'Energy Demand (kWh)']        =  Energy_Demand[t]
         Scenarios.loc[t,'SOC (kWh)']                  =  SOC[t]
-        Scenarios.loc[t,'Gen energy (kWh)']           =  Total_Generator_Energy[t]     #JVS electric was added
-        Scenarios.loc[t,'Gen thermal energy (kWh)']           =  Total_Thermal_Energy[t]        #JVS for thermal energy
+        Scenarios.loc[t,'Gen energy (kWh)']           =  Total_Generator_Energy[t]      
+        Scenarios.loc[t,'Gen thermal energy (kWh)']   =  Total_Thermal_Energy[t]        #JVS for thermal energy
+        Scenarios.loc[t,'Thermal Demand (kWh)']       =  Thermal_Demand[t]              #JVS for thermal energy
+        Scenarios.loc[t,'Fuel Flow CHP (l/h)']        =  Fuel_FlowCHP[g,t]              #JVS for fuel flow required by CHP
+#        Scenarios.loc[t,'Elec Eff Co (-)']          =  Generator_EffCo[g,t]           #JVS for correction of El Eff of Generator
 
 
         if instance.Lost_Load_Probability > 0: 

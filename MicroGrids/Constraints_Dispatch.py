@@ -72,11 +72,31 @@ def Energy_Genarator_Energy_Max_Integer(model,g,t):
     a maximun value.
     :param model: Pyomo model as defined in the Model_creation library.
     '''
-    return model.Generator_Energy[g,t] <= model.Generator_Nominal_Capacity[g]        
+    return model.Generator_Energy[g,t] <= model.Generator_Nominal_Capacity[g]       
+
+    #for CHP JVS 
 
 def Generator_Thermal_Energy(model,g,t): #JVS Thermal energy that can be recovered
     
-     return model.Thermal_Energy[g,t] == (model.Generator_Nominal_Capacity[g]*model.Cogeneration_Efficiency[g]*model.Generator_Energy_Integer[g,t])/model.Generator_Efficiency[g] - model.Generator_Energy[g,t]
+     return model.Thermal_Energy[g,t] == ((model.Cogeneration_Efficiency[g]-model.Generator_Efficiency[g])*model.Generator_Energy[g,t])/model.Generator_Efficiency[g] 
+
+
+def Fuel_Flow_Demand_CHP(model,g,t): #JVS Fuel flow required by the CHP system 
+    
+     return model.Fuel_FlowCHP[g,t] == model.Generator_Energy[g,t]/(model.Generator_Efficiency[g]*model.Low_Heating_Value[g]) 
+ 
+
+def Maximum_Fuel_Available(model,g,t):      #JVS Fuel flow required by the CHP system
+    
+     return model.Maximum_Fuel[g] >= model.Fuel_FlowCHP[g,t] 
+
+#def Generator_Efficiency_Corrected(model,g,t): #JVS Electrical efficiency corrected
+    
+     #return model.Generator_EffCo[g,t] == model.Generator_Energy[g,t]/(model.Generator_Energy[g,t]*model.Low_Heating_Value[g]*model.Fuel_Cost[g]) 
+ 
+    
+ #+ model.Thermal_Energy[g,t]/((model.Cogeneration_Efficiency[g]-model.Generator_Efficiency[g])*model.Low_Heating_Value[g])
+
 
 #def Generator_Thermal_Energy_inactive(model,g,t): #JVS Thermal energy that can be recovered
     
