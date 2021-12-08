@@ -785,6 +785,7 @@ def Load_results1_Dispatch(instance):
     Number_Periods = int(instance.Periods.extract_values()[None])
     Number_Renewable_Source = int(instance.Renewable_Source.extract_values()[None])
     Number_Generator = int(instance.Generator_Type.extract_values()[None])
+    Number_Combustor = int(instance.Combustor_Type.extract_values()[None])
     
     Inverter_Efficiency_Renewable = instance.Renewable_Inverter_Efficiency.extract_values()
     Data_Renewable = pd.DataFrame()
@@ -826,23 +827,32 @@ def Load_results1_Dispatch(instance):
     Thermal_Energy = instance.Thermal_Energy.get_values()    #JVS for thermal energy
     Thermal_Demand = instance.Thermal_Demand.extract_values()    #JVS for thermal energy
     Fuel_FlowCHP = instance.Fuel_FlowCHP.get_values()    #JVS for fuel flow required by CHP
-#    Generator_EffCo = instance.Generator_EffCo.get_values()    #JVS corrected Electric Efficiency
+    Thermal_Combustor = instance.Thermal_Combustor.get_values () # Heat from combustor
+    Fuel_FlowCom = instance.Fuel_FlowCom.get_values ()       # Fuel flow required by combustor
+#    Thermal_Surplus = instance.Thermal_Surplus.extract_values ()    # Surplus heat from the system
+#    Thermal_Use_Factor = instance.Thermal_Use_Factor.extract_values () # Fraction of heat (available from the system) that is used
     
     Total_Generator_Energy = {}
-    Total_Thermal_Energy = {}       #JVS thermal energy
-    
-                
+    Total_Thermal_Energy = {}       #JVS thermal energy from generator
+#    Total_Thermal_Surplus = {}      #JVS Thermal surplus
+                    
 
     for t in range(1, Number_Periods+1):
                 foo = []
                 for g in range(1,Number_Generator+1):
                     foo.append((g,t))
-                Total_Generator_Energy[t] = sum(Generator_Energy[i] for i in foo) 
+                Total_Generator_Energy[t] = sum(Generator_Energy[i] for i in foo)
                 Total_Thermal_Energy[t] = sum(Thermal_Energy[i] for i in foo) 
+                                      
+    for t in range(1, Number_Periods+1):
+              foo = []
+              for c in range(1,Number_Combustor+1):
+                 foo.append((c,t))
+                 #Total_Thermal_Surplus[t] = sum(Thermal_Energy[t] + Thermal_Combustor[c,t] - Thermal_Demand[t] for c,t in foo)                        
     
     for t in range(1, Number_Periods+1):
     
-        Scenarios.loc[t,'Renewable Energy (kWh)'] =  Renewable_Energy[t]
+        Scenarios.loc[t,'Renewable Energy (kWh)']     =  Renewable_Energy[t]
         Scenarios.loc[t,'Battery Flow Out (kWh)']     =  Battery_Flow_Out[t]
         Scenarios.loc[t,'Battery Flow in (kWh)']      =  Battery_Flow_in[t]
         Scenarios.loc[t,'Curtailment (kWh)']          =  Curtailment[t]
@@ -850,10 +860,12 @@ def Load_results1_Dispatch(instance):
         Scenarios.loc[t,'SOC (kWh)']                  =  SOC[t]
         Scenarios.loc[t,'Gen energy (kWh)']           =  Total_Generator_Energy[t]      
         Scenarios.loc[t,'Gen thermal energy (kWh)']   =  Total_Thermal_Energy[t]        #JVS for thermal energy
-        Scenarios.loc[t,'Thermal Demand (kWh)']       =  Thermal_Demand[t]              #JVS for thermal energy
         Scenarios.loc[t,'Fuel Flow CHP (l/h)']        =  Fuel_FlowCHP[g,t]              #JVS for fuel flow required by CHP
-#        Scenarios.loc[t,'Elec Eff Co (-)']          =  Generator_EffCo[g,t]           #JVS for correction of El Eff of Generator
-
+        Scenarios.loc[t,'Comb thermal energy (kWh)']  =  Thermal_Combustor[c,t]         #JVS Heat from combustor
+        Scenarios.loc[t,'Fuel Flow Comb (l/h)']       =  Fuel_FlowCom[c,t]              #JVS for fuel flow required by Combustor
+        Scenarios.loc[t,'Thermal Demand (kWh)']       =  Thermal_Demand[t]              #JVS for thermal energy
+        #Scenarios.loc[t,'Thermal surplus (kWh)']      =  Total_Thermal_Surplus[t]       #JVS Surplus heat from the system
+#        Scenarios.loc[t,'Thermal use factor']         =  Thermal_Use_Factor[t]          #JVS Fraction of heat (available from the system) that is used
 
         if instance.Lost_Load_Probability > 0: 
                Scenarios.loc[t,'Lost Load (kWh)']     =  Lost_Load[t]

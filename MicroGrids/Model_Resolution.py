@@ -158,10 +158,11 @@ def Model_Resolution_Dispatch(model,datapath="Example/data_Dispatch.dat"):
     from Constraints_Dispatch import  Net_Present_Cost,  State_of_Charge,\
     Maximun_Charge, Minimun_Charge, Max_Bat_in, Max_Bat_out, \
     Energy_balance, Maximun_Lost_Load, Fuel_Flow_Demand_CHP, Maximum_Fuel_Available, \
-    Max_Power_Battery_Charge, Generator_Thermal_Energy, \
+    Thermal_balance, Combustor_Thermal_Energy, Thermal_surplus_system, \
+    Max_Power_Battery_Charge, Generator_Thermal_Energy, Thermal_Energy_Combustor_Max, \
     Max_Power_Battery_Discharge, Generator_Bounds_Min_Integer,\
     Generator_Bounds_Max_Integer,Energy_Genarator_Energy_Max_Integer
-
+#Thermal_use_factor_system,  
     # OBJETIVE FUNTION:
     model.ObjectiveFuntion = Objective(rule=Net_Present_Cost, sense=minimize)  
     
@@ -169,6 +170,10 @@ def Model_Resolution_Dispatch(model,datapath="Example/data_Dispatch.dat"):
     #Energy constraints
     model.EnergyBalance = Constraint(model.periods, rule=Energy_balance)  # Energy balance
     model.MaximunLostLoad = Constraint(rule=Maximun_Lost_Load) # Maximum permissible lost load
+    
+    #Thermal Energy constraints
+    model.ThermalBalance = Constraint(model.periods, rule=Thermal_balance)  # Thermal Energy balance
+    model.ThermalSurplusSystem = Constraint(model.periods, model.generator_type, model.combustor_type, rule=Thermal_surplus_system) # Surplus of thermal energy
     
     # Battery constraints
     model.StateOfCharge = Constraint(model.periods, rule=State_of_Charge) # State of Charge of the battery
@@ -186,7 +191,13 @@ def Model_Resolution_Dispatch(model,datapath="Example/data_Dispatch.dat"):
     #CHP constraints
     model.GeneratorThermalEnergy = Constraint(model.generator_type, model.periods, rule =Generator_Thermal_Energy)
     model.FuelFlowCHP =  Constraint(model.generator_type, model.periods, rule =Fuel_Flow_Demand_CHP)
-    model.MaxFuel =  Constraint(model.generator_type, model.periods, rule =Maximum_Fuel_Available)
+    model.MaxFuel =  Constraint(model.combustor_type, model.generator_type, model.periods, rule =Maximum_Fuel_Available)
+#    model.ThermalUseFactor = Constraint(model.generator_type, model.combustor_type, model.periods, rule =Thermal_use_factor_system)
+    
+    #Combustor constraints
+    model.CombustorThermalEnergy = Constraint(model.generator_type, model.combustor_type, model.periods, rule =Combustor_Thermal_Energy)
+    model.ThermalCombustorMax = Constraint(model.combustor_type, model.periods, rule =Thermal_Energy_Combustor_Max)
+    
 #    model.GeneratorEffCo =  Constraint(model.generator_type, model.periods, rule =Generator_Efficiency_Corrected)
     
     

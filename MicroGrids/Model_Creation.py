@@ -315,10 +315,12 @@ def Model_Creation_Dispatch(model):
     model.StartDate = Param() # Start date of the analisis
     model.Generator_Type = Param()
     model.Renewable_Source = Param()
+    model.Combustor_Type = Param() #Combustor JVS
     #SETS
     model.periods = RangeSet(1, model.Periods) # Creation of a set from 1 to the number of periods in each year   
     model.generator_type = RangeSet(1, model.Generator_Type)    
     model.renewable_source = RangeSet(1, model.Renewable_Source)
+    model.combustor_type = RangeSet(1, model.Combustor_Type) #Combustor JVS
     # PARAMETERS
     
     # Parameters of the Renewable energy
@@ -357,7 +359,11 @@ def Model_Creation_Dispatch(model):
     #for the CHP JVS
     model.Cogeneration_Efficiency = Param(model.generator_type,within=NonNegativeReals)
     model.Maximum_Fuel = Param(model.generator_type, within=NonNegativeReals) # Maximum Fuel available in l/h
+#    model.Thermal_Use_Factor = Param(within=NonNegativeReals) #minimum fraction of heat (available from the system) used to meet thermal demands
     
+    #for the combustor JVS
+    model.Combustor_Nominal_Capacity = Param(model.combustor_type, within=NonNegativeReals)
+    model.Combustor_Efficiency = Param(model.combustor_type, within=NonNegativeReals)
     
     # Parameters of the Energy balance                  
     model.Energy_Demand = Param(model.periods, initialize=Initialize_Demand_Dispatch) # Energy Energy_Demand in W 
@@ -389,11 +395,14 @@ def Model_Creation_Dispatch(model):
     #for the CHP JVS
     model.Thermal_Energy = Var(model.generator_type, model.periods, within=NonNegativeReals)
     model.Fuel_FlowCHP = Var(model.generator_type, model.periods, within=NonNegativeReals)
-#    model.Generator_EffCo = Var(model.generator_type, model.periods, within=NonNegativeReals)        
-    
+   #for the combustor JVS       
+    model.Thermal_Combustor = Var(model.combustor_type, model.periods, within=NonNegativeReals)
+    model.Fuel_FlowCom = Var(model.combustor_type, model.periods, within=NonNegativeReals)
     
     # Varialbles associated to the energy balance
     model.Lost_Load = Var(model.periods, within=NonNegativeReals) # Energy not suply by the system kWh
     model.Energy_Curtailment = Var(model.periods, within=NonNegativeReals) # Curtailment of solar energy in kWh
     
+    #Variables associated to the thermal energy balance
+    model.Thermal_Surplus = Var(model.periods, within=NonNegativeReals) # Surplus of Thermal Energy kWh
 

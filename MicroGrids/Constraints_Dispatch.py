@@ -12,18 +12,25 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
     # Operation Cost
     # Generator operation cost
     foo = []
-    for g in range(1,model.Generator_Type+1):
-         for t in range(1,model.Periods+1):
-                foo.append((g,t))
-
-        
+    for c in range(1,model.Combustor_Type+1):
+        for g in range(1,model.Generator_Type+1):
+            for t in range(1,model.Periods+1):
+                foo.append((c,g,t))    
+               
+       
     Generator_Cost =  sum(model.Generator_Energy_Integer[g,t]*model.Start_Cost_Generator[g] + 
                              model.Marginal_Cost_Generator[g]*model.Generator_Energy[g,t]
-                             for g,t in foo)     
+                             for c,g,t in foo)     
     Operation_Cost = Generator_Cost   
-    # Battery opereation cost
     
-                
+    # Combustor operation cost
+    
+    Combustor_Cost = sum(model.Thermal_Combustor[c,t]*model.Fuel_Cost[g]/(model.Combustor_Efficiency[c]*model.Low_Heating_Value[g]) for c,g,t in foo)    
+    
+    Operation_Cost += Combustor_Cost
+    
+    # Battery opereation cost
+                 
     Battery_cost_in = sum(model.Energy_Battery_Flow_In[t]*model.Unitary_Battery_Reposition_Cost
                            for t in range(1,model.Periods+1))
     Battery_cost_out = sum(model.Energy_Battery_Flow_Out[t]*model.Unitary_Battery_Reposition_Cost
@@ -86,9 +93,19 @@ def Fuel_Flow_Demand_CHP(model,g,t): #JVS Fuel flow required by the CHP system
      return model.Fuel_FlowCHP[g,t] == model.Generator_Energy[g,t]/(model.Generator_Efficiency[g]*model.Low_Heating_Value[g]) 
  
 
-def Maximum_Fuel_Available(model,g,t):      #JVS Fuel flow required by the CHP system
+def Maximum_Fuel_Available(model,c,g,t):      #JVS Fuel flow required by the CHP + combustor 
     
-     return model.Maximum_Fuel[g] >= model.Fuel_FlowCHP[g,t] 
+     return model.Maximum_Fuel[g] >= model.Fuel_FlowCHP[g,t]+model.Fuel_FlowCom[c,t] 
+ 
+    #for combustor JVS
+    
+def Thermal_Energy_Combustor_Max(model,c,t):   # Max thermal energy from combustor
+   
+    return model.Thermal_Combustor[c,t] <= model.Combustor_Nominal_Capacity[c]*model.Delta_Time
+    
+def Combustor_Thermal_Energy(model,c,g,t): #JVS Thermal energy from combustor
+    
+     return model.Thermal_Combustor[c,t] == model.Fuel_FlowCom[c,t]*model.Combustor_Efficiency[c]*model.Low_Heating_Value[g]     
 
 #def Generator_Efficiency_Corrected(model,g,t): #JVS Electrical efficiency corrected
     
@@ -217,3 +234,78 @@ def Maximun_Lost_Load(model): # Maximum permissible lost load
     Total_Lost_Load = sum(model.Energy_Demand[t] for t in model.periods)
     
     return model.Lost_Load_Probability >= (Total_Demand/Total_Lost_Load)
+
+# Thermal energy constraints JVS
+
+def Thermal_balance(model, t): # Thermal energy balance
+    '''
+    This constraint ensures the perfect match between the thermal energy demand of the 
+    system and the differents sources to meet this demand in each scenario i.
+    
+    :param model: Pyomo model as defined in the Model_creation library.
+    '''
+    Foo = []
+    for g in model.generator_type:
+        Foo.append((g,t))
+
+    #Thermal_Sources = sum(model.Thermal_Energy[g,t] for g,t in Foo)     #thermal energy from CHP, engine
+    
+    foo=[]
+    for c in model.generator_type:
+        foo.append((c,t))
+        
+    #Thermal_Sources += sum(model.Thermal_Combustor[c,t] for c,t in foo)    #adding thermal energy from combustor
+        
+
+    return model.Thermal_Demand[t] <= model.Thermal_Energy[g,t] + model.Thermal_Combustor[c,t] 
+
+def Thermal_surplus_system(model, c, g, t): 
+    
+   foo = []
+   for c in range(1,model.Combustor_Type+1):
+        for g in range(1,model.Generator_Type+1):
+           for t in range(1,model.Periods+1):
+                foo.append((c,g,t))  
+          
+   return model.Thermal_Surplus[t] == model.Thermal_Energy[g,t] + model.Thermal_Combustor[c,t] - model.Thermal_Demand[t]                     
+
+#def Thermal_use_factor_system(model): 
+    
+    #foo = []
+    #for c in range(1,model.Combustor_Type+1):
+     #   for g in range(1,model.Generator_Type+1):
+      #      for t in range(1,model.Periods+1):
+       #         foo.append((c,g,t))  
+          
+    #return model.Thermal_Use_Factor >= (model.Thermal_Energy[g,t] + model.Thermal_Combustor[c,t])/model.Thermal_Demand[t]     
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

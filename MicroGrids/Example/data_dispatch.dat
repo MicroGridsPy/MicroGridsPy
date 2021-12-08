@@ -43,17 +43,30 @@ param: Cost_Increase :=
 1    0.084;
 
 param: Generator_Nominal_Capacity :=
-1   15; # the other result can be obtain changing this value to 30
+1   30; # the other result can be obtain changing this value to 30
 
 # CHP Parameters
 
 param: Cogeneration_Efficiency :=
-
 1   0.8;
 
 param: Maximum_Fuel :=
 
-1   4;
+1   50;
+
+#param: Thermal_Use_Factor :=
+
+#1   1; # Minimum percentage of heat 
+
+# Combustor Parameters
+
+param: Combustor_Type := 1;
+
+param: Combustor_Nominal_Capacity :=
+1   80; # Capacity of the combustor can be equal or lower than the maximum thermal demand
+
+param: Combustor_Efficiency :=
+1   0.9;
 
 
 param: Battery_Nominal_Capacity := 464;
