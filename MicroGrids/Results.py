@@ -1002,6 +1002,25 @@ def Load_results1_Dispatch(instance):
     Generator_Time_Series.index = Scenarios.index           
     Generator_Time_Series.to_excel(writer, sheet_name='Generator Time Series')       
     
+    Combustor_Time_Series = pd.DataFrame()
+    
+    Combustor_Efficiency = instance.Combustor_Efficiency.extract_values()
+    
+    #Generator_Integer = instance.Generator_Energy_Integer.get_values()
+     
+    for g in range(1, Number_Combustor + 1):
+         column_1 = 'Thermal Energy Combustor ' + str(g)  + ' (kWh)' 
+         column_2 = 'Fuel flow Comb '  + str(g) + ' (l/h)' 
+         column_3 = 'Fuel Cost Comb'  + str(g) + ' (USD)' 
+         Name =  'Combustor ' + str(g)
+         for t in range(1, Number_Periods + 1):
+             Combustor_Time_Series.loc[t,column_1] = Thermal_Combustor[c,t]
+             Combustor_Time_Series.loc[t,column_2] = Fuel_FlowCom[c,t] 
+             Combustor_Time_Series.loc[t,column_3] = (Thermal_Combustor[c,t]*Fuel_Cost[g]/(Combustor_Efficiency[c]*Low_Heating_Value[g]))
+             
+    Combustor_Time_Series.index = Scenarios.index           
+    Combustor_Time_Series.to_excel(writer, sheet_name='Combustor Time Series')       
+    
     Cost_Time_Series = pd.DataFrame()
 
     if instance.Lost_Load_Probability > 0:
@@ -1012,6 +1031,7 @@ def Load_results1_Dispatch(instance):
     name_3 = 'Battery Flow in (kWh)'  
     name_3_1 = 'Battery Flow In (USD)' 
     name_4_1 = 'Generator Cost (USD)' 
+    name_5_1 = 'Combustor Cost (USD)' 
 
     for t in Scenarios.index:
             if instance.Lost_Load_Probability > 0:
@@ -1026,10 +1046,16 @@ def Load_results1_Dispatch(instance):
                 Fuel_Cost += Generator_Time_Series.loc[t,name_5]
             Cost_Time_Series.loc[t,name_4_1] = Fuel_Cost
             
+            Fuel_Cost_Comb = 0
+            for c in range(1, Number_Combustor + 1):
+                name_6 = 'Fuel Cost Comb'  + str(g) + ' (USD)'  
+                Fuel_Cost_Comb += Combustor_Time_Series.loc[t,name_6]
+            Cost_Time_Series.loc[t,name_5_1] = Fuel_Cost_Comb
+            
             if instance.Curtailment_Unitary_Cost > 0:
-                name_6 = 'Curtailment (kWh)'
-                name_6_1 = 'Curtailment Cost (USD)' 
-                Cost_Time_Series.loc[t,name_6_1] = (Scenarios[name_6][t]*Project_Data['Curtailment Unitary Cost (USD/kWh)'])
+                name_7 = 'Curtailment (kWh)'
+                name_7_1 = 'Curtailment Cost (USD)' 
+                Cost_Time_Series.loc[t,name_7_1] = (Scenarios[name_7][t]*Project_Data['Curtailment Unitary Cost (USD/kWh)'])
             
     Cost_Time_Series.to_excel(writer, sheet_name='Cost Time Series')    
     
@@ -1073,13 +1099,9 @@ def Load_results1_Dispatch(instance):
     
     Total_Fuel_Cost = Cost_Time_Series['Generator Cost (USD)'].sum()
     Total_Fuel_Cost = round(Total_Fuel_Cost,0)
-    print('The cost for fuel is ' + str(Total_Fuel_Cost) + ' USD')
+    print('The cost for fuel of the CHP is ' + str(Total_Fuel_Cost) + ' USD')
     
-    Total_Thermal_Energy = Generator_Time_Series['Thermal Energy '  + str(g) + ' (kWh)'].sum()
-    Total_Thermal_Energy = round(Total_Thermal_Energy,0)
-    
-    print('The total thermal energy is ' + str(Total_Thermal_Energy) + ' kWh')
-    
+     
     Total_Battery_Cost = Cost_Time_Series['Battery Flow Out (USD)'].sum() + Cost_Time_Series['Battery Flow In (USD)'].sum()
     Total_Battery_Cost = round(Total_Battery_Cost,0)
     print('The cost for Battery is ' + str(Total_Battery_Cost) + ' USD')
@@ -1095,9 +1117,19 @@ def Load_results1_Dispatch(instance):
         Total_Curtailment_Cost = Cost_Time_Series['Curtailment Cost (USD)' ].sum()
         Total_Curtailment_Cost = round(Total_Curtailment_Cost, 0)
         print('The cost of the energy curtail is ' + str(Total_Curtailment_Cost) + ' USD')
+    
+    Total_Fuel_Cost_Comb = Cost_Time_Series['Combustor Cost (USD)'].sum()
+    Total_Fuel_Cost_Comb = round(Total_Fuel_Cost_Comb,0)
+    print('The cost for fuel of Combustor is ' + str(Total_Fuel_Cost_Comb) + ' USD')    
+    
 
     Operation_Cost = round(Project_Data['Operation Cost (USD)'], 0) 
     print('The operation cost is ' + str(Operation_Cost) + ' USD')
+    
+    Total_Thermal_Energy = Generator_Time_Series['Thermal Energy '  + str(g) + ' (kWh)'].sum()
+    Total_Thermal_Energy = round(Total_Thermal_Energy,0)
+    
+    print('The total thermal energy is ' + str(Total_Thermal_Energy) + ' kWh')
     
     
    # Curtailment_Percentage = Scenarios['Curtailment (kWh)'].sum()/(Scenarios['Renewable Energy (kWh)'].sum()
