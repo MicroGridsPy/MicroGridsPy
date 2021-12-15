@@ -56,10 +56,10 @@ def Initialize_Demand_Dispatch(model, t):
 # Thermal Energy Demand (JVS)
     
 Thermal_Demand = pd.read_excel('Example/Thermal_Demand_Test.xls',index_col=0,Header=None) # open thermal demand file
-Thermal_Demand = Thermal_Demand/1000
+Thermal_Demand = Thermal_Demand/1000    # Total Thermal Demand
 Thermal_Demand = round(Thermal_Demand, 3)
 
-def Initialize_Thermal_Demand(model, i, t):
+def Initialize_Thermal_Demand(model, i, g, t):
     '''
     This function returns the value of thermal demand from a system for each period of analysis from a excel file.
     
@@ -80,7 +80,29 @@ def Initialize_Thermal_Dispatch(model, t):
     :return: Thermal demand for the period t.     
         
     '''
-    return float(Thermal_Demand[1][t])
+    return float (Thermal_Demand[1][t])   # Total thermal (heat) demand for the system
+
+def Initialize_Refrigeration_Dispatch(model, t):
+    '''
+     This function returns the value of refrigeration demand of the polygeneration plant from a system for each period of analysis from a excel file.
+    
+    :param model: Pyomo model as defined in the Model_Creation script.
+        
+    :return: Refrigeration demand for the period t.     
+        
+    '''
+    return float (Thermal_Demand[2][t])   # Total refrigeration demand for the system
+
+def Initialize_Thermal_Drier_Dispatch(model, t):
+    '''
+     This function returns the value of thermal demand of the bioslurry drier from a system for each period of analysis from a excel file.
+    
+    :param model: Pyomo model as defined in the Model_Creation script.
+        
+    :return: Thermal demand of the bioslurry drier (BSD) for the period t.     
+        
+    '''
+    return float (Thermal_Demand[4][t])   # Total thermal demand of the BSD for the system
 
 # Thermal Energy Demand (JVS)--------------------------
 

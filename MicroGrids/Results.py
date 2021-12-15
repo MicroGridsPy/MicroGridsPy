@@ -829,12 +829,16 @@ def Load_results1_Dispatch(instance):
     Fuel_FlowCHP = instance.Fuel_FlowCHP.get_values()    #JVS for fuel flow required by CHP
     Thermal_Combustor = instance.Thermal_Combustor.get_values () # Heat from combustor
     Fuel_FlowCom = instance.Fuel_FlowCom.get_values ()       # Fuel flow required by combustor
-#    Thermal_Surplus = instance.Thermal_Surplus.extract_values ()    # Surplus heat from the system
-#    Thermal_Use_Factor = instance.Thermal_Use_Factor.extract_values () # Fraction of heat (available from the system) that is used
+    Low_Heating_Value = instance.Low_Heating_Value.extract_values()
+    COP_el = instance.COP_el.extract_values()
+    Refrigeration_Demand = instance.Refrigeration_Demand.extract_values()    #JVS for thermal energy
+    Drier_Thermal_Demand = instance.Drier_Thermal_Demand.extract_values()
+    Emission_Factor_Electricity = instance.Emission_Factor_Electricity.extract_values()
+    Emission_Factor_Thermal = instance.Emission_Factor_Thermal.extract_values()
     
     Total_Generator_Energy = {}
     Total_Thermal_Energy = {}       #JVS thermal energy from generator
-#    Total_Thermal_Surplus = {}      #JVS Thermal surplus
+  
                     
 
     for t in range(1, Number_Periods+1):
@@ -848,7 +852,7 @@ def Load_results1_Dispatch(instance):
               foo = []
               for c in range(1,Number_Combustor+1):
                  foo.append((c,t))
-                 #Total_Thermal_Surplus[t] = sum(Thermal_Energy[t] + Thermal_Combustor[c,t] - Thermal_Demand[t] for c,t in foo)                        
+                                  
     
     for t in range(1, Number_Periods+1):
     
@@ -863,9 +867,27 @@ def Load_results1_Dispatch(instance):
         Scenarios.loc[t,'Fuel Flow CHP (l/h)']        =  Fuel_FlowCHP[g,t]              #JVS for fuel flow required by CHP
         Scenarios.loc[t,'Comb thermal energy (kWh)']  =  Thermal_Combustor[c,t]         #JVS Heat from combustor
         Scenarios.loc[t,'Fuel Flow Comb (l/h)']       =  Fuel_FlowCom[c,t]              #JVS for fuel flow required by Combustor
-        Scenarios.loc[t,'Thermal Demand (kWh)']       =  Thermal_Demand[t]              #JVS for thermal energy
-        #Scenarios.loc[t,'Thermal surplus (kWh)']      =  Total_Thermal_Surplus[t]       #JVS Surplus heat from the system
-#        Scenarios.loc[t,'Thermal use factor']         =  Thermal_Use_Factor[t]          #JVS Fraction of heat (available from the system) that is used
+        Scenarios.loc[t,'Thermal Demand (kWh)']       =  Thermal_Demand[t]             #JVS for thermal energy
+        Scenarios.loc[t,'Thermal surplus (kWh)']      =  (Total_Thermal_Energy[t] + Thermal_Combustor[c,t] - Thermal_Demand[t])     #JVS Surplus heat from the system
+        Scenarios.loc[t,'Total Fuel Flow l/h']        =  (Fuel_FlowCHP[g,t] + Fuel_FlowCom[c,t])          #JVS Total fuel used by the system 
+
+        if Fuel_FlowCHP[g,t] == 0:
+            Scenarios.loc[t,'CHP efficiency']     =  0
+        elif Thermal_Demand[t] <= Total_Thermal_Energy[t]:
+            Scenarios.loc[t,'CHP efficiency']     =  ((Total_Generator_Energy[t]+Thermal_Demand[t])/(Fuel_FlowCHP[g,t]*Low_Heating_Value[g]))
+        else:
+            Scenarios.loc[t,'CHP efficiency']     =  ((Total_Generator_Energy[t]+Total_Thermal_Energy[t])/(Fuel_FlowCHP[g,t]*Low_Heating_Value[g])) 
+        
+        Scenarios.loc[t,'Thermal demand Drier (kWh)']     =  Drier_Thermal_Demand[t]             #JVS for thermal energy
+        Scenarios.loc[t,'Refrigeration Demand (kWh)']     =  Refrigeration_Demand[t]             #JVS for thermal energy
+        Scenarios.loc[t,'Elect. for refrig. (kWh)']     =  Refrigeration_Demand[t]/COP_el[g]            #JVS for thermal energy
+        Scenarios.loc[t,'Total Elect. Used (kWh)']     =  (Refrigeration_Demand[t]/COP_el[g] +  Energy_Demand[t])          #JVS for thermal energy
+        Scenarios.loc[t,'Total Elect. Produced (kWh)']     =  (Refrigeration_Demand[t]/COP_el [g] +  Energy_Demand[t] + Curtailment[t])  
+        Scenarios.loc[t,'CO2 emissions Elect. Demand (kg of CO2)']     =  Energy_Demand[t]*Emission_Factor_Electricity[g] 
+        Scenarios.loc[t,'CO2 emissions Elect. Refrigeration (kg of CO2)']     =  Refrigeration_Demand[t]*Emission_Factor_Electricity[g]/COP_el[g]     
+        Scenarios.loc[t,'CO2 emissions Elect. Used (kg of CO2)']     =  (Refrigeration_Demand[t]/COP_el[g] +  Energy_Demand[t])*Emission_Factor_Electricity[g] 
+        Scenarios.loc[t,'CO2 emissions Elect. Curtailment (kg of CO2)']     =  Curtailment[t]*Emission_Factor_Electricity[g]
+        Scenarios.loc[t,'CO2 emissions Elect. Produced (kg of CO2)']     =  (Refrigeration_Demand[t]/COP_el [g] +  Energy_Demand[t] + Curtailment[t])*Emission_Factor_Electricity[g] 
 
         if instance.Lost_Load_Probability > 0: 
                Scenarios.loc[t,'Lost Load (kWh)']     =  Lost_Load[t]

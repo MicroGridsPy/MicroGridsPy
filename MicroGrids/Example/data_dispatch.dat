@@ -43,7 +43,7 @@ param: Cost_Increase :=
 1    0.084;
 
 param: Generator_Nominal_Capacity :=
-1   30; # the other result can be obtain changing this value to 30
+1   15; # the other result can be obtain changing this value to 30
 
 # CHP Parameters
 
@@ -52,18 +52,15 @@ param: Cogeneration_Efficiency :=
 
 param: Maximum_Fuel :=
 
-1   50;
+1   25;
 
-#param: Thermal_Use_Factor :=
-
-#1   1; # Minimum percentage of heat 
 
 # Combustor Parameters
 
 param: Combustor_Type := 1;
 
 param: Combustor_Nominal_Capacity :=
-1   80; # Capacity of the combustor can be equal or lower than the maximum thermal demand
+1   100; # Capacity of the combustor can be equal or lower than the maximum thermal demand
 
 param: Combustor_Efficiency :=
 1   0.9;
@@ -79,3 +76,14 @@ param: Renewable_Source := 1;
 param: Renewable_Inverter_Efficiency :=
 
 1   	1;
+
+# GHG and others
+
+param: COP_el := 
+1   3;    #Coefficient of Performance of the conventional compressor driven refrigerators
+
+param: Emission_Factor_Electricity:= 
+1   0.39;  # kg of CO2/kWh aggregate emission factor for conventional electricity production
+
+param: Emission_Factor_Thermal:= 
+1   0.23;    # # kg of CO2/kWh aggregate emission factor for conventional heat production using LPG or NG

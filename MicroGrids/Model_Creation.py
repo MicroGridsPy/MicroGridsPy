@@ -305,8 +305,8 @@ def Model_Creation_Dispatch(model):
     
     '''
     from pyomo.environ import  Param, RangeSet, NonNegativeReals, Var, NonNegativeIntegers
-    from Initialize import Initialize_Demand, Initialize_Thermal_Dispatch, \
-    Initialize_Demand_Dispatch, Initialize_Renewable_Energy_Dispatch, Marginal_Cost_Generator,\
+    from Initialize import Initialize_Demand, Initialize_Thermal_Dispatch, Initialize_Refrigeration_Dispatch,\
+    Initialize_Demand_Dispatch, Initialize_Thermal_Drier_Dispatch, Initialize_Renewable_Energy_Dispatch, Marginal_Cost_Generator,\
     Start_Cost, Marginal_Cost_Generator_1, Battery_Reposition_Cost # Import library with initialitation funtions for the parameters
     
     
@@ -359,7 +359,6 @@ def Model_Creation_Dispatch(model):
     #for the CHP JVS
     model.Cogeneration_Efficiency = Param(model.generator_type,within=NonNegativeReals)
     model.Maximum_Fuel = Param(model.generator_type, within=NonNegativeReals) # Maximum Fuel available in l/h
-#    model.Thermal_Use_Factor = Param(within=NonNegativeReals) #minimum fraction of heat (available from the system) used to meet thermal demands
     
     #for the combustor JVS
     model.Combustor_Nominal_Capacity = Param(model.combustor_type, within=NonNegativeReals)
@@ -372,8 +371,17 @@ def Model_Creation_Dispatch(model):
     
     model.Thermal_Demand = Param(model.periods, initialize=Initialize_Thermal_Dispatch) # Thermal Energy_Demand in W, JVS 
     
+    model.Refrigeration_Demand = Param(model.periods, initialize=Initialize_Refrigeration_Dispatch) # Refrigeration_Demand in W, JVS 
+    
+    model.Drier_Thermal_Demand = Param(model.periods, initialize=Initialize_Thermal_Drier_Dispatch)
+    
     # Parameters of the proyect
     model.Delta_Time = Param(within=NonNegativeReals) # Time step in hours
+    
+    # Paramaters for GHG emissions estimation and others model.generator type, maybe it needs to be created another type
+    model.COP_el = Param(model.generator_type)
+    model.Emission_Factor_Electricity = Param(model.generator_type)
+    model.Emission_Factor_Thermal = Param(model.generator_type)
    
     # VARIABLES
             
@@ -403,6 +411,5 @@ def Model_Creation_Dispatch(model):
     model.Lost_Load = Var(model.periods, within=NonNegativeReals) # Energy not suply by the system kWh
     model.Energy_Curtailment = Var(model.periods, within=NonNegativeReals) # Curtailment of solar energy in kWh
     
-    #Variables associated to the thermal energy balance
-    model.Thermal_Surplus = Var(model.periods, within=NonNegativeReals) # Surplus of Thermal Energy kWh
+
 

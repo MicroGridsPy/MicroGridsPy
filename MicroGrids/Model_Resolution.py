@@ -158,7 +158,7 @@ def Model_Resolution_Dispatch(model,datapath="Example/data_Dispatch.dat"):
     from Constraints_Dispatch import  Net_Present_Cost,  State_of_Charge,\
     Maximun_Charge, Minimun_Charge, Max_Bat_in, Max_Bat_out, \
     Energy_balance, Maximun_Lost_Load, Fuel_Flow_Demand_CHP, Maximum_Fuel_Available, \
-    Thermal_balance, Combustor_Thermal_Energy, Thermal_surplus_system, \
+    Thermal_balance, Combustor_Thermal_Energy, \
     Max_Power_Battery_Charge, Generator_Thermal_Energy, Thermal_Energy_Combustor_Max, \
     Max_Power_Battery_Discharge, Generator_Bounds_Min_Integer,\
     Generator_Bounds_Max_Integer,Energy_Genarator_Energy_Max_Integer
@@ -173,8 +173,7 @@ def Model_Resolution_Dispatch(model,datapath="Example/data_Dispatch.dat"):
     
     #Thermal Energy constraints
     model.ThermalBalance = Constraint(model.periods, rule=Thermal_balance)  # Thermal Energy balance
-    model.ThermalSurplusSystem = Constraint(model.periods, model.generator_type, model.combustor_type, rule=Thermal_surplus_system) # Surplus of thermal energy
-    
+     
     # Battery constraints
     model.StateOfCharge = Constraint(model.periods, rule=State_of_Charge) # State of Charge of the battery
     model.MaximunCharge = Constraint(model.periods, rule=Maximun_Charge) # Maximun state of charge of the Battery
@@ -198,10 +197,6 @@ def Model_Resolution_Dispatch(model,datapath="Example/data_Dispatch.dat"):
     model.CombustorThermalEnergy = Constraint(model.generator_type, model.combustor_type, model.periods, rule =Combustor_Thermal_Energy)
     model.ThermalCombustorMax = Constraint(model.combustor_type, model.periods, rule =Thermal_Energy_Combustor_Max)
     
-#    model.GeneratorEffCo =  Constraint(model.generator_type, model.periods, rule =Generator_Efficiency_Corrected)
-    
-    
-    #model.GeneratorThermalEnergyinactive = Constraint(model.generator_type, model.periods, rule =Generator_Thermal_Energy_inactive)
     
     instance = model.create_instance("Example/data_dispatch.dat") # load parameters       
     opt = SolverFactory('gurobi') # Solver use during the optimization    

@@ -107,18 +107,6 @@ def Combustor_Thermal_Energy(model,c,g,t): #JVS Thermal energy from combustor
     
      return model.Thermal_Combustor[c,t] == model.Fuel_FlowCom[c,t]*model.Combustor_Efficiency[c]*model.Low_Heating_Value[g]     
 
-#def Generator_Efficiency_Corrected(model,g,t): #JVS Electrical efficiency corrected
-    
-     #return model.Generator_EffCo[g,t] == model.Generator_Energy[g,t]/(model.Generator_Energy[g,t]*model.Low_Heating_Value[g]*model.Fuel_Cost[g]) 
- 
-    
- #+ model.Thermal_Energy[g,t]/((model.Cogeneration_Efficiency[g]-model.Generator_Efficiency[g])*model.Low_Heating_Value[g])
-
-
-#def Generator_Thermal_Energy_inactive(model,g,t): #JVS Thermal energy that can be recovered
-    
-     
-    #return model.Thermal_Energy[g,t] == model.Generator_Nominal_Capacity[g]*model.Generator_Energy_Integer[g,t]    
 
 
 ############################################# Battery constraints ####################################################
@@ -259,25 +247,9 @@ def Thermal_balance(model, t): # Thermal energy balance
 
     return model.Thermal_Demand[t] <= model.Thermal_Energy[g,t] + model.Thermal_Combustor[c,t] 
 
-def Thermal_surplus_system(model, c, g, t): 
-    
-   foo = []
-   for c in range(1,model.Combustor_Type+1):
-        for g in range(1,model.Generator_Type+1):
-           for t in range(1,model.Periods+1):
-                foo.append((c,g,t))  
-          
-   return model.Thermal_Surplus[t] == model.Thermal_Energy[g,t] + model.Thermal_Combustor[c,t] - model.Thermal_Demand[t]                     
+                  
 
-#def Thermal_use_factor_system(model): 
-    
-    #foo = []
-    #for c in range(1,model.Combustor_Type+1):
-     #   for g in range(1,model.Generator_Type+1):
-      #      for t in range(1,model.Periods+1):
-       #         foo.append((c,g,t))  
-          
-    #return model.Thermal_Use_Factor >= (model.Thermal_Energy[g,t] + model.Thermal_Combustor[c,t])/model.Thermal_Demand[t]     
+
     
 
 
