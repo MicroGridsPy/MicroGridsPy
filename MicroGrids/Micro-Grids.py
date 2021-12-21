@@ -14,7 +14,7 @@ import time
 start = time.time()
 
 # Type of problem formulation:
-formulation = 'Dispatch'
+formulation = 'MILP'
 #datapath='Example/Dispatch/'
 # Renewable energy penetrarion
 

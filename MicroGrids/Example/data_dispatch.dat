@@ -1,6 +1,6 @@
-param: Periods := 4344;
+param: Periods := 8760;
 
-param: StartDate := '01/01/2017 01:00:00';
+param: StartDate := '21/03/2016 01:00:00';
 
 
 param: Delta_Time := 1;
