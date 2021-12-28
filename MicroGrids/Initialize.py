@@ -55,11 +55,11 @@ def Initialize_Demand_Dispatch(model, t):
 
 # Thermal Energy Demand (JVS)
     
-Thermal_Demand = pd.read_excel('Example/Thermal_Demand_Test.xls',index_col=0,Header=None) # open thermal demand file
+Thermal_Demand = pd.read_excel('Example/Thermal_Demand_Test.xls',index_col=0,Header=0) # open thermal demand file
 Thermal_Demand = Thermal_Demand/1000    # Total Thermal Demand
 Thermal_Demand = round(Thermal_Demand, 3)
 
-def Initialize_Thermal_Demand(model, i, g, t):
+def Initialize_Thermal_Demand(model,i, t):
     '''
     This function returns the value of thermal demand from a system for each period of analysis from a excel file.
     
@@ -69,7 +69,7 @@ def Initialize_Thermal_Demand(model, i, g, t):
         
     '''
     
-    return float(Thermal_Demand[i][t])
+    return float(Thermal_Demand[1][t])
 
 def Initialize_Thermal_Dispatch(model, t):
     '''

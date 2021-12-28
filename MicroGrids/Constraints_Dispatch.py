@@ -235,15 +235,10 @@ def Thermal_balance(model, t): # Thermal energy balance
     Foo = []
     for g in model.generator_type:
         Foo.append((g,t))
-
-    #Thermal_Sources = sum(model.Thermal_Energy[g,t] for g,t in Foo)     #thermal energy from CHP, engine
-    
+   
     foo=[]
-    for c in model.generator_type:
+    for c in model.combustor_type:
         foo.append((c,t))
-        
-    #Thermal_Sources += sum(model.Thermal_Combustor[c,t] for c,t in foo)    #adding thermal energy from combustor
-        
 
     return model.Thermal_Demand[t] <= model.Thermal_Energy[g,t] + model.Thermal_Combustor[c,t] 
 

@@ -97,33 +97,3 @@ param: Generator_Nominal_Capacity :=
 param: Maintenance_Operation_Cost_Generator := 
 
 1   0.02;
-
-#JVS
-
-param: Cogeneration_Efficiency :=
-1   0.8;
-
-
-param: Combustor_Nominal_Capacity := 
-
-1   25;
-
-param: Combustor_Type := 1;
-
-param: Maximum_Fuel :=
-
-1   100;
-
-param: Combustor_Efficiency :=
-1   0.9;
-
-param: EH_cost_factor := 1;
-
-param: Maintenance_Operation_Cost_Combustor :=
-
-1	0.1;
-
-param: Combustor_Invesment_Cost := 
-
-1	500;
-

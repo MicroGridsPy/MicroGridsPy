@@ -11,22 +11,38 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
     # Operation Cost
     # Generator operation cost
     foo = []
-    for g in range(1,model.Generator_Type+1):
-        for s in model.scenario:
-            for t in range(1,model.Periods+1):
-                foo.append((s,g,t))
+    for c in range(1,model.Combustor_Type+1):
+        for g in range(1,model.Generator_Type+1):
+            for s in model.scenario:
+                for t in range(1,model.Periods+1):
+                    foo.append((s,c,g,t))
+                
+  #    for c in range(1,model.Combustor_Type+1):
+   #     for g in range(1,model.Generator_Type+1):
+    #        for t in range(1,model.Periods+1):
+     #           foo.append((c,g,t))                  
 
     if model.formulation == 'LP':
         Generator_Cost = sum(model.Generator_Energy[s,g,t]*model.Marginal_Cost_Generator_1[g]
-                             *model.Scenario_Weight[s] for s,g,t in foo)
+                             *model.Scenario_Weight[s] for s,c,g,t in foo)
         Operation_Cost = (Generator_Cost)/model.Capital_Recovery_Factor
         
     if model.formulation == 'MILP':
-       Generator_Cost =  sum(model.Generator_Energy_Integer[s,g,t]*model.Start_Cost_Generator[g]*model.Scenario_Weight[s] + 
-                             model.Marginal_Cost_Generator[g]*model.Generator_Energy[s,g,t]*model.Scenario_Weight[s]
-                             for s,g,t in foo)
+       Generator_Cost =  sum((model.Generator_Energy_Integer[s,g,t]*model.Start_Cost_Generator[g]*model.Scenario_Weight[s] + 
+                             model.Marginal_Cost_Generator[g]*model.Generator_Energy[s,g,t]*model.Scenario_Weight[s])*model.EH_cost_factor
+                             for s,c,g,t in foo)
        Operation_Cost = Generator_Cost/model.Capital_Recovery_Factor
        
+       Generator_Thermal_Cost =  sum((model.Generator_Energy_Integer[s,g,t]*model.Start_Cost_Generator[g]*model.Scenario_Weight[s] + 
+                                     model.Marginal_Cost_Generator[g]*model.Thermal_Energy[s,g,t]*model.Scenario_Weight[s])*(1-model.EH_cost_factor)
+                                     for s,c,g,t in foo)
+       Operation_Cost += Generator_Thermal_Cost/model.Capital_Recovery_Factor
+       
+       #For combustor operation cost
+       
+       Combustor_Thermal_Cost = sum(model.Thermal_Combustor[s,c,t]*model.Marginal_Cost_Generator_1[g]
+                                    *model.Scenario_Weight[s] for s,c,g,t in foo)
+       Operation_Cost += (Combustor_Thermal_Cost)/model.Capital_Recovery_Factor
        
     # Battery opereation cost
     foo=[]
@@ -63,12 +79,18 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
         OyM_Gen = sum(model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]
                 *model.Maintenance_Operation_Cost_Generator[g] for g in model.generator_type)
     if model.formulation == 'MILP':
-        OyM_Gen = sum(model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]*model.Integer_generator[g]
-                *model.Maintenance_Operation_Cost_Generator[g] for g in model.generator_type)
+        OyM_Gen = sum((model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]*model.Integer_generator[g]
+                *model.Maintenance_Operation_Cost_Generator[g])*model.EH_cost_factor for g in model.generator_type)
+        
+        OyM_GenTh = sum((model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]*model.Integer_generator[g]
+                   *model.Maintenance_Operation_Cost_Generator[g])*(1-model.EH_cost_factor) for g in model.generator_type)
+        
+        OyM_Com = sum(model.Combustor_Invesment_Cost[c]*model.Combustor_Nominal_Capacity[c]
+                 *model.Maintenance_Operation_Cost_Combustor[c] for c in model.combustor_type)
     
     
     OyM_Bat = model.Battery_Nominal_Capacity*model.Battery_Invesment_Cost*model.Maintenance_Operation_Cost_Battery
-    OyM_Cost =  OyM_PV + OyM_Gen + OyM_Bat
+    OyM_Cost =  OyM_PV + OyM_Gen + OyM_GenTh + OyM_Com + OyM_Bat
     Operation_Cost += OyM_Cost/model.Capital_Recovery_Factor
     
    
@@ -81,11 +103,18 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
                  for g in model.generator_type)
     if model.formulation == 'MILP':
 
-        Inv_Gen = sum(model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]
-        *model.Integer_generator[g] for g in model.generator_type) 
+        Inv_Gen = sum((model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]
+        *model.Integer_generator[g])*model.EH_cost_factor for g in model.generator_type)
+        
+        Inv_GenTh = sum((model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]
+        *model.Integer_generator[g])*(1-model.EH_cost_factor) for g in model.generator_type)
+        
+        Inv_Com = sum(model.Combustor_Invesment_Cost[g]*model.Combustor_Nominal_Capacity[g]
+                 for c in model.combustor_type)
+        
         
     Inv_Bat = model.Battery_Nominal_Capacity*model.Battery_Invesment_Cost
-    Initial_Inversion =  Inv_PV + Inv_Gen + Inv_Bat
+    Initial_Inversion =  Inv_PV + Inv_Gen + Inv_GenTh + Inv_Com + Inv_Bat
     
            
     return Initial_Inversion + Operation_Cost
@@ -264,6 +293,65 @@ def Energy_Genarator_Energy_Max_Integer(model,s,g,t):
     :param model: Pyomo model as defined in the Model_creation library.
     '''
     return model.Generator_Energy[s,g,t] <= model.Generator_Nominal_Capacity[g]*model.Integer_generator[g]
+
+###############################   Thermal energy and CHP   ##############################################
+#
+def Generator_Thermal_Energy(model,s,g,t): #JVS Thermal energy that can be recovered    
+    
+    return model.Thermal_Energy[s,g,t] == ((model.Cogeneration_Efficiency[g]-model.Generator_Efficiency[g])*model.Generator_Energy[s,g,t])/model.Generator_Efficiency[g] 
+
+def Fuel_Flow_Demand_CHP(model,s,g,t): #JVS Fuel flow required by the CHP system 
+    
+    return model.Fuel_FlowCHP[s,g,t] == model.Generator_Energy[s,g,t]/(model.Generator_Efficiency[g]*model.Low_Heating_Value[g]) 
+
+def Thermal_Energy_Combustor_Max(model,s,c,t):   # Max thermal energy from combustor
+   
+    return model.Thermal_Combustor[s,c,t] <= model.Combustor_Nominal_Capacity[c]*model.Delta_Time
+
+def Maximum_Fuel_Available(model,s,c,g,t):      #JVS Fuel flow required by the CHP + combustor 
+    
+    return model.Maximum_Fuel[g] >= model.Fuel_FlowCHP[s,g,t]+model.Fuel_FlowCom[s,c,t] 
+
+def Combustor_Thermal_Energy(model,s,c,g,t): #JVS Thermal energy from combustor
+    
+    return model.Thermal_Combustor[s,c,t] == model.Fuel_FlowCom[s,c,t]*model.Combustor_Efficiency[c]*model.Low_Heating_Value[g]  
+
+def Thermal_balance(model,s,c,g,t): # Thermal energy balance
+    '''
+    This constraint ensures the perfect match between the thermal energy demand of the 
+    system and the differents sources to meet this demand in each scenario i.
+    
+    :param model: Pyomo model as defined in the Model_creation library.
+    '''
+
+    foo = []
+    for c in model.combustor_type:
+        for g in model.generator_type:
+            for s in model.scenario:
+                for t in model.periods:
+                    foo.append((s,c,g,t))
+                    
+#    foo = []
+#    for c in range(1,model.Combustor_Type+1):
+#        for g in range(1,model.Generator_Type+1):
+#            for s in model.scenario:
+#                for t in range(1,model.Periods+1):
+#                    foo.append((s,c,g,t))
+     
+
+    return model.Thermal_Demand[s,t] <= model.Thermal_Energy[s,g,t] + model.Thermal_Combustor[s,c,t] 
+
+#   # Foo = []
+#    #for g in model.generator_type:
+#   #     Foo.append((s,g,t))
+#   
+#    #foo=[]
+#   # for c in model.combustor_type:
+#    #    foo.append((s,c,t))
+#    Foo = []
+#    for c in model.combustor_type:
+#        for g in model.generator_type:
+#            Foo.append((s,c,g,t))
 
 ##################################################################################################
 #########                     Economical Constraints                                ##############

@@ -16,7 +16,8 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     # Import library with initialitation funtions for the parameters
     from Initialize import Initialize_years, Initialize_Demand, Battery_Reposition_Cost,\
     Initialize_Renewable_Energy, Marginal_Cost_Generator_1,Min_Bat_Capacity, Start_Cost,\
-    Marginal_Cost_Generator, Capital_Recovery_Factor
+    Marginal_Cost_Generator, Capital_Recovery_Factor, Initialize_Thermal_Demand
+    #, Initialize_Refrigeration_Dispatch, Initialize_Thermal_Drier_Dispatch  
     
     
     # Time parameters
@@ -26,20 +27,21 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     model.Scenarios = Param() 
     model.Renewable_Source = Param()
     model.Generator_Type = Param()
+    model.Combustor_Type = Param() #Combustor JVS
     
     #SETS
     model.periods = RangeSet(1, model.Periods) # Creation of a set from 1 to the number of periods in each year
     model.years = RangeSet(1, model.Years) # Creation of a set from 1 to the number of years of the project
     model.scenario = RangeSet(1, model.Scenarios) # Creation of a set from 1 to the numbero scenarios to analized
     model.renewable_source = RangeSet(1, model.Renewable_Source)
-    model.generator_type = RangeSet(1, model.Generator_Type)    
-
+    model.generator_type = RangeSet(1, model.Generator_Type)
+    model.combustor_type = RangeSet(1, model.Combustor_Type) #Combustor JVS    
 
     # PARAMETERS
     model.Scenario_Weight = Param(model.scenario, within=NonNegativeReals) #########
+    
     # Parameters of the PV 
    
-
     model.Renewable_Nominal_Capacity = Param(model.renewable_source,
                                              within=NonNegativeReals) # Nominal capacity of the PV in W/unit
     model.Renewable_Inverter_Efficiency = Param(model.renewable_source) # Efficiency of the inverter in %
@@ -91,6 +93,8 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
                                        within=NonNegativeReals, initialize=Start_Cost)  
         model.Marginal_Cost_Generator = Param(model.generator_type,
                                           initialize=Marginal_Cost_Generator)
+        model.Combustor_Nominal_Capacity = Param(model.combustor_type, 
+                                            within=NonNegativeReals)
         
     # Parameters of the Energy balance                  
     model.Energy_Demand = Param(model.scenario, model.periods, 
@@ -174,14 +178,43 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
                                              bounds=bounds_E)
         model.Last_Energy_Generator = Var(model.scenario, model.generator_type,
                                           model.periods, within=NonNegativeReals)
-    
+        model.Thermal_Combustor = Var(model.scenario, model.combustor_type, 
+                                      model.periods, within=NonNegativeReals)
+              
     # Varialbles associated to the energy balance
     if model.Lost_Load_Probability > 0:
         model.Lost_Load = Var(model.scenario, model.periods, within=NonNegativeReals) # Energy not suply by the system kWh
     model.Energy_Curtailment = Var(model.scenario, model.periods, within=NonNegativeReals
                                    ,bounds=(0,100000)) # Curtailment of solar energy in kWh
 
+#    #for the CHP JVS
+    model.Cogeneration_Efficiency = Param(model.generator_type,within=NonNegativeReals)
+    model.Maximum_Fuel = Param(model.generator_type) # Maximum Fuel available in l/h
+    model.EH_cost_factor = Param(within=NonNegativeReals) # it is 1 if the cost of fuel is totally considered for electricity cost calculation
+    model.Maintenance_Operation_Cost_Combustor = Param(model.combustor_type,within=NonNegativeReals)
+    model.Combustor_Invesment_Cost = Param(model.combustor_type,within=NonNegativeReals)
+    
+#    #for the combustor JVS
 
+    model.Combustor_Efficiency = Param(model.combustor_type, within=NonNegativeReals)
+#   
+#    #thermal balance
+    model.Thermal_Demand = Param(model.scenario, model.periods, 
+                                initialize=Initialize_Thermal_Demand) # Thermal Energy_Demand in W, JVS 
+#    model.Refrigeration_Demand = Param(model.periods, initialize=Initialize_Refrigeration_Dispatch) # Refrigeration_Demand in W, JVS 
+#    model.Drier_Thermal_Demand = Param(model.periods, initialize=Initialize_Thermal_Drier_Dispatch) # Heat demand for the drier in W, JVS 
+#    
+#    # Paramaters for GHG emissions estimation and others model.generator type, maybe it needs to be created another type
+#    model.COP_el = Param(model.generator_type)
+#    model.Emission_Factor_Electricity = Param(model.generator_type)
+#    model.Emission_Factor_Thermal = Param(model.generator_type)
+#    
+#    #for the CHP JVS
+    model.Thermal_Energy = Var(model.scenario, model.generator_type, model.periods, within=NonNegativeReals)
+    model.Fuel_FlowCHP = Var(model.scenario, model.generator_type, model.periods, within=NonNegativeReals)
+#    #for the combustor JVS       
+    
+    model.Fuel_FlowCom = Var(model.scenario, model.combustor_type, model.periods, within=NonNegativeReals)
 
 def Model_Creation_binary(model):
     
