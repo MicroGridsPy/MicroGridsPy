@@ -108,7 +108,7 @@ param: Combustor_Type := 1;
 
 param: Maximum_Fuel :=
 
-1   100;
+1   13;
 
 param: Combustor_Efficiency :=
 1   0.9;
@@ -122,4 +122,16 @@ param: Maintenance_Operation_Cost_Combustor :=
 param: Combustor_Invesment_Cost := 
 
 1	500;
+
+param: COP_el := 
+
+1   3;    #Coefficient of Performance of the conventional compressor driven refrigerators
+
+param: Emission_Factor_Electricity:= 
+
+1   0.39;  # kg of CO2/kWh aggregate emission factor for conventional electricity production
+
+param: Emission_Factor_Thermal:= 
+
+1   0.23;    # # kg of CO2/kWh aggregate emission factor for conventional heat production using LPG or NG
 

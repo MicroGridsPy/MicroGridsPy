@@ -340,13 +340,22 @@ def Thermal_balance(model,s,t): # Thermal energy balance
 #            for g in model.generator_type:
 #                for t in model.periods:
 #                    foo.append((s,c,g,t))
-                    
     foo = []
-    for c in range(1,model.Combustor_Type+1):
-        for g in range(1,model.Generator_Type+1):
-            for s in model.scenario:
-                for t in range(1,model.Periods+1):
-                    foo.append((s,c,g,t))
+    for g in model.generator_type:
+        foo.append((s,g,t))
+        
+    Foo = []
+    for c in model.combustor_type:
+        Foo.append((s,c,t))
+        
+    return model.Thermal_Demand[s,t] == sum(model.Thermal_Energy[s,g,t] for s,g,t in foo) + sum(model.Thermal_Combustor[s,c,t] for s,c,t in Foo) - model.Thermal_Curtailment[s,t]
+                    
+#    foo = []
+#    for c in range(1,model.Combustor_Type+1):
+#        for g in range(1,model.Generator_Type+1):
+#            for s in model.scenario:
+#                for t in range(1,model.Periods+1):
+#                    foo.append((s,c,g,t))
                     
 #    foo = []
 #    for c in range(1,model.Combustor_Type+1):
@@ -356,7 +365,7 @@ def Thermal_balance(model,s,t): # Thermal energy balance
 #                    foo.append((s,c,g,t))
      
 
-    return model.Thermal_Demand[s,t] <= model.Thermal_Energy[s,g,t] + model.Thermal_Combustor[s,c,t] 
+#    return model.Thermal_Demand[s,t] <= model.Thermal_Energy[s,g,t] + model.Thermal_Combustor[s,c,t] 
 
 #def Thermal_balance(model, s, t):
 #

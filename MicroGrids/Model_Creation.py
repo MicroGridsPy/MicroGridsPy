@@ -16,8 +16,8 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     # Import library with initialitation funtions for the parameters
     from Initialize import Initialize_years, Initialize_Demand, Battery_Reposition_Cost,\
     Initialize_Renewable_Energy, Marginal_Cost_Generator_1,Min_Bat_Capacity, Start_Cost,\
-    Marginal_Cost_Generator, Capital_Recovery_Factor, Initialize_Thermal_Demand
-    #, Initialize_Refrigeration_Dispatch, Initialize_Thermal_Drier_Dispatch  
+    Marginal_Cost_Generator, Capital_Recovery_Factor, Initialize_Thermal_Demand,\
+    Initialize_Refrigeration_Dispatch, Initialize_Thermal_Drier_Dispatch  
     
     
     # Time parameters
@@ -201,17 +201,20 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
 #    #thermal balance
     model.Thermal_Demand = Param(model.scenario, model.periods, 
                                 initialize=Initialize_Thermal_Demand) # Thermal Energy_Demand in W, JVS 
-#    model.Refrigeration_Demand = Param(model.periods, initialize=Initialize_Refrigeration_Dispatch) # Refrigeration_Demand in W, JVS 
-#    model.Drier_Thermal_Demand = Param(model.periods, initialize=Initialize_Thermal_Drier_Dispatch) # Heat demand for the drier in W, JVS 
+    model.Refrigeration_Demand = Param(model.scenario, model.periods, initialize=Initialize_Refrigeration_Dispatch) # Refrigeration_Demand in W, JVS 
+    model.Drier_Thermal_Demand = Param(model.scenario, model.periods, initialize=Initialize_Thermal_Drier_Dispatch) # Heat demand for the drier in W, JVS 
 #    
 #    # Paramaters for GHG emissions estimation and others model.generator type, maybe it needs to be created another type
-#    model.COP_el = Param(model.generator_type)
-#    model.Emission_Factor_Electricity = Param(model.generator_type)
-#    model.Emission_Factor_Thermal = Param(model.generator_type)
+    model.COP_el = Param(model.generator_type)
+    model.Emission_Factor_Electricity = Param(model.generator_type)
+    model.Emission_Factor_Thermal = Param(model.generator_type)
 #    
 #    #for the CHP JVS
     model.Thermal_Energy = Var(model.scenario, model.generator_type, model.periods, within=NonNegativeReals)
     model.Fuel_FlowCHP = Var(model.scenario, model.generator_type, model.periods, within=NonNegativeReals)
+    model.Thermal_Curtailment = Var(model.scenario, model.periods, within=NonNegativeReals
+                                   ,bounds=(0,100000)) # Curtailment of thermal energy in kWh
+    
 #    #for the combustor JVS       
     
     model.Fuel_FlowCom = Var(model.scenario, model.combustor_type, model.periods, within=NonNegativeReals)

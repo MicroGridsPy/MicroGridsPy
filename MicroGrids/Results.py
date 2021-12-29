@@ -57,7 +57,7 @@ def Load_results1(instance):
     # Energy Time Series
     Scenarios = pd.DataFrame()
     
-    Number = 12
+    Number = 25
     
     if instance.Lost_Load_Probability > 0: 
         Lost_Load = instance.Lost_Load.get_values()
@@ -87,13 +87,21 @@ def Load_results1(instance):
     Fuel_FlowCHP = instance.Fuel_FlowCHP.get_values()    #JVS for fuel flow required by CHP
     Thermal_Combustor = instance.Thermal_Combustor.get_values () # Heat from combustor
     Thermal_Demand = instance.Thermal_Demand.extract_values()    #JVS for thermal energy
-#    Fuel_FlowCom = instance.Fuel_FlowCom.get_values ()       # Fuel flow required by combustor
+    Fuel_FlowCom = instance.Fuel_FlowCom.get_values ()       # Fuel flow required by combustor
+    Thermal_Curtailment = instance.Thermal_Curtailment.get_values()
+    Low_Heating_Value = instance.Low_Heating_Value.extract_values()
+    COP_el = instance.COP_el.extract_values()
+    Refrigeration_Demand = instance.Refrigeration_Demand.extract_values()    #JVS for thermal energy
+    Drier_Thermal_Demand = instance.Drier_Thermal_Demand.extract_values()
+    Emission_Factor_Electricity = instance.Emission_Factor_Electricity.extract_values()
+#    Emission_Factor_Thermal = instance.Emission_Factor_Thermal.extract_values()
+
     
     Total_Generator_Energy = {}
     Total_Thermal_Energy = {}       #JVS thermal energy from generator
     Total_FuelFlow_CHP = {}
     Total_Thermal_Combustor = {}
-#    Total_Fuel_FlowCom = {} 
+    Total_Fuel_FlowCom = {} 
                 
     for s in range(1, Number_Scenarios + 1):
           for t in range(1, Number_Periods+1):
@@ -110,7 +118,7 @@ def Load_results1(instance):
                     foo.append((s,c,t))
                 Total_Thermal_Energy[s,t] = sum(Thermal_Energy[i] for i in foo)
                 Total_Thermal_Combustor[s,t] = sum(Thermal_Combustor[i] for i in foo)
-#                Total_Fuel_FlowCom[s,t] = sum(Fuel_FlowCom[i] for i in foo)
+                Total_Fuel_FlowCom[s,t] = sum(Fuel_FlowCom[i] for i in foo)
                 
             
                 
@@ -123,10 +131,7 @@ def Load_results1(instance):
     for i in columns:
         Information = [[] for i in range(Number)]
         for j in  Scenarios_Periods[foo]:
-#             for t in range(1, Number_Periods+1):
-#                foo = []
-#                for g in range(1,Number_Generator+1):
-#                   foo.append((g,t))
+
             Information[0].append(Renewable_Energy[j]) 
             Information[1].append(Battery_Flow_Out[j]) 
             Information[2].append(Battery_Flow_in[j]) 
@@ -136,11 +141,30 @@ def Load_results1(instance):
             Information[6].append(Total_Generator_Energy[j])
             Information[7].append(Total_Thermal_Energy[j])
             Information[8].append(Total_FuelFlow_CHP[j])
-            Information[9].append(Total_Thermal_Combustor[j])
-#            Information[10].append(Total_Fuel_FlowCom[j])
-            Information[11].append(Thermal_Demand[j])
+            if Total_FuelFlow_CHP[j] == 0:
+                Information[9].append(0)
+            elif Thermal_Demand[j] <= Total_Thermal_Energy[j]:
+                Information[9].append((Total_Generator_Energy[j]+Thermal_Demand[j])/(Total_FuelFlow_CHP[j]*Low_Heating_Value[g]))
+            else:
+                Information[9].append((Total_Generator_Energy[j]+Total_Thermal_Energy[j])/(Total_FuelFlow_CHP[j]*Low_Heating_Value[g])) 
+            Information[10].append(Total_Thermal_Combustor[j])
+            Information[11].append(Total_Fuel_FlowCom[j])
+            Information[12].append(Thermal_Demand[j])
+            Information[13].append(Thermal_Curtailment[j])
+            Information[14].append(Total_FuelFlow_CHP[j]+Total_Fuel_FlowCom[j])
+            Information[15].append(Drier_Thermal_Demand[j])
+            Information[16].append(Refrigeration_Demand[j])
+            Information[17].append(Refrigeration_Demand[j]/COP_el[g])
+            Information[18].append(Refrigeration_Demand[j]/COP_el[g]+Energy_Demand[j])
+            Information[19].append(Refrigeration_Demand[j]/COP_el[g]+Energy_Demand[j]+Curtailment[j])
+            Information[20].append(Energy_Demand[j]*Emission_Factor_Electricity[g]) 
+            Information[21].append(Refrigeration_Demand[j]*Emission_Factor_Electricity[g]/COP_el[g])
+            Information[22].append((Refrigeration_Demand[j]/COP_el[g]+Energy_Demand[j])*Emission_Factor_Electricity[g])
+            Information[23].append(Curtailment[j]*Emission_Factor_Electricity[g]) 
+            Information[24].append((Refrigeration_Demand[j]/COP_el[g]+Energy_Demand[j]+Curtailment[j])*Emission_Factor_Electricity[g])
+            
             if instance.Lost_Load_Probability > 0: 
-                Information[12].append(Lost_Load[j])
+                Information[25].append(Lost_Load[j])
         
         Scenarios=Scenarios.append(Information)
         foo+=1
@@ -156,78 +180,28 @@ def Load_results1(instance):
        index.append('Gen energy '+str(j) + ' (kWh)')
        index.append('Gen thermal energy '+str(j) + ' (kWh)')
        index.append('Fuel Flow CHP '+str(j) + ' (l/h)')
+       index.append('CHP efficiency '+str(j) + ' ')
        index.append('Comb thermal energy '+str(j) + ' (kWh)')
        index.append('Fuel Flow Com '+str(j) + ' (l/h)')
        index.append('Thermal energy demand '+str(j) + ' (kWh)')
+       index.append('Thermal curtailment '+str(j) + ' (kWh)')       
+       index.append('Total Fuel Flow '+str(j) + ' (l/h)')
+       index.append('Thermal demand Drier '+str(j) + ' (kWh)')
+       index.append('Refrigeration demand '+str(j) + ' (kWh)')
+       index.append('Elect. for refrig. '+str(j) + ' (kWh)') 
+       index.append('Total Elect. Used '+str(j) + ' (kWh)')
+       index.append('Total Elect. Produced '+str(j) + ' (kWh)') 
+       index.append('CO2 emissions Elect. Demand '+str(j) + ' (kg of CO2)')
+       index.append('CO2 emissions Elect. Refrigeration '+str(j) + ' (kg of CO2)') 
+       index.append('CO2 emissions Elect. Used '+str(j) + ' (kg of CO2)') 
+       index.append('CO2 emissions Elect. Curtailment '+str(j) + ' (kg of CO2)') 
+       index.append('CO2 emissions Elect. Produced '+str(j) + ' (kg of CO2)') 
+
+           
        if instance.Lost_Load_Probability > 0: 
            index.append('Lost Load '+str(j) + ' (kWh)')
     Scenarios.index= index
-     
-#     
-#    Fuel_FlowCHP = instance.Fuel_FlowCHP.get_values()    #JVS for fuel flow required by CHP
-#    Thermal_Combustor = instance.Thermal_Combustor.get_values () # Heat from combustor
-#    Fuel_FlowCom = instance.Fuel_FlowCom.get_values ()       # Fuel flow required by combustor
-#    Low_Heating_Value = instance.Low_Heating_Value.extract_values()
-#    COP_el = instance.COP_el.extract_values()
-#    Refrigeration_Demand = instance.Refrigeration_Demand.extract_values()    #JVS for thermal energy
-#    Drier_Thermal_Demand = instance.Drier_Thermal_Demand.extract_values()
-#    Emission_Factor_Electricity = instance.Emission_Factor_Electricity.extract_values()
-#    Emission_Factor_Thermal = instance.Emission_Factor_Thermal.extract_values()
-#    
-#    Total_Generator_Energy = {}
-#    Total_Thermal_Energy = {}       #JVS thermal energy from generator
-#  
-#                    
-#
-#    for t in range(1, Number_Periods+1):
-#                foo = []
-#                for g in range(1,Number_Generator+1):
-#                    foo.append((g,t))
-#                Total_Generator_Energy[t] = sum(Generator_Energy[i] for i in foo)
-#                Total_Thermal_Energy[t] = sum(Thermal_Energy[i] for i in foo) 
-#                                      
-#    for t in range(1, Number_Periods+1):
-#              foo = []
-#              for c in range(1,Number_Combustor+1):
-#                 foo.append((c,t))
-#                                  
-#    
-#    for t in range(1, Number_Periods+1):
-#    
-#        Scenarios.loc[t,'Renewable Energy (kWh)']     =  Renewable_Energy[t]
-#        Scenarios.loc[t,'Battery Flow Out (kWh)']     =  Battery_Flow_Out[t]
-#        Scenarios.loc[t,'Battery Flow in (kWh)']      =  Battery_Flow_in[t]
-#        Scenarios.loc[t,'Curtailment (kWh)']          =  Curtailment[t]
-#        Scenarios.loc[t,'Energy Demand (kWh)']        =  Energy_Demand[t]
-#        Scenarios.loc[t,'SOC (kWh)']                  =  SOC[t]
-#        Scenarios.loc[t,'Gen energy (kWh)']           =  Total_Generator_Energy[t]      
-#        Scenarios.loc[t,'Gen thermal energy (kWh)']   =  Total_Thermal_Energy[t]        #JVS for thermal energy
-#        Scenarios.loc[t,'Fuel Flow CHP (l/h)']        =  Fuel_FlowCHP[g,t]              #JVS for fuel flow required by CHP
-#        Scenarios.loc[t,'Comb thermal energy (kWh)']  =  Thermal_Combustor[c,t]         #JVS Heat from combustor
-#        Scenarios.loc[t,'Fuel Flow Comb (l/h)']       =  Fuel_FlowCom[c,t]              #JVS for fuel flow required by Combustor
-#        Scenarios.loc[t,'Thermal Demand (kWh)']       =  Thermal_Demand[t]             #JVS for thermal energy
-#        Scenarios.loc[t,'Thermal surplus (kWh)']      =  (Total_Thermal_Energy[t] + Thermal_Combustor[c,t] - Thermal_Demand[t])     #JVS Surplus heat from the system
-#        Scenarios.loc[t,'Total Fuel Flow l/h']        =  (Fuel_FlowCHP[g,t] + Fuel_FlowCom[c,t])          #JVS Total fuel used by the system 
-#
-#        if Fuel_FlowCHP[g,t] == 0:
-#            Scenarios.loc[t,'CHP efficiency']     =  0
-#        elif Thermal_Demand[t] <= Total_Thermal_Energy[t]:
-#            Scenarios.loc[t,'CHP efficiency']     =  ((Total_Generator_Energy[t]+Thermal_Demand[t])/(Fuel_FlowCHP[g,t]*Low_Heating_Value[g]))
-#        else:
-#            Scenarios.loc[t,'CHP efficiency']     =  ((Total_Generator_Energy[t]+Total_Thermal_Energy[t])/(Fuel_FlowCHP[g,t]*Low_Heating_Value[g])) 
-#        
-#        Scenarios.loc[t,'Thermal demand Drier (kWh)']     =  Drier_Thermal_Demand[t]             #JVS for thermal energy
-#        Scenarios.loc[t,'Refrigeration Demand (kWh)']     =  Refrigeration_Demand[t]             #JVS for thermal energy
-#        Scenarios.loc[t,'Elect. for refrig. (kWh)']     =  Refrigeration_Demand[t]/COP_el[g]            #JVS for thermal energy
-#        Scenarios.loc[t,'Total Elect. Used (kWh)']     =  (Refrigeration_Demand[t]/COP_el[g] +  Energy_Demand[t])          #JVS for thermal energy
-#        Scenarios.loc[t,'Total Elect. Produced (kWh)']     =  (Refrigeration_Demand[t]/COP_el [g] +  Energy_Demand[t] + Curtailment[t])  
-#        Scenarios.loc[t,'CO2 emissions Elect. Demand (kg of CO2)']     =  Energy_Demand[t]*Emission_Factor_Electricity[g] 
-#        Scenarios.loc[t,'CO2 emissions Elect. Refrigeration (kg of CO2)']     =  Refrigeration_Demand[t]*Emission_Factor_Electricity[g]/COP_el[g]     
-#        Scenarios.loc[t,'CO2 emissions Elect. Used (kg of CO2)']     =  (Refrigeration_Demand[t]/COP_el[g] +  Energy_Demand[t])*Emission_Factor_Electricity[g] 
-#        Scenarios.loc[t,'CO2 emissions Elect. Curtailment (kg of CO2)']     =  Curtailment[t]*Emission_Factor_Electricity[g]
-#        Scenarios.loc[t,'CO2 emissions Elect. Produced (kg of CO2)']     =  (Refrigeration_Demand[t]/COP_el [g] +  Energy_Demand[t] + Curtailment[t])*Emission_Factor_Electricity[g]    
-   
-   
+
      # Creation of an index starting in the 'model.StartDate' value with a frequency step equal to 'model.Delta_Time'
     if instance.Delta_Time() >= 1 and type(instance.Delta_Time()) == type(1.0) : # if the step is in hours and minutes
         foo = str(instance.Delta_Time()) # trasform the number into a string
