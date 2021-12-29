@@ -21,9 +21,9 @@ def Model_Resolution(model,Renewable_Penetration, Battery_Independency,datapath=
     Energy_balance, Maximun_Lost_Load, Renewable_Energy_Penetration,\
     Maximun_Generator_Energy,Generator_Bounds_Min_Integer,\
     Battery_Min_Capacity,Generator_Bounds_Max_Integer,Energy_Genarator_Energy_Max_Integer, \
-    Generator_Thermal_Energy, Fuel_Flow_Demand_CHP, Thermal_Energy_Combustor_Max, Maximum_Fuel_Available, \
-    Combustor_Thermal_Energy, Thermal_balance 
-   # ,  ,, Maximum_Fuel_Available\
+    Generator_Thermal_Energy, Fuel_Flow_Demand_CHP, Thermal_Energy_Combustor_Max,  \
+    Thermal_balance, Maximum_Fuel_Available, Fuel_Flow_Demand_Comb 
+   # ,  ,, Maximum_Fuel_Available Combustor_Thermal_Energy, \
            
     # OBJETIVE FUNTION:
     model.ObjectiveFuntion = Objective(rule=Net_Present_Cost, sense=minimize)  
@@ -48,22 +48,24 @@ def Model_Resolution(model,Renewable_Penetration, Battery_Independency,datapath=
     model.Maxbatout = Constraint(model.scenario, model.periods, rule=Max_Bat_out) 
     
 #    #Thermal Energy constraints JVS
-    model.ThermalBalance = Constraint(model.scenario, model.generator_type, model.combustor_type, model.periods, rule=Thermal_balance)  # Thermal Energy balance
+    model.ThermalBalance = Constraint(model.scenario, model.periods, rule=Thermal_balance)  # Thermal Energy balance
 #    
 #    #CHP constraints
     model.GeneratorThermalEnergy = Constraint(model.scenario, model.generator_type, model.periods, rule =Generator_Thermal_Energy)
     model.FuelFlowCHP =  Constraint(model.scenario, model.generator_type, model.periods, rule =Fuel_Flow_Demand_CHP)
     model.MaxFuel =  Constraint(model.scenario, model.generator_type, model.combustor_type, 
                                            model.periods, rule =Maximum_Fuel_Available)
-#    
-#    #Combustor constraints
-    model.CombustorThermalEnergy = Constraint(model.scenario,model.generator_type, model.combustor_type,
-                                              model.periods, rule =Combustor_Thermal_Energy)
-    model.ThermalCombustorMax = Constraint(model.scenario, model.combustor_type, 
-                                           model.periods, rule =Thermal_Energy_Combustor_Max)    
+    model.FuelFlowCom = Constraint(model.scenario, model.combustor_type, model.generator_type, model.periods, rule =Fuel_Flow_Demand_Comb)
+
+     #Combustor constraints
+    model.CombustorThermalEnergy = Constraint(model.scenario, model.combustor_type, 
+                                              model.periods, rule =Thermal_Energy_Combustor_Max)
+    
+#    model.ThermalCombustorMax = Constraint(model.scenario, model.combustor_type, 
+#                                           model.periods, rule =Thermal_Energy_Combustor_Max)    
     
     if Battery_Independency > 0:
-        model.BatteryMinCapacity = Constraint(rule=Battery_Min_Capacity)
+        model.BatteryMinCapacity = Constraint(rule=Battery_Min_Capacity) 
 
     # Diesel Generator constraints
     

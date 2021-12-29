@@ -109,7 +109,7 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
         Inv_GenTh = sum((model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]
         *model.Integer_generator[g])*(1-model.EH_cost_factor) for g in model.generator_type)
         
-        Inv_Com = sum(model.Combustor_Invesment_Cost[g]*model.Combustor_Nominal_Capacity[g]
+        Inv_Com = sum(model.Combustor_Invesment_Cost[c]*model.Combustor_Nominal_Capacity[c]
                  for c in model.combustor_type)
         
         
@@ -300,23 +300,33 @@ def Generator_Thermal_Energy(model,s,g,t): #JVS Thermal energy that can be recov
     
     return model.Thermal_Energy[s,g,t] == ((model.Cogeneration_Efficiency[g]-model.Generator_Efficiency[g])*model.Generator_Energy[s,g,t])/model.Generator_Efficiency[g] 
 
+
 def Fuel_Flow_Demand_CHP(model,s,g,t): #JVS Fuel flow required by the CHP system 
     
     return model.Fuel_FlowCHP[s,g,t] == model.Generator_Energy[s,g,t]/(model.Generator_Efficiency[g]*model.Low_Heating_Value[g]) 
 
+
 def Thermal_Energy_Combustor_Max(model,s,c,t):   # Max thermal energy from combustor
    
-    return model.Thermal_Combustor[s,c,t] <= model.Combustor_Nominal_Capacity[c]*model.Delta_Time
+    return model.Thermal_Combustor[s,c,t] <= model.Combustor_Nominal_Capacity[c]*model.Delta_Time 
+
+
+def Fuel_Flow_Demand_Comb(model,s,c,g,t): #JVS Fuel flow required by the combustor 
+    
+    return model.Fuel_FlowCom[s,c,t] == model.Thermal_Combustor[s,c,t]/(model.Combustor_Efficiency[c]*model.Low_Heating_Value[g]) 
+
 
 def Maximum_Fuel_Available(model,s,c,g,t):      #JVS Fuel flow required by the CHP + combustor 
     
     return model.Maximum_Fuel[g] >= model.Fuel_FlowCHP[s,g,t]+model.Fuel_FlowCom[s,c,t] 
 
-def Combustor_Thermal_Energy(model,s,c,g,t): #JVS Thermal energy from combustor
-    
-    return model.Thermal_Combustor[s,c,t] == model.Fuel_FlowCom[s,c,t]*model.Combustor_Efficiency[c]*model.Low_Heating_Value[g]  
 
-def Thermal_balance(model,s,c,g,t): # Thermal energy balance
+#def Combustor_Thermal_Energy(model,s,c,g,t): #JVS Thermal energy from combustor
+#    
+#    return model.Thermal_Combustor[s,c,t] == model.Fuel_FlowCom[s,c,t]*model.Combustor_Efficiency[c]*model.Low_Heating_Value[g]  
+
+
+def Thermal_balance(model,s,t): # Thermal energy balance
     '''
     This constraint ensures the perfect match between the thermal energy demand of the 
     system and the differents sources to meet this demand in each scenario i.
@@ -324,11 +334,18 @@ def Thermal_balance(model,s,c,g,t): # Thermal energy balance
     :param model: Pyomo model as defined in the Model_creation library.
     '''
 
+#    foo = []
+#    for s in model.scenario:
+#        for c in model.combustor_type:
+#            for g in model.generator_type:
+#                for t in model.periods:
+#                    foo.append((s,c,g,t))
+                    
     foo = []
-    for c in model.combustor_type:
-        for g in model.generator_type:
+    for c in range(1,model.Combustor_Type+1):
+        for g in range(1,model.Generator_Type+1):
             for s in model.scenario:
-                for t in model.periods:
+                for t in range(1,model.Periods+1):
                     foo.append((s,c,g,t))
                     
 #    foo = []
@@ -340,6 +357,22 @@ def Thermal_balance(model,s,c,g,t): # Thermal energy balance
      
 
     return model.Thermal_Demand[s,t] <= model.Thermal_Energy[s,g,t] + model.Thermal_Combustor[s,c,t] 
+
+#def Thermal_balance(model, s, t):
+#
+#    Foo = []
+#    for g in model.generator_type:
+#        Foo.append((s,g,t))
+#
+#    Thermal_Sources = sum(model.Thermal_Energy[s,g,t] for s,g,t in Foo)
+#    
+#    foo=[]
+#    for c in model.combustor_type:
+#        foo.append((s,c,t))
+#        
+#    Thermal_Sources += sum(model.Thermal_Combustor[s,c,t] for s,c,t in foo)  
+#        
+#    return model.Thermal_Demand[s,t] == Thermal_Sources 
 
 #   # Foo = []
 #    #for g in model.generator_type:

@@ -69,7 +69,7 @@ def Initialize_Thermal_Demand(model,i, t):
         
     '''
     
-    return float(Thermal_Demand[1][t])
+    return float(Thermal_Demand[i][t])
 
 def Initialize_Thermal_Dispatch(model, t):
     '''

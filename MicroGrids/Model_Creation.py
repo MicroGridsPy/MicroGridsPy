@@ -93,9 +93,7 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
                                        within=NonNegativeReals, initialize=Start_Cost)  
         model.Marginal_Cost_Generator = Param(model.generator_type,
                                           initialize=Marginal_Cost_Generator)
-        model.Combustor_Nominal_Capacity = Param(model.combustor_type, 
-                                            within=NonNegativeReals)
-        
+               
     # Parameters of the Energy balance                  
     model.Energy_Demand = Param(model.scenario, model.periods, 
                                 initialize=Initialize_Demand) # Energy Energy_Demand in W 
@@ -178,8 +176,10 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
                                              bounds=bounds_E)
         model.Last_Energy_Generator = Var(model.scenario, model.generator_type,
                                           model.periods, within=NonNegativeReals)
-        model.Thermal_Combustor = Var(model.scenario, model.combustor_type, 
-                                      model.periods, within=NonNegativeReals)
+    model.Thermal_Combustor = Var(model.scenario, model.combustor_type, 
+                                  model.periods, within=NonNegativeReals)
+    model.Combustor_Nominal_Capacity = Var(model.combustor_type, 
+                                           within=NonNegativeReals)
               
     # Varialbles associated to the energy balance
     if model.Lost_Load_Probability > 0:

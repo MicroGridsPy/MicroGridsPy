@@ -57,7 +57,7 @@ def Load_results1(instance):
     # Energy Time Series
     Scenarios = pd.DataFrame()
     
-    Number = 10
+    Number = 12
     
     if instance.Lost_Load_Probability > 0: 
         Lost_Load = instance.Lost_Load.get_values()
@@ -86,11 +86,14 @@ def Load_results1(instance):
     Thermal_Energy = instance.Thermal_Energy.get_values()    #JVS for thermal energy
     Fuel_FlowCHP = instance.Fuel_FlowCHP.get_values()    #JVS for fuel flow required by CHP
     Thermal_Combustor = instance.Thermal_Combustor.get_values () # Heat from combustor
+    Thermal_Demand = instance.Thermal_Demand.extract_values()    #JVS for thermal energy
+#    Fuel_FlowCom = instance.Fuel_FlowCom.get_values ()       # Fuel flow required by combustor
     
     Total_Generator_Energy = {}
     Total_Thermal_Energy = {}       #JVS thermal energy from generator
     Total_FuelFlow_CHP = {}
     Total_Thermal_Combustor = {}
+#    Total_Fuel_FlowCom = {} 
                 
     for s in range(1, Number_Scenarios + 1):
           for t in range(1, Number_Periods+1):
@@ -100,13 +103,14 @@ def Load_results1(instance):
                 Total_Generator_Energy[s,t] = sum(Generator_Energy[i] for i in foo)
                 Total_FuelFlow_CHP [s,t] = sum(Fuel_FlowCHP[i] for i in foo)
                 
-#    for s in range(1, Number_Scenarios + 1):
-#          for t in range(1, Number_Periods+1):
+    for s in range(1, Number_Scenarios + 1):
+          for t in range(1, Number_Periods+1):
                 foo = []
                 for c in range(1,Number_Combustor+1):
                     foo.append((s,c,t))
                 Total_Thermal_Energy[s,t] = sum(Thermal_Energy[i] for i in foo)
                 Total_Thermal_Combustor[s,t] = sum(Thermal_Combustor[i] for i in foo)
+#                Total_Fuel_FlowCom[s,t] = sum(Fuel_FlowCom[i] for i in foo)
                 
             
                 
@@ -133,8 +137,10 @@ def Load_results1(instance):
             Information[7].append(Total_Thermal_Energy[j])
             Information[8].append(Total_FuelFlow_CHP[j])
             Information[9].append(Total_Thermal_Combustor[j])
+#            Information[10].append(Total_Fuel_FlowCom[j])
+            Information[11].append(Thermal_Demand[j])
             if instance.Lost_Load_Probability > 0: 
-                Information[10].append(Lost_Load[j])
+                Information[12].append(Lost_Load[j])
         
         Scenarios=Scenarios.append(Information)
         foo+=1
@@ -149,13 +155,15 @@ def Load_results1(instance):
        index.append('SOC '+str(j) + ' (kWh)')
        index.append('Gen energy '+str(j) + ' (kWh)')
        index.append('Gen thermal energy '+str(j) + ' (kWh)')
-       index.append('Fuel Flow CHP '+str(j) + '(l/h)')
+       index.append('Fuel Flow CHP '+str(j) + ' (l/h)')
        index.append('Comb thermal energy '+str(j) + ' (kWh)')
+       index.append('Fuel Flow Com '+str(j) + ' (l/h)')
+       index.append('Thermal energy demand '+str(j) + ' (kWh)')
        if instance.Lost_Load_Probability > 0: 
            index.append('Lost Load '+str(j) + ' (kWh)')
     Scenarios.index= index
      
-#     Thermal_Demand = instance.Thermal_Demand.extract_values()    #JVS for thermal energy
+#     
 #    Fuel_FlowCHP = instance.Fuel_FlowCHP.get_values()    #JVS for fuel flow required by CHP
 #    Thermal_Combustor = instance.Thermal_Combustor.get_values () # Heat from combustor
 #    Fuel_FlowCom = instance.Fuel_FlowCom.get_values ()       # Fuel flow required by combustor
