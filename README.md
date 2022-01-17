@@ -3,7 +3,8 @@ MicroGridsPy - Multi Year Capacity Expansion
 
 ### Description
 
-The MicroGridsPy model main objective is to provide an open-source alternative to the problem of sizing and dispatch of energy in micro-grids in isolated places. It’s written in python(pyomo) and use excel and text files as input and output data handling and visualisation.
+The MicroGridsPy model main objective is to provide an open-source alternative to the problem of sizing and dispatch of energy in micro-grids in isolated places. 
+It is written in python (pyomo) and use excel and text files as input and output data handling and visualisation.
 
 Main features:
     Solar PV and wind energy hourly time series estimation relying on NASA POWER API.
@@ -14,7 +15,7 @@ Main features:
     Determination of the LCOE for the optimal system.
 
 
-### Main developpers
+### Based on the orginal code developed by:
 
 Sergio Balderrana <br/>
 University of Liege, Belgium - Universidad Mayor de San Simon, Bolivia <br/>
@@ -24,11 +25,11 @@ Sylvain Quoilin <br/>
 University of Liege, Belgium <br/>
 E-mail: squoilin@ulg.ac.be  <br/>
 
-*Current Version*<br/>
+### SESAM Version Developed by:
+
 Lorenzo Rinaldi, Giulia Guidicini, Nicolò Stevanato, Francesco Lombardi <br/>
 Politecnico di Milano, Italy <br/>
-E-mail: lorenzo.rinaldi@polimi.it <br/>
-        francesco.lombardi@polimi.it <br/>
+E-mail: nicolo.stevanato@polimi.it <br/>
  
 ### Required libraries
 
