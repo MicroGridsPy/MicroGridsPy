@@ -18,12 +18,11 @@ Based on the original model by:
 
 from pyomo.environ import Param, RangeSet, NonNegativeReals, Var, Set 
 from Initialize import Initialize_Demand, Initialize_Battery_Unit_Repl_Cost, Initialize_RES_Energy, Initialize_Generator_Marginal_Cost, Initialize_Battery_Minimum_Capacity, Initialize_YearUpgrade_Tuples, Initialize_Upgrades_Number # Import library with initialitation funtions for the parameters
-
+import pandas
 
 def Model_Creation(model, Renewable_Penetration,Battery_Independence):
 
 #%% PARAMETERS  
-
     "Project parameters"
     model.Periods         = Param(within=NonNegativeReals)                          # Number of periods of analysis of the energy variables
     model.Years           = Param(within=NonNegativeReals)                          # Number of years of the project
@@ -51,6 +50,7 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independence):
                                   within=NonNegativeReals) 
     
     "Parameters of RES" 
+     
     model.RES_Names                   = Param(model.renewable_sources)               # RES names
     model.RES_Nominal_Capacity         = Param(model.renewable_sources,
                                                within=NonNegativeReals)               # Nominal capacity of the RES in W/unit

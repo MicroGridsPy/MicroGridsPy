@@ -6,7 +6,8 @@ MicroGridsPy - Multi Year Capacity Expansion
 The MicroGridsPy model main objective is to provide an open-source alternative to the problem of sizing and dispatch of energy in micro-grids in isolated places. It’s written in python(pyomo) and use excel and text files as input and output data handling and visualisation.
 
 Main features:
-
+    Solar PV and wind energy hourly time series estimation relying on NASA POWER API.
+    Load demand prediction applying demand archetypes of households, schools and hospitals for different wealth tiers.
     Optimal sizing of Lion-Ion batteries, diesel generators and PV panels in order to supply a demand with the lowest cost possible.
     Optimal dispatch from different energy sources.
     Calculation of the net present cost of the system for the project lifetime.
@@ -31,7 +32,7 @@ E-mail: lorenzo.rinaldi@polimi.it <br/>
  
 ### Required libraries
 
-To run the model the ad-hoc environmens are available as a branch of this repository
+To run the model the ad-hoc environments are available as a branch of this repository
 
  - mgp.yml
  - mgp_mac.yml

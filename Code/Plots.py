@@ -181,7 +181,7 @@ def DispatchPlot(instance,TimeSeries,PlotScenario,PlotDate,PlotTime,PlotResoluti
     ax1.grid(True, zorder=2)
        
     "secondary y axis"
-    if BESSNominalCapacity[PlotStep] >= 1:
+    if BESSNominalCapacity[PlotStep] < 1:
         ax2=ax1.twinx()
         ax2.plot(x_Plot, y_BESS_SOC, '--', color='black', label='Battery state\nof charge', zorder=2)
         ax2.set_ylabel('Battery state of charge [%]', fontsize=fontaxis)

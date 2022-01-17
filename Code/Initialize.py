@@ -20,7 +20,7 @@ import pandas as pd
 import re
 
 #%% This section extracts the values of Scenarios, Periods, Years from data.dat and creates ranges for them
-Data_file = "Inputs/data.dat"
+Data_file = "Inputs/Model_data.dat"
 Data_import = open(Data_file).readlines()
 
 for i in range(len(Data_import)):
@@ -40,7 +40,7 @@ generator = [i for i in range(1,n_generators+1)]
 
 #%% This section is useful to define the number of investment steps as well as to assign each year to its corresponding step
 def Initialize_Upgrades_Number(model):
-    Data_file = "Inputs/data.dat"
+    Data_file = "Inputs/Model_data.dat"
     Data_import = open(Data_file).readlines()
     
     for i in range(len(Data_import)):
@@ -83,7 +83,7 @@ def Initialize_YearUpgrade_Tuples(model):
 
 
 #%% This section imports the multi-year Demand and Renewable-Energy output and creates a Multi-indexed DataFrame for it
-Demand = pd.read_excel('Inputs/Demand.xls')
+Demand = pd.read_excel('Inputs/Demand.xlsx')
 Energy_Demand_Series = pd.Series()
 for i in range(1,n_years*n_scenarios+1):
     dum = Demand[i][:]
@@ -105,10 +105,10 @@ Energy_Demand_2.index = index_2
 def Initialize_Demand(model, s, y, t):
     return float(Energy_Demand[0][(s,y,t)])
 
-Renewable_Energy = pd.read_excel('Inputs/Renewable_Energy.xls')
+Renewable_Energy = pd.read_excel('Inputs/Renewable_Energy.xlsx')
 def Initialize_RES_Energy(model,s,r,t):
-    column = (s-1)*model.RES_Sources + r 
-    return float(Renewable_Energy[column][t])   
+    column = (s-1)*model.RES_Sources + float(r) 
+    return (Renewable_Energy[column][(t)])   
 
 
 

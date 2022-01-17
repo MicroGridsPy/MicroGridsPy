@@ -21,7 +21,7 @@ from pyomo.environ import Objective, minimize, Constraint
 from Constraints import *
 
 
-def Model_Resolution(model, Optimization_Goal, Renewable_Penetration, Battery_Independence,datapath="Inputs/data.dat"):      
+def Model_Resolution(model, Optimization_Goal, Renewable_Penetration, Battery_Independence,datapath="Inputs/Model_data.dat"):      
     
 #%% Economic constraints
     if Optimization_Goal == 'NPC':

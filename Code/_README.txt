@@ -7,6 +7,9 @@ SCRIPTS:
 "Model_Creation"  : contains the creation of the Pyomo variables 
 "Model_Resolution": contains the creation of the Pyomo instance, to be elaborated by the external solver (GUROBI, CPLEX, GLPK)
 "Results"         : script for results extraction, elaboration and export to Excel; also contains the functions needed for the results plot
+"RE_calculation"  : script for the download, processing and calculation of PV and wind power hourly time-series, then exported to "Renewable_energy.xlsx". 
+"Demand_main"     : script for the calculation of total hourly load demand using demand archetypes and data from "Demand_data.dat"
+
 
 PROPOSED EXAMPLE:
 Time horizon: 5 years
