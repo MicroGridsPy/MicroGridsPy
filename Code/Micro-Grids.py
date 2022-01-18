@@ -22,7 +22,7 @@ from Model_Resolution import Model_Resolution
 from Results import ResultsSummary, TimeSeries, PrintResults
 from Plots import DispatchPlot#, CashFlowPlot, SizePlot
 from RE_calculation import RE_supply
-from Demand_main import demand_generation
+from Demand import demand_generation
 
 start = time.time()         # Start time counter
 model = AbstractModel()     # Define type of optimization problem

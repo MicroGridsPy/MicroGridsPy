@@ -26,4 +26,4 @@ param: G_NMOT := 800;											#irradiance of NMOT conditions [W/m^2]
 
 
 param: turbine_type := 'HA';										#Horizontal/Vertical axys
-param: turbine_model := 'Enercon.E40.500';							        #model of the turbine (choose from Power_curve sheet)
+param: turbine_model := 'Bonus.B23.150';							        #model name of the turbine 

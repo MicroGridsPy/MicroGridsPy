@@ -456,7 +456,7 @@ def EnergySystemSize(instance):
     RES_Size = pd.DataFrame()
     for r in range(1,R+1):
         for st in range(1,ST+1):
-            res_size = pd.DataFrame([RES_Names[r], 'kW', (RES_Units[st,r]*RES_Nominal_Capacity[r])/1e3]).T.set_index([0,1]) 
+            res_size = pd.DataFrame([RES_Names[r], 'kW', (RES_Units[st,r]*RES_Nominal_Capacity[r])/1000]).T.set_index([0,1]) 
             if ST == 1:
                 res_size.columns = ['Total']
             else:
@@ -464,7 +464,7 @@ def EnergySystemSize(instance):
             res_size.index.names = ['Component', 'Unit']
             RES_Size = pd.concat([RES_Size, res_size], axis=1).fillna(0)
     RES_Size = RES_Size.groupby(level=[0], axis=1, sort=False).sum()
-    res_size_tot = RES_Size.sum(1).to_frame()
+    res_size_tot = RES_Size['Step '+str(ST)].to_frame()
     res_size_tot.columns = ['Total']
     if ST != 1:
         RES_Size = pd.concat([RES_Size, res_size_tot],axis=1)
@@ -482,7 +482,7 @@ def EnergySystemSize(instance):
         bess_size.index.names = ['Component', 'Unit']
         BESS_Size = pd.concat([BESS_Size, bess_size], axis=1).fillna(0)
     BESS_Size = BESS_Size.groupby(level=[0], axis=1, sort=False).sum()
-    bess_size_tot = BESS_Size.sum(1).to_frame()
+    bess_size_tot = BESS_Size['Step '+str(ST)].to_frame()
     bess_size_tot.columns = ['Total']
     if ST != 1:
         BESS_Size = pd.concat([BESS_Size, bess_size_tot],axis=1)
@@ -501,7 +501,7 @@ def EnergySystemSize(instance):
             gen_size.index.names = ['Component', 'Unit']
             Generator_Size = pd.concat([Generator_Size, gen_size], axis=1).fillna(0)
     Generator_Size = Generator_Size.groupby(level=[0], axis=1, sort=False).sum()
-    gen_size_tot = Generator_Size.sum(1).to_frame()
+    gen_size_tot = Generator_Size['Step '+str(ST)].to_frame()
     gen_size_tot.columns = ['Total']
     if ST != 1:
         Generator_Size = pd.concat([Generator_Size, gen_size_tot],axis=1)

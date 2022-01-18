@@ -1,10 +1,10 @@
 from Windrose import WindroseAxes
 import time, sys
-from Input_data import *
+from RE_input_data import *
 from Solar_PV_calculation import hourly_solar
 from Typical_year import *
 from Wind_calculation import shear_exp, air_density, wind_distr, P_turb
-from Excel_export import excel_export
+
 
 def RE_supply():
     
@@ -43,6 +43,7 @@ def RE_supply():
     (power_curve, surface_area, rot_height, data1, df) = wind_parameters(data_import)
     
     #%% Find the vector of hourly irradiation on a tilted surface for all days of the year [W/m^2 h] and K_T for power calculation
+    
     print("Calculating the solar PV production in the typical year... \n")      
     I_tilt = [[] for i in range(len(param_typical_daily[0]))]        #[KWh/m^2]
     day = 1
@@ -79,7 +80,7 @@ def RE_supply():
     
     print("Completed\n ")            
     
-    #%% Display the windrose (This library is released under dual licensing: CECILL-B , BSD-3-Clause)
+    #%% Display the windrose 
     
     wind_speed_lst = []
     wind_direction_lst = []
@@ -96,8 +97,10 @@ def RE_supply():
     print("Windrose generated \n")  
     
     #%% Report results on excel sheet 'RES_supply'
+    
     "Exporting time series to Renewable_energy.xlsx... \n"
-    dataf = excel_export(energy_PV,energy_WT)
+    
+    excel_export(energy_PV,energy_WT)
     
     # Timing
     end = time.time()

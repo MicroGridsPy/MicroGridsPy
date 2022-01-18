@@ -1,4 +1,4 @@
-import math, numpy, pandas as pd
+import math, numpy
 
 
 #%% Returns the ratio of daily diffuse irradiation to total irradiation (K_diff)

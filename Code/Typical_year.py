@@ -1,12 +1,17 @@
+from collections import defaultdict
+import operator, numpy as np, json, pandas as pd
+
 #%% Download JSON data for the 4 URLs of daily and hourly parameters using multiple threads
+
 import concurrent.futures
-from Input_data import get_data
+from RE_input_data import get_data
 def multithread_data_download(URL_list):
     with concurrent.futures.ThreadPoolExecutor() as executor:
         jsdata = list(executor.map(get_data, URL_list)) 
     return jsdata
 
 #%% Function for bilinear interpolation 
+
 def bilinear_interpolation(x, y, points):
     '''Interpolate (x,y) from values associated with four points.
 
@@ -70,7 +75,6 @@ def data_2D_interpolation(jsdata, date_start, date_end, lat, lon,lat_ext, lon_ex
     for jsdata_h in jsdata_hourly:
         pydata = json.loads(jsdata_h)
         param_hourly = [[[[] for ii in range(12)] for ii in range(int(date_end[5:9])-int(date_start[7:11])+1)]for ii in range(4)]
-        param_typical_hourly = [[[] for ii in range(12)] for ii in range(len(param_hourly))]   
         for ii in range(len(param_hourly)):
             for jj in range(len(param_hourly[ii])):
                 for kk in range(len(param_daily[ii][jj])):
@@ -113,8 +117,6 @@ def data_2D_interpolation(jsdata, date_start, date_end, lat, lon,lat_ext, lon_ex
                     
         param_hourly_list.append(param_hourly)
         
-
-    
     ''' Here applies bilinear interpolation function to daily and hourly lists '''
     lat_min = lat_ext[0]
     lat_max = lat_ext[1]
@@ -140,12 +142,9 @@ def data_2D_interpolation(jsdata, date_start, date_end, lat, lon,lat_ext, lon_ex
 
 #%% Finds the list of most representative year for each month (best_years) and returns the nested  list of typical daily values (param_typical_daily) given as input param_daily
 
-from collections import defaultdict
-import operator, numpy as np, json
-
 def typical_year_daily(param_daily, date_start, date_end):          
     
-    '''the list param_daily is re-ordered and first cumulate is calculated ''' 
+    #the list param_daily is re-ordered and first cumulate is calculated
     param_daily_ord = [[[]for ii in range(12)]for ii in range(len(param_daily))]
     cdf_1 = [[defaultdict(list) for ii in range(0,12)]for ii in range(len(param_daily))]
     phi_1 = [[[[] for ii in range(int(date_end[5:9])-int(date_start[7:11])+1)]for ii in range(12)]for ii in range(len(param_daily))]
@@ -175,7 +174,7 @@ def typical_year_daily(param_daily, date_start, date_end):
                             else:
                                  continue
     
-    # the second cumulate is calculated
+    #the second cumulate is calculated
     param_daily_ord_2 = [[[] for ii in range(int(date_end[5:9])-int(date_start[7:11])+1)]for ii in range(len(param_daily))]
     cdf_2 = [[defaultdict(list) for ii in range(int(date_end[5:9])-int(date_start[7:11])+1)]for ii in range(len(param_daily))]
     
@@ -235,14 +234,13 @@ def typical_year_daily(param_daily, date_start, date_end):
             diff_sec[ii][best_prim[ii][jj][0]] = abs(np.mean(param_daily[3][int(best_prim[ii][jj][0])][ii]) - long_term_average[ii]) 
         best_years[ii] = min(diff_sec[ii], key=diff_sec[ii].get) 
     
-    param_typical_daily = [[[] for ii in range(12)] for ii in range(len(param_daily))]
-    best_years = ['15' for ii in range(len(best_years))]  #QUI AGGIORNO I BEST YEARS PER COMPARARE I RISULTATI CON NINJA A PARI ANNO     
+    param_typical_daily = [[[] for ii in range(12)] for ii in range(len(param_daily))]    
     
     for ii in range(len(param_daily)):
         for jj in range(len(param_typical_daily[ii])):
             param_typical_daily[ii][jj] = param_daily[ii][int(best_years[jj])][jj]
             
-            #Removes data for 29 feb if TMY is a leap year
+            # removes data for 29 feb if TMY is a leap year
             
         if len(param_typical_daily[ii][1]) == 29:
             param_typical_daily[ii][1].remove(param_typical_daily[ii][1][28])         
@@ -257,10 +255,32 @@ def typical_year_hourly(best_years, param_hourly_interp):
         for month in range(12):
             for day in range(len(param_hourly_interp[param][int(best_years[month])][month])):                       
                 param_typical_hourly[param][month].append(param_hourly_interp[param][int(best_years[month])][month][day])
-                ''' Removes data for 29 feb if TMY is a leap year'''
+                
+                # removes data for 29 feb if TMY is a leap year
+                
         if len(param_typical_hourly[param][1]) == 29:
             param_typical_hourly[param][1].remove(param_typical_hourly[param][1][28])
     return param_typical_hourly
+
+#%% Function to export time-series to excel file
+
+def excel_export(energy_PV,energy_WT):
+    energy_PV_lst = []
+    energy_WT_lst = []
+    counter = 1
+    matrix = []
+    for months in range(0,len(energy_PV)):
+        for day in range(0,len(energy_PV[months])):
+            for hour in range(0,len(energy_PV[months][day])):
+                energy_PV_lst.append(energy_PV[months][day][hour])           
+                energy_WT_lst.append(energy_WT[months][day][hour])
+                matrix.append([counter, energy_PV[months][day][hour], energy_WT[months][day][hour]])
+                counter = counter +1
+    dataf = pd.DataFrame(matrix)
+    dataf = dataf.set_axis([None,1,2], axis=1, inplace=False)
+    dataf.to_excel(r'C:\Users\ivans\Desktop\TESI\MicroGridsPy-SESAM-MYCE\Code\Inputs\Renewable_Energy.xlsx', index = False, header = True, startrow = 0, startcol = 0)
+
+    return
                 
                 
     
