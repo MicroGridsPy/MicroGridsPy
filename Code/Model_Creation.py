@@ -36,6 +36,8 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independence):
     model.Steps_Number = Param(initialize = Initialize_Upgrades_Number)
     model.RES_Sources     = Param(within=NonNegativeReals)
     model.Generator_Types = Param(within=NonNegativeReals)
+    model.RE_Supply_Calculation = Param(within=NonNegativeReals)
+    model.Demand_Profile_Generation = Param(within=NonNegativeReals)
     
     "Sets"
     model.periods = RangeSet(1, model.Periods)                                      # Creation of a set from 1 to the number of periods in each year

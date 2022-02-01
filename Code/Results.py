@@ -464,9 +464,11 @@ def EnergySystemSize(instance):
             res_size.index.names = ['Component', 'Unit']
             RES_Size = pd.concat([RES_Size, res_size], axis=1).fillna(0)
     RES_Size = RES_Size.groupby(level=[0], axis=1, sort=False).sum()
-    res_size_tot = RES_Size['Step '+str(ST)].to_frame()
-    res_size_tot.columns = ['Total']
-    if ST != 1:
+    if ST == 1:
+        res_size_tot = RES_Size['Total'].to_frame()
+    else:
+        res_size_tot = RES_Size['Step '+str(ST)].to_frame()
+        res_size_tot.columns = ['Total']
         RES_Size = pd.concat([RES_Size, res_size_tot],axis=1)
     
     "Battery bank"
@@ -482,10 +484,16 @@ def EnergySystemSize(instance):
         bess_size.index.names = ['Component', 'Unit']
         BESS_Size = pd.concat([BESS_Size, bess_size], axis=1).fillna(0)
     BESS_Size = BESS_Size.groupby(level=[0], axis=1, sort=False).sum()
-    bess_size_tot = BESS_Size['Step '+str(ST)].to_frame()
-    bess_size_tot.columns = ['Total']
-    if ST != 1:
+    if ST == 1:
+        bess_size_tot = BESS_Size['Total'].to_frame()
+    else:
+        bess_size_tot = BESS_Size['Step '+str(ST)].to_frame()
+        bess_size_tot.columns = ['Total']
         BESS_Size = pd.concat([BESS_Size, bess_size_tot],axis=1)
+   # bess_size_tot = BESS_Size['Step '+str(ST)].to_frame()
+    #bess_size_tot.columns = ['Total']
+    #if ST != 1:
+        #BESS_Size = pd.concat([BESS_Size, bess_size_tot],axis=1)
 
     "Generators"
     Generator_Capacity = instance.Generator_Nominal_Capacity.get_values()   
@@ -501,10 +509,16 @@ def EnergySystemSize(instance):
             gen_size.index.names = ['Component', 'Unit']
             Generator_Size = pd.concat([Generator_Size, gen_size], axis=1).fillna(0)
     Generator_Size = Generator_Size.groupby(level=[0], axis=1, sort=False).sum()
-    gen_size_tot = Generator_Size['Step '+str(ST)].to_frame()
-    gen_size_tot.columns = ['Total']
-    if ST != 1:
+    if ST == 1:
+        gen_size_tot = Generator_Size['Total'].to_frame()
+    else:
+        gen_size_tot = Generator_Size['Step '+str(ST)].to_frame()
+        gen_size_tot.columns = ['Total']
         Generator_Size = pd.concat([Generator_Size, gen_size_tot],axis=1)
+    #gen_size_tot = Generator_Size['Step '+str(ST)].to_frame()
+    #gen_size_tot.columns = ['Total']
+    #if ST != 1:
+        #Generator_Size = pd.concat([Generator_Size, gen_size_tot],axis=1)
                
     #%% Concatenating
     SystemSize = pd.concat([round(RES_Size.astype(float),2),

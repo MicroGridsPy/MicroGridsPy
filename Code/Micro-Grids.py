@@ -27,19 +27,10 @@ from Demand import demand_generation
 start = time.time()         # Start time counter
 model = AbstractModel()     # Define type of optimization problem
 
-
 #%% Input parameters
 Optimization_Goal = 'NPC'   # Options: NPC / Operation cost. It allows to switch between a NPC-oriented optimization and a NON-ACTUALIZED Operation Cost-oriented optimization
 Renewable_Penetration = 0   # Fraction of electricity produced by renewable sources. Number from 0 to 1.
 Battery_Independence  = 0   # Number of days of battery independence
-RE_Supply_Calculation = 1    # 1 to select solar PV and wind production time series calculation by the program, 0 otherwise
-Demand_Profile_Generation = 1   # 1 to select load demand profile generation by the program, 0 otherwise
-
-if RE_Supply_Calculation:
-       RE_supply()
-       
-if Demand_Profile_Generation:
-   demand_generation() 
 
 #%% Processing
 Model_Creation(model, Renewable_Penetration, Battery_Independence) # Creation of the Sets, parameters and variables.

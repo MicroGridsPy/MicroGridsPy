@@ -1,3 +1,5 @@
+# --- non-editable parameters ---
+
 param: base_URL:= 'https://power.larc.nasa.gov/api/temporal/';               				#URL base for API 
 param: loc_id := 'point';                                                       			#spatial resolution
 param: parameters_1 := 'ALLSKY_SFC_SW_DWN, T2MWET, T2M, WS50M';						#parameters of daily data
@@ -8,21 +10,22 @@ param: community := 'RE';                     								#community of data archive
 param: temp_res_1 := 'daily';										#temporal resolution for daily data
 param: temp_res_2 := 'hourly';										#temporal resolution for hourly data
 param: output_format := 'JSON'; 									#output format
-param: lat := '-10 10 20'; 										        #latitude  [-° -' -", N positive, S negative]
-param: lon := '-43 11 17'; 										#longitude [-° -' -", E positive, O negative]
-param: user := 'anonymous';										#user key
-param: time_zone := -3;											#UTC time zone [-]
 
-param: area_module := 0.873166; 									#area of a module [m^2]
-param: nom_power := 300; 										#module nominal power [W]	
-param: num_mod := 1;											#number of modules for panel
-param: tilt := 20;											#tilt angle [°]
-param: azim := 180;											#azimuth angle [0° south facing]
+# --- editable parameters ---
+
+param: lat := '-1 35 14.1'; 										#latitude  [-° -' -", N positive, S negative]
+param: lon := '30 21 15.4'; 										#longitude [-° -' -", E positive, O negative]
+param: user := 'anonymous';										#user key
+param: time_zone := +2;											#UTC time zone [-]
+
+param: nom_power := 275; 										#panel nominal power [W]	
+param: tilt := 10;											#tilt angle [°]
+param: azim := 0;											#azimuth angle [0° south facing]
 param: ro_ground := 0.2;										#ground reflectivity  [-]
-param: k_T := -0.4;											#power variation coefficient with temperature [%/K]
-param: NMOT := 44.5 ;											#Normal Module Operating Temperature [°C]		
+param: k_T := -0.38;											#power variation coefficient with temperature [%/K]
+param: NMOT := 42.5 ;											#Normal Module Operating Temperature [°C]		
 param: T_NMOT := 20;											#ambient temperature of NMOT conditions [°C]
-param: G_NMOT := 800;											#irradiance of NMOT conditions [W/m^2]
+param: G_NMOT := 800;											#irradiance in NMOT conditions [W/m^2]
 
 
 param: turbine_type := 'HA';										#Horizontal/Vertical axys

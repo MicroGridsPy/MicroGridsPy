@@ -1,14 +1,14 @@
 import math, numpy as np
 
             
-#%% Calculate the shear exponent and the wind speed at rotor height given the wind speed measurements at two different heights
+#%% Calculate the Hellmann coefficient and the wind speed at rotor height given the wind speed measurements at two different heights
 
 
 def shear_exp(param_typical_hourly, Z_1, Z_0, Z_rot): 
                                                  
     w_Z1 = param_typical_hourly[0]
     w_Z0 = param_typical_hourly[1]
-    alpha = [[] for ii in range(len(w_Z1))]       #shear exponent is evaluated from velocities at 2 and 50 meters on hourly basis
+    alpha = [[] for ii in range(len(w_Z1))]       #Hellmann coefficient is evaluated from velocities at 2 and 50 meters on hourly basis
     U_rotor = [[] for ii in range(len(w_Z1))]
     for month in range(len(w_Z1)):
         alpha[month] = [[] for ii in range(len(w_Z1[month]))]
@@ -18,8 +18,9 @@ def shear_exp(param_typical_hourly, Z_1, Z_0, Z_rot):
                 if w_Z1[month][day][hour] == 0 or w_Z0[month][day][hour] == 0:
                     alpha[month][day].append(0)
                 else:
-                    alpha[month][day].append((math.log(w_Z1[month][day][hour]) - math.log(w_Z0[month][day][hour]))/(math.log(Z_1)-math.log(Z_0)))
+                    alpha[month][day].append((math.log(w_Z1[month][day][hour]) - math.log(w_Z0[month][day][hour]))/(math.log(Z_1)-math.log(Z_0)))  
                     U_rotor[month][day].append(w_Z0[month][day][hour] * (Z_rot/Z_0)**alpha[month][day][hour])
+    # corrects error in wind speed dataset
     if len(U_rotor[9][21]) < 24:
         U_rotor[9][21].append(param_typical_hourly[1][9][21][23] * (40/2)**alpha[9][21][23])
     return U_rotor,alpha
@@ -51,7 +52,7 @@ def rayleigh_cumul_distr(x):
     return F
 
 def wind_distr(U_rotor):
-    WS_range = range(1,41)
+    WS_range = range(1,31)
     cumul_distr_function = [[] for i in range(len(U_rotor))]
     prob_density_function = [[] for i in range(len(U_rotor))]
     for ii in range(len(U_rotor)):
@@ -73,7 +74,7 @@ def wind_distr(U_rotor):
 
 def P_turb(power_curve, ro_air, prob_density, surface_area):
     
-    U = np.arange(0.5, 40.5, 1)
+    U = np.arange(0.5, 30.5, 1)
     En_wind = [[] for i in range(len(prob_density))]
     En_WT = [[] for i in range(len(prob_density))]
     Cp = [[] for i in range(len(prob_density))]

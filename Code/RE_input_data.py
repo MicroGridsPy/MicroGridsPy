@@ -103,10 +103,6 @@ def URL_creation_h(Data_import):
 def solarPV_parameters(Data_import):
     for value in Data_import:
         
-        if "param: num_mod " in value:
-            num_mod = float(value[value.index('=')+1:value.index(';')].replace(' ',''))
-        if "param: area_module" in value:
-            area_module = float(value[value.index('=')+1:value.index(';')].replace(' ',''))
         if "param: nom_power" in value:
             nom_power = float(value[value.index('=')+1:value.index(';')].replace(' ',''))
         if "param: G_NMOT" in value:
@@ -124,7 +120,7 @@ def solarPV_parameters(Data_import):
         if "param: ro_ground" in value:
             ro_ground = float(value[value.index('=')+1:value.index(';')].replace(' ',''))
     
-    return num_mod, area_module,nom_power,tilt,azim,ro_ground, k_T, NMOT, T_NMOT, G_NMOT
+    return nom_power,tilt,azim,ro_ground, k_T, NMOT, T_NMOT, G_NMOT
 
 # Wind turbine parameters        
 def wind_parameters(Data_import):

@@ -18,6 +18,9 @@ Based on the original model by:
 
 import pandas as pd
 import re
+from RE_calculation import RE_supply
+from Demand import demand_generation
+
 
 #%% This section extracts the values of Scenarios, Periods, Years from data.dat and creates ranges for them
 Data_file = "Inputs/Model_data.dat"
@@ -32,6 +35,10 @@ for i in range(len(Data_import)):
         n_periods = int((re.findall('\d+',Data_import[i])[0]))
     if "param: Generator_Types" in Data_import[i]:      
         n_generators = int((re.findall('\d+',Data_import[i])[0]))
+    if "param: RE_Supply_Calculation" in Data_import[i]:      
+        RE_Supply_Calculation = int((re.findall('\d+',Data_import[i])[0]))
+    if "param: Demand_Profile_Generation" in Data_import[i]:      
+        Demand_Profile_Generation = int((re.findall('\d+',Data_import[i])[0]))
 
 scenario = [i for i in range(1,n_scenarios+1)]
 year = [i for i in range(1,n_years+1)]
@@ -84,6 +91,15 @@ def Initialize_YearUpgrade_Tuples(model):
 
 #%% This section imports the multi-year Demand and Renewable-Energy output and creates a Multi-indexed DataFrame for it
 Demand = pd.read_excel('Inputs/Demand.xlsx')
+Renewable_Energy = pd.read_excel('Inputs/Renewable_Energy.xlsx')
+
+# Updates Excel file if RES or Demand calculation are selected
+
+if RE_Supply_Calculation:
+   Renewable_energy = RE_supply()
+if Demand_Profile_Generation:
+   Demand = demand_generation() 
+
 Energy_Demand_Series = pd.Series()
 for i in range(1,n_years*n_scenarios+1):
     dum = Demand[i][:]
@@ -105,12 +121,10 @@ Energy_Demand_2.index = index_2
 def Initialize_Demand(model, s, y, t):
     return float(Energy_Demand[0][(s,y,t)])
 
-Renewable_Energy = pd.read_excel('Inputs/Renewable_Energy.xlsx')
+
 def Initialize_RES_Energy(model,s,r,t):
     column = (s-1)*model.RES_Sources + float(r) 
     return (Renewable_Energy[column][(t)])   
-
-
 
   
 def Initialize_Battery_Unit_Repl_Cost(model):

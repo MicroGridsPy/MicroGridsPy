@@ -144,7 +144,7 @@ def data_2D_interpolation(jsdata, date_start, date_end, lat, lon,lat_ext, lon_ex
 
 def typical_year_daily(param_daily, date_start, date_end):          
     
-    #the list param_daily is re-ordered and first cumulate is calculated
+    #the list param_daily is re-ordered and the long-term cumulate is calculated
     param_daily_ord = [[[]for ii in range(12)]for ii in range(len(param_daily))]
     cdf_1 = [[defaultdict(list) for ii in range(0,12)]for ii in range(len(param_daily))]
     phi_1 = [[[[] for ii in range(int(date_end[5:9])-int(date_start[7:11])+1)]for ii in range(12)]for ii in range(len(param_daily))]
@@ -174,7 +174,7 @@ def typical_year_daily(param_daily, date_start, date_end):
                             else:
                                  continue
     
-    #the second cumulate is calculated
+    #the year-specific cumulate is calculated
     param_daily_ord_2 = [[[] for ii in range(int(date_end[5:9])-int(date_start[7:11])+1)]for ii in range(len(param_daily))]
     cdf_2 = [[defaultdict(list) for ii in range(int(date_end[5:9])-int(date_start[7:11])+1)]for ii in range(len(param_daily))]
     
@@ -200,8 +200,8 @@ def typical_year_daily(param_daily, date_start, date_end):
                                  cdf_2[ii][kk][key].pop(0)
                             else:
                                  continue
-                
-                    fs[ii][jj][str(kk)] = np.absolute(np.subtract(f_2[ii][jj][kk],phi_1[ii][jj][kk]))    #Finkelstein-Shafer statistics is applied
+     #Finkelstein-Shafer statistics is calculated
+                    fs[ii][jj][str(kk)] = np.absolute(np.subtract(f_2[ii][jj][kk],phi_1[ii][jj][kk]))    
                     fs[ii][jj][str(kk)] = sum(fs[ii][jj][str(kk)][:])
                 
                 
@@ -210,14 +210,14 @@ def typical_year_daily(param_daily, date_start, date_end):
     sum_prim = [dict() for ii in range(len(fs[0]))]
     best_prim = [[] for ii in range(12)]
     
-    #first 3 best years according to the minimum sum of primary parameters are collected into best_prim
+    #first 3 best years according to the minimum sum of FS for primary parameters are collected into best_prim
     
     for jj in range(len(fs[0])):
         for key in fs[0][jj]:
             sum_prim[jj][key] =  fs[0][jj][key] + fs[1][jj][key] + fs[2][jj][key]
             best_prim[jj] = sorted(sum_prim[jj].items(),key=operator.itemgetter(1))[0:3]        
             
-    #among the 3 best years for each month according to primary parameters, the one having the lowest deviation between monthly mean and long-term monthly mean (calc. for all years for that month) is picked
+    #among the 3 best years for each month, the one having the lowest deviation between monthly mean and long-term monthly mean for wind speed (secondary parameter) is picked
     
     diff_sec = [dict() for ii in range(12)]
     long_term_average = [[] for ii in range(12)]
@@ -278,9 +278,8 @@ def excel_export(energy_PV,energy_WT):
                 counter = counter +1
     dataf = pd.DataFrame(matrix)
     dataf = dataf.set_axis([None,1,2], axis=1, inplace=False)
-    dataf.to_excel(r'C:\Users\ivans\Desktop\TESI\MicroGridsPy-SESAM-MYCE\Code\Inputs\Renewable_Energy.xlsx', index = False, header = True, startrow = 0, startcol = 0)
 
-    return
+    return dataf
                 
                 
     

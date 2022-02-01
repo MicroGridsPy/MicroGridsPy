@@ -39,7 +39,7 @@ def RE_supply():
     
     #%% Import technological parameters of RE technologies
     
-    (num_mod, area_module,nom_power,tilt,azim,ro_ground, k_T, NMOT, T_NMOT, G_NMOT) = solarPV_parameters(data_import)  #PV param.
+    (nom_power,tilt,azim,ro_ground, k_T, NMOT, T_NMOT, G_NMOT) = solarPV_parameters(data_import)  #PV param.
     (power_curve, surface_area, rot_height, data1, df) = wind_parameters(data_import)
     
     #%% Find the vector of hourly irradiation on a tilted surface for all days of the year [W/m^2 h] and K_T for power calculation
@@ -64,7 +64,7 @@ def RE_supply():
         for jj in range(len(T_amb[ii])):
             for kk in range(len(T_amb[ii][jj])):
                 T_cell[ii][jj].append(T_amb[ii][jj][kk] + ((NMOT - T_NMOT)/G_NMOT)*I_tilt[ii][jj][kk]*1000)          #find the vector of hourly average cell T using T2M
-                energy_PV[ii][jj].append((I_tilt[ii][jj][kk])*num_mod* nom_power * (1+(k_T/100)*(T_cell[ii][jj][kk]-25)))                #[Wh/module]
+                energy_PV[ii][jj].append((I_tilt[ii][jj][kk])* nom_power * (1+(k_T/100)*(T_cell[ii][jj][kk]-25)))                #[Wh/module]
      
     print("Completed\n")  
     
@@ -100,14 +100,14 @@ def RE_supply():
     
     "Exporting time series to Renewable_energy.xlsx... \n"
     
-    excel_export(energy_PV,energy_WT)
-    
+    dataf = excel_export(energy_PV,energy_WT)
+    dataf.to_excel(r'C:\Users\ivans\Desktop\TESI\MicroGridsPy-SESAM-MYCE\Code\Inputs\Renewable_Energy.xlsx', index = False, header = True, startrow = 0, startcol = 0)
     # Timing
     end = time.time()
     elapsed = end - start
     print('\n\nRES time series calculation completed (overall time: ',round(elapsed,0),'s,', round(elapsed/60,1),' m)\n')
 
-    return 
+    return dataf
 
 
 

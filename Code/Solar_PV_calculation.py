@@ -26,7 +26,7 @@ def I_tilt_f(beta, I_tot, I_diff, ro_g, theta_z, theta_i):
         I_tilt_iso = 0
     return I_tilt_iso
 
-#%% Define the function hourly_solar to obtain the hourly solar radiation on a tilted surface from daily irradiation data
+#%% Define the function hourly_solar to obtain the hourly solar radiation on a tilted surface from daily GHI data
 
 def hourly_solar(H_day,lat,lon, standard_lon, day_year,tilt, azimuth, albedo):
     

@@ -128,11 +128,12 @@ def demand_generation():
     start = time.time()
         
     print("Load demand calculation started, please remember to close Demand.xlsx... \n")
-    
-    excel_export(demand_calculation())
+    load_tot = demand_calculation()
+    load_tot = load_tot.set_axis(np.arange(1,21), axis=1, inplace=False)
+    excel_export(load_tot)
     
     
     end = time.time()
     elapsed = end - start
     print('\n\nLoad demand calculation completed (overall time: ',round(elapsed,0),'s,', round(elapsed/60,1),' m)\n')
-
+    return load_tot
