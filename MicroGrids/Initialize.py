@@ -12,9 +12,7 @@ def Initialize_years(model, i):
     '''    
     return i
 
-Energy_Demand = pd.read_excel('Example/Demand.xls',index_col=0,Header=None) # open the energy demand file
-Energy_Demand = Energy_Demand/1000
-Energy_Demand = round(Energy_Demand, 3)
+
 
 
 def Initialize_Demand(model, i, t):
@@ -27,7 +25,7 @@ def Initialize_Demand(model, i, t):
         
     '''
     
-    return float(Energy_Demand[i][t])
+    return float(model.Energy_Demand_Excel[i][t])
 
 # PV_Energy = pd.read_excel('Example/PV_Energy.xls') # open the PV energy yield file
 
@@ -51,7 +49,7 @@ def Initialize_Demand_Dispatch(model, t):
     :return: The energy demand for the period t.     
         
     '''
-    return float(Energy_Demand[1][t])
+    return float(model.Energy_Demand_Excel[1][t])
 
 
 # def Initialize_PV_Energy_Dispatch(model, t):
@@ -95,9 +93,7 @@ def Battery_Reposition_Cost(model):
     return round(a,3) 
     
     
-Renewable_Energy = pd.read_excel('Example/Renewable_Energy.xls',index_col=0,Header=None) # open the PV energy yield file
-Renewable_Energy = Renewable_Energy/1000
-Renewable_Energy = round(Renewable_Energy, 3)
+
 
 def Initialize_Renewable_Energy(model, s,r,t):
     '''
@@ -110,13 +106,13 @@ def Initialize_Renewable_Energy(model, s,r,t):
     '''
 
     column = (s-1)*model.Renewable_Source + r 
-    return float(Renewable_Energy[column][t])   
+    return float(model.Renewable_Energy_Excel [column][t])   
     
 def Initialize_Renewable_Energy_Dispatch(model, r, t):
     '''
     '''
     
-    return float(Renewable_Energy[r][t])    
+    return float(model.Renewable_Energy_Excel [r][t])    
     
 def Marginal_Cost_Generator_1_Dispatch(model):
     
@@ -132,6 +128,7 @@ def Marginal_Cost_Generator_Dispatch(model):
 
 def Min_Bat_Capacity(model):
         
+    Energy_Demand = model.Energy_Demand_Excel.copy()
     
     Periods = model.Battery_Independency*24
     Len = int(model.Periods/Periods)

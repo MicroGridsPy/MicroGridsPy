@@ -14,7 +14,7 @@ import time
 start = time.time()
 
 # Type of problem formulation:
-formulation = 'Dispatch'
+formulation = 'LP'
 #datapath='Example/Dispatch/'
 # Renewable energy penetrarion
 
@@ -77,5 +77,5 @@ elif formulation =='Dispatch':
 end = time.time()
 print('The optimization took ' + str(round(end - start,0)) + ' seconds')
 
-# energy_check(instance)
+energy_check(instance)
 

@@ -5,7 +5,9 @@ from pyomo.opt import SolverFactory
 from pyomo.environ import Objective, minimize, Constraint
 
 
-def Model_Resolution(model,Renewable_Penetration, Battery_Independency,datapath="Example/data.dat"):   
+def Model_Resolution(model,Renewable_Penetration, Battery_Independency,datapath="Example/data.dat", options_string="mipgap=0.05",
+                     warmstart=False, keepfiles=False, load_solutions=False, logfile="Solver_Output.log", solver = 'gurobi',
+                     timelimit = 1800):   
     '''
     This function creates the model and call Pyomo to solve the instance of the proyect 
     
@@ -55,7 +57,7 @@ def Model_Resolution(model,Renewable_Penetration, Battery_Independency,datapath=
         model.MaximunFuelEnergy = Constraint(model.scenario, model.generator_type,
                                          model.periods, rule=Maximun_Generator_Energy) 
         instance = model.create_instance(datapath) # load parameters       
-        opt = SolverFactory('gurobi') # Solver use during the optimization    
+        opt = SolverFactory(solver) # Solver use during the optimization    
         results = opt.solve(instance, tee=True) # Solving a model instance 
         instance.solutions.load_from(results)  # Loading solution into instance
         
@@ -67,16 +69,16 @@ def Model_Resolution(model,Renewable_Penetration, Battery_Independency,datapath=
    
         model.EnergyGenaratorEnergyMax = Constraint(model.scenario, model.generator_type,
                                                 model.periods, rule=Energy_Genarator_Energy_Max_Integer)
-        instance = model.create_instance("Example/data_Integer.dat") # load parameters       
-        opt = SolverFactory('gurobi') # Solver use during the optimization    
+        instance = model.create_instance(datapath) # load parameters       
+        opt = SolverFactory(solver) # Solver use during the optimization    
 #       opt.options['emphasis_memory'] = 'y'
-        opt.options['timelimit'] = 1800
+        opt.options['timelimit'] = timelimit
 #        opt.options['StartNodeLimit'] = 10 # 500 Default
 #       opt.options['emphasis_mip'] = 2
 #        opt.options['Presolve'] = 2
-        results = opt.solve(instance, tee=True, options_string="mipgap=0.05",
-                            warmstart=False,keepfiles=False,
-                            load_solutions=False, logfile="Solver_Output.log") # Solving a model instance 
+        results = opt.solve(instance, tee=True, options_string=options_string,
+                            warmstart=warmstart,keepfiles=keepfiles,
+                            load_solutions=load_solutions, logfile=logfile) # Solving a model instance 
 
         #    instance.write(io_options={'emphasis_memory':True})
         #options_string="mipgap=0.03", timelimit=1200
@@ -147,7 +149,8 @@ def Model_Resolution_binary(model,datapath="Example/data_binary.dat"):
     instance.solutions.load_from(results) # Loading solution into instance
     return instance
     
-def Model_Resolution_Dispatch(model,datapath="Example/data_Dispatch.dat"):   
+def Model_Resolution_Dispatch(model,datapath="Example/data_Dispatch.dat", solver = 'gurobi',
+                              options_string="mipgap=0.005", timelimit = 1800):   
     '''
     This function creates the model and call Pyomo to solve the instance of the proyect 
     
@@ -184,11 +187,12 @@ def Model_Resolution_Dispatch(model,datapath="Example/data_Dispatch.dat"):
     model.GeneratorBoundsMax = Constraint(model.generator_type, model.periods, rule=Generator_Bounds_Max_Integer)
 
     
-    instance = model.create_instance("Example/data_dispatch.dat") # load parameters       
-    opt = SolverFactory('gurobi') # Solver use during the optimization    
+    instance = model.create_instance(datapath) # load parameters       
+    opt = SolverFactory(solver) # Solver use during the optimization    
 #    opt.options['emphasis_memory'] = 'y'
 #    opt.options['node_select'] = 3
-    results = opt.solve(instance, tee=True,options_string="mipgap=0.005") # Solving a model instance 
+    opt.options['timelimit'] = timelimit
+    results = opt.solve(instance, tee=True,options_string=options_string) # Solving a model instance 
 
     #    instance.write(io_options={'emphasis_memory':True})
     #options_string="mipgap=0.03", timelimit=1200

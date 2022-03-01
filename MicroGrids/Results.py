@@ -9,7 +9,7 @@ from pandas import ExcelWriter
 from numpy import interp
 import math
 
-def Load_results1(instance):
+def Load_results1(instance, path = 'Results/Results.xls'):
     '''
     This function loads the results that depend of the periods in to a dataframe and creates a excel file with it.
     
@@ -18,7 +18,7 @@ def Load_results1(instance):
     :return: A dataframe called Time_series with the values of the variables that depend of the periods.    
     '''
     
-    path = 'Results/Results.xls'
+    
     writer = ExcelWriter(path, engine='xlsxwriter')
     
     # Load the variables that does not depend of the periods in python dyctionarys
@@ -140,7 +140,7 @@ def Load_results1(instance):
                                    periods=instance.Periods(), 
                                    freq=(hour + 'h'+ minutes + 'min')) # Creation of an index with a start date and a frequency
     elif instance.Delta_Time() >= 1 and type(instance.Delta_Time()) == type(1): # if the step is in hours
-        columns = pd.DatetimeIndex(start=instance.StartDate(), 
+        columns = pd.date_range(start=instance.StartDate(), 
                                    periods=instance.Periods(), 
                                    freq=(str(instance.Delta_Time()) + 'h')) # Creation of an index with a start date and a frequency
     else: # if the step is in minutes
@@ -1191,7 +1191,7 @@ def Dispatch_Economic_Analysis(Results,Time_Series):
      
     
     
-def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):  
+def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime, path =  'Results/Energy_Dispatch.png'):  
     '''
     This function creates a plot of the dispatch of energy of a defined number of days.
     
@@ -1203,14 +1203,14 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
    
     if plot == 'No Average':
         Periods_Day = 24/instance.Delta_Time() # periods in a day
-        foo = pd.DatetimeIndex(start=Plot_Date,periods=1,freq='1h')# Asign the start date of the graphic to a dumb variable
+        foo = pd.date_range(start=Plot_Date,periods=1,freq='1h')# Asign the start date of the graphic to a dumb variable
         for x in range(0, instance.Periods()): # Find the position form wich the plot will start in the Time_Series dataframe
             if foo == Time_Series.index[x]: 
                Start_Plot = x # asign the value of x to the position where the plot will start 
         End_Plot = Start_Plot + PlotTime*Periods_Day # Create the end of the plot position inside the time_series
         Time_Series.index=range(1,(len(Time_Series)+1))
         Plot_Data = Time_Series[Start_Plot:int(End_Plot)] # Extract the data between the start and end position from the Time_Series
-        columns = pd.DatetimeIndex(start=Plot_Date, 
+        columns = pd.date_range(start=Plot_Date, 
                                    periods=PlotTime*Periods_Day, 
                                     freq=('1H'))    
         Plot_Data.index=columns
@@ -1288,10 +1288,10 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         
         for t in Fill.index[:-1]:
             if Fill[b][t] > Fill[g][t]:
-                if  Fill[r][t+1]>Fill[d][t+1]:
+                if  Fill[r][t+ t.freq]>Fill[d][t+ t.freq]:
 #                    print(t)
-                    b_d = (Fill[d][t+1] - Fill[d][t])/60
-                    b_g = (Fill[g][t+1] - Fill[g][t])/60
+                    b_d = (Fill[d][t+ t.freq] - Fill[d][t])/60
+                    b_g = (Fill[g][t+ t.freq] - Fill[g][t])/60
                     
                     a_d = Fill[d][t]
                     a_g = Fill[g][t]
@@ -1309,29 +1309,29 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
                         
                         xp = [0, 60]
                         
-                        New.loc[t_1,r]   = interp(x,xp,[Fill[r][t],  Fill[r][t+1]])
-                        New.loc[t_1,g]   = interp(x,xp,[Fill[g][t],  Fill[g][t+1]])
-                        New.loc[t_1,c]   = interp(x,xp,[Fill[c][t],  Fill[c][t+1]])
-                        New.loc[t_1,c2]  = interp(x,xp,[Fill[c2][t], Fill[c2][t+1]])
-                        New.loc[t_1,b]   = interp(x,xp,[Fill[d][t], Fill[d][t+1]])
-                        New.loc[t_1,d]   = interp(x,xp,[Fill[d][t], Fill[d][t+1]])
-                        New.loc[t_1,SOC] = interp(x,xp,[Fill[SOC][t], Fill[SOC][t+1]])
-                        New.loc[t_1,ch]  = interp(x,xp,[Fill[ch][t], Fill[ch][t+1]])
+                        New.loc[t_1,r]   = interp(x,xp,[Fill[r][t],  Fill[r][t+ t.freq]])
+                        New.loc[t_1,g]   = interp(x,xp,[Fill[g][t],  Fill[g][t+ t.freq]])
+                        New.loc[t_1,c]   = interp(x,xp,[Fill[c][t],  Fill[c][t+ t.freq]])
+                        New.loc[t_1,c2]  = interp(x,xp,[Fill[c2][t], Fill[c2][t+ t.freq]])
+                        New.loc[t_1,b]   = interp(x,xp,[Fill[d][t], Fill[d][t+ t.freq]])
+                        New.loc[t_1,d]   = interp(x,xp,[Fill[d][t], Fill[d][t+ t.freq]])
+                        New.loc[t_1,SOC] = interp(x,xp,[Fill[SOC][t], Fill[SOC][t+ t.freq]])
+                        New.loc[t_1,ch]  = interp(x,xp,[Fill[ch][t], Fill[ch][t+ t.freq]])
                         if Renewable_Source > 1:
                             for R in range(1,Renewable_Source+1):
                                 name = 'Renewable ' + str(R) + ' (kWh)'
-                                New.loc[t_1,name]  = interp(x,xp,[Fill[name][t], Fill[name][t+1]])
+                                New.loc[t_1,name]  = interp(x,xp,[Fill[name][t], Fill[name][t+ t.freq]])
 
 
 
                                      
                     
         for t in Fill.index[:-1]:
-            if (Fill[b][t] == Fill[d][t]) and (Fill[g][t+1] > Plot_Data[d][t+1]):
+            if (Fill[b][t] == Fill[d][t]) and (Fill[g][t+ t.freq] > Plot_Data[d][t+ t.freq]):
                 if  Fill[b][t] > Fill[g][t]:
 #                    print(t)
-                    b_d = (Fill[d][t+1] - Fill[d][t])/60
-                    b_g = (Fill[g][t+1] - Fill[g][t])/60
+                    b_d = (Fill[d][t+ t.freq] - Fill[d][t])/60
+                    b_g = (Fill[g][t+ t.freq] - Fill[g][t])/60
                     
                     a_d = Fill[d][t]
                     a_g = Fill[g][t]
@@ -1349,27 +1349,27 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
                         
                         xp = [0, 60]
                         
-                        New.loc[t_1,r]   = interp(x,xp,[Fill[r][t],  Fill[r][t+1]])
-                        New.loc[t_1,g]   = interp(x,xp,[Fill[g][t],  Fill[g][t+1]])
-                        New.loc[t_1,c]   = interp(x,xp,[Fill[c][t],  Fill[c][t+1]])
-                        New.loc[t_1,c2]  = interp(x,xp,[Fill[c2][t], Fill[c2][t+1]])
-                        New.loc[t_1,b]   = interp(x,xp,[Fill[d][t], Fill[d][t+1]])
-                        New.loc[t_1,d]   = interp(x,xp,[Fill[d][t], Fill[d][t+1]])
-                        New.loc[t_1,SOC] = interp(x,xp,[Fill[SOC][t], Fill[SOC][t+1]])
-                        New.loc[t_1,ch]  = interp(x,xp,[Fill[ch][t], Fill[ch][t+1]])
+                        New.loc[t_1,r]   = interp(x,xp,[Fill[r][t],  Fill[r][t+ t.freq]])
+                        New.loc[t_1,g]   = interp(x,xp,[Fill[g][t],  Fill[g][t+ t.freq]])
+                        New.loc[t_1,c]   = interp(x,xp,[Fill[c][t],  Fill[c][t+ t.freq]])
+                        New.loc[t_1,c2]  = interp(x,xp,[Fill[c2][t], Fill[c2][t+ t.freq]])
+                        New.loc[t_1,b]   = interp(x,xp,[Fill[d][t], Fill[d][t+ t.freq]])
+                        New.loc[t_1,d]   = interp(x,xp,[Fill[d][t], Fill[d][t+ t.freq]])
+                        New.loc[t_1,SOC] = interp(x,xp,[Fill[SOC][t], Fill[SOC][t+ t.freq]])
+                        New.loc[t_1,ch]  = interp(x,xp,[Fill[ch][t], Fill[ch][t+ t.freq]])
                         if Renewable_Source > 1:
                             for R in range(1,Renewable_Source+1):
                                 name = 'Renewable ' + str(R) + ' (kWh)'
-                                New.loc[t_1,name]  = interp(x,xp,[Fill[name][t], Fill[name][t+1]])
+                                New.loc[t_1,name]  = interp(x,xp,[Fill[name][t], Fill[name][t+ t.freq]])
 
         
         # fix the battery if in one step before the energy production is more than demand
         # and in time t the battery is used            
         for t in Fill.index[1:-1]:
-            if Fill[g][t] > Plot_Data[d][t] and Fill[b][t+1] == Plot_Data[d][t+1] and Plot_Data[b][t+1] > 0:
+            if Fill[g][t] > Plot_Data[d][t] and Fill[b][t+ t.freq] == Plot_Data[d][t+ t.freq] and Plot_Data[b][t+ t.freq] > 0:
 #                    print(t)
-                    b_d = (Fill[d][t+1] - Fill[d][t])/60
-                    b_g = (Fill[g][t+1] - Fill[g][t])/60
+                    b_d = (Fill[d][t+ t.freq] - Fill[d][t])/60
+                    b_g = (Fill[g][t+ t.freq] - Fill[g][t])/60
                     
                     a_d = Fill[d][t]
                     a_g = Fill[g][t]
@@ -1387,18 +1387,18 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
                         
                         xp = [0, 60]
                         
-                        New.loc[t_1,r]   = interp(x,xp,[Fill[r][t],  Fill[r][t+1]])
-                        New.loc[t_1,g]   = interp(x,xp,[Fill[g][t],  Fill[g][t+1]])
-                        New.loc[t_1,c]   = interp(x,xp,[Fill[c][t],  Fill[c][t+1]])
-                        New.loc[t_1,c2]  = interp(x,xp,[Fill[c2][t], Fill[c2][t+1]])
-                        New.loc[t_1,b]   = interp(x,xp,[Fill[d][t], Fill[d][t+1]])
-                        New.loc[t_1,d]   = interp(x,xp,[Fill[d][t], Fill[d][t+1]])
-                        New.loc[t_1,SOC] = interp(x,xp,[Fill[SOC][t], Fill[SOC][t+1]])
-                        New.loc[t_1,ch]  = interp(x,xp,[Fill[ch][t], Fill[ch][t+1]])
+                        New.loc[t_1,r]   = interp(x,xp,[Fill[r][t],  Fill[r][t+ t.freq]])
+                        New.loc[t_1,g]   = interp(x,xp,[Fill[g][t],  Fill[g][t+ t.freq]])
+                        New.loc[t_1,c]   = interp(x,xp,[Fill[c][t],  Fill[c][t+ t.freq]])
+                        New.loc[t_1,c2]  = interp(x,xp,[Fill[c2][t], Fill[c2][t+ t.freq]])
+                        New.loc[t_1,b]   = interp(x,xp,[Fill[d][t], Fill[d][t+ t.freq]])
+                        New.loc[t_1,d]   = interp(x,xp,[Fill[d][t], Fill[d][t+ t.freq]])
+                        New.loc[t_1,SOC] = interp(x,xp,[Fill[SOC][t], Fill[SOC][t+ t.freq]])
+                        New.loc[t_1,ch]  = interp(x,xp,[Fill[ch][t], Fill[ch][t+ t.freq]])
                         if Renewable_Source > 1:
-                            for R in range(1,Renewable_Source+1):
+                            for R in range(1,Renewable_Source+ t.freq):
                                 name = 'Renewable ' + str(R) + ' (kWh)'
-                                New.loc[t_1,name]  = interp(x,xp,[Fill[name][t], Fill[name][t+1]])
+                                New.loc[t_1,name]  = interp(x,xp,[Fill[name][t], Fill[name][t+ t.freq]])
 
         Fill = Fill.append(New)
         Fill.sort_index(inplace=True)
@@ -1457,7 +1457,9 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         ax3.fill_between(Fill.index, Fill[g].values, Fill[b].values,   
                          alpha=alpha_bat, color =C_Bat,edgecolor=C_Bat, hatch =hatch_b)
         # Demand
-        ax4 = Plot_Data[d].plot(style='k', linewidth=2, marker= 'o')
+        ax4 = Plot_Data[d].plot(style='k', linewidth=2
+#                                , marker= 'o'
+                                )
         # Battery Charge        
         ax5= Fill[ch].plot(style='m', linewidth=0.5) # Plot the line of the energy flowing into the battery
         ax5.fill_between(Fill.index, 0, 
@@ -1540,7 +1542,7 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         plt.legend(handles=Legends,
                             bbox_to_anchor=(1.025, -0.15),fontsize = 20,
                             frameon=False,  ncol=4)
-        plt.savefig('Results/Energy_Dispatch.png', bbox_inches='tight')    
+        plt.savefig(path, bbox_inches='tight')    
         plt.show()    
         
     else:   
@@ -2189,18 +2191,18 @@ def Energy_Mix_Dispatch(instance,Time_Series):
     print(str(Battery_Usage*100) + ' % Battery usage')
 
 
-def energy_check(instance):
+def energy_check(instance,path='Results/Results.xls'):
     
-    Energy_Demand = pd.read_excel('Results/Results.xls',sheet_name= 'Time Series'
-                                  ,index_col=0,Header=None)
+    Energy_Demand = pd.read_excel(path,sheet_name= 'Time Series'
+                                  ,index_col=0)
 
-    Data_Scenarios = pd.read_excel('Results/Results.xls',sheet_name= 'Project Data'
-                                  ,index_col=0,Header=None)
+    Data_Scenarios = pd.read_excel(path,sheet_name= 'Project Data'
+                                  ,index_col=0)
     Number_Scenarios = int(Data_Scenarios[0]['Number of Scenarios'])
     Number_Periods = int(Data_Scenarios[0]['Periods of the year'])
     
-    Data_Bat = pd.read_excel('Results/Results.xls',sheet_name= 'Battery Data'
-                                  ,index_col=0,Header=None)
+    Data_Bat = pd.read_excel(path,sheet_name= 'Battery Data'
+                                  ,index_col=0)
     
     Bat = Data_Bat['Battery']['Nominal Capacity (kWh)']
     Bat_Initial = Data_Bat['Battery']['Initial State of Charge']
@@ -2262,8 +2264,8 @@ def energy_check(instance):
     
         # geset test
         print('Gen test')
-        gen_ene = pd.read_excel('Results/Results.xls',sheet_name= 'Generator Time Series'
-                                  ,index_col=0,Header=None)
+        gen_ene = pd.read_excel(path,sheet_name= 'Generator Time Series'
+                                  ,index_col=0)
        
         Generator_Total_Energy = pd.DataFrame(index=Energy_Demand.index)
         Generator_Total_Energy[0] = 0
@@ -2279,10 +2281,10 @@ def energy_check(instance):
         print(comparation_6)
     
     
-        re_ene = pd.read_excel('Results/Results.xls',sheet_name= 'Renewable Energy Time Series'
-                                  ,index_col=0,Header=None)
-        Data_Renewable = pd.read_excel('Results/Results.xls',sheet_name= 'Data Renewable'
-                                  ,index_col=0,Header=None)
+        re_ene = pd.read_excel(path,sheet_name= 'Renewable Energy Time Series'
+                                  ,index_col=0)
+        Data_Renewable = pd.read_excel(path,sheet_name= 'Data Renewable'
+                                  ,index_col=0)
         
         
         Renewable_Total_Energy = pd.DataFrame(index=Energy_Demand.index)

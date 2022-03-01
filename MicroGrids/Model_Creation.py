@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import pandas as pd
 
 
-
-def Model_Creation(model, Renewable_Penetration,Battery_Independency):
+def Model_Creation(model, Renewable_Penetration, Battery_Independency, Renewable_Limit= 100000, Battery_Limit = 700000,
+                   Curtailment_Limit= 1000000, Generator_Warm_Start_1 = 1, Generator_Warm_Start_2 = 1,
+                   Generator_Bounds_Installed_1 =  5, Generator_Bounds_Installed_2 = 5,
+                   Generator_Bounds_Used_1 = 5, Generator_Bounds_Used_2 = 5,
+                   path_renewable= 'Example/Renewable_Energy.xls', path_demand = 'Example/Demand.xls'):
     
     '''
     This function creates the instance for the resolution of the optimization in Pyomo.
@@ -19,6 +23,22 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     Marginal_Cost_Generator, Capital_Recovery_Factor
     
     
+    
+    # Loading Demand and Renewable energy
+    
+    Renewable_Energy_Excel = pd.read_excel(path_renewable,index_col=0) # open the PV energy yield file
+    Renewable_Energy_Excel = Renewable_Energy_Excel/1000
+    Renewable_Energy_Excel = round(Renewable_Energy_Excel, 3)
+    
+    model.Renewable_Energy_Excel = Renewable_Energy_Excel
+    
+    Energy_Demand_Excel = pd.read_excel(path_demand,index_col=0) # open the energy demand file
+    Energy_Demand_Excel = Energy_Demand_Excel/1000
+    Energy_Demand_Excel = round(Energy_Demand_Excel, 1)
+    
+    model.Energy_Demand_Excel = Energy_Demand_Excel 
+    
+
     # Time parameters
     model.Periods = Param(within=NonNegativeReals) # Number of periods of analysis of the energy variables
     model.Years = Param() # Number of years of the project
@@ -111,23 +131,23 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     model.Capital_Recovery_Factor = Param(within=NonNegativeReals, initialize= Capital_Recovery_Factor) 
     # VARIABLES
    
-    # Variables associated to the solar panels
+    # Variables associated to the renewable energy
         
     model.Renewable_Units = Var(model.renewable_source,
-                                within=NonNegativeReals,bounds= (10,50000)) # Number of units of solar panels
+                                within=NonNegativeReals,bounds= (0,Renewable_Limit)) # Number of units of solar panels
 
 
     # Variables associated to the battery bank
-    bat = 700000
-    model.Battery_Nominal_Capacity = Var(within=NonNegativeReals,bounds= (0,bat)) # Capacity of the battery bank in Wh
+    
+    model.Battery_Nominal_Capacity = Var(within=NonNegativeReals,bounds= (0,Battery_Limit)) # Capacity of the battery bank in Wh
     model.Energy_Battery_Flow_Out = Var(model.scenario, model.periods,
-                                        within=NonNegativeReals,bounds=(0,bat)) # Battery discharge energy in wh
+                                        within=NonNegativeReals,bounds=(0,Battery_Limit)) # Battery discharge energy in wh
     model.Energy_Battery_Flow_In = Var(model.scenario, model.periods, 
-                                       within=NonNegativeReals,bounds=(0,bat)) # Battery charge energy in wh
+                                       within=NonNegativeReals,bounds=(0,Battery_Limit)) # Battery charge energy in wh
     model.State_Of_Charge_Battery = Var(model.scenario, model.periods, 
                                         within=NonNegativeReals) # State of Charge of the Battery in wh
-    model.Maximun_Charge_Power = Var(within=NonNegativeReals,bounds=(0,bat))
-    model.Maximun_Discharge_Power = Var(within=NonNegativeReals,bounds=(0,bat))
+    model.Maximun_Charge_Power = Var(within=NonNegativeReals,bounds=(0,Battery_Limit))
+    model.Maximun_Discharge_Power = Var(within=NonNegativeReals,bounds=(0,Battery_Limit))
     
     # Variables associated to the diesel generator
     
@@ -140,23 +160,24 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
 
     elif model.formulation == 'MILP':
         
+        
         def gen(model,g):
             if g == 1:
-                return 1
+                return Generator_Warm_Start_1
             else:
-                return 1
+                return Generator_Warm_Start_2
     
         def bounds_N(model,g):
             if g == 1:
-                return (1,2)
+                return (0, Generator_Bounds_Installed_1)
             else:
-                return (1,2)
+                return (0, Generator_Bounds_Installed_2)
         
         def bounds_E(model,s,g,t):
             if g == 1:
-                return (0,2)
+                return (0, Generator_Bounds_Used_1)
             else:
-                return (0,2)    
+                return (0, Generator_Bounds_Used_1)
     
         model.Generator_Energy = Var(model.scenario, model.generator_type,
                                            model.periods, within=NonNegativeReals)
@@ -179,7 +200,7 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     if model.Lost_Load_Probability > 0:
         model.Lost_Load = Var(model.scenario, model.periods, within=NonNegativeReals) # Energy not suply by the system kWh
     model.Energy_Curtailment = Var(model.scenario, model.periods, within=NonNegativeReals
-                                   ,bounds=(0,100000)) # Curtailment of solar energy in kWh
+                                   ,bounds=(0,Curtailment_Limit)) # Curtailment of solar energy in kWh
 
 
 
