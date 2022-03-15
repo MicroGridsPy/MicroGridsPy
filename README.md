@@ -1,4 +1,4 @@
-MicroGridsPy - Teaching version
+MicroGridsPy - On-Grid Version
 ========================
 
 ### Description
