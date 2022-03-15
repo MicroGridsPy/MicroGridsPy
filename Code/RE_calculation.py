@@ -1,13 +1,12 @@
-from Windrose import WindroseAxes
 import time, sys
 from RE_input_data import *
 from Solar_PV_calculation import hourly_solar
 from Typical_year import *
-from Wind_calculation import shear_exp, air_density, wind_distr, P_turb
+from Wind_calculation import shear_exp, air_density, wind_lst, P_turb
 
 
 def RE_supply():
-    
+        
     start = time.time()
     
     print("Renewable energy time series calculation started, please remember to close Renewable_energy.xlsx... \n")
@@ -16,14 +15,14 @@ def RE_supply():
     
     data_file = "Inputs/RES_data.dat"
     data_import = open(data_file).readlines()
-    (date_start, date_end, lat, lon, lat_ext,lon_ext, standard_lon, URL_d) = URL_creation_d(data_import)
+    (date_start, date_end, lat, lon, lat_ext_1,lon_ext_1, lat_ext_2, lon_ext_2, standard_lon, URL_1_d, URL_2_d ) = URL_creation_d(data_import)
     URL_h = URL_creation_h(data_import)
-    URL_list = URL_d + URL_h
+    URL_list = URL_1_d + URL_2_d + URL_h
     print("Input file reading completed\n")
-    print("Downloading data from NASA POWER...\n")
+    print("Downloading time-series from NASA POWER...\n")
     try:
         jsdata = multithread_data_download(URL_list) 
-        param_daily_interp, param_hourly_interp = data_2D_interpolation(jsdata, date_start, date_end,lat, lon, lat_ext, lon_ext)
+        param_daily_interp, param_hourly_interp = data_2D_interpolation(jsdata, date_start, date_end,lat, lon, lat_ext_1, lon_ext_1, lat_ext_2, lon_ext_2)
     except:
         print("POWER server response error, please try again")
         sys.exit(1)        
@@ -32,7 +31,7 @@ def RE_supply():
     #%% Calculate the typical year using the daily parameters 
     
     print("Calculating the typical meteorological year...\n")
-    (best_years,param_typical_daily) = typical_year_daily(param_daily_interp, date_start, date_end)
+    (best_years,param_typical_daily,fs, diff_sec) = typical_year_daily(param_daily_interp, date_start, date_end)
     param_typical_hourly = typical_year_hourly(best_years, param_hourly_interp)
     
     print("Completed \n") 
@@ -40,7 +39,7 @@ def RE_supply():
     #%% Import technological parameters of RE technologies
     
     (nom_power,tilt,azim,ro_ground, k_T, NMOT, T_NMOT, G_NMOT) = solarPV_parameters(data_import)  #PV param.
-    (power_curve, surface_area, rot_height, data1, df) = wind_parameters(data_import)
+    (power_curve, surface_area, drivetrain_eff, rot_height, data1, df) = wind_parameters(data_import)
     
     #%% Find the vector of hourly irradiation on a tilted surface for all days of the year [W/m^2 h] and K_T for power calculation
     
@@ -75,33 +74,17 @@ def RE_supply():
     param_hourly_str = ['WS50M', 'WS2M', 'WD10M']
     (WS_rotor,alpha) = shear_exp(param_typical_hourly,int(param_hourly_str[0][2:4]), int(param_hourly_str[1][2:3]), rot_height) 
     ro_air = air_density(rot_height,param_typical_hourly)
-    prob_density = wind_distr(WS_rotor)
-    (energy_WT, energy_wind, Cp) = P_turb(power_curve, ro_air, prob_density, surface_area)             #hourly energy production of 1 wind turbine [kWh]
+    U_rotor_lst, wind_direction_lst, ro_air_lst = wind_lst(WS_rotor, param_typical_hourly, ro_air)
+    (energy_WT, Cp) = P_turb(power_curve, U_rotor_lst, ro_air_lst, surface_area, drivetrain_eff)            #hourly energy production of 1 wind turbine [kWh]
     
     print("Completed\n ")            
+               
+    #%% Report results on excel sheet 'RES_supply' and export windrose and plots
     
-    #%% Display the windrose 
+    print('Exporting time series to Renewable_energy.xlsx... \n')
+    dataf = export(energy_PV, U_rotor_lst, energy_WT, wind_direction_lst, Cp)    
+    dataf.to_excel("Inputs/Renewable_Energy.xlsx", index = False, header = True, startrow = 0, startcol = 0)
     
-    wind_speed_lst = []
-    wind_direction_lst = []
-    
-    for ii in range(len(param_typical_hourly[0])):
-        for jj in range(len(param_typical_hourly[0][ii])):
-            wind_speed_lst.extend(param_typical_hourly[0][ii][jj])
-            wind_direction_lst.extend(param_typical_hourly[2][ii][jj])
-    
-    ax = WindroseAxes.from_ax()
-    ax.bar(wind_direction_lst, wind_speed_lst, normed=True, opening=0.8, edgecolor='white')
-    ax.set_legend()
-    
-    print("Windrose generated \n")  
-    
-    #%% Report results on excel sheet 'RES_supply'
-    
-    "Exporting time series to Renewable_energy.xlsx... \n"
-    
-    dataf = excel_export(energy_PV,energy_WT)
-    dataf.to_excel(r'C:\Users\ivans\Desktop\TESI\MicroGridsPy-SESAM-MYCE\Code\Inputs\Renewable_Energy.xlsx', index = False, header = True, startrow = 0, startcol = 0)
     # Timing
     end = time.time()
     elapsed = end - start
@@ -111,6 +94,5 @@ def RE_supply():
 
 
 
-        
- 
     
+ 

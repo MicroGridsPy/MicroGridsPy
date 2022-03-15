@@ -49,8 +49,14 @@ def Model_Resolution(model, Optimization_Goal, Renewable_Penetration, Battery_In
     model.FuelCostTotalAct             = Constraint(model.scenarios, 
                                             model.generator_types,
                                             rule=Total_Fuel_Cost_Act)
+    model.TotalElectricityCostAct        = Constraint(model.scenarios,
+                                                      rule=Total_Electricity_Cost_Act)   ####
+    model.TotalRevenuesAct             = Constraint(model.scenarios,
+                                                    rule=Total_Revenues_Act)
+    model.TotalRevenuesNonAct          = Constraint(model.scenarios,
+                                                    rule=Total_Revenues_NonAct)    
     model.BatteryReplacementCostAct    = Constraint(model.scenarios,
-                                                 rule=Battery_Replacement_Cost_Act) 
+                                                    rule=Battery_Replacement_Cost_Act) 
     model.ScenarioLostLoadCostAct      = Constraint(model.scenarios, 
                                                  rule=Scenario_Lost_Load_Cost_Act)
     model.ScenarioVariableCostAct      = Constraint(model.scenarios,
@@ -59,6 +65,8 @@ def Model_Resolution(model, Optimization_Goal, Renewable_Penetration, Battery_In
     model.FuelCostTotalNonAct          = Constraint(model.scenarios, 
                                                     model.generator_types, 
                                                     rule=Total_Fuel_Cost_NonAct)
+    model.TotalElectricityCostNonAct   = Constraint(model.scenarios,
+                                                    rule=Total_Revenues_NonAct)     ####
     model.BatteryReplacementCostNonAct = Constraint(model.scenarios,
                                                     rule=Battery_Replacement_Cost_NonAct) 
     model.ScenarioLostLoadCostNonAct   = Constraint(model.scenarios, 
@@ -73,13 +81,14 @@ def Model_Resolution(model, Optimization_Goal, Renewable_Penetration, Battery_In
 #%% Electricity generation system constraints 
     model.EnergyBalance = Constraint(model.scenarios, 
                                      model.years_steps, 
-                                     model.periods, 
+                                     model.periods,
                                      rule=Energy_balance)
 
     "Renewable Energy Sources constraints"
-    model.RenewableEnergy = Constraint(model.scenarios, model.years_steps, 
+    model.RenewableEnergy = Constraint(model.scenarios, 
+                                       model.years_steps, 
                                        model.renewable_sources,
-                                       model.periods, 
+                                       model.periods,
                                        rule=Renewable_Energy)  # Energy output of the solar panels
     model.ResMinStepUnits = Constraint(model.years_steps,
                                        model.renewable_sources, 
@@ -121,26 +130,34 @@ def Model_Resolution(model, Optimization_Goal, Renewable_Penetration, Battery_In
 
     "Diesel generator constraints"
     model.MaximunFuelEnergy        = Constraint(model.scenarios, 
-                                                model.years_steps, 
+                                                model.years_steps,
                                                 model.generator_types,
-                                                model.periods, 
+                                                model.periods,
                                                 rule=Maximun_Generator_Energy) # Maximun energy output of the diesel generator
     model.GeneratorMinStepCapacity = Constraint(model.years_steps, 
                                                 model.generator_types, 
-                                                rule = Generator_Min_Step_Capacity)
+                                                rule=Generator_Min_Step_Capacity)
+    "Grid constraints"  ####
+    
+    model.MaximumPowerFromGrid     = Constraint(model.scenarios,
+                                                model.years_steps,
+                                                model.periods,
+                                                rule=Maximum_Power_From_Grid)
+    model.MaximumPowerToGrid       = Constraint(model.scenarios,
+                                                model.years_steps,
+                                                model.periods,
+                                                rule=Maximum_Power_To_Grid) 
     
     "Lost load constraints"
     model.MaximunLostLoad = Constraint(model.scenarios, model.years, 
                                        rule=Maximun_Lost_Load) # Maximum permissible lost load
-    
-       
-    
+ 
     instance = model.create_instance(datapath) # load parameters
 
     print('\nInstance created')
     
     opt = SolverFactory('gurobi') # Solver use during the optimization
-
+    
     opt.set_options('Method=2 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000') # !! only works with GUROBI solver   
     # opt.set_options('Method=2 BarHomogeneous=1 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000') # !! only works with GUROBI solver   
 

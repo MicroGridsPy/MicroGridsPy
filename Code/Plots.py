@@ -95,6 +95,8 @@ def DispatchPlot(instance,TimeSeries,PlotScenario,PlotDate,PlotTime,PlotResoluti
         y_Genset[g] = Series.loc[:,idx[:,'Generator Production',Generator_Names[g],:]].values.flatten()/1e3 
     y_LostLoad    = Series.loc[:,idx[:,'Lost Load',:,:]].values.flatten()/1e3 
     y_Curtailment = -1*Series.loc[:,idx[:,'Curtailment',:,:]].values.flatten()/1e3 
+    y_Grid_out   = -1*Series.loc[:,idx[:,'Electricity to grid',:,:]].values.flatten()/1e3  ####
+    y_Grid_in    = Series.loc[:,idx[:,'Electricity from grid',:,:]].values.flatten()/1e3  ####
 
     x_Plot = np.arange(len(y_BESS_out))
     
@@ -115,6 +117,8 @@ def DispatchPlot(instance,TimeSeries,PlotScenario,PlotDate,PlotTime,PlotResoluti
         y_Stacked_pos += [y_Genset[g]]
     y_Stacked_pos += [y_LostLoad]  
     y_Stacked_pos += [y_Curtailment]  
+    y_Stacked_pos += [y_Grid_out]
+    y_Stacked_pos += [y_Grid_in]
                          
     y_Stacked_neg = [deltaBESS_neg]
     
@@ -128,6 +132,8 @@ def DispatchPlot(instance,TimeSeries,PlotScenario,PlotDate,PlotTime,PlotResoluti
     Generator_Colors = instance.Generator_Colors.extract_values()
     Lost_Load_Color = instance.Lost_Load_Color()
     Curtailment_Color = instance.Curtailment_Color()
+    Energy_to_grid_Color = instance.Energy_To_Grid_Color() ####
+    Energy_from_grid_Color = instance.Energy_From_Grid_Color() ####
 
     Colors_pos = []
     for r in range(1,R+1):
@@ -137,6 +143,9 @@ def DispatchPlot(instance,TimeSeries,PlotScenario,PlotDate,PlotTime,PlotResoluti
          Colors_pos += ['#'+Generator_Colors[g]]
     Colors_pos += ['#'+Lost_Load_Color]  
     Colors_pos += ['#'+Curtailment_Color]  
+    Colors_pos += ['#'+Energy_to_grid_Color] ####
+    Colors_pos += ['#'+Energy_from_grid_Color] ####
+    
    
     Colors_neg = ['#'+BESS_Color,]
 
@@ -147,7 +156,9 @@ def DispatchPlot(instance,TimeSeries,PlotScenario,PlotDate,PlotTime,PlotResoluti
     for g in range(1,G+1):
          Labels_pos += [Generator_Names[g]]
     Labels_pos += ['Lost load']  
-    Labels_pos += ['Curtailment']  
+    Labels_pos += ['Curtailment'] 
+    Labels_pos += ['Energy to grid']  ####
+    Labels_pos += ['Energy from grid'] ####
       
     Labels_neg = ['_nolegend_'] 
 
@@ -178,7 +189,7 @@ def DispatchPlot(instance,TimeSeries,PlotScenario,PlotDate,PlotTime,PlotResoluti
     "primary y axis"
     # ax1.set_yticklabels(ax1.get_yticks(), fontsize=fontticks) 
     ax1.margins(y=0)
-    ax1.grid(True, zorder=2)
+    ax1.grid(True, zorder=2) ####
        
     "secondary y axis"
     if BESSNominalCapacity[PlotStep] < 1:
@@ -246,11 +257,13 @@ def CashFlowPlot(instance,Results,PlotResolution,PlotFormat):
     for r in range(1,R+1):
         Investment_RES[RES_Names[r]] = [0 for y in range(Y)]
     Investment_Gen = {}
+    Investment_Grid = [0 for y in range(Y)]
     for g in range(1,G+1):
         Investment_Gen[Generator_Names[g]] = [0 for y in range(Y)]
 
     if ST == 1:
         Investment_BESS[0] = Results['Costs'].loc[idx['Investment cost','Battery bank',:,:],'Total'].values[0]
+        Investment_Grid[0] = Results['Costs'].loc[idx['Investment cost','Electricity ',:,:],'Total'].values[0] ####
         for r in range(1,R+1):
             Investment_RES[RES_Names[r]][0] = Results['Costs'].loc[idx['Investment cost',RES_Names[r],:,:],'Total'].values[0]
         for g in range(1,G+1):

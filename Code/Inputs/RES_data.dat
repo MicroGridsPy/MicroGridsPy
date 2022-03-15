@@ -1,32 +1,34 @@
 # --- non-editable parameters ---
 
-param: base_URL:= 'https://power.larc.nasa.gov/api/temporal/';               				#URL base for API 
-param: loc_id := 'point';                                                       			#spatial resolution
-param: parameters_1 := 'ALLSKY_SFC_SW_DWN, T2MWET, T2M, WS50M';						#parameters of daily data
-param: parameters_2 := 'WS50M, WS2M,WD50M, T2M';							#parameters of hourly data
-param: date_start = '20010101';  									#starting date for dataset (from 2001)
-param: date_end := '20201231';      									#ending date for dataset (until 2020)
-param: community := 'RE';                     								#community of data archive
-param: temp_res_1 := 'daily';										#temporal resolution for daily data
-param: temp_res_2 := 'hourly';										#temporal resolution for hourly data
-param: output_format := 'JSON'; 									#output format
+param: base_URL:= 'https://power.larc.nasa.gov/api/temporal/';               	#URL base for API 
+param: loc_id := 'point';                                                       #spatial resolution
+param: parameters_1 := 'ALLSKY_SFC_SW_DWN';			                             #parameters of daily data with resolution of 1° x 1°
+param: parameters_2 := 'T2MWET, T2M, WS50M';			                          #parameters of daily data with resolution of 0.5° x 0.625°
+param: parameters_3 := 'WS50M, WS2M,WD50M, T2M';				#parameters of hourly data
+param: date_start = '20010101';  						#starting date for dataset (from 2001)
+param: date_end := '20201231';      						#ending date for dataset (until 2020)
+param: community := 'RE';                     					#community of data archive
+param: temp_res_1 := 'daily';							#temporal resolution for daily data
+param: temp_res_2 := 'hourly';							#temporal resolution for hourly data
+param: output_format := 'JSON'; 						#output format
+param: user := 'anonymous';							#user key
 
 # --- editable parameters ---
 
-param: lat := '-1 35 14.1'; 										#latitude  [-° -' -", N positive, S negative]
-param: lon := '30 21 15.4'; 										#longitude [-° -' -", E positive, O negative]
-param: user := 'anonymous';										#user key
-param: time_zone := +2;											#UTC time zone [-]
+param: lat := '-1 35 14.1'; 							#latitude  [-° -' -", N positive, S negative]
+param: lon := '30 21 15.4'; 							#longitude [-° -' -", E positive, O negative]
+param: time_zone := +2;								#UTC time zone [-]
 
-param: nom_power := 275; 										#panel nominal power [W]	
-param: tilt := 10;											#tilt angle [°]
-param: azim := 0;											#azimuth angle [0° south facing]
-param: ro_ground := 0.2;										#ground reflectivity  [-]
-param: k_T := -0.38;											#power variation coefficient with temperature [%/K]
-param: NMOT := 42.5 ;											#Normal Module Operating Temperature [°C]		
-param: T_NMOT := 20;											#ambient temperature of NMOT conditions [°C]
-param: G_NMOT := 800;											#irradiance in NMOT conditions [W/m^2]
+param: nom_power := 300; 							#Module nominal power [W]	
+param: tilt := 10;								    #tilt angle [°]
+param: azim := 180;								    #azimuth angle [0° south facing]
+param: ro_ground := 0.2;							#ground reflectivity  [-]
+param: k_T := -0.37;								#power variation coefficient with temperature [%/°C]
+param: NMOT := 45 ;								    #Nominal Module Operating Temperature [°C]		
+param: T_NMOT := 25;								#ambient temperature of NMOT conditions [°C]
+param: G_NMOT := 800;								#irradiance in NMOT conditions [W/m^2]
 
 
-param: turbine_type := 'HA';										#Horizontal/Vertical axys
-param: turbine_model := 'Bonus.B23.150';							        #model name of the turbine 
+param: turbine_type := 'HA';							#Horizontal Axis/Vertical Axis
+param: drivetrain_eff := 0.95;                                      		#efficiency of turbine drivetrain
+param: turbine_model := 'Bonus.B23.150';					#model name of the turbine 

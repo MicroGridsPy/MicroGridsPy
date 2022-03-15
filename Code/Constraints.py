@@ -68,7 +68,12 @@ def Investment_Cost(model):
     Inv_Bat = ((model.Battery_Nominal_Capacity[1]*model.Battery_Specific_Investment_Cost)
                     + sum((((model.Battery_Nominal_Capacity[ut] - model.Battery_Nominal_Capacity[ut-1])*model.Battery_Specific_Investment_Cost))/((1+model.Discount_Rate)**(yt-1))
                     for (yt,ut) in tup_list))
-    return model.Investment_Cost == Inv_Ren + Inv_Gen + Inv_Bat
+    if model.Grid_Connection == 0:
+        Inv_Grid = 0
+    else:
+        Inv_Grid = (model.Grid_Connection_Cost*model.Grid_Distance)/((1+model.Discount_Rate)**(model.Year_Grid_Connection-1)) ####
+    
+    return model.Investment_Cost == Inv_Ren + Inv_Gen + Inv_Bat + Inv_Grid   ####
 
 def Investment_Cost_Limit(model):
     return model.Investment_Cost <= model.Investment_Cost_Limit
@@ -103,15 +108,17 @@ def Scenario_Variable_Cost_Act(model, s):
     foo = []
     for g in range(1,model.Generator_Types+1):
             foo.append((s,g))   
-    Fuel_Cost = sum(model.Total_Fuel_Cost_Act[s,g] for s,g in foo)    
-    return model.Total_Scenario_Variable_Cost_Act[s] == model.Operation_Maintenance_Cost_Act + model.Battery_Replacement_Cost_Act[s] + model.Scenario_Lost_Load_Cost_Act[s] + Fuel_Cost
+    Fuel_Cost = sum(model.Total_Fuel_Cost_Act[s,g] for s,g in foo)   
+    Electricity_Cost = model.Total_Electricity_Cost_Act[s]     ####
+    return model.Total_Scenario_Variable_Cost_Act[s] == model.Operation_Maintenance_Cost_Act + model.Battery_Replacement_Cost_Act[s] + model.Scenario_Lost_Load_Cost_Act[s] + Fuel_Cost + Electricity_Cost - model.Total_Revenues_Act[s]     ####
 
-def Scenario_Variable_Cost_NonAct(model, s):
+def Scenario_Variable_Cost_NonAct(model, s): 
     foo = []
     for g in range(1,model.Generator_Types+1):
-            foo.append((s,g))   
-    Fuel_Cost = sum(model.Total_Fuel_Cost_NonAct[s,g] for s,g in foo)    
-    return model.Total_Scenario_Variable_Cost_NonAct[s] == model.Operation_Maintenance_Cost_NonAct + model.Battery_Replacement_Cost_NonAct[s] + model.Scenario_Lost_Load_Cost_NonAct[s] + Fuel_Cost
+        foo.append((s,g))   
+    Fuel_Cost = sum(model.Total_Fuel_Cost_Act[s,g] for s,g in foo)  
+    Electricity_Cost = model.Total_Electricity_Cost_NonAct[s]     ####
+    return model.Total_Scenario_Variable_Cost_NonAct[s] == model.Operation_Maintenance_Cost_NonAct + model.Battery_Replacement_Cost_NonAct[s] + model.Scenario_Lost_Load_Cost_NonAct[s] + Fuel_Cost + Electricity_Cost- model.Total_Revenues_NonAct[s] ####
 
 def Scenario_Lost_Load_Cost_Act(model,s):    
     Cost_Lost_Load = 0         
@@ -140,6 +147,33 @@ def Total_Fuel_Cost_NonAct(model,s,g):
         Num = sum(model.Generator_Energy_Production[s,y,g,t]*model.Generator_Marginal_Cost[s,y,g] for t in model.periods)
         Fuel_Cost_Tot += Num
     return model.Total_Fuel_Cost_NonAct[s,g] == Fuel_Cost_Tot
+
+def Total_Electricity_Cost_Act(model,s): ####
+    Electricity_Cost_Tot = 0
+    for y in range(1, model.Years +1):
+        Num = sum(model.Energy_From_Grid[s,y,t]*model.Grid_Availability[s,y,t]*model.Grid_Purchased_El_Price/1000  for t in model.periods)
+        Electricity_Cost_Tot += Num/((1+model.Discount_Rate)**y)
+    return model.Total_Electricity_Cost_Act[s] == Electricity_Cost_Tot
+   
+def Total_Electricity_Cost_NonAct(model,s): ####
+    Electricity_Cost_Tot = 0
+    for y in range(1, model.Years +1):
+        Num = sum(model.Energy_From_Grid[s,y,t]*model.Grid_Availability[s,y,t]*model.Grid_Purchased_El_Price/1000  for t in model.periods)
+        Electricity_Cost_Tot += Num
+    return model.Total_Electricity_Cost_NonAct[s] == Electricity_Cost_Tot
+
+
+def Total_Revenues_NonAct(model,s): ####
+    Revenues_Yearly = [0 for y in model.years]
+    for y in range(1, model.Years +1):
+        Revenues_Yearly[y-1] = sum(model.Energy_To_Grid[s,y,t]*model.Grid_Availability[s,y,t] * model.Grid_Sold_El_Price/1000 for t in model.periods)
+    return model.Total_Revenues_NonAct [s] == sum(Revenues_Yearly[y-1] for y in model.years)
+
+def Total_Revenues_Act(model,s): ####
+    Revenues_Yearly = [0 for y in model.years]
+    for y in range(1,model.Years+1):
+        Revenues_Yearly [y-1] = sum(model.Energy_To_Grid[s,y,t]*model.Grid_Availability[s,y,t] * model.Grid_Sold_El_Price/1000 for t in model.periods)
+    return model.Total_Revenues_Act [s] == sum(Revenues_Yearly[y-1]/((1+model.Discount_Rate)**y)  for y in model.years)
 
 def Battery_Replacement_Cost_Act(model,s):
     Battery_cost_in = [0 for y in model.years]
@@ -188,7 +222,7 @@ def Salvage_Value(model):
                         ((1 + model.Discount_Rate)**(model.Years)) for g in model.generator_types)        
         SV_Gen_2 = 0
         SV_Gen_3 = 0
-
+        SV_Grid = model.Grid_Distance*model.Grid_Connection_Cost / ((1 + model.Discount_Rate)**(model.Years)) ####
     if model.Steps_Number == 2:    
         yt_last_up = upgrade_years_list[1]       
         SV_Ren_1 = sum(model.RES_Units[1,r]*model.RES_Nominal_Capacity[r]*model.RES_Specific_Investment_Cost[r] * (model.RES_Lifetime[r]-model.Years)/model.RES_Lifetime[r] / 
@@ -201,6 +235,7 @@ def Salvage_Value(model):
         SV_Gen_2 = sum((model.Generator_Nominal_Capacity[2,g]-model.Generator_Nominal_Capacity[1,g])*model.Generator_Specific_Investment_Cost[g] * (model.Generator_Lifetime[g]+(yt_last_up-1)-model.Years)/model.Generator_Lifetime[g] / 
                         ((1 + model.Discount_Rate)**(model.Years)) for g in model.generator_types)
         SV_Gen_3 = 0
+        SV_Grid = model.Grid_Distance*model.Grid_Connection_Cost*model.Grid_Connection / ((1 + model.Discount_Rate)**(model.Years)) ####
         
     if model.Steps_Number > 2:
         tup_list_2 = [[] for i in range(len(model.steps)-2)]
@@ -222,7 +257,9 @@ def Salvage_Value(model):
                         ((1 + model.Discount_Rate)**(model.Years)) for g in model.generator_types)
         SV_Gen_3 = sum(sum((model.Generator_Nominal_Capacity[ut,g] - model.Generator_Nominal_Capacity[ut-1,g])*model.Generator_Specific_Investment_Cost[g] * (model.Generator_Lifetime[g]+(yt-1)-model.Years)/model.Generator_Lifetime[g] / 
                         ((1+model.Discount_Rate)**model.Years) for (yt,ut) in tup_list_2) for g in model.generator_types)
-    return model.Salvage_Value ==  SV_Ren_1 + SV_Gen_1 + SV_Ren_2 + SV_Gen_2 + SV_Ren_3 + SV_Gen_3
+        SV_Grid = model.Grid_Distance*model.Grid_Connection_Cost / ((1 + model.Discount_Rate)**(model.Years)) ####
+        
+    return model.Salvage_Value ==  SV_Ren_1 + SV_Gen_1 + SV_Ren_2 + SV_Gen_2 + SV_Ren_3 + SV_Gen_3 + SV_Grid ####
 
 
 #%% Electricity balance constraints
@@ -234,14 +271,21 @@ def Energy_balance(model,s,yt,ut,t): # Energy balance
     foo=[]
     for g in model.generator_types:
         foo.append((s,yt,g,t))    
-    Total_Generator_Energy = sum(model.Generator_Energy_Production[i] for i in foo)  
-    return model.Energy_Demand[s,yt,t] == (Total_Renewable_Energy + Total_Generator_Energy 
-                                      - model.Battery_Inflow[s,yt,t] + model.Battery_Outflow[s,yt,t] 
-                                      + model.Lost_Load[s,yt,t] - model.Energy_Curtailment[s,yt,t])
+    Total_Generator_Energy = sum(model.Generator_Energy_Production[i] for i in foo)
+    En_From_Grid = model.Energy_From_Grid[s,yt,t]*model.Grid_Availability[s,yt,t]
+    En_To_Grid = model.Energy_To_Grid[s,yt,t]*model.Grid_Availability[s,yt,t]
+    return model.Energy_Demand[s,yt,t] == (Total_Renewable_Energy 
+                                           + Total_Generator_Energy
+                                           + En_From_Grid
+                                           - En_To_Grid 
+                                           - model.Battery_Inflow[s,yt,t] 
+                                           + model.Battery_Outflow[s,yt,t] 
+                                           + model.Lost_Load[s,yt,t]  
+                                           - model.Energy_Curtailment[s,yt,t] )  ####   
 
 
 "Renewable Energy Sources constraints"
-def Renewable_Energy(model,s,yt,ut,r,t): # Energy output of the solar panels
+def Renewable_Energy(model,s,yt,ut,r,t): # Energy output of the RES
     return model.RES_Energy_Production[s,yt,r,t] == model.RES_Unit_Energy_Production[s,r,t]*model.RES_Inverter_Efficiency[r]*model.RES_Units[ut,r]
 
 def Renewable_Energy_Penetration(model,ut):    
@@ -327,7 +371,7 @@ def Battery_Min_Step_Capacity(model,yt,ut):
     
 
 "Diesel generator constraints"
-def Maximun_Generator_Energy(model,s,yt,ut,g,t): # Maximum energy output of the diesel generator
+def Maximun_Generator_Energy(model,s,yt,ut,g,t): 
     return model.Generator_Energy_Production[s,yt,g,t] <= model.Generator_Nominal_Capacity[ut,g]*model.Delta_Time
 
 def Generator_Min_Step_Capacity(model,yt,ut,g):
@@ -342,26 +386,30 @@ def Maximun_Lost_Load(model,s,yt): # Maximum admittable lost load
     return model.Lost_Load_Fraction >= (sum(model.Lost_Load[s,yt,t] for t in model.periods)/sum(model.Energy_Demand[s,yt,t] for t in model.periods))
 
 
+"Grid constraints" ####
 
+def Maximum_Power_From_Grid(model,s,yt,ut,t):
+    if model.Grid_Availability[s,yt,t] == 0:
+        return model.Energy_From_Grid[s,yt,t] == 0
+    else:
+        return model.Energy_From_Grid[s,yt,t] <= model.Maximum_Grid_Power*1000 
 
-
+def Maximum_Power_To_Grid(model,s,yt,ut,t):    
+    if model.Grid_Connection_Type == 2 and model.Grid_Availability[s,yt,t] == 1:
+        return model.Energy_To_Grid[s,yt,t] <= model.Maximum_Grid_Power*1000  
+    elif model.Grid_Connection_Type == 1 or model.Grid_Availability[s,yt,t] == 0:
+        return model.Energy_To_Grid[s,yt,t] == 0
+    
 
  
+
      
 
 
-
-
-
-
-    
-                
-
+                                                                        
     
     
     
-    
-
 
 
 

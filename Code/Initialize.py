@@ -16,11 +16,11 @@ Based on the original model by:
 """
 
 
-import pandas as pd
+import pandas as pd, numpy as np
 import re
 from RE_calculation import RE_supply
 from Demand import demand_generation
-
+from Grid_Availability import grid_availability
 
 #%% This section extracts the values of Scenarios, Periods, Years from data.dat and creates ranges for them
 Data_file = "Inputs/Model_data.dat"
@@ -39,6 +39,16 @@ for i in range(len(Data_import)):
         RE_Supply_Calculation = int((re.findall('\d+',Data_import[i])[0]))
     if "param: Demand_Profile_Generation" in Data_import[i]:      
         Demand_Profile_Generation = int((re.findall('\d+',Data_import[i])[0]))
+    if "param: Grid_Average_Number_Outages " in Data_import[i]:      
+        average_n_outages = int((re.findall('\d+',Data_import[i])[0]))
+    if "param: Grid_Average_Outage_Duration" in Data_import[i]:       
+        average_outage_duration = int((re.findall('\d+',Data_import[i])[0]))
+    if "param: Grid_Connection " in Data_import[i]:      
+        grid_connection = int((re.findall('\d+',Data_import[i])[0]))
+    if "param: Year_Grid_Connection " in Data_import[i]:      
+        year_grid_connection = int((re.findall('\d+',Data_import[i])[0]))
+    if "param: Grid_Connection_Type" in Data_import[i]:      
+        grid_connection_type = ((Data_import[i][Data_import[i].index('=')+1:Data_import[i].index(';')]).replace(' ','')).replace("'","")
 
 scenario = [i for i in range(1,n_scenarios+1)]
 year = [i for i in range(1,n_years+1)]
@@ -93,8 +103,6 @@ def Initialize_YearUpgrade_Tuples(model):
 Demand = pd.read_excel('Inputs/Demand.xlsx')
 Renewable_Energy = pd.read_excel('Inputs/Renewable_Energy.xlsx')
 
-# Updates Excel file if RES or Demand calculation are selected
-
 if RE_Supply_Calculation:
    Renewable_energy = RE_supply()
 if Demand_Profile_Generation:
@@ -123,8 +131,10 @@ def Initialize_Demand(model, s, y, t):
 
 
 def Initialize_RES_Energy(model,s,r,t):
-    column = (s-1)*model.RES_Sources + float(r) 
-    return (Renewable_Energy[column][(t)])   
+    column = (s-1)*model.RES_Sources + r 
+    return float(Renewable_Energy[column][t])   
+
+
 
   
 def Initialize_Battery_Unit_Repl_Cost(model):
@@ -168,6 +178,43 @@ def Initialize_Battery_Minimum_Capacity(model,ut):
     
     return  Available_Energy/(1-model.Battery_Depth_of_Discharge)
 
-#%% This function calculates
+#%% 
 def Initialize_Generator_Marginal_Cost(model,s,y,g):
     return model.Fuel_Specific_Cost[g]/(model.Fuel_LHV[g]*model.Generator_Efficiency[g])
+
+#initialize grid availability
+if grid_connection:  
+    availability = grid_availability(average_n_outages, average_outage_duration, n_years, year_grid_connection) 
+else:
+    availability = pd.concat([pd.DataFrame(np.zeros(n_years)).T for ii in range(8760)])
+    availability.set_axis([ii for ii in range(8760)], axis='index')
+    availability.set_axis([ii for ii in range(1,n_years+1)], axis='columns')
+
+grid_availability_Series = pd.Series()
+for i in range(1,n_years*n_scenarios+1):
+    dum = availability[i][:]
+    grid_availability_Series = pd.concat([grid_availability_Series,dum])
+grid_availability = pd.DataFrame(grid_availability_Series) 
+frame = [scenario,year,period]
+index = pd.MultiIndex.from_product(frame, names=['scenario','year','period'])
+grid_availability.index = index
+grid_availability_2 = pd.DataFrame()    
+for s in scenario:
+   grid_availability_Series_2 = pd.Series()
+   for y in year:
+      dum_2 = availability[(s-1)*n_years + y][:]
+      grid_availability_Series_2 = pd.concat([grid_availability_Series_2,dum_2])
+   grid_availability_2.loc[:,s] = grid_availability_Series_2
+index_2 = pd.RangeIndex(1,n_years*n_periods+1)
+grid_availability_2.index = index_2
+
+def Initialize_Grid_Availability(model, s, y, t):  
+    return float(grid_availability[0][(s,y,t)])
+
+if grid_connection_type == "Bidirectional":
+    grid_connection_type = 2
+elif grid_connection_type == "Purchase":
+    grid_connection_type = 1
+
+def Initialize_Grid_Connection_Type(model):
+    return grid_connection_type

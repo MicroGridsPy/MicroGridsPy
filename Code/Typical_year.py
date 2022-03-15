@@ -32,25 +32,28 @@ def bilinear_interpolation(x, y, points):
             q22 * (x - x1) * (y - y1)
            ) / ((x2 - x1) * (y2 - y1) + 0.0)
 
-#%% Converts JSON data into lists and applies 2D interpolation 
-import math
-def data_2D_interpolation(jsdata, date_start, date_end, lat, lon,lat_ext, lon_ext):
+#%% Converts JSON data into lists and applies 2D interpolation    
+import math, copy
+def data_2D_interpolation(jsdata, date_start, date_end, lat, lon,lat_ext_1, lon_ext_1, lat_ext_2, lon_ext_2):
     ''' Here converting JSON daily data into daily annidated list param_daily_list '''
-    jsdata_daily = jsdata[0:4]
-    jsdata_hourly = jsdata[4:8]
+    jsdata_daily_1 = jsdata[0:4]
+    jsdata_daily_2 = jsdata[4:8]
+    jsdata_hourly = jsdata[8:12]
     param_daily_list = []
-    for jsdata_d in jsdata_daily:
-        pydata_d = json.loads(jsdata_d)
-        param_daily = [[[[] for ii in range(12)] for ii in range(int(date_end[5:9])-int(date_start[7:11])+1)]for ii in range(4)]
-        param_daily_str = ['ALLSKY_SFC_SW_DWN','T2MWET','T2M','WS50M']    
-        keys = pydata_d['properties']['parameter'][param_daily_str[0]].keys()
-        for pp in range(len(param_daily_str)):   
+    param_daily_str_1 = ['ALLSKY_SFC_SW_DWN'] 
+    param_daily_str_2 = ['T2MWET','T2M','WS50M']   
+    
+    for jsdata_d_1 in jsdata_daily_1:
+        pydata_d = json.loads(jsdata_d_1)    
+        keys = pydata_d['properties']['parameter'][param_daily_str_1[0]].keys() 
+        param_daily_1 = [[[[] for ii in range(12)] for ii in range(int(date_end[5:9])-int(date_start[7:11])+1)]for ii in range(1)] 
+        for pp in range(len(param_daily_str_1)):   
             jj = int(date_start[7:11])
             month = 1
             year = 0
             for key in keys:
-                if pydata_d['properties']['parameter'][param_daily_str[pp]][key] < -990:             #check for missing values (equal to 0)
-                   pydata_d['properties']['parameter'][param_daily_str[pp]][key] = 0
+                if pydata_d['properties']['parameter'][param_daily_str_1[pp]][key] < -990:             #check for missing values (equal to 0)
+                   pydata_d['properties']['parameter'][param_daily_str_1[pp]][key] = 0
                 
                 if month>=10:
                     mm = str(month)
@@ -58,27 +61,59 @@ def data_2D_interpolation(jsdata, date_start, date_end, lat, lon,lat_ext, lon_ex
                     mm = '0' + str(month)
                          
                 if jj == int(key[0:4]) and mm == key[4:6]:
-                    param_daily[pp][year][month-1].append(pydata_d['properties']['parameter'][param_daily_str[pp]][key]) 
+                    param_daily_1[pp][year][month-1].append(pydata_d['properties']['parameter'][param_daily_str_1[pp]][key]) 
                                 
                 elif jj == int(key[0:4]) and mm != key[4:6]:
                     month = month + 1
-                    param_daily[pp][year][month-1].append(pydata_d['properties']['parameter'][param_daily_str[pp]][key])
+                    param_daily_1[pp][year][month-1].append(pydata_d['properties']['parameter'][param_daily_str_1[pp]][key])
                                   
                 elif jj != int(key[0:4]):
                     month = 1 
                     year = year+1   
-                    param_daily[pp][year][month-1].append(pydata_d['properties']['parameter'][param_daily_str[pp]][key])
+                    param_daily_1[pp][year][month-1].append(pydata_d['properties']['parameter'][param_daily_str_1[pp]][key])
                     jj = jj+1
-        param_daily_list.append(param_daily)
+            param_daily_list.append(param_daily_1)
+    
+    for jsdata_d_2 in jsdata_daily_2:
+        pydata_d = json.loads(jsdata_d_2) 
+        keys = pydata_d['properties']['parameter'][param_daily_str_2[0]].keys() 
+        param_daily_2 = [[[[] for ii in range(12)] for ii in range(int(date_end[5:9])-int(date_start[7:11])+1)]for ii in range(3)]
+        for pp in range(len(param_daily_str_2)):   
+            jj = int(date_start[7:11])
+            month = 1
+            year = 0
+            for key in keys:
+                if pydata_d['properties']['parameter'][param_daily_str_2[pp]][key] < -990:             #check for missing values (equal to 0)
+                   pydata_d['properties']['parameter'][param_daily_str_2[pp]][key] = 0
+                
+                if month>=10:
+                    mm = str(month)
+                else: 
+                    mm = '0' + str(month)
+                         
+                if jj == int(key[0:4]) and mm == key[4:6]:
+                    param_daily_2[pp][year][month-1].append(pydata_d['properties']['parameter'][param_daily_str_2[pp]][key]) 
+                                
+                elif jj == int(key[0:4]) and mm != key[4:6]:
+                    month = month + 1
+                    param_daily_2[pp][year][month-1].append(pydata_d['properties']['parameter'][param_daily_str_2[pp]][key])
+                                  
+                elif jj != int(key[0:4]):
+                    month = 1 
+                    year = year+1   
+                    param_daily_2[pp][year][month-1].append(pydata_d['properties']['parameter'][param_daily_str_2[pp]][key])
+                    jj = jj+1
+        param_daily_list.append(param_daily_2)
+    
     ''' Here converting JSON hourly data into hourly annidated list param_hourly_list'''   
     param_hourly_list = [] 
     for jsdata_h in jsdata_hourly:
         pydata = json.loads(jsdata_h)
         param_hourly = [[[[] for ii in range(12)] for ii in range(int(date_end[5:9])-int(date_start[7:11])+1)]for ii in range(4)]
         for ii in range(len(param_hourly)):
-            for jj in range(len(param_hourly[ii])):
-                for kk in range(len(param_daily[ii][jj])):
-                    param_hourly[ii][jj][kk] = [[] for ii in range(len(param_daily[ii][jj][kk]))]
+            for jj in range(len(param_daily_2[0])):
+                for kk in range(12):
+                    param_hourly[ii][jj][kk] = [[] for yy in range(len(param_daily_2[0][jj][kk]))]
         param_hourly_str = ['WS50M','WS2M', 'WD50M','T2M']    
         keys = pydata['properties']['parameter'][param_hourly_str[0]].keys()
         for param in range(len(param_hourly_str)):  
@@ -118,27 +153,36 @@ def data_2D_interpolation(jsdata, date_start, date_end, lat, lon,lat_ext, lon_ex
         param_hourly_list.append(param_hourly)
         
     ''' Here applies bilinear interpolation function to daily and hourly lists '''
-    lat_min = lat_ext[0]
-    lat_max = lat_ext[1]
-    lon_min = lon_ext[0]
-    lon_max = lon_ext[1]
-    param_daily_interp = param_daily_list[0]
-    param_hourly_interp = param_hourly_list[0]
+    lat_min_1 = lat_ext_1[0]     #1 is used for 1° x 1° resolution, 2 for 0.5° x 0.625°
+    lat_max_1 = lat_ext_1[1]
+    lon_min_1 = lon_ext_1[0]
+    lon_max_1 = lon_ext_1[1]
+    lat_min_2 = lat_ext_2[0]
+    lat_max_2 = lat_ext_2[1]
+    lon_min_2 = lon_ext_2[0]
+    lon_max_2 = lon_ext_2[1]
+    param_daily_interp = [[[[] for ii in range(12)] for ii in range(int(date_end[5:9])-int(date_start[7:11])+1)] for ii in range(len(param_daily_str_1 + param_daily_str_2))]
+    param_hourly_interp = [[[[] for ii in range(12)] for ii in range(int(date_end[5:9])-int(date_start[7:11])+1)] for ii in range(len(param_daily_str_1 + param_daily_str_2))]
     ''' Check if coordinates coincide with a point covered by data (interpolation would fail)'''
-    if math.modf(lat)[0] == 0 and math.modf(lon)[0] == 0:       
+    if math.modf(lat)[0] == 0 and math.modf(lon)[0] == 0:      
        return param_daily_interp, param_hourly_interp
     else:    
         for param in range(len(param_hourly_list[0])):
             for year in range(len(param_hourly_list[0][param])):
                 for month in range(len(param_hourly_list[0][param][year])):
                     for day in range(len(param_hourly_list[0][param][year][month])):
-                        points_daily = [(lat_min, lon_min, param_daily_list[0][param][year][month][day]), (lat_min, lon_max, param_daily_list[1][param][year][month][day]), (lat_max, lon_min, param_daily_list[2][param][year][month][day]), (lat_max, lon_max, param_daily_list[3][param][year][month][day])]
-                        param_daily_interp[param][year][month][day] = bilinear_interpolation(lat, lon, points_daily)
+                        param_hourly_interp[param][year][month].append([[] for ii in range(24)])
+                        if param == 0:
+                            points_daily_1 = [(lat_min_1, lon_min_1, param_daily_list[0][0][year][month][day]), (lat_min_1, lon_max_1, param_daily_list[1][0][year][month][day]), (lat_max_1, lon_min_1, param_daily_list[2][0][year][month][day]), (lat_max_1, lon_max_1, param_daily_list[3][0][year][month][day])]
+                            param_daily_interp[param][year][month].append(bilinear_interpolation(lat, lon, points_daily_1)) 
+                        else:
+                            points_daily_2 = [(lat_min_2, lon_min_2, param_daily_list[4][param-1][year][month][day]), (lat_min_2, lon_max_2, param_daily_list[5][param-1][year][month][day]), (lat_max_2, lon_min_2, param_daily_list[6][param-1][year][month][day]), (lat_max_2, lon_max_2, param_daily_list[7][param-1][year][month][day])]
+                            param_daily_interp[param][year][month].append(bilinear_interpolation(lat, lon, points_daily_2))
                         for hour in range(len(param_hourly_list[0][param][year][month][day])):
-                            points_hourly = [(lat_min, lon_min, param_hourly_list[0][param][year][month][day][hour]), (lat_max, lon_min, param_hourly_list[1][param][year][month][day][hour]), (lat_min, lon_max, param_hourly_list[2][param][year][month][day][hour]), (lat_max, lon_max, param_hourly_list[3][param][year][month][day][hour])]
+                            points_hourly = [(lat_min_2, lon_min_2, param_hourly_list[0][param][year][month][day][hour]), (lat_max_2, lon_min_2, param_hourly_list[1][param][year][month][day][hour]), (lat_min_2, lon_max_2, param_hourly_list[2][param][year][month][day][hour]), (lat_max_2, lon_max_2, param_hourly_list[3][param][year][month][day][hour])]
                             param_hourly_interp[param][year][month][day][hour] = bilinear_interpolation(lat, lon, points_hourly)
                         
-        return param_daily_interp, param_hourly_interp
+    return param_daily_interp, param_hourly_interp
 
 #%% Finds the list of most representative year for each month (best_years) and returns the nested  list of typical daily values (param_typical_daily) given as input param_daily
 
@@ -161,6 +205,7 @@ def typical_year_daily(param_daily, date_start, date_end):
             for kk in range(len(param_daily_ord[ii][jj])):
                 cdf_1[ii][jj][str(param_daily_ord[ii][jj][kk])].append((kk+1)/len(param_daily_ord[ii][jj]))
     
+    
     for ii in range(len(cdf_1)):
         for jj in range(len(cdf_1[ii])):
                 for kk in range(len(phi_1[ii][jj])):
@@ -176,33 +221,34 @@ def typical_year_daily(param_daily, date_start, date_end):
     
     #the year-specific cumulate is calculated
     param_daily_ord_2 = [[[] for ii in range(int(date_end[5:9])-int(date_start[7:11])+1)]for ii in range(len(param_daily))]
-    cdf_2 = [[defaultdict(list) for ii in range(int(date_end[5:9])-int(date_start[7:11])+1)]for ii in range(len(param_daily))]
+    cdf_2 = [[[defaultdict(list) for ii in range(12)] for ii in range(int(date_end[5:9])-int(date_start[7:11])+1)]for ii in range(len(param_daily))]
     
     for ii in range(len(param_daily)):
         for jj in range(len(param_daily[ii])):
             for kk in range(len(param_daily[ii][jj])):
-                param_daily_ord_2[ii][jj] = sorted(param_daily_ord_2[ii][jj] + (param_daily[ii][jj][kk]))
+                param_daily_ord_2[ii][jj].append(sorted(param_daily[ii][jj][kk]))  #organizing param_daily in ascending order values
     
     for ii in range(len(param_daily_ord_2)):
         for jj in range(len(param_daily_ord_2[ii])):
             for kk in range(len(param_daily_ord_2[ii][jj])):
-                cdf_2[ii][jj][param_daily_ord_2[ii][jj][kk]].append((kk+1)/(len(param_daily_ord_2[ii][jj])))
+                for day in range(len(param_daily_ord_2[ii][jj][kk])):
+                    cdf_2[ii][jj][kk][param_daily_ord_2[ii][jj][kk][day]].append((day+1)/(len(param_daily_ord_2[ii][jj][kk]))) #constructing year-specific cdf
     
     for ii in range(len(cdf_1)):
         for jj in range(len(cdf_1[ii])):
                 for kk in range(len(f_2[ii][jj])):
                     for yy in range(len(param_daily[ii][kk][jj])):
-                        for key in cdf_2[ii][kk]:
-                            if (param_daily[ii][kk][jj][yy]) == key and len(cdf_2[ii][kk][key]) == 1:
-                                 f_2[ii][jj][kk].append(cdf_2[ii][kk][key][0])
-                            elif (param_daily[ii][kk][jj][yy]) == key and len(cdf_2[ii][kk][key]) > 1:
-                                 f_2[ii][jj][kk].append(cdf_2[ii][kk][key][0])
-                                 cdf_2[ii][kk][key].pop(0)
+                        for key in cdf_2[ii][kk][jj]:
+                            if (param_daily[ii][kk][jj][yy]) == key and len(cdf_2[ii][kk][jj][key]) == 1:
+                                 f_2[ii][jj][kk].append(cdf_2[ii][kk][jj][key][0])                              
+                            elif (param_daily[ii][kk][jj][yy]) == key and len(cdf_2[ii][kk][jj][key]) > 1:     #checking for multiple values
+                                 f_2[ii][jj][kk].append(cdf_2[ii][kk][jj][key][0])                         
+                                 cdf_2[ii][kk][jj][key].pop(0)
                             else:
                                  continue
      #Finkelstein-Shafer statistics is calculated
-                    fs[ii][jj][str(kk)] = np.absolute(np.subtract(f_2[ii][jj][kk],phi_1[ii][jj][kk]))    
-                    fs[ii][jj][str(kk)] = sum(fs[ii][jj][str(kk)][:])
+                    fs[ii][jj][str(kk)] = np.absolute(np.subtract(f_2[ii][jj][kk],phi_1[ii][jj][kk]))   #computing deviations of year-specific cdf from long-term cdf 
+                    fs[ii][jj][str(kk)] = sum(fs[ii][jj][str(kk)][:])                                   #summing deviations in a month for each year
                 
                 
     # choice of the best years for each month according to primary and secondary parameters
@@ -244,7 +290,7 @@ def typical_year_daily(param_daily, date_start, date_end):
             
         if len(param_typical_daily[ii][1]) == 29:
             param_typical_daily[ii][1].remove(param_typical_daily[ii][1][28])         
-    return (best_years,param_typical_daily)
+    return best_years,param_typical_daily, fs, diff_sec
 
 #%% Returns the nested list of hourly values for the typical year (param_typical_hourly) taking as input the best_years list and param_hourly
 
@@ -262,24 +308,88 @@ def typical_year_hourly(best_years, param_hourly_interp):
             param_typical_hourly[param][1].remove(param_typical_hourly[param][1][28])
     return param_typical_hourly
 
-#%% Function to export time-series to excel file
 
-def excel_export(energy_PV,energy_WT):
-    energy_PV_lst = []
-    energy_WT_lst = []
-    counter = 1
-    matrix = []
+#%% Function to export results to excel file and produce windrose and plots
+
+from Windrose import WindroseAxes
+import matplotlib.pyplot as plt
+from matplotlib import pyplot
+
+def export(energy_PV, U_rotor_lst, energy_WT, wind_direction_lst, Cp):
+    energy_PV_lst = [] 
     for months in range(0,len(energy_PV)):
         for day in range(0,len(energy_PV[months])):
             for hour in range(0,len(energy_PV[months][day])):
-                energy_PV_lst.append(energy_PV[months][day][hour])           
-                energy_WT_lst.append(energy_WT[months][day][hour])
-                matrix.append([counter, energy_PV[months][day][hour], energy_WT[months][day][hour]])
-                counter = counter +1
-    dataf = pd.DataFrame(matrix)
+                energy_PV_lst.append(energy_PV[months][day][hour])   
+    dataf = pd.concat([pd.DataFrame([ii for ii in range(1,len(energy_WT)+1)]), pd.DataFrame(energy_PV_lst), pd.DataFrame(energy_WT)], axis = 1)
     dataf = dataf.set_axis([None,1,2], axis=1, inplace=False)
-
+    
+    PlotFormat = 'png'                  # Desired extension of the saved file (Valid formats: png, svg, pdf)
+    PlotResolution = 1000                # Plot resolution in dpi (useful only for .png files, .svg and .pdf output a vector plot)
+    #Windrose plot in the TMY
+    
+    ax = WindroseAxes.from_ax()
+    ax.bar(wind_direction_lst, U_rotor_lst, normed=True, opening=0.8, edgecolor='white')
+    ax.set_legend()
+    plt.title('Windrose',fontsize=18)
+    fig1 = plt.figure(figsize=(20,15))
+    fig1.savefig('Results/Plots/Windrose.'+PlotFormat, dpi=PlotResolution, bbox_inches='tight')
+    
+    #Wind speed occurrencies and probability histograms in the TMY
+    
+    WS_range = range(0,31)
+    plt.hist(U_rotor_lst, bins= WS_range, color='#0504aa', alpha = 0.7,  rwidth=0.85)  
+    plt.grid(axis='y', alpha=0.75)
+    plt.ylabel('N',fontsize=18)
+    plt.xlabel('Wind speed [m/s]',fontsize=18)
+    plt.title('Hourly wind speed occurrencies in the TMY',fontsize=18)
+    fig2 = plt.figure(figsize=(20,15))
+    fig2.savefig('Results/Plots/Wind speed occurrencies.'+PlotFormat, dpi=PlotResolution, bbox_inches='tight')
+    
+    #Wind turbine hourly production in the TMY (8760 hours)
+    
+    fig3 = plt.figure(figsize=(20,15))
+    plt.plot(range(len(energy_WT)), np.divide(energy_WT,1000), 'g.', markersize=1)
+    plt.ylabel('Energy prod. [kWh/turbine]',fontsize=18)
+    plt.xlabel('Time [h]',fontsize=18)
+    plt.title('Hourly Energy Production (single turbine) (8760 hours)',fontsize=18)
+    fig3.savefig('Results/Plots/Wind energy 8760 h.'+PlotFormat, dpi=PlotResolution, bbox_inches='tight') 
+    
+    #Wind turbine hourly production in the TMY (100 hours)
+    fig4 = plt.figure(figsize=(20,15))
+    plt.plot(range(100), np.divide(energy_WT[:100],1000), 'g-')
+    plt.ylabel('Energy prod. [kWh/turbine]',fontsize=18)
+    plt.xlabel('Time [h]',fontsize=18)
+    plt.title('Hourly Energy Production (single turbine) (100 hours)',fontsize=18)
+    fig4.savefig('Results/Plots/Wind energy 100 h.'+PlotFormat, dpi=PlotResolution, bbox_inches='tight')
+    
+    #Wind turbine power coefficient in the TMY 
+    fig5 = plt.figure(figsize=(20,15))
+    plt.plot(range(len(Cp)), np.multiply(Cp,100), 'b.', markersize=1 )
+    plt.ylabel('Cp [%]',fontsize=18)
+    plt.xlabel('Time [h]',fontsize=18)
+    plt.title('Turbine Hourly Power Coefficient',fontsize=18)
+    fig5.savefig('Results/Plots/Turbine Power Coefficient.'+PlotFormat, dpi=PlotResolution, bbox_inches='tight')
+    
+    #Solar PV module hourly production in the TMY (8760 hours)
+    fig6 = plt.figure(figsize=(20,15))
+    plt.plot(range(len(energy_PV_lst)), energy_PV_lst, 'r.', markersize=1)
+    plt.ylabel('Energy prod. [Wh/module]',fontsize=18)
+    plt.xlabel('Time [h]',fontsize=18)
+    plt.title('PV module hourly production (8760 hours)',fontsize=18)
+    fig6.savefig('Results/Plots/PV energy 8760 h.'+PlotFormat, dpi=PlotResolution, bbox_inches='tight')
+    
+    #Solar PV module hourly production in the TMY (first 100 hours)
+    fig7 = plt.figure(figsize=(20,15))
+    plt.plot(range(100), energy_PV_lst[:100], 'r-', markersize=1)
+    plt.ylabel('Energy prod. [Wh/module]',fontsize=18)
+    plt.xlabel('Time [h]',fontsize=18)
+    plt.title('PV module hourly production (100 hours)',fontsize=18)
+    fig7.savefig('Results/Plots/PV energy 100 h.'+PlotFormat, dpi=PlotResolution, bbox_inches='tight')
+    
     return dataf
+
+
                 
                 
     

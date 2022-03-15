@@ -2,7 +2,7 @@
 
 data_MY.dat : text file containing
 		- optimization parameters (time horizon, duration of investment steps, time resolution, number of scenarios)
-		- technical parameters (renewable technologies number and capacity, battery technical data, generator efficiency and fuel LHV, components lifetime)
+		- technical parameters (renewable technologies number and capacity, battery technical data, generator efficiency and fuel LHV, national grid data, components lifetime)
 		- economic parameters (unitary cost of components, discount rate, O&M costs, fuel cost)
 
 Demand.xls : spreadsheet containing

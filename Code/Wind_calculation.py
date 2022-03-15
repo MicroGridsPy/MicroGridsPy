@@ -40,66 +40,37 @@ def air_density(Z,param_typical_hourly):
         ro_air[ii] = [[] for ii in range(len(T2M_hourly[ii]))]
         for jj in range(len(T2M_hourly[ii])):
             for kk in range(len(T2M_hourly[ii][jj])):
-                ro_air[ii][jj].append(P/(R_molar*(T2M_hourly[ii][jj][kk] + 273.15 + DT)))
+                ro_air[ii][jj].append(P/(R_molar*(T2M_hourly[ii][jj][kk] + 273.15 + DT)))       #find air density at hub height
              
         
     return ro_air
 
-#%% Estimation of wind speed probability distribution: probability distribution is obtained from hourly average values of wind speed at rotor height
+#%% Returns wind speed, direction and air density at rotor height as list of 8760 elements
 
-def rayleigh_cumul_distr(x):
-    F = 1 -math.exp((-math.pi/4) * x**2)                #Rayleigh cumulative distribution function 
-    return F
-
-def wind_distr(U_rotor):
-    WS_range = range(1,31)
-    cumul_distr_function = [[] for i in range(len(U_rotor))]
-    prob_density_function = [[] for i in range(len(U_rotor))]
+def wind_lst(U_rotor, wind_direction, ro_air):
+    U_rotor_lst = []
+    wind_direction_lst = []
+    ro_air_lst = []
     for ii in range(len(U_rotor)):
-        cumul_distr_function[ii] = [[[] for i in range(24)] for i in range(len(U_rotor[ii]))]
-        prob_density_function[ii] = [[[] for i in range(24)] for i in range(len(U_rotor[ii]))]
         for jj in range(len(U_rotor[ii])):
-            for hh in range(len(U_rotor[ii][jj])):
-                for kk in range(len(WS_range)):
-                    cumul_distr_function[ii][jj][hh].append(rayleigh_cumul_distr(WS_range[kk]/U_rotor[ii][jj][hh]))
-                    if WS_range[kk] == 1:
-                        prob_density_function[ii][jj][hh].append(cumul_distr_function[ii][jj][hh][kk])
-                    else:
-                        prob_density_function[ii][jj][hh].append(cumul_distr_function[ii][jj][hh][kk]-cumul_distr_function[ii][jj][hh][kk-1])
-                
-    return prob_density_function
+            U_rotor_lst.extend(U_rotor[ii][jj])
+            wind_direction_lst.extend(wind_direction[2][ii][jj])
+            ro_air_lst.extend(ro_air[ii][jj])
+    return U_rotor_lst, wind_direction_lst, ro_air_lst
 
            
-#%% Extrapolate power curve of the turbine from Power_curves excel file and calculate daily energy production of the turbine     
+#%% Extrapolate power curve of the turbine from Power_curves excel file and calculate wind power hourly production     #QUI MANCA IL CALCOLO PER TURBINE AD ASSE ORIZZONTALE
 
-def P_turb(power_curve, ro_air, prob_density, surface_area):
+def P_turb(power_curve, WS_rotor_lst, ro_air_lst, surface_area, drivetrain_eff):
     
-    U = np.arange(0.5, 30.5, 1)
-    En_wind = [[] for i in range(len(prob_density))]
-    En_WT = [[] for i in range(len(prob_density))]
-    Cp = [[] for i in range(len(prob_density))]
-    for month in range(len(prob_density)):
-        En_WT[month] = [[[] for i in range(24)] for i in range(len(prob_density[month]))]
-        En_wind[month] = [[[] for i in range(24)] for i in range(len(prob_density[month]))]
-        Cp[month] = [[[] for i in range(24)] for i in range(len(prob_density[month]))]
-        
-        for day in range(len(prob_density[month])):
-            for hour in range(len(prob_density[month][day])):
-                for velocity in range(len(prob_density[month][day][hour])):
-                    if prob_density[month][day][hour][velocity] == []:
-                        continue
-                    else:
-                        En_wind[month][day][hour].append((0.5 * surface_area*ro_air[month][day][hour]*prob_density[month][day][hour][velocity]*U[velocity]**3))
-                        En_WT[month][day][hour].append(power_curve[velocity] * 1000* prob_density[month][day][hour][velocity])
-                En_wind[month][day][hour] = sum(En_wind[month][day][hour])              #hourly wind energy [Wh]
-                En_WT[month][day][hour] = sum(En_WT[month][day][hour])                  #hourly energy production by the turbine [Wh]
-                if En_wind[month][day][hour] == 0:
-                    Cp[month][day][hour] = 0
-                else:
-                    Cp[month][day][hour] = En_WT[month][day][hour]/En_wind[month][day][hour]      #hourly Cp
-                                                                                     
-    return En_WT, En_wind, Cp
-    
+    En_wind = []
+    En_WT = []
+    Cp = []
+    for ii in range(len(WS_rotor_lst)):
+        En_wind.append(0.5 * ro_air_lst[ii] * surface_area * WS_rotor_lst[ii]**3)                         #compute hourly ideal wind energy 
+        En_WT.append(np.interp(WS_rotor_lst[ii], range(0,30), power_curve)*1000*drivetrain_eff)           #compute hourly energy production
+        Cp.append(En_WT[ii]/(En_wind[ii]*drivetrain_eff))                                                 #compute hourly turbine power coefficient  
+    return En_WT, Cp    
   
 
 

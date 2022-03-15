@@ -1,21 +1,19 @@
-MicroGridsPy - Multi Year Capacity Expansion
+MicroGridsPy - Teaching version
 ========================
 
 ### Description
 
-The MicroGridsPy model main objective is to provide an open-source alternative to the problem of sizing and dispatch of energy in micro-grids in isolated places. 
-It is written in python (pyomo) and use excel and text files as input and output data handling and visualisation.
+The MicroGridsPy model main objective is to provide an open-source alternative to the problem of sizing and dispatch of energy in micro-grids in isolated places. It’s written in python(pyomo) and use excel and text files as input and output data handling and visualisation.
 
 Main features:
-    Solar PV and wind energy hourly time series estimation relying on NASA POWER API.
-    Load demand prediction applying demand archetypes of households, schools and hospitals for different wealth tiers.
+
     Optimal sizing of Lion-Ion batteries, diesel generators and PV panels in order to supply a demand with the lowest cost possible.
     Optimal dispatch from different energy sources.
     Calculation of the net present cost of the system for the project lifetime.
     Determination of the LCOE for the optimal system.
 
 
-### Based on the orginal code developed by:
+### Main developers
 
 Sergio Balderrana <br/>
 University of Liege, Belgium - Universidad Mayor de San Simon, Bolivia <br/>
@@ -25,18 +23,19 @@ Sylvain Quoilin <br/>
 University of Liege, Belgium <br/>
 E-mail: squoilin@ulg.ac.be  <br/>
 
-### SESAM Version Developed by:
-
-Lorenzo Rinaldi, Giulia Guidicini, Nicolò Stevanato, Francesco Lombardi <br/>
+*TEACHING VERSION*<br/>
+Francesco Lombardi, Giulia Guidicini, Lorenzo Rinaldi, Nicolò Stevanato <br/>
 Politecnico di Milano, Italy <br/>
-E-mail: nicolo.stevanato@polimi.it <br/>
+E-mail: lorenzo.rinaldi@polimi.it <br/>
+        francesco.lombardi@polimi.it <br/>
  
 ### Required libraries
 
-To run the model the ad-hoc environments are available as a branch of this repository
+The python libraries needed to run Micro-Grids are the following:
 
- - mgp.yml
- - mgp_mac.yml
+    -Pyomo Optimization object library, interface to LP solver (e.g. CPLEX)
+    -Pandas for input and result data handling
+    -Matplotlib for plotting
 
 
 ### Licence
