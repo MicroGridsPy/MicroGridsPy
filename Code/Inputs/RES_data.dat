@@ -15,20 +15,20 @@ param: user := 'anonymous';							#user key
 
 # --- editable parameters ---
 
-param: lat := '-1 35 14.1'; 							#latitude  [-° -' -", N positive, S negative]
-param: lon := '30 21 15.4'; 							#longitude [-° -' -", E positive, O negative]
+param: lat := '-1 33 56.4'; 						#latitude  [-° -' -", N positive, S negative]
+param: lon := '30 21 3.4'; 							#longitude [-° -' -", E positive, O negative]
 param: time_zone := +2;								#UTC time zone [-]
 
-param: nom_power := 300; 							#Module nominal power [W]	
+param: nom_power := 285; 							#Module nominal power [W]	
 param: tilt := 10;								    #tilt angle [°]
 param: azim := 180;								    #azimuth angle [0° south facing]
 param: ro_ground := 0.2;							#ground reflectivity  [-]
 param: k_T := -0.37;								#power variation coefficient with temperature [%/°C]
 param: NMOT := 45 ;								    #Nominal Module Operating Temperature [°C]		
-param: T_NMOT := 25;								#ambient temperature of NMOT conditions [°C]
+param: T_NMOT := 20;								#ambient temperature of NMOT conditions [°C]
 param: G_NMOT := 800;								#irradiance in NMOT conditions [W/m^2]
 
 
 param: turbine_type := 'HA';							#Horizontal Axis/Vertical Axis
-param: drivetrain_eff := 0.95;                                      		#efficiency of turbine drivetrain
-param: turbine_model := 'Bonus.B23.150';					#model name of the turbine 
+param: turbine_model := 'NPS100c-21';				      #model name of the turbine 
+param: drivetrain_efficiency := 0.9;                    #average efficiency of turbine drivetrain (gearbox,generator,brake)

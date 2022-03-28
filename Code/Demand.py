@@ -88,12 +88,7 @@ def demand_calculation():
         h_load = pd.DataFrame(pd.read_excel("Demand_archetypes/" + h_load_name +".xlsx", skiprows = 0, usecols = "B")) 
         load_households.append(household.load_demand(households[ii-1], h_load))
         
-    load_households = pd.concat([sum(load_households)]*years, axis = 1, ignore_index = True)
-    for column in load_households:
-        if column == 0:
-            continue
-        else: 
-            load_households[column] = load_households[column-1]*(1+demand_growth/100)       #introduce yearly demand growth
+    load_households = pd.concat([sum(load_households)]*years, axis = 1, ignore_index = True)       
             
     #%% Load demand of services    
     services = []
@@ -111,6 +106,11 @@ def demand_calculation():
     # Total load demand (households + services)   
     
     load_total = load_tot_services + load_households
+    for column in load_total:
+        if column == 0:
+            continue
+        else: 
+            load_total[column] = load_total[column-1]*(1+demand_growth/100)    # yearly demand growth 
 
     return load_total
     

@@ -61,15 +61,15 @@ def wind_lst(U_rotor, wind_direction, ro_air):
            
 #%% Extrapolate power curve of the turbine from Power_curves excel file and calculate wind power hourly production     #QUI MANCA IL CALCOLO PER TURBINE AD ASSE ORIZZONTALE
 
-def P_turb(power_curve, WS_rotor_lst, ro_air_lst, surface_area, drivetrain_eff):
+def P_turb(power_curve, WS_rotor_lst, ro_air_lst, surface_area, drivetrain_efficiency):
     
     En_wind = []
     En_WT = []
     Cp = []
     for ii in range(len(WS_rotor_lst)):
         En_wind.append(0.5 * ro_air_lst[ii] * surface_area * WS_rotor_lst[ii]**3)                         #compute hourly ideal wind energy 
-        En_WT.append(np.interp(WS_rotor_lst[ii], range(0,30), power_curve)*1000*drivetrain_eff)           #compute hourly energy production
-        Cp.append(En_WT[ii]/(En_wind[ii]*drivetrain_eff))                                                 #compute hourly turbine power coefficient  
+        En_WT.append(np.interp(WS_rotor_lst[ii], range(0,30), power_curve)*1000)                          #compute hourly energy production
+        Cp.append(En_WT[ii]/(En_wind[ii]))                                                               #compute hourly turbine power coefficient  
     return En_WT, Cp    
   
 

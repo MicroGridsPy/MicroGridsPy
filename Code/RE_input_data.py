@@ -57,12 +57,12 @@ def URL_creation_d(Data_import):
     
     '''Generates a daily URL for each node of the square'''
     for ii in range(2):
-        URL_1.append((base_URL + temp_res + loc_id + parameters_1 + community + '&longitude=' + str(lon_ext_1[ii]) + '&latitude=' + str(lat_ext_1[0]) + date_start + date_end +  output_format).replace("'",""))
-        URL_1.append((base_URL + temp_res + loc_id + parameters_1 + community + '&longitude=' + str(lon_ext_1[ii]) + '&latitude=' + str(lat_ext_1[1]) + date_start + date_end +  output_format).replace("'",""))
+        URL_1.append((base_URL + temp_res + loc_id + parameters_1 + community + '&longitude=' + str(lon_ext_1[ii]) + '&latitude=' + str(lat_ext_1[0]) + date_start + date_end +  output_format).replace("'","") + "&time-standard=utc")
+        URL_1.append((base_URL + temp_res + loc_id + parameters_1 + community + '&longitude=' + str(lon_ext_1[ii]) + '&latitude=' + str(lat_ext_1[1]) + date_start + date_end +  output_format).replace("'","")+ "&time-standard=utc")
 
     for ii in range(2):
-        URL_2.append((base_URL + temp_res + loc_id + parameters_2 + community + '&longitude=' + str(lon_ext_2[ii]) + '&latitude=' + str(lat_ext_2[0]) + date_start + date_end +  output_format).replace("'",""))
-        URL_2.append((base_URL + temp_res + loc_id + parameters_2 + community + '&longitude=' + str(lon_ext_2[ii]) + '&latitude=' + str(lat_ext_2[1]) + date_start + date_end +  output_format).replace("'",""))
+        URL_2.append((base_URL + temp_res + loc_id + parameters_2 + community + '&longitude=' + str(lon_ext_2[ii]) + '&latitude=' + str(lat_ext_2[0]) + date_start + date_end +  output_format).replace("'","")+ "&time-standard=utc")
+        URL_2.append((base_URL + temp_res + loc_id + parameters_2 + community + '&longitude=' + str(lon_ext_2[ii]) + '&latitude=' + str(lat_ext_2[1]) + date_start + date_end +  output_format).replace("'","")+ "&time-standard=utc")
     
     return date_start, date_end, lat, lon, lat_ext_1, lon_ext_1, lat_ext_2, lon_ext_2, standard_lon, URL_1, URL_2
 
@@ -110,8 +110,8 @@ def URL_creation_h(Data_import):
     
     # generates a daily URL for each node of the square
     for ii in range(2):
-        URL.append((base_URL + temp_res + loc_id + parameters + community + '&longitude=' + str(lon_ext[ii]) + '&latitude=' + str(lat_ext[0]) + date_start + date_end +  output_format).replace("'",""))
-        URL.append((base_URL + temp_res + loc_id + parameters + community + '&longitude=' + str(lon_ext[ii]) + '&latitude=' + str(lat_ext[1]) + date_start + date_end +  output_format).replace("'",""))
+        URL.append((base_URL + temp_res + loc_id + parameters + community + '&longitude=' + str(lon_ext[ii]) + '&latitude=' + str(lat_ext[0]) + date_start + date_end +  output_format).replace("'","")+ "&time-standard=utc")
+        URL.append((base_URL + temp_res + loc_id + parameters + community + '&longitude=' + str(lon_ext[ii]) + '&latitude=' + str(lat_ext[1]) + date_start + date_end +  output_format).replace("'","")+ "&time-standard=utc")
 
 
     return URL
@@ -148,8 +148,8 @@ def wind_parameters(Data_import):
             type_turb = value[value.index('=')+1:value.index(';')].replace(' ','').replace("'","")
         if "param: turbine_model" in value:
             turb_model = value[value.index('=')+1:value.index(';')].replace(' ','').replace("'","")  
-        if "param: drivetrain_eff" in value:
-            drivetrain_eff = float(value[value.index('=')+1:value.index(';')].replace(' ','').replace("'",""))
+        if "param: drivetrain_efficiency" in value:
+            drivetrain_efficiency = float(value[value.index('=')+1:value.index(';')].replace(' ','').replace("'",""))
     if type_turb == 'HA':
         skipf = 71-35
         skiprow = 0
@@ -166,8 +166,7 @@ def wind_parameters(Data_import):
     else:
         surface_area = rot_height*math.pi*rot_diam
     
-    return  power_curve, surface_area, drivetrain_eff, rot_height, data1, df
-
+    return  power_curve, surface_area, rot_height, drivetrain_efficiency, data1, df
 
 #%% Retrieves JSON daily and hourly data from POWER API 
 def get_data(URL):

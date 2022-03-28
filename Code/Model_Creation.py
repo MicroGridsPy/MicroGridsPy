@@ -50,7 +50,7 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independence):
     model.generator_types = RangeSet(1, model.Generator_Types)                      # Creation of a set from 1 to the number of generators types to analized
     model.steps = RangeSet(1, model.Steps_Number)                                   # Creation of a set from 1 to the number of investment decision steps
     model.years_steps = Set(dimen = 2, initialize=Initialize_YearUpgrade_Tuples)    # 2D set of tuples: it associates each year to the corresponding investment decision step
-    model.years_grid_connection = RangeSet(1,model.Year_Grid_Connection,model.Years) #### # Creation of a set from 1 to the year of grid connection
+    model.years_grid_connection = RangeSet(model.Year_Grid_Connection,model.Years) #### # Creation of a set from year of grid connection to last year
     model.Scenario_Weight = Param(model.scenarios, 
                                   within=NonNegativeReals) 
     
@@ -118,6 +118,7 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independence):
     model.Grid_Lifetime                = Param(within=NonNegativeReals)
     model.Grid_Distance                = Param(within=NonNegativeReals)
     model.Grid_Connection_Cost         = Param(within=NonNegativeReals)
+    model.Grid_Maintenance_Cost        = Param(within=NonNegativeReals)
     model.Maximum_Grid_Power           = Param(within=NonNegativeReals)
     model.Grid_Availability            = Param(model.scenarios,
                                              model.years,

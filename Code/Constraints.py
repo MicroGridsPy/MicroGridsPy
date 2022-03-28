@@ -87,7 +87,9 @@ def Operation_Maintenance_Cost_Act(model):
                     1+model.Discount_Rate)**yt)for (yt,ut) in model.years_steps)for g in model.generator_types)
     OyM_Bat = sum((model.Battery_Nominal_Capacity[ut]*model.Battery_Specific_Investment_Cost*model.Battery_Specific_OM_Cost)/((
                     1+model.Discount_Rate)**yt)for (yt,ut) in model.years_steps)
-    return model.Operation_Maintenance_Cost_Act == OyM_Ren + OyM_Gen + OyM_Bat
+    OyM_Grid = sum((model.Grid_Connection_Cost*model.Grid_Distance*model.Grid_Maintenance_Cost*model.Grid_Connection)/((
+                    1+model.Discount_Rate)**yt) for yt in model.years_grid_connection)
+    return model.Operation_Maintenance_Cost_Act == OyM_Ren + OyM_Gen + OyM_Bat + OyM_Grid
 
 
 def Operation_Maintenance_Cost_NonAct(model):
@@ -97,7 +99,8 @@ def Operation_Maintenance_Cost_NonAct(model):
                     for (yt,ut) in model.years_steps)for g in model.generator_types)
     OyM_Bat = sum((model.Battery_Nominal_Capacity[ut]*model.Battery_Specific_Investment_Cost*model.Battery_Specific_OM_Cost)
                     for (yt,ut) in model.years_steps)
-    return model.Operation_Maintenance_Cost_NonAct == OyM_Ren + OyM_Gen + OyM_Bat
+    OyM_Grid = sum((model.Grid_Connection_Cost*model.Grid_Distance*model.Grid_Maintenance_Cost*model.Grid_Connection) for yt in model.years_grid_connection)
+    return model.Operation_Maintenance_Cost_NonAct == OyM_Ren + OyM_Gen + OyM_Bat + OyM_Grid
 
 
 "Variable costs"
@@ -222,7 +225,7 @@ def Salvage_Value(model):
                         ((1 + model.Discount_Rate)**(model.Years)) for g in model.generator_types)        
         SV_Gen_2 = 0
         SV_Gen_3 = 0
-        SV_Grid = model.Grid_Distance*model.Grid_Connection_Cost / ((1 + model.Discount_Rate)**(model.Years)) ####
+        SV_Grid = model.Grid_Distance*model.Grid_Connection_Cost*model.Grid_Connection / ((1 + model.Discount_Rate)**(model.Years)) ####
     if model.Steps_Number == 2:    
         yt_last_up = upgrade_years_list[1]       
         SV_Ren_1 = sum(model.RES_Units[1,r]*model.RES_Nominal_Capacity[r]*model.RES_Specific_Investment_Cost[r] * (model.RES_Lifetime[r]-model.Years)/model.RES_Lifetime[r] / 
@@ -257,7 +260,7 @@ def Salvage_Value(model):
                         ((1 + model.Discount_Rate)**(model.Years)) for g in model.generator_types)
         SV_Gen_3 = sum(sum((model.Generator_Nominal_Capacity[ut,g] - model.Generator_Nominal_Capacity[ut-1,g])*model.Generator_Specific_Investment_Cost[g] * (model.Generator_Lifetime[g]+(yt-1)-model.Years)/model.Generator_Lifetime[g] / 
                         ((1+model.Discount_Rate)**model.Years) for (yt,ut) in tup_list_2) for g in model.generator_types)
-        SV_Grid = model.Grid_Distance*model.Grid_Connection_Cost / ((1 + model.Discount_Rate)**(model.Years)) ####
+        SV_Grid = model.Grid_Distance*model.Grid_Connection_Cost*model.Grid_Connection / ((1 + model.Discount_Rate)**(model.Years)) ####
         
     return model.Salvage_Value ==  SV_Ren_1 + SV_Gen_1 + SV_Ren_2 + SV_Gen_2 + SV_Ren_3 + SV_Gen_3 + SV_Grid ####
 

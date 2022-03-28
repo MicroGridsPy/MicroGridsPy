@@ -400,6 +400,22 @@ def EnergySystemCost(instance, Optimization_Goal):
         Generator_Fixed_Cost = pd.concat([Generator_Fixed_Cost, gen_fc], axis=1).fillna(0)
     Generator_Fixed_Cost = Generator_Fixed_Cost.groupby(level=[0], axis=1, sort=False).sum()
     
+    "Grid" ####
+    Grid_OM_Specific_Cost = instance.Grid_Maintenance_Cost.extract_values()     
+    Grid_Fixed_Cost = pd.DataFrame()
+    Grid_Connection = instance.Grid_Connection.extract_values()
+    g_fc = 0
+    for (y,st) in yu_tuples_list:
+        if y < instance.Year_Grid_Connection.extract_values()[None]:
+            g_fc += (0)/((1+Discount_Rate)**(y))
+        else:
+            g_fc += (Grid_Distance[None]*Grid_Connection_Specific_Cost[None]*Grid_OM_Specific_Cost[None]*Grid_Connection[None])/((1+Discount_Rate)**(y))
+    grid_fc = pd.DataFrame(['Fixed cost', 'National Grid', '-', 'kUSD', g_fc/1e3]).T.set_index([0,1,2,3]) 
+    grid_fc.columns = ['Total']
+    grid_fc.index.names = ['Cost item', 'Component', 'Scenario', 'Unit']
+    Grid_Fixed_Cost = pd.concat([Grid_Fixed_Cost, grid_fc], axis=1).fillna(0)
+    Grid_Fixed_Cost = Grid_Fixed_Cost.groupby(level=[0], axis=1, sort=False).sum()
+    
 
     #%% Variable costs
 
@@ -420,17 +436,6 @@ def EnergySystemCost(instance, Optimization_Goal):
             Fuel_Cost = pd.concat([Fuel_Cost, fc], axis=0)
     Fuel_Cost = Fuel_Cost.set_index([0,1,2,3])
     Fuel_Cost.columns = ['Total']
-    
-    '''
-    "Fuel CO2 emissions" 
-    Fuel_CO2 = pd.DataFrame()
-    for g in range(1,G+1):   
-        for s in range(1,S+1):
-            fc = pd.DataFrame(['Fuel direct CO2 emissions', Fuel_Names[g], s, 'tons', (sum([instance.Generator_Energy_Production.get_values()[s,y,g,t] for t in range(1,P+1)])  * instance.Fuel_CO2)/(1e3*instance.Fuel_LHV)]).T
-            Fuel_CO2 = pd.concat([Fuel_Cost, fc], axis=0)
-    Fuel_CO2 = Fuel_CO2.set_index([0,1,2,3])
-    Fuel_CO2.columns = ['Total']
-    '''
     
     "Grid electricity cost and revenue"  ####
     Grid_El_Cost = pd.DataFrame(['Grid electricity cost', "National Grid", '-', 'kUSD', instance.Total_Electricity_Cost_Act.get_values()[s]/1e3]).T.set_index([0,1,2,3])
@@ -475,10 +480,10 @@ def EnergySystemCost(instance, Optimization_Goal):
                             round(RES_Fixed_Cost.astype(float),3),
                             round(BESS_Fixed_Cost.astype(float),3),
                             round(Generator_Fixed_Cost.astype(float),3),
+                            round(Grid_Fixed_Cost.astype(float),3),
                             round(LostLoad_Cost.astype(float),3),
                             round(BESS_Replacement_Cost.astype(float),3),
                             round(Fuel_Cost.astype(float),3),
-                            #round(Fuel_CO2.astype(float),3),
                             round(Grid_El_Cost.astype(float),3),
                             round(Grid_El_Rev.astype(float),3)], axis=0).fillna('-')
     
@@ -639,6 +644,21 @@ def YearlyCosts(instance):
             gen_yc_types = pd.concat([gen_yc_types,gen_yc], axis=0)
         Generator_Yearly_Cost = pd.concat([Generator_Yearly_Cost,gen_yc_types], axis=1)
     
+    "National Grid"
+    Grid_Connection_Specific_Cost = instance.Grid_Connection_Cost.extract_values()  
+    Grid_Distance = instance.Grid_Distance.extract_values() 
+    Grid_OM_Specific_Cost = instance.Grid_Maintenance_Cost.extract_values()
+    Grid_Connection = instance.Grid_Connection.extract_values()  
+    Grid_Yearly_Fixed_Cost = pd.DataFrame()
+    for (y,st) in ys_tuples_list:
+        if y < instance.Year_Grid_Connection.extract_values()[None]:
+            grid_yc = pd.DataFrame(['Year '+str(y), 0]).T.set_index([0]) 
+            grid_yc.columns = pd.MultiIndex.from_arrays([['Fixed costs'],['Grid'],['-'],['kUSD']], names=['','Component','Scenario','Unit'])
+        else:
+            grid_yc = pd.DataFrame(['Year '+str(y), Grid_Distance[None]*Grid_Connection_Specific_Cost[None]*Grid_OM_Specific_Cost[None]*Grid_Connection[None]/1e3]).T.set_index([0]) 
+            grid_yc.columns = pd.MultiIndex.from_arrays([['Fixed costs'],['Grid'],['-'],['kUSD']], names=['','Component','Scenario','Unit'])
+        Grid_Yearly_Fixed_Cost = pd.concat([Grid_Yearly_Fixed_Cost,grid_yc], axis=0)
+    
         
     #%% Variable costs
     
@@ -718,6 +738,7 @@ def YearlyCosts(instance):
     YearlyCost = pd.concat([round(RES_Yearly_Cost.astype(float),2),
                             round(BESS_Yearly_Cost.astype(float),2),
                             round(Generator_Yearly_Cost.astype(float),2),
+                            round(Grid_Yearly_Fixed_Cost.astype(float),2), ####
                             round(Lost_Load_Yearly_Cost.astype(float),2),
                             round(BESS_Replacement_Yearly_Cost.astype(float),2),
                             round(Fuel_Cost_Yearly_Cost.astype(float),2),
@@ -806,8 +827,11 @@ def PrintResults(instance, Results):
     print('Salvage Value = '+str(round(Results['Costs'].iloc[4,-1],2))+' kUSD')
     print('LCOE = '+str(Results['Costs'].iloc[5,-1])+' USD/kWh')
     print('\nAverage renewable penetration per year = '+ str(round(Results['Renewables Penetration'].sum().sum()/Y,2))+' %')
-    print('Average battery usage per year = '+str(round(Results['Yearly energy parameters'].iloc[:,-1].sum().sum()/Y,2))+' %')
-    print('Average curtailment per year = '+str(round(Results['Yearly energy parameters'].iloc[:,-2].sum().sum()/Y,2))+' %')
+    print('Average battery usage per year = '+str(round(Results['Yearly energy parameters'].iloc[:,-2].sum().sum()/Y,2))+' %')
+    print('Average generator share per year = '+str(round(Results['Yearly energy parameters'].iloc[:,0].sum().sum()/Y,2))+' %')
+    print('Average curtailment per year = '+str(round(Results['Yearly energy parameters'].iloc[:,-3].sum().sum()/Y,2))+' %')
+    print('Average national grid usage per year = '+str(round(Results['Yearly energy parameters'].iloc[:,-1].sum().sum()/Y,2))+' %')
+    
             
                 
         

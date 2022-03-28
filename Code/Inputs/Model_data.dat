@@ -7,10 +7,9 @@ param: Delta_Time := 1.0;                                   # Time step in hours
 param: Scenarios := 1;                                      # Number of scenarios to consider within the optimisation
 param: Scenario_Weight :=                                   # Occurrence probability of each scenario [-]
 1      1;
-param: RE_Supply_Calculation := 0;   			# 1 to select solar PV and wind production time series calculation by the program, 0 otherwise
+
+param: RE_Supply_Calculation := 1;   			# 1 to select solar PV and wind production time series calculation by the program, 0 otherwise
 param: Demand_Profile_Generation := 0;   		# 1 to select load demand profile generation by the program, 0 otherwise
-param: Grid_Connection := 0;                    # 1 to select grid connection during project lifetime, 0 otherwise
-param: Year_Grid_Connection := 1;			                # Year at which microgrid is connected to the national grid (starting from 1)
 
 param: Discount_Rate := 0.1;                                  # Real discount rate accounting also for inflation
 param: Investment_Cost_Limit := 500000;                     # Upper limit to investment cost [USD] (considered only in case Optimization_Goal='Operation cost')
@@ -20,8 +19,8 @@ param: RES_Sources := 1;                                    # Number of Renewabl
 param: RES_Names :=                                         # Renewable Energy Sources (RES) names
 1      'PV panels';
 param: RES_Nominal_Capacity :=                              # Single unit capacity of each type of Renewable Energy Source (RES) [W] 
-1      300;                                                                                              
-param: RES_Inverter_Efficiency :=                           # Efficiency [%] of the inverter connected to each Renewable Energy Source (RES) (put 1 in case of AC bus)
+1      285;                                                                                              
+param: RES_Inverter_Efficiency :=                           # Efficiency [-] of the inverter connected to each Renewable Energy Source (RES) (put 1 in case of AC bus)
 1	   0.96;
 param: RES_Specific_Investment_Cost :=                      # Specific investment cost for each type of Renewable Energy Source (RES) [USD/W]
 1      1.2;   
@@ -31,7 +30,7 @@ param: RES_Lifetime :=                                      # Lifetime of each R
 1      20;
 
 
-param: Battery_Specific_Investment_Cost := 0.35;            # Specific investment cost of the battery bank [USD/Wh]
+param: Battery_Specific_Investment_Cost := 0.25;            # Specific investment cost of the battery bank [USD/Wh]
 param: Battery_Specific_Electronic_Investment_Cost := 0.2; # Specific investment cost of non-replaceable parts (electronics) of the battery bank [USD/Wh]
 param: Battery_Specific_OM_Cost:= 0.08;                     # O&M cost of the battery bank as a fraction of specific investment cost [-]
 param: Battery_Discharge_Battery_Efficiency := 0.93;        # Discharge efficiency of the battery bank [-]
@@ -51,22 +50,24 @@ param: Generator_Efficiency :=                              # Average generator 
 param: Generator_Specific_Investment_Cost :=                # Specific investment cost for each generator type [USD/W]
 1      0.4;
 param: Generator_Specific_OM_Cost :=                        # O&M cost for each generator type as a fraction of specific investment cost [-]
-1	   0.06;                                                   
+1	   0.0625;                                                   
 param: Generator_Lifetime :=
 1      20;
 param: Fuel_Names :=                                        # Fuel names (to be specified for each generator, even if they use the same fuel)
 1      'Diesel';
 param: Fuel_Specific_Cost :=                                # Specific fuel cost for each generator type [USD/lt]
-1      2;
+1      1.175;
 param: Fuel_LHV :=                                          # Fuel lower heating value (LHV) for each generator type [Wh/lt]
-1	   9840;
+1	   9972;
 
-
+param: Grid_Connection := 0;                    # 1 to select grid connection during project lifetime, 0 otherwise
+param: Year_Grid_Connection := 10;			                # Year at which microgrid is connected to the national grid (starting from 1)
 param: Grid_Connection_Type:= 2;	                        # 2 for both sell and purchase, 1 for purchase only
 param: Grid_Sold_El_Price := 0.23;                          # Price at which electricity is sold to the grid [USD/kWh]
 param: Grid_Purchased_El_Price := 0.24;		               # Price at which electricity is purchased from the grid [USD/kWh]
 param: Grid_Distance := 10;				                   # Distance from grid connection point [km]
-param: Grid_Connection_Cost := 157470;			           # Investment cost of grid connection [USD/km]
+param: Grid_Connection_Cost := 157470;			           # Investment cost of grid connection, i.e. extension of power line + transformer costs [USD/km]
+param: Grid_Maintenance_Cost := 0.02;                      # O&M cost for maintenance of the power line and transformer as a fraction of investment cost [-]
 param: Maximum_Grid_Power := 1000;			                # Maximum active power that can be injected/withdrawn to/from the grid [kW]
 param: Grid_Average_Number_Outages := 29;                  # Average number of outages in the national grid in a year 
 param: Grid_Average_Outage_Duration := 60;                  # Average duration of an outage [min]

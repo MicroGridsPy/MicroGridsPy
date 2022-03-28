@@ -39,7 +39,7 @@ def RE_supply():
     #%% Import technological parameters of RE technologies
     
     (nom_power,tilt,azim,ro_ground, k_T, NMOT, T_NMOT, G_NMOT) = solarPV_parameters(data_import)  #PV param.
-    (power_curve, surface_area, drivetrain_eff, rot_height, data1, df) = wind_parameters(data_import)
+    (power_curve, surface_area, rot_height,drivetrain_efficiency, data1, df) = wind_parameters(data_import)
     
     #%% Find the vector of hourly irradiation on a tilted surface for all days of the year [W/m^2 h] and K_T for power calculation
     
@@ -75,7 +75,7 @@ def RE_supply():
     (WS_rotor,alpha) = shear_exp(param_typical_hourly,int(param_hourly_str[0][2:4]), int(param_hourly_str[1][2:3]), rot_height) 
     ro_air = air_density(rot_height,param_typical_hourly)
     U_rotor_lst, wind_direction_lst, ro_air_lst = wind_lst(WS_rotor, param_typical_hourly, ro_air)
-    (energy_WT, Cp) = P_turb(power_curve, U_rotor_lst, ro_air_lst, surface_area, drivetrain_eff)            #hourly energy production of 1 wind turbine [kWh]
+    (energy_WT, Cp) = P_turb(power_curve, U_rotor_lst, ro_air_lst, surface_area,drivetrain_efficiency)            #hourly energy production of 1 wind turbine [kWh]
     
     print("Completed\n ")            
                

@@ -327,16 +327,16 @@ def export(energy_PV, U_rotor_lst, energy_WT, wind_direction_lst, Cp):
     PlotFormat = 'png'                  # Desired extension of the saved file (Valid formats: png, svg, pdf)
     PlotResolution = 1000                # Plot resolution in dpi (useful only for .png files, .svg and .pdf output a vector plot)
     #Windrose plot in the TMY
-    
+    '''
     ax = WindroseAxes.from_ax()
     ax.bar(wind_direction_lst, U_rotor_lst, normed=True, opening=0.8, edgecolor='white')
     ax.set_legend()
     plt.title('Windrose',fontsize=18)
     fig1 = plt.figure(figsize=(20,15))
     fig1.savefig('Results/Plots/Windrose.'+PlotFormat, dpi=PlotResolution, bbox_inches='tight')
-    
+    '''
     #Wind speed occurrencies and probability histograms in the TMY
-    
+    '''
     WS_range = range(0,31)
     plt.hist(U_rotor_lst, bins= WS_range, color='#0504aa', alpha = 0.7,  rwidth=0.85)  
     plt.grid(axis='y', alpha=0.75)
@@ -371,22 +371,40 @@ def export(energy_PV, U_rotor_lst, energy_WT, wind_direction_lst, Cp):
     plt.title('Turbine Hourly Power Coefficient',fontsize=18)
     fig5.savefig('Results/Plots/Turbine Power Coefficient.'+PlotFormat, dpi=PlotResolution, bbox_inches='tight')
     
-    #Solar PV module hourly production in the TMY (8760 hours)
     fig6 = plt.figure(figsize=(20,15))
-    plt.plot(range(len(energy_PV_lst)), energy_PV_lst, 'r.', markersize=1)
+    plt.hist(np.multiply(Cp,100), bins= range(0,100,5), color='#0504aa', alpha = 0.7,  rwidth=0.85)  
+    plt.grid(axis='y', alpha=0.75)
+    plt.ylabel('N',fontsize=20)
+    plt.xlabel('Cp [%]',fontsize=20)
+    plt.title('Cp occurrencies in the TMY',fontsize=20)
+    fig6 = plt.figure(figsize=(20,15))
+    
+    
+    #Solar PV module hourly production in the TMY (8760 hours)
+    fig7 = plt.figure(figsize=(20,15))
+    plt.plot(range(len(energy_PV_lst)), energy_PV_lst, 'k.', markersize=1)
+    plt.grid(axis='y', alpha=0.5)
     plt.ylabel('Energy prod. [Wh/module]',fontsize=18)
     plt.xlabel('Time [h]',fontsize=18)
     plt.title('PV module hourly production (8760 hours)',fontsize=18)
-    fig6.savefig('Results/Plots/PV energy 8760 h.'+PlotFormat, dpi=PlotResolution, bbox_inches='tight')
+    fig7.savefig('Results/Plots/PV energy 8760 h.'+PlotFormat, dpi=PlotResolution, bbox_inches='tight')
+    
+    fig8 = plt.figure(figsize=(20,15))
+    plt.hist(energy_PV_lst, bins= range(0,285,25), color='#0504aa', alpha = 0.7,  rwidth=0.85)  
+    plt.grid(axis='y', alpha=0.75)
+    plt.ylabel('N',fontsize=20)
+    plt.xlabel('E [Wh]',fontsize=20)
+    plt.title('PV hourly production histogram',fontsize=20)
+    fig8 = plt.figure(figsize=(20,15))
     
     #Solar PV module hourly production in the TMY (first 100 hours)
-    fig7 = plt.figure(figsize=(20,15))
-    plt.plot(range(100), energy_PV_lst[:100], 'r-', markersize=1)
+    fig9 = plt.figure(figsize=(20,15))
+    plt.plot(range(240), energy_PV_lst[3720:3960], 'b-', markersize=1)
     plt.ylabel('Energy prod. [Wh/module]',fontsize=18)
     plt.xlabel('Time [h]',fontsize=18)
     plt.title('PV module hourly production (100 hours)',fontsize=18)
-    fig7.savefig('Results/Plots/PV energy 100 h.'+PlotFormat, dpi=PlotResolution, bbox_inches='tight')
-    
+    fig9.savefig('Results/Plots/PV energy 100 h.'+PlotFormat, dpi=PlotResolution, bbox_inches='tight')
+    '''
     return dataf
 
 
