@@ -1,12 +1,13 @@
+
 import time, sys
 from RE_input_data import *
 from Solar_PV_calculation import hourly_solar
 from Typical_year import *
 from Wind_calculation import shear_exp, air_density, wind_lst, P_turb
-
-
+    
 def RE_supply():
-        
+    
+            
     start = time.time()
     
     print("Renewable energy time series calculation started, please remember to close Renewable_energy.xlsx... \n")
@@ -81,7 +82,7 @@ def RE_supply():
                
     #%% Report results on excel sheet 'RES_supply' and export windrose and plots
     
-    print('Exporting time series to Renewable_energy.xlsx... \n')
+    print('Exporting time series to Renewable_Energy.xlsx... \n')
     dataf = export(energy_PV, U_rotor_lst, energy_WT, wind_direction_lst, Cp)    
     dataf.to_excel("Inputs/Renewable_Energy.xlsx", index = False, header = True, startrow = 0, startcol = 0)
     
@@ -91,6 +92,12 @@ def RE_supply():
     print('\n\nRES time series calculation completed (overall time: ',round(elapsed,0),'s,', round(elapsed/60,1),' m)\n')
 
     return dataf
+
+if __name__ == "__main__":
+    RES_supply()
+
+
+
 
 
 

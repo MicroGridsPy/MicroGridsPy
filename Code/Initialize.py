@@ -100,13 +100,16 @@ def Initialize_YearUpgrade_Tuples(model):
 
 
 #%% This section imports the multi-year Demand and Renewable-Energy output and creates a Multi-indexed DataFrame for it
-Demand = pd.read_excel('Inputs/Demand.xlsx')
-Renewable_Energy = pd.read_excel('Inputs/Renewable_Energy.xlsx')
 
 if RE_Supply_Calculation:
-   Renewable_energy = RE_supply()
+   Renewable_Energy = RE_supply().drop([None], axis=1).set_index([pd.Index([ii for ii in range(1,8761)])], inplace = False)
+else:
+   Renewable_Energy = pd.read_excel('Inputs/Renewable_Energy.xlsx')   
 if Demand_Profile_Generation:
    Demand = demand_generation() 
+else:
+   Demand = pd.read_excel('Inputs/Demand.xlsx')
+       
 
 Energy_Demand_Series = pd.Series()
 for i in range(1,n_years*n_scenarios+1):

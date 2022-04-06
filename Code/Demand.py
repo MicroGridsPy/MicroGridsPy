@@ -137,3 +137,8 @@ def demand_generation():
     elapsed = end - start
     print('\n\nLoad demand calculation completed (overall time: ',round(elapsed,0),'s,', round(elapsed/60,1),' m)\n')
     return load_tot
+
+if __name__ == "__Demand__":
+    demand_calculation()
+    demand_generation()
+
