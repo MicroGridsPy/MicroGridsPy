@@ -12,7 +12,7 @@ param: Battery_Electronic_Invesmente_Cost := 220;
 
 param: Maintenance_Operation_Cost_Battery:= 0.02;
 
-param: Discount_Rate := 0.12;
+param: Discount_Rate := 0.06;
 
 param: Discharge_Battery_Efficiency := 0.95;
 
@@ -66,11 +66,11 @@ param: Generator_Type := 1;
 
 param: Generator_Invesment_Cost :=
 
-1   	1480;
+1   	750;
 
 param: Generator_Min_Out_Put:= 
 
-1   	0.5; 
+1   	0.8; 
 
 param: Generator_Efficiency :=
 
@@ -78,11 +78,11 @@ param: Generator_Efficiency :=
 
 param: Low_Heating_Value :=
 
-1   9.9;
+1   6.0;          #kWh/m3 biogas
 
 param: Fuel_Cost :=
 
-1   0.7;
+1   0.12;        #USD/m3 biogas
 
 
 param: Cost_Increase := 
@@ -108,7 +108,7 @@ param: Combustor_Type := 1;
 
 param: Maximum_Fuel :=
 
-1   13;
+1   20;
 
 param: Combustor_Efficiency :=
 1   0.9;

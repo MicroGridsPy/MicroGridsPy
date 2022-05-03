@@ -559,7 +559,9 @@ def Load_results1(instance):
     for s in range(1, Number_Scenarios + 1):
         a = 'Energy Demand ' + str(s) + ' (kWh)'
         b = 'Scenario ' + str(s)
-        Demand.loc[a,'Total Demand (kWh)'] = sum(Scenarios[a][i] for i in Scenarios.index)
+ #       c = 'Curtailment ' +str(s) + ' (kWh)'  #prueba
+        Demand.loc[a,'Total Demand (kWh)'] = sum(Scenarios[a][i] for i in Scenarios.index) 
+ #+ sum(Scenarios[c][i] for i in Scenarios.index) #second term prueba
         Demand.loc[a,'Present Demand (kWh)'] = sum((Demand.loc[a,'Total Demand (kWh)']/(1+Discount_rate)**i) 
                                                             for i in range(1, Years+1))  
         Demand.loc[a,'Rate'] = Scenario_Information[b]['Scenario Weight']                                                         
@@ -1645,7 +1647,7 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
         
         
         # Define name  and units of the axis
-        ax1.set_ylabel('Power (kkW)',size=30)
+        ax1.set_ylabel('Power (kW)',size=30)
         ax1.set_xlabel('Time',size=30)
         ax6.set_ylabel('Battery State of charge (kWh)',size=30)
         ax1.set_xlim(Fill.index[0], Fill.index[len(Fill)-1])
@@ -1737,7 +1739,7 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
 
 
         # Define name  and units of the axis
-        ax1.set_ylabel('Power (kkW)')
+        ax1.set_ylabel('Power (kW)')
         ax1.set_xlabel('hours')
         ax6.set_ylabel('Battery State of charge (kWh)')
                 
@@ -2065,7 +2067,7 @@ def Plot_Energy_Total_Dispatch(instance, Time_Series, plot, Plot_Date, PlotTime)
         
         
         # Define name  and units of the axis
-        ax1.set_ylabel('Power (kkW)',size=30)
+        ax1.set_ylabel('Power (kW)',size=30)
         ax1.set_xlabel('Time',size=30)
         ax6.set_ylabel('Battery State of charge (kWh)',size=30)
         ax1.set_xlim(Fill.index[0], Fill.index[len(Fill)-1])
@@ -2157,7 +2159,7 @@ def Plot_Energy_Total_Dispatch(instance, Time_Series, plot, Plot_Date, PlotTime)
 
 
         # Define name  and units of the axis
-        ax1.set_ylabel('Power (kkW)')
+        ax1.set_ylabel('Power (kW)')
         ax1.set_xlabel('hours')
         ax6.set_ylabel('Battery State of charge (kWh)')
                 

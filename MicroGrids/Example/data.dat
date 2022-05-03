@@ -63,14 +63,14 @@ param: Maintenance_Operation_Cost_Generator :=
 1	0;
 
 param: Fuel_Cost := 
-1	1.8;
+1   1.8;        #USD/m3
 
 param: Generator_Efficiency := 
 
 1	0.25;
 
 param: Low_Heating_Value := 
-1	5.46;
+1   5.46;          #kWh/m3 biogas
 
 param: Scenario_Weight :=
 
@@ -85,7 +85,7 @@ param: Combustor_Type := 1;
 
 param: Maximum_Fuel :=
 
-1   100;
+1   20;
 
 param: Combustor_Efficiency :=
 1   0.9;
