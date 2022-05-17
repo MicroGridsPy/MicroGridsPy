@@ -27,6 +27,9 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
                              *model.Scenario_Weight[s] for s,c,g,t in foo)
         Operation_Cost = (Generator_Cost)/model.Capital_Recovery_Factor
         
+        
+        
+        
     if model.formulation == 'MILP':
        Generator_Cost =  sum((model.Generator_Energy_Integer[s,g,t]*model.Start_Cost_Generator[g]*model.Scenario_Weight[s] + 
                              model.Marginal_Cost_Generator[g]*model.Generator_Energy[s,g,t]*model.Scenario_Weight[s])*model.EH_cost_factor
@@ -40,10 +43,10 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
        
        #For combustor operation cost
        
-       Combustor_Thermal_Cost = sum(model.Thermal_Combustor[s,c,t]*model.Marginal_Cost_Generator_1[g]
+       Combustor_Thermal_Cost = sum(model.Thermal_Combustor[s,c,t]*model.Marginal_Cost_Combustor_1[g,c]
                                     *model.Scenario_Weight[s] for s,c,g,t in foo)
        Operation_Cost += (Combustor_Thermal_Cost)/model.Capital_Recovery_Factor
-       
+        
     # Battery opereation cost
     foo=[]
     for s in model.scenario:
@@ -78,6 +81,7 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
     if model.formulation == 'LP':
         OyM_Gen = sum(model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]
                 *model.Maintenance_Operation_Cost_Generator[g] for g in model.generator_type)
+        
     if model.formulation == 'MILP':
         OyM_Gen = sum((model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]*model.Integer_generator[g]
                 *model.Maintenance_Operation_Cost_Generator[g])*model.EH_cost_factor for g in model.generator_type)
@@ -90,7 +94,7 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
     
     
     OyM_Bat = model.Battery_Nominal_Capacity*model.Battery_Invesment_Cost*model.Maintenance_Operation_Cost_Battery
-    OyM_Cost =  OyM_PV + OyM_Gen + OyM_GenTh + OyM_Com + OyM_Bat
+    OyM_Cost =  OyM_PV + OyM_Gen + OyM_GenTh + OyM_Bat + OyM_Com 
     Operation_Cost += OyM_Cost/model.Capital_Recovery_Factor
     
    
@@ -101,6 +105,7 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
     if model.formulation == 'LP':
         Inv_Gen = sum(model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]
                  for g in model.generator_type)
+        
     if model.formulation == 'MILP':
 
         Inv_Gen = sum((model.Generator_Invesment_Cost[g]*model.Generator_Nominal_Capacity[g]
@@ -114,7 +119,7 @@ def Net_Present_Cost(model): # OBJETIVE FUNTION: MINIMIZE THE NPC FOR THE SISTEM
         
         
     Inv_Bat = model.Battery_Nominal_Capacity*model.Battery_Invesment_Cost
-    Initial_Inversion =  Inv_PV + Inv_Gen + Inv_GenTh + Inv_Com + Inv_Bat
+    Initial_Inversion =  Inv_PV + Inv_Gen + Inv_GenTh + Inv_Bat + Inv_Com 
     
            
     return Initial_Inversion + Operation_Cost
@@ -318,7 +323,7 @@ def Fuel_Flow_Demand_Comb(model,s,c,g,t): #JVS Fuel flow required by the combust
 
 def Maximum_Fuel_Available(model,s,c,g,t):      #JVS Fuel flow required by the CHP + combustor 
     
-    return model.Maximum_Fuel[g] >= model.Fuel_FlowCHP[s,g,t]+model.Fuel_FlowCom[s,c,t] 
+    return model.Maximum_Fuel[g] >= model.Fuel_FlowCHP[s,g,t] + model.Fuel_FlowCom[s,c,t] 
 
 
 #def Combustor_Thermal_Energy(model,s,c,g,t): #JVS Thermal energy from combustor

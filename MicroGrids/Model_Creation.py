@@ -17,7 +17,7 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     from Initialize import Initialize_years, Initialize_Demand, Battery_Reposition_Cost,\
     Initialize_Renewable_Energy, Marginal_Cost_Generator_1,Min_Bat_Capacity, Start_Cost,\
     Marginal_Cost_Generator, Capital_Recovery_Factor, Initialize_Thermal_Demand,\
-    Initialize_Refrigeration_Dispatch, Initialize_Thermal_Drier_Dispatch  
+    Initialize_Refrigeration_Dispatch, Initialize_Thermal_Drier_Dispatch, Marginal_Cost_Combustor_1  
     
     
     # Time parameters
@@ -66,6 +66,11 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     if  Battery_Independency > 0:
         model.Battery_Independency = Battery_Independency
         model.Battery_Min_Capacity = Param(initialize=Min_Bat_Capacity)
+        
+#    #for the combustor JVS
+
+    model.Combustor_Efficiency = Param(model.combustor_type, within=NonNegativeReals)
+
     # Parametes of the diesel generator
     if model.formulation == 'LP': 
     
@@ -80,7 +85,7 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
                                         within=NonNegativeReals)
         model.Generator_Efficiency = Param(model.generator_type) # Generator efficiency to trasform heat into electricity %
         model.Low_Heating_Value = Param(model.generator_type) # Low heating value of the diesel in W/L
-        model.Fuel_Cost = Param(model.generator_type,
+        model.Fuel_Cost = Param(model.generator_type, 
                               within=NonNegativeReals) # Cost of diesel in USD/L
         model.Generator_Invesment_Cost = Param(model.generator_type,within=NonNegativeReals) # Cost of the diesel generator  
         model.Marginal_Cost_Generator_1 = Param(model.generator_type,
@@ -93,6 +98,11 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
                                        within=NonNegativeReals, initialize=Start_Cost)  
         model.Marginal_Cost_Generator = Param(model.generator_type,
                                           initialize=Marginal_Cost_Generator)
+
+    model.Marginal_Cost_Combustor_1 = Param(model.generator_type,model.combustor_type,
+                                        initialize=Marginal_Cost_Combustor_1)
+    model.Combustor_Nominal_Capacity = Param(model.combustor_type, 
+                                           within=NonNegativeReals)
                
     # Parameters of the Energy balance                  
     model.Energy_Demand = Param(model.scenario, model.periods, 
@@ -178,8 +188,8 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
                                           model.periods, within=NonNegativeReals)
     model.Thermal_Combustor = Var(model.scenario, model.combustor_type, 
                                   model.periods, within=NonNegativeReals)
-    model.Combustor_Nominal_Capacity = Var(model.combustor_type, 
-                                           within=NonNegativeReals)
+    #model.Combustor_Nominal_Capacity = Var(model.combustor_type, 
+     #                                      within=NonNegativeReals)
               
     # Varialbles associated to the energy balance
     if model.Lost_Load_Probability > 0:
@@ -194,9 +204,6 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independency):
     model.Maintenance_Operation_Cost_Combustor = Param(model.combustor_type,within=NonNegativeReals)
     model.Combustor_Invesment_Cost = Param(model.combustor_type,within=NonNegativeReals)
     
-#    #for the combustor JVS
-
-    model.Combustor_Efficiency = Param(model.combustor_type, within=NonNegativeReals)
 #   
 #    #thermal balance
     model.Thermal_Demand = Param(model.scenario, model.periods, 

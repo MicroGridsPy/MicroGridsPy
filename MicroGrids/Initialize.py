@@ -133,6 +133,12 @@ def Marginal_Cost_Generator(model, i):
     a = (model.Marginal_Cost_Generator_1[i]*model.Generator_Nominal_Capacity[i]-model.Start_Cost_Generator[i])/model.Generator_Nominal_Capacity[i] 
     return round(a, 3) 
 
+#Combustor marginal cost new
+def Marginal_Cost_Combustor_1(model,g,c):
+    
+    a = model.Fuel_Cost[g]/(model.Low_Heating_Value[g]*model.Combustor_Efficiency[c]) #
+    return round(a, 3)
+
 
 def Capital_Recovery_Factor(model):
    

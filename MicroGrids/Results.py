@@ -94,7 +94,7 @@ def Load_results1(instance):
     Refrigeration_Demand = instance.Refrigeration_Demand.extract_values()    #JVS for thermal energy
     Drier_Thermal_Demand = instance.Drier_Thermal_Demand.extract_values()
     Emission_Factor_Electricity = instance.Emission_Factor_Electricity.extract_values()
-#    Emission_Factor_Thermal = instance.Emission_Factor_Thermal.extract_values()
+    Emission_Factor_Thermal = instance.Emission_Factor_Thermal.extract_values()
 
     
     Total_Generator_Energy = {}
@@ -156,16 +156,17 @@ def Load_results1(instance):
             Information[16].append(Refrigeration_Demand[j])
             Information[17].append(Refrigeration_Demand[j]/COP_el[g])
             Information[18].append(Refrigeration_Demand[j]/COP_el[g]+Energy_Demand[j])
-            Information[19].append(Refrigeration_Demand[j]/COP_el[g]+Energy_Demand[j]+Curtailment[j])
+            Information[19].append(Refrigeration_Demand[j]/COP_el[g]+Energy_Demand[j]+Curtailment[j])   #not useful
             Information[20].append(Energy_Demand[j]*Emission_Factor_Electricity[g]) 
             Information[21].append(Refrigeration_Demand[j]*Emission_Factor_Electricity[g]/COP_el[g])
             Information[22].append((Refrigeration_Demand[j]/COP_el[g]+Energy_Demand[j])*Emission_Factor_Electricity[g])
             Information[23].append(Curtailment[j]*Emission_Factor_Electricity[g]) 
-            Information[24].append((Refrigeration_Demand[j]/COP_el[g]+Energy_Demand[j]+Curtailment[j])*Emission_Factor_Electricity[g])
+#            Information[24].append((Refrigeration_Demand[j]/COP_el[g]+Energy_Demand[j]+Curtailment[j])*Emission_Factor_Electricity[g])
+            Information[24].append(Drier_Thermal_Demand[j]*Emission_Factor_Thermal[g]) 
             
             if instance.Lost_Load_Probability > 0: 
                 Information[25].append(Lost_Load[j])
-        
+                
         Scenarios=Scenarios.append(Information)
         foo+=1
     
@@ -179,14 +180,14 @@ def Load_results1(instance):
        index.append('SOC '+str(j) + ' (kWh)')
        index.append('Gen energy '+str(j) + ' (kWh)')
        index.append('Gen thermal energy '+str(j) + ' (kWh)')
-       index.append('Fuel Flow CHP '+str(j) + ' (l/h)')
+       index.append('Fuel Flow CHP '+str(j) + ' (m3/h)')
        index.append('CHP efficiency '+str(j) + ' ')
        index.append('Comb thermal energy '+str(j) + ' (kWh)')
-       index.append('Fuel Flow Com '+str(j) + ' (l/h)')
+       index.append('Fuel Flow Com '+str(j) + ' (m3/h)')
        index.append('Thermal energy demand '+str(j) + ' (kWh)')
        index.append('Thermal curtailment '+str(j) + ' (kWh)')       
-       index.append('Total Fuel Flow '+str(j) + ' (l/h)')
-       index.append('Thermal demand Drier '+str(j) + ' (kWh)')
+       index.append('Total Fuel Flow '+str(j) + ' (m3/h)')
+       index.append('Thermal demand Dryer '+str(j) + ' (kWh)')
        index.append('Refrigeration demand '+str(j) + ' (kWh)')
        index.append('Elect. for refrig. '+str(j) + ' (kWh)') 
        index.append('Total Elect. Used '+str(j) + ' (kWh)')
@@ -195,11 +196,11 @@ def Load_results1(instance):
        index.append('CO2 emissions Elect. Refrigeration '+str(j) + ' (kg of CO2)') 
        index.append('CO2 emissions Elect. Used '+str(j) + ' (kg of CO2)') 
        index.append('CO2 emissions Elect. Curtailment '+str(j) + ' (kg of CO2)') 
-       index.append('CO2 emissions Elect. Produced '+str(j) + ' (kg of CO2)') 
-
-           
+       index.append('CO2 emissions Thermal Energy Dryer '+str(j) + ' (kg of CO2)') 
+                
        if instance.Lost_Load_Probability > 0: 
            index.append('Lost Load '+str(j) + ' (kWh)')
+           
     Scenarios.index= index
 
      # Creation of an index starting in the 'model.StartDate' value with a frequency step equal to 'model.Delta_Time'
@@ -275,17 +276,17 @@ def Load_results1(instance):
         Maintenance_Operation_Cost_Generator = instance.Maintenance_Operation_Cost_Generator.extract_values()
         
         for g in range(1, Number_Generator + 1):
-            Name = 'Generator ' + str(g)
-            Generator_Data.loc['Generator Efficiency',Name] = Generator_Efficiency[g]
-            Generator_Data.loc['Low Heating Value (kWh/l)',Name] = Low_Heating_Value[g]
-            Generator_Data.loc['Fuel Cost (USD/l)',Name] = Fuel_Cost[g]
+            Name = 'Generator CHP ' + str(g)
+            Generator_Data.loc['Generator Electrical Efficiency',Name] = Generator_Efficiency[g]
+            Generator_Data.loc['Low Heating Value (kWh/m3)',Name] = Low_Heating_Value[g]
+            Generator_Data.loc['Fuel Cost (USD/m3)',Name] = Fuel_Cost[g]
             Generator_Data.loc['Generator Invesment Cost (USD/kW)',Name] = Generator_Invesment_Cost[g]
             Generator_Data.loc['Generator Nominal Capacity (kW)',Name] = Generator_Nominal_Capacity[g]
             Generator_Data.loc['OyM Generator', Name] = Maintenance_Operation_Cost_Generator[g]
             Generator_Data.loc['Invesment Generator (USD)', Name] = Generator_Invesment_Cost[g]*Generator_Nominal_Capacity[g]
             Generator_Data.loc['OyM Cost (USD)', Name] = Generator_Data.loc['Invesment Generator (USD)', Name]*Generator_Data.loc['OyM Generator', Name]
-            Generator_Data.loc['Marginal Cost (USD/kWh)', Name] = (Generator_Data.loc['Fuel Cost (USD/l)',Name]/
-                                      (Generator_Data.loc['Generator Efficiency',Name]*Generator_Data.loc['Low Heating Value (kWh/l)',Name]))
+            Generator_Data.loc['Marginal Cost (USD/kWh)', Name] = (Generator_Data.loc['Fuel Cost (USD/m3)',Name]/
+                                      (Generator_Data.loc['Generator Electrical Efficiency',Name]*Generator_Data.loc['Low Heating Value (kWh/m3)',Name]))
             Generator_Data.loc['Marginal Cost (USD/kWh)', Name] = round(Generator_Data.loc['Marginal Cost (USD/kWh)', Name],3)
     
     if instance.formulation == 'MILP':
@@ -298,14 +299,17 @@ def Load_results1(instance):
         Generator_Nominal_Capacity = instance.Generator_Nominal_Capacity.extract_values()
         Integer_generator = instance.Integer_generator.get_values()
         Maintenance_Operation_Cost_Generator = instance.Maintenance_Operation_Cost_Generator.extract_values()
+        Cogeneration_Efficiency = instance.Cogeneration_Efficiency.extract_values()
+    
     
         for g in range(1, Number_Generator + 1):
-                Name = 'Generator ' + str(g)
+                Name = 'Generator CHP ' + str(g)
                 Generator_Data.loc['Generator Nominal Capacity (kW)',Name] = Generator_Nominal_Capacity[g]
                 Generator_Data.loc['Generator Min Out Put',Name] = Generator_Min_Out_Put[g]
-                Generator_Data.loc['Generator Efficiency',Name] = Generator_Efficiency[g]
-                Generator_Data.loc['Low Heating Value (kWh/l)',Name] = Low_Heating_Value[g]
-                Generator_Data.loc['Fuel Cost (USD/l)',Name] = Fuel_Cost[g]
+                Generator_Data.loc['Generator Electrical Efficiency',Name] = Generator_Efficiency[g]
+                Generator_Data.loc['Cogeneration CHP Efficiency',Name] = Cogeneration_Efficiency[g]
+                Generator_Data.loc['Low Heating Value (kWh/m3)',Name] = Low_Heating_Value[g]
+                Generator_Data.loc['Fuel Cost (USD/m3)',Name] = Fuel_Cost[g]
                 Generator_Data.loc['Generator Invesment Cost (USD/kW)',Name] = Generator_Invesment_Cost[g]
                 Generator_Data.loc['Cost Increase',Name] = Cost_Increase[g]
                 M_1 = Fuel_Cost[g]/(Generator_Efficiency[g]*Low_Heating_Value[g])
@@ -316,11 +320,6 @@ def Load_results1(instance):
                                                                                   *Generator_Data.loc['Generator Nominal Capacity (kW)',Name]\
                                                                       - Generator_Data.loc['Start Cost Generator (USD)',Name])/Generator_Data.loc['Generator Nominal Capacity (kW)',Name]
                 
-                
-                
-                
-                
-                
                 Generator_Data.loc['Marginal cost Partial load (USD/kWh)',Name] = round(Generator_Data.loc['Marginal cost Partial load (USD/kWh)',Name],3)
                 Generator_Data.loc['Number of Generators', Name] = Integer_generator[g]
                 Generator_Data.loc['Maintenance Operation Cost Generator', Name] = Maintenance_Operation_Cost_Generator[g]
@@ -330,8 +329,33 @@ def Load_results1(instance):
                                                                          *Generator_Invesment_Cost[g]
                                                                          *Maintenance_Operation_Cost_Generator[g])
     
-    Generator_Data.to_excel(writer, sheet_name='Generator Data')      
+    Generator_Data.to_excel(writer, sheet_name='Generator Data')  
 
+    Combustor_Data = pd.DataFrame()     #new JVS
+
+    if instance.formulation == 'MILP':
+        Combustor_Nominal_Capacity = instance.Combustor_Nominal_Capacity.extract_values()
+        Combustor_Efficiency = instance.Combustor_Efficiency.extract_values()
+        Low_Heating_Value = instance.Low_Heating_Value.extract_values()
+        Fuel_Cost = instance.Fuel_Cost.extract_values()
+        Combustor_Invesment_Cost = instance.Combustor_Invesment_Cost.extract_values()
+        Maintenance_Operation_Cost_Combustor = instance.Maintenance_Operation_Cost_Combustor.extract_values()       
+        
+        for c in range(1, Number_Combustor + 1):
+                Name = 'Combustor ' + str(c)
+                Combustor_Data.loc['Combustor Nominal Capacity (kW)',Name] = Combustor_Nominal_Capacity[c]
+                Combustor_Data.loc['Combustor thermal efficiency',Name] = Combustor_Efficiency[c]
+                Combustor_Data.loc['Low Heating Value (kWh/m3)',Name] = Low_Heating_Value[g]
+                Combustor_Data.loc['Fuel Cost (USD/m3)',Name] = Fuel_Cost[g]
+                Combustor_Data.loc['Combustor Investment Cost (USD/kW)',Name] = Combustor_Invesment_Cost[c]
+                Combustor_Data.loc['Maintenance Operation Cost Combustor',Name] = Maintenance_Operation_Cost_Combustor[c]
+                
+                Combustor_Data.loc['Invesment Combustor (USD)', Name] = (Combustor_Nominal_Capacity[c]*Combustor_Invesment_Cost[c])
+                Combustor_Data.loc['OyM Cost (USD)', Name] = (Combustor_Nominal_Capacity[c]*Combustor_Invesment_Cost[c]
+                                                                         *Maintenance_Operation_Cost_Combustor[c])
+    Combustor_Data.to_excel(writer, sheet_name='Combustor Data')
+       
+  
     Project_Data = pd.Series()
     Project_Data['Net Present Cost (USD)'] = instance.ObjectiveFuntion.expr()
     Project_Data['Discount Rate'] = instance.Discount_Rate.value
@@ -391,7 +415,7 @@ def Load_results1(instance):
             for g in range(1, Number_Generator + 1):
                 column_1 = 'Energy Generator ' + str(s) + ' ' + str(g) + ' (kWh)'  
                 column_2 = 'Fuel Cost ' + str(s) + ' ' + str(g) + ' (USD)'  
-                Name =  'Generator ' + str(g)
+                Name =  'Generator CHP ' + str(g)
                 for t in range(1, Number_Periods + 1):
                     Generator_Time_Series.loc[t,column_1] = Generator_Energy[s,g,t]
                     Generator_Time_Series.loc[t,column_2] = (Generator_Time_Series.loc[t,column_1]
@@ -403,7 +427,7 @@ def Load_results1(instance):
                     column_1 = 'Energy Generator ' + str(s) + ' ' + str(g)  + ' (kWh)' 
                     column_2 = 'Integer Generator ' + str(s) + ' ' + str(g)
                     column_3 = 'Fuel Cost ' + str(s) + ' ' + str(g) + ' (USD)' 
-                    Name =  'Generator ' + str(g)
+                    Name =  'Generator CHP ' + str(g)
                     for t in range(1, Number_Periods + 1):
                         Generator_Time_Series.loc[t,column_1] = Generator_Energy[s,g,t]
                         Generator_Time_Series.loc[t,column_2] = Generator_Integer[s,g,t]
@@ -472,7 +496,7 @@ def Load_results1(instance):
         
         gen_oym = 0
         for g in range(1, Number_Generator + 1):
-            Name_2 = 'Generator ' + str(g)
+            Name_2 = 'Generator CHP ' + str(g)
             gen_oym += Generator_Data.loc['OyM Cost (USD)', Name_2]
         Scenario_Cost.loc['Gen OyM Cost (USD)',name_5] = gen_oym
         
@@ -525,7 +549,7 @@ def Load_results1(instance):
     
     gen_Invesment = 0
     for g in range(1, Number_Generator + 1):
-        Name_2 = 'Generator ' + str(g)
+        Name_2 = 'Generator CHP ' + str(g)
         gen_Invesment += Generator_Data.loc['Invesment Generator (USD)', Name_2]
     NPC.loc['Generator Invesment Cost (USD)', 'Data'] = gen_Invesment
     
@@ -556,21 +580,95 @@ def Load_results1(instance):
     
     Demand = pd.DataFrame()
     NP_Demand = 0
+    
     for s in range(1, Number_Scenarios + 1):
-        a = 'Energy Demand ' + str(s) + ' (kWh)'
+        a = 'Energy Demand '+ str(s) + ' (kWh)' 
         b = 'Scenario ' + str(s)
- #       c = 'Curtailment ' +str(s) + ' (kWh)'  #prueba
+        c = 'Curtailment ' +str(s) + ' (kWh)'  #prueba
+        d = 'Thermal energy demand ' +str(s) + ' (kWh)'  #prueba
+        e = 'Total Fuel Flow '+str(s) + ' (m3/h)' #prueba
+        f = 'Renewable Energy '+str(s) + ' (kWh)' #prueba
+        g = 'Gen energy '+str(s) + ' (kWh)'       #prueba
+        h = 'Thermal demand Dryer '+str(s) + ' (kWh)'
+        o = 'Thermal curtailment '+str(s) + ' (kWh)'
+        k = 'CO2 emissions Elect. Demand '+str(s) + ' (kg of CO2)'
+        l = 'CO2 emissions Elect. Refrigeration '+str(s) + ' (kg of CO2)'
+        m = 'CO2 emissions Elect. Curtailment '+str(s) + ' (kg of CO2)'
+        n = 'CO2 emissions Thermal Energy Dryer '+str(s) + ' (kg of CO2)'
+    
+        
         Demand.loc[a,'Total Demand (kWh)'] = sum(Scenarios[a][i] for i in Scenarios.index) 
- #+ sum(Scenarios[c][i] for i in Scenarios.index) #second term prueba
+        
+        Demand.loc[c,'Total Curtailment (kWh)'] = sum(Scenarios[c][i] for i in Scenarios.index) #prueba
+        
+        Demand.loc[d,'Total Thermal demand (kWh)'] = sum(Scenarios[d][i] for i in Scenarios.index) #prueba
+        
+        Demand.loc[e,'Total Fuel Flow (m3/h)'] = sum(Scenarios[e][i] for i in Scenarios.index) #prueba
+        
+        Demand.loc[f,'Total Renewable Energy (kWh)'] = sum(Scenarios[f][i] for i in Scenarios.index) #prueba
+        Demand.loc[g,'Total Electricity Generator (kWh)'] = sum(Scenarios[g][i] for i in Scenarios.index) #prueba
+        
+        Demand.loc[h,'Total Thermal Energy Demand Dryer (kWh)'] = sum(Scenarios[h][i] for i in Scenarios.index) #prueba
+        Demand.loc[o,'Total Thermal Curtailment (kWh)'] = sum(Scenarios[o][i] for i in Scenarios.index) #prueba
+        
+        
+        Demand.loc[k,'CO2 emissions Elect. Demand (kg of CO2)'] = sum(Scenarios[k][i] for i in Scenarios.index) #prueba
+        Demand.loc[l,'CO2 emissions Elect. Refrigeration (kg of CO2)'] = sum(Scenarios[l][i] for i in Scenarios.index) #prueba
+        Demand.loc[m,'CO2 emissions Elect. Curtailment (kg of CO2)'] = sum(Scenarios[m][i] for i in Scenarios.index) #prueba
+        Demand.loc[n,'CO2 emissions Thermal Energy Dryer (kg of CO2)'] = sum(Scenarios[n][i] for i in Scenarios.index) #prueba
+        
+        
+        
+                                                
         Demand.loc[a,'Present Demand (kWh)'] = sum((Demand.loc[a,'Total Demand (kWh)']/(1+Discount_rate)**i) 
                                                             for i in range(1, Years+1))  
+        #prueba
+        Demand.loc[c,'Present Curtailment (kWh)'] = sum((Demand.loc[c,'Total Curtailment (kWh)']/(1+Discount_rate)**i) 
+                                                            for i in range(1, Years+1))  
+        Demand.loc[d,'Present Thermal demand (kWh)'] = sum((Demand.loc[d,'Total Thermal demand (kWh)']/(1+Discount_rate)**i) 
+                                                            for i in range(1, Years+1))  
+        
+        
         Demand.loc[a,'Rate'] = Scenario_Information[b]['Scenario Weight']                                                         
         Demand.loc[a,'Rated Demand (kWh)'] = Demand.loc[a,'Rate']*Demand.loc[a,'Present Demand (kWh)'] 
+        Demand.loc[c,'Rated Curtailment (kWh)'] = Demand.loc[a,'Rate']*Demand.loc[c,'Present Curtailment (kWh)'] #prueba
+        Demand.loc[d,'Rated Thermal demand (kWh)'] = Demand.loc[a,'Rate']*Demand.loc[d,'Present Thermal demand (kWh)'] #prueba
+
+        
         NP_Demand += Demand.loc[a,'Rated Demand (kWh)']
-    NPC.loc['LCOE (USD/kWh)', 'Data'] = (Project_Data['Net Present Cost (USD)']/NP_Demand)
+        NP_Demand += Demand.loc[c,'Rated Curtailment (kWh)'] #prueba
+        NP_Demand += Demand.loc[d,'Rated Thermal demand (kWh)'] #prueba
+        
+        EL = Demand.loc[a,'Total Demand (kWh)']
+        ELC = Demand.loc[c,'Total Curtailment (kWh)']
+        TH = Demand.loc[d,'Total Thermal demand (kWh)']
+        ABP = Demand.loc[e,'Total Fuel Flow (m3/h)']
+        ECF = (Demand.loc[a,'Total Demand (kWh)']+Demand.loc[c,'Total Curtailment (kWh)'])/(Demand.loc[a,'Total Demand (kWh)']+Demand.loc[c,'Total Curtailment (kWh)']+Demand.loc[d,'Total Thermal demand (kWh)'])
+        
+    NPC.loc['LCOEn (USD/kWh)', 'Data'] = (Project_Data['Net Present Cost (USD)']/NP_Demand)
+    NPC.loc['LCOE (USD/kWh)', 'Data'] = (Project_Data['Net Present Cost (USD)']*ECF/NP_Demand)
+    NPC.loc['LCOH (USD/kWh)', 'Data'] = (Project_Data['Net Present Cost (USD)']*(1-ECF)/NP_Demand)
+    NPC.loc['Electricity Cost Factor', 'Data'] = (ECF)
     
+    NPC.loc['Average biogas flow required (m3/h)', 'Data'] = (ABP/8760)
     
+    NPC.loc['Annual Dispatched Electricity for Community (kWh)', 'Data'] = (EL)
+    NPC.loc['Annual Surplus Electricity (kWh)', 'Data'] = (ELC)
+    NPC.loc['Annual Dispatched Thermal Energy (kWh)', 'Data'] = (TH)
+    
+    NPC.loc['Annual Electricity supplied by generator CHP (kWh)', 'Data'] =  Demand.loc[g,'Total Electricity Generator (kWh)']
+    NPC.loc['Annual Electricity supplied by Renewables (kWh)', 'Data'] = Demand.loc[f,'Total Renewable Energy (kWh)']
+    NPC.loc['Annual Thermal Energy supplied to Dryer (kWh)', 'Data'] = Demand.loc[h,'Total Thermal Energy Demand Dryer (kWh)']
+    NPC.loc['Annual Surplus Thermal Energy (kWh)', 'Data'] = Demand.loc[o,'Total Thermal Curtailment (kWh)']
+    
+    NPC.loc['Annual CO2 savings for electricity demand supplied (kg of CO2)', 'Data'] = Demand.loc[k,'CO2 emissions Elect. Demand (kg of CO2)']
+    NPC.loc['Annual CO2 savings for refrigeration of milk cooling center (kg of CO2)', 'Data'] = Demand.loc[l,'CO2 emissions Elect. Refrigeration (kg of CO2)']
+    NPC.loc['Annual CO2 savings for surplus electricity (kg of CO2)', 'Data'] = Demand.loc[m,'CO2 emissions Elect. Curtailment (kg of CO2)']
+    NPC.loc['Annual CO2 savings for thermal energy Dryer (kg of CO2)', 'Data'] = Demand.loc[n,'CO2 emissions Thermal Energy Dryer (kg of CO2)']
+
+          
     NPC.to_excel(writer, sheet_name='Results')
+    
     
     Data = []
     Data.append(NPC)
@@ -578,6 +676,7 @@ def Load_results1(instance):
     Data.append(Project_Data)
     Data.append(Scenarios)
     Data.append(Generator_Data)
+#    Data.append(Combustor_Data)
     Data.append(Scenario_Information)
     Data.append(Data_Renewable)
     Data.append(Battery_Data)
@@ -1017,13 +1116,13 @@ def Load_results1_Dispatch(instance):
 
 
     for g in range(1, Number_Generator + 1):
-                Name = 'Generator ' + str(g)
+                Name = 'Generator CHP ' + str(g)
                 Generator_Data.loc['Generator Nominal Capacity (kW)',Name] = Generator_Nominal_Capacity[g]
                 Generator_Data.loc['Generator Min Out Put',Name] = Generator_Min_Out_Put[g]
                 Generator_Data.loc['Generator Electric Efficiency',Name] = Generator_Efficiency[g]  #JVS changed the name added Electric
                 Generator_Data.loc['Generator CHP Efficiency',Name] = Cogeneration_Efficiency[g]    #JVS added CHP efficiency 
-                Generator_Data.loc['Low Heating Value (kWh/l)',Name] = Low_Heating_Value[g]
-                Generator_Data.loc['Fuel Cost (USD/l)',Name] = Fuel_Cost[g]
+                Generator_Data.loc['Low Heating Value (kWh/m3)',Name] = Low_Heating_Value[g]
+                Generator_Data.loc['Fuel Cost (USD/m3)',Name] = Fuel_Cost[g]
                 Generator_Data.loc['Cost Increase',Name] = Cost_Increase[g]
                 M_1 = Fuel_Cost[g]/(Generator_Efficiency[g]*Low_Heating_Value[g])
                 Generator_Data.loc['Marginal cost Full load (USD/kWh)',Name] = round(M_1,3)
@@ -1087,7 +1186,7 @@ def Load_results1_Dispatch(instance):
          column_2 = 'Integer Generator '  + str(g)
          column_3 = 'Fuel Cost '  + str(g) + ' (USD)' 
          column_4 = 'Thermal Energy '  + str(g) + ' (kWh)' 
-         Name =  'Generator ' + str(g)
+         Name =  'Generator CHP ' + str(g)
          for t in range(1, Number_Periods + 1):
              Generator_Time_Series.loc[t,column_1] = Generator_Energy[g,t]
              Generator_Time_Series.loc[t,column_2] = Generator_Integer[g,t]
@@ -1273,9 +1372,9 @@ def Load_results2_Dispatch(instance):
     
     Generator_Data = pd.DataFrame()
     g = None
-    Name = 'Generator ' + str(1)
+    Name = 'Generator CHP ' + str(1)
     Generator_Data.loc['Generator Min Out Put',Name] = Generator_Min_Out_Put[g]
-    Generator_Data.loc['Generator Efficiency',Name] = Generator_Efficiency[g]
+    Generator_Data.loc['Generator Electrical Efficiency',Name] = Generator_Efficiency[g]
     Generator_Data.loc['Low Heating Value',Name] = Low_Heating_Value[g]
     Generator_Data.loc['Fuel Cost',Name] = Fuel_Cost[g]
     Generator_Data.loc['Marginal cost Full load',Name] = Marginal_Cost_Generator_1[g]
@@ -1669,13 +1768,13 @@ def Plot_Energy_Total(instance, Time_Series, plot, Plot_Date, PlotTime):
                 From_Renewable.append(foo)
             
         From_Generator = mpatches.Patch(color=c_d,alpha=Alpha_g,
-                                        label='From Generator',hatch =hatch_g)
+                                        label='From Generator CHP',hatch =hatch_g)
         Battery = mpatches.Patch(color=C_Bat ,alpha=alpha_bat, 
                                  label='Battery Energy Flow',hatch =hatch_b)
         Curtailment = mpatches.Patch(color=C_Cur ,alpha=alpha_cu, 
                                  label='Curtailment',hatch =hatch_cu)
 
-        Energy_Demand = mlines.Line2D([], [], color='black',label='Energy Demand')
+        Energy_Demand = mlines.Line2D([], [], color='black',label='Electricity Demand')
         State_Of_Charge_Battery = mlines.Line2D([], [], color='black',
                                                 label='State Of Charge Battery',
                                                 linestyle='--',alpha=0.7)
@@ -2221,8 +2320,8 @@ def Energy_Mix(instance,Scenarios,Scenario_Probability):
         Demand += De*We
         
         
-        Energy_Mix.loc['PV Penetration',index_3] = PV/(PV+Ge)
-        Energy_Mix.loc['Curtailment Percentage',index_3] = Cu/(PV+Ge)
+        Energy_Mix.loc['PV Penetration',index_3] = PV/(PV+Ge)    #test jvs
+        Energy_Mix.loc['Curtailment Percentage',index_3] = Cu/(PV+Ge)  #test jvs
         Energy_Mix.loc['Battery Usage',index_3] = B_O/De
         
         if instance.Lost_Load_Probability > 0:
@@ -2230,8 +2329,8 @@ def Energy_Mix(instance,Scenarios,Scenario_Probability):
             Lost_Load += LL*We
             Energy_Mix.loc['Lost Load', index_3] = LL/De
         
-    Renewable_Real_Penetration = PV_Energy/(PV_Energy+Generator_Energy)     
-    Curtailment_Percentage = Curtailment/(PV_Energy+Generator_Energy)
+    Renewable_Real_Penetration = PV_Energy/(PV_Energy+Generator_Energy)     #test jvs
+    Curtailment_Percentage = Curtailment/(PV_Energy+Generator_Energy)       #test jvs
     Battery_Usage = Battery_Out/Demand
         
     print(str(round(Renewable_Real_Penetration*100, 1)) + ' % Renewable Penetration')
@@ -2265,24 +2364,24 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Battery_Data ,Result
                   + str(Renewable_Rate) +' kW')    
         if formulation == 'LP':    
             for i in range(1, Number_Generator + 1):
-                index_1 = 'Generator ' + str(i)
+                index_1 = 'Generator CHP ' + str(i)
                 index_2 = 'Generator Nominal Capacity (kW)'
                 
                 Generator_Rate = float(Generator_Data[index_1][index_2])
                 Generator_Rate = round(Generator_Rate, 1)
                 
-                print('Generator ' + str(i) + ' nominal capacity is ' 
+                print('Generator CHP ' + str(i) + ' nominal capacity is ' 
                       + str(Generator_Rate) +' kW')  
         if formulation == 'MILP': 
              Number_Generator = int(instance.Generator_Type.extract_values()[None])
              for i in range(1, Number_Generator + 1):
-                index_1 = 'Generator ' + str(i)
+                index_1 = 'Generator CHP ' + str(i)
                 index_2 = 'Generator Nominal Capacity (kW)'
                 index_3 = 'Number of Generators'
                 Generator_Rate = float(Generator_Data[index_1][index_2])
                 Generator_Rate = round(Generator_Rate, 1)
                 Generator_Rate = Generator_Rate*Generator_Data[index_1][index_3]
-                print('Generator ' + str(i) + ' nominal capacity is ' 
+                print('Generator CHP ' + str(i) + ' nominal capacity is ' 
                   + str(Generator_Rate) +' kW')                
         
         index_2 = 'Nominal Capacity (kWh)'    
@@ -2299,11 +2398,18 @@ def Print_Results(instance, Generator_Data, Data_Renewable, Battery_Data ,Result
         print('NPC is ' + str(NPC) +' Thousand USD') 
     
     
-        index_2 = 'LCOE (USD/kWh)'    
-        LCOE = Results['Data'][index_2]
-        LCOE = round(LCOE, 3)
+        index_2 = 'LCOEn (USD/kWh)'    
+        LCOEn = Results['Data'][index_2]
+        LCOEn = round(LCOEn, 3)
             
-        print('The LCOE is ' + str(LCOE) + ' USD/kWh')  
+        print('The LCOEn is ' + str(LCOEn) + ' USD/kWh')  
+        
+#        for s in range(1, Number_Scenarios + 1):
+#           e =  'Total Fuel Flow '+str(s) + ' (m3/h)'
+#            ABP = Demand.loc[e,'Total Fuel Flow (m3/h)']/8760
+#            ABP = round(ABP, 1)
+            
+#           print('Average biogas required is ' + str(ABP) + ' m3/h')  
 
 
     
