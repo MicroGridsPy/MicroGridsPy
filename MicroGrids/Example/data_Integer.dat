@@ -109,7 +109,7 @@ param: Combustor_Type := 1;
 
 param: Maximum_Fuel :=
 
-1   20;
+1   25;
 
 param: Combustor_Efficiency :=
 

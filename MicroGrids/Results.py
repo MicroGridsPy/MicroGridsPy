@@ -338,6 +338,7 @@ def Load_results1(instance):
         Combustor_Efficiency = instance.Combustor_Efficiency.extract_values()
         Low_Heating_Value = instance.Low_Heating_Value.extract_values()
         Fuel_Cost = instance.Fuel_Cost.extract_values()
+        
         Combustor_Invesment_Cost = instance.Combustor_Invesment_Cost.extract_values()
         Maintenance_Operation_Cost_Combustor = instance.Maintenance_Operation_Cost_Combustor.extract_values()       
         
@@ -347,6 +348,8 @@ def Load_results1(instance):
                 Combustor_Data.loc['Combustor thermal efficiency',Name] = Combustor_Efficiency[c]
                 Combustor_Data.loc['Low Heating Value (kWh/m3)',Name] = Low_Heating_Value[g]
                 Combustor_Data.loc['Fuel Cost (USD/m3)',Name] = Fuel_Cost[g]
+                M_2 = Fuel_Cost[g]/(Combustor_Efficiency[c]*Low_Heating_Value[g])
+                Combustor_Data.loc['Marginal cost fuel Combustor (USD/kWh)',Name] = round(M_2,3)
                 Combustor_Data.loc['Combustor Investment Cost (USD/kW)',Name] = Combustor_Invesment_Cost[c]
                 Combustor_Data.loc['Maintenance Operation Cost Combustor',Name] = Maintenance_Operation_Cost_Combustor[c]
                 
@@ -436,7 +439,24 @@ def Load_results1(instance):
             
          
     Generator_Time_Series.index = Scenarios.index           
-    Generator_Time_Series.to_excel(writer, sheet_name='Generator Time Series')                
+    Generator_Time_Series.to_excel(writer, sheet_name='Generator Time Series') 
+
+#JVS combustor    
+    Combustor_Time_Series = pd.DataFrame()
+    
+    if instance.formulation == 'MILP': 
+        for s in range(1, Number_Scenarios + 1):   
+            for c in range(1, Number_Combustor + 1):
+                column_1 = 'Thermal Energy Combustor ' + str(s) + ' ' + str(c) + ' (kWh)'  
+                column_2 = 'Fuel Cost ' + str(s) + ' ' + str(g) + ' (USD)'  
+                Name =  'Combustor ' + str(c)
+                for t in range(1, Number_Periods + 1):
+                    Combustor_Time_Series.loc[t,column_1] = Thermal_Combustor[s,c,t]
+                    Combustor_Time_Series.loc[t,column_2] = (Combustor_Time_Series.loc[t,column_1]
+                                                            *Combustor_Data.loc['Marginal cost fuel Combustor (USD/kWh)', Name]) 
+ 
+    Combustor_Time_Series.index = Scenarios.index           
+    Combustor_Time_Series.to_excel(writer, sheet_name='Combustor Time Series')               
 
     Cost_Time_Series = pd.DataFrame()
     for s in range(1, Number_Scenarios + 1):
@@ -447,7 +467,8 @@ def Load_results1(instance):
         name_2_1 = 'Battery Flow Out ' + str(s) + ' (USD)' 
         name_3 = 'Battery Flow in ' + str(s) + ' (kWh)'  
         name_3_1 = 'Battery Flow In ' + str(s) + ' (USD)' 
-        name_4_1 = 'Generator Cost ' + str(s) + ' (USD)' 
+        name_4_1 = 'Generator Fuel Cost ' + str(s) + ' (USD)' 
+        name_5_1 = 'Combustor Fuel Cost ' + str(s) + ' (USD)' 
 
         for t in Scenarios.index:
             if instance.Lost_Load_Probability > 0:
@@ -461,6 +482,13 @@ def Load_results1(instance):
                 name_5 = 'Fuel Cost ' + str(s) + ' ' + str(g) + ' (USD)'  
                 Fuel_Cost += Generator_Time_Series.loc[t,name_5]
             Cost_Time_Series.loc[t,name_4_1] = Fuel_Cost
+            
+            #JVS for combustor
+            Fuel_Cost_Com = 0
+            for c in range(1, Number_Combustor + 1):
+                name_5 = 'Fuel Cost ' + str(s) + ' ' + str(c) + ' (USD)'  
+                Fuel_Cost_Com += Combustor_Time_Series.loc[t,name_5]
+            Cost_Time_Series.loc[t,name_5_1] = Fuel_Cost_Com
             
             if instance.Curtailment_Unitary_Cost > 0:
                 name_6 = 'Curtailment ' + str(s) + ' (kWh)'
@@ -478,12 +506,13 @@ def Load_results1(instance):
         name_2 = 'Battery Flow Out (USD)'
         name_3_1 = 'Battery Flow In ' + str(s) + ' (USD)' 
         name_3 = 'Battery Flow In (USD)'
-        name_4_1 = 'Generator Cost ' + str(s) + ' (USD)'
-        name_4 = 'Generator Cost (USD)'
+        name_4_1 = 'Generator Fuel Cost ' + str(s) + ' (USD)'
+        name_4 = 'Generator Fuel Cost (USD)'
         if instance.Curtailment_Unitary_Cost > 0:
                 name_6 = 'Curtailment ' + str(s) + ' (kWh)'
                 name_6_1 = 'Curtailment Cost ' + str(s) + ' (USD)' 
-        
+        name_7_1 = 'Combustor Fuel Cost ' + str(s) + ' (USD)'
+        name_7 = 'Combustor Fuel Cost (USD)'
         
         name_5 = 'Scenario ' + str(s)
         if instance.Lost_Load_Probability > 0:
@@ -491,6 +520,8 @@ def Load_results1(instance):
         Scenario_Cost.loc[name_2,name_5] = Cost_Time_Series[name_2_1].sum()
         Scenario_Cost.loc[name_3,name_5] = Cost_Time_Series[name_3_1].sum()
         Scenario_Cost.loc[name_4,name_5] = Cost_Time_Series[name_4_1].sum() 
+        Scenario_Cost.loc[name_7,name_5] = Cost_Time_Series[name_7_1].sum() 
+        
         if instance.Curtailment_Unitary_Cost > 0:    
             Scenario_Cost.loc[name_6,name_5] = Cost_Time_Series[name_6_1].sum() 
         
@@ -500,6 +531,12 @@ def Load_results1(instance):
             gen_oym += Generator_Data.loc['OyM Cost (USD)', Name_2]
         Scenario_Cost.loc['Gen OyM Cost (USD)',name_5] = gen_oym
         
+        com_oym = 0             #JVS
+        for c in range(1, Number_Combustor + 1):
+            Name_2 = 'Combustor ' + str(c)
+            com_oym += Combustor_Data.loc['OyM Cost (USD)', Name_2]
+        Scenario_Cost.loc['Com OyM Cost (USD)',name_5] = com_oym
+
         renewable_energy_oym = 0
         for r in range(1, Number_Renewable_Source + 1):
             Name = 'Source ' + str(r)
@@ -515,10 +552,13 @@ def Load_results1(instance):
         
         
         Scenario_Cost.loc['OyM (USD)',name_5] = (Scenario_Cost.loc['Gen OyM Cost (USD)',name_5] 
+                                        +Scenario_Cost.loc['Com OyM Cost (USD)',name_5]
                                         +Scenario_Cost.loc['PV OyM Cost (USD)',name_5]
                                         +Scenario_Cost.loc['Battery OyM Cost (USD)',name_5])
 # Present values with capital recovery factor        
-        Scenario_Cost.loc['Present Gen Cost (USD)',name_5] = Scenario_Cost.loc[name_4,name_5]/Project_Data['Capital Recovery Factor']
+        Scenario_Cost.loc['Present Gen Fuel Cost (USD)',name_5] = Scenario_Cost.loc[name_4,name_5]/Project_Data['Capital Recovery Factor']
+        Scenario_Cost.loc['Present Com Fuel Cost (USD)',name_5] = Scenario_Cost.loc[name_7,name_5]/Project_Data['Capital Recovery Factor']
+
         if instance.Lost_Load_Probability > 0:
             Scenario_Cost.loc['Present Lost Load Cost (USD)',name_5] = Scenario_Cost.loc[name_1,name_5]/Project_Data['Capital Recovery Factor']
         Scenario_Cost.loc['Present Bat Out Cost (USD)',name_5] = Scenario_Cost.loc[name_2,name_5]/Project_Data['Capital Recovery Factor']
@@ -553,12 +593,19 @@ def Load_results1(instance):
         gen_Invesment += Generator_Data.loc['Invesment Generator (USD)', Name_2]
     NPC.loc['Generator Invesment Cost (USD)', 'Data'] = gen_Invesment
     
+    com_Invesment = 0
+    for c in range(1, Number_Combustor + 1):
+        Name_2 = 'Combustor ' + str(c)
+        com_Invesment += Combustor_Data.loc['Invesment Combustor (USD)', Name_2]
+    NPC.loc['Combustor Invesment Cost (USD)', 'Data'] = com_Invesment
+    
     renewable_energy_invesment = 0
     for r in range(1, Number_Renewable_Source + 1):
             Name = 'Source ' + str(r)
             renewable_energy_invesment += Data_Renewable.loc['Invesment (USD)', Name]
     NPC.loc['Renewable Investment Cost (USD)', 'Data'] = renewable_energy_invesment 
     
+   
     operation_cost = 0
     for s in range(1, Number_Scenarios + 1):
         name_1 = 'Scenario ' + str(s)
@@ -574,6 +621,7 @@ def Load_results1(instance):
     NPC.loc['NPC LP (USD)', 'Data'] = Project_Data['Net Present Cost (USD)']
     NPC.loc['Invesment (USD)', 'Data'] = (NPC.loc['Battery Invesment (USD)', 'Data'] 
                                      + NPC.loc['Generator Invesment Cost (USD)', 'Data'] 
+                                     +NPC.loc['Combustor Invesment Cost (USD)', 'Data']
                                      + NPC.loc['Renewable Investment Cost (USD)', 'Data'])
     
     
