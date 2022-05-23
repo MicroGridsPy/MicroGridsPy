@@ -1,3 +1,9 @@
+<img src="/logo.png" width="300">
+
+*A open-source bottom-up two-stage stochastic model for isolated energy systems optimal sizing.*
+
+---
+
 MicroGridsPy - Version 2.0
 ========================
 
