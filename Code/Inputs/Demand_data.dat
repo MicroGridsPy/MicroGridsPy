@@ -1,4 +1,4 @@
-param: lat := '-1';               						#latitude [°]
+param: lat := '-1';               						#latitude [ï¿½]
 param: demand_growth := '0';							#yearly expected average percentage variation of the demand [%]
 param: cooling_period := 'AY';							#cooling period (NC = No Cooling; AY = All Year; OM = Oct-Mar; AS=Apr-Sept)
 param: h_tier1:= '252';								#number of households in the wealth tier 1

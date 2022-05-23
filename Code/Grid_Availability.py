@@ -1,5 +1,5 @@
 import math, numpy as np, pandas as pd
-import matplotlib.pyplot as plt, seaborn
+import matplotlib.pyplot as plt
 
 #%% Function returning as output a logical matrix (0 and 1) representing the availability of the grid, at hourly resolution
 
@@ -142,15 +142,13 @@ def grid_availability(average_n_outages, average_outage_duration, project_lifeti
     
     grid_availability_lifetime = pd.concat([pd.DataFrame(np.zeros((8760,project_lifetime-grid_lifetime))), pd.DataFrame(grid_matrix)], axis = 1)
     grid_availability_lifetime = grid_availability_lifetime.set_axis(range(1,project_lifetime+1), axis=1, inplace=False)
-    '''
+    ''' 
     fig7 = plt.figure(dpi=1000)
     plt.plot(range(len(grid_matrix[:,0])), grid_matrix[:,0] , 'b.-', linewidth=0.1, markersize = 0.5)   
     plt.xlabel('Time [h]',fontsize=10)
     plt.title('Grid availability (for 1st year of grid connection)',fontsize=10) 
     fig7.savefig('Results/Plots/Grid availability (for 1st year of grid connection).'+PlotFormat, dpi=PlotResolution, bbox_inches='tight') 
     '''
-    #error = 100*abs(TBO_tot - grid_availability_lifetime.values.sum())/TBO_tot
-    
     
     print("Calculation of Grid Availability Matrix for " + str(grid_lifetime) + " years of grid connection completed" )
     grid_availability_lifetime.to_excel("Inputs/Grid_availability.xlsx")

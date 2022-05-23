@@ -1,5 +1,5 @@
 param: Periods := 8760;                                     # Periods considered in one year (8760h/y in the example)
-param: Years := 20;                                         # Total duration of the project
+param: Years := 5;                                         # Total duration of the project
 param: Step_Duration := 20;                                 # Duration (in years) of each investment decision step in which the project lifetime will be split
 param: Min_Last_Step_Duration := 1;                         # Minimum duration (in years) of the last investment decision step, in case of non-homogeneous divisions of the project lifetime 
 param: StartDate := '01/01/2019 00:00:00';                  # Start date of the project
@@ -8,81 +8,105 @@ param: Scenarios := 1;                                      # Number of scenario
 param: Scenario_Weight :=                                   # Occurrence probability of each scenario [-]
 1      1;
 
-param: RE_Supply_Calculation := 1;   			# 1 to select solar PV and wind production time series calculation by the program, 0 otherwise
+param: RE_Supply_Calculation := 0;   			# 1 to select solar PV and wind production time series calculation by the program, 0 otherwise
 param: Demand_Profile_Generation := 0;   		# 1 to select load demand profile generation by the program, 0 otherwise
 
 param: Discount_Rate := 0.1;                                  # Real discount rate accounting also for inflation
 param: Investment_Cost_Limit := 500000;                     # Upper limit to investment cost [USD] (considered only in case Optimization_Goal='Operation cost')
 
 
-param: RES_Sources := 1;                                    # Number of Renewable Energy Sources (RES) types
+param: RES_Sources := 2;                                    # Number of Renewable Energy Sources (RES) types
 param: RES_Names :=                                         # Renewable Energy Sources (RES) names
-1      'PV panels';
+1      'PV panels'
+2      'Wind turbines';
 param: RES_Nominal_Capacity :=                              # Single unit capacity of each type of Renewable Energy Source (RES) [W] 
-1      285;                                                                                              
-param: RES_Inverter_Efficiency :=                           # Efficiency [-] of the inverter connected to each Renewable Energy Source (RES) (put 1 in case of AC bus)
-1	   0.96;
+1      285
+2      100000;                                                                                                
+param: RES_Inverter_Efficiency :=                           # Efficiency [%] of the inverter connected to each Renewable Energy Source (RES) (put 1 in case of AC bus)
+1	   0.961
+2      1;
 param: RES_Specific_Investment_Cost :=                      # Specific investment cost for each type of Renewable Energy Source (RES) [USD/W]
-1      1.2;   
-param: RES_Specific_OM_Cost :=                              # O&M cost for each type of Renewable Energy Source (RES) as a fraction of specific investment cost [-]
-1      0.02;                                                                                                              
+1      1.06
+2      3;   
+param: RES_Specific_OM_Cost :=                              # O&M cost for each type of Renewable Energy Source (RES) as a fraction of specific investment cost [%]
+1      0.02                                                       
+2      0.02;                                                         
 param: RES_Lifetime :=                                      # Lifetime of each Renewable Energy Source (RES) [y]
-1      20;
+1      20
+2      20;
+param: RES_units :=                                         # Existing RES units of RES_Nominal_Capacity [-]
+1      10
+2      0;
+param: RES_years :=                                         # How many years ago the component was installed [y]
+1      1
+2      0;
+param: RES_unit_CO2_emission :=                             # [kgCO2/kW]
+1      0
+2      0;
 
-
-param: Battery_Specific_Investment_Cost := 0.25;            # Specific investment cost of the battery bank [USD/Wh]
-param: Battery_Specific_Electronic_Investment_Cost := 0.2; # Specific investment cost of non-replaceable parts (electronics) of the battery bank [USD/Wh]
-param: Battery_Specific_OM_Cost:= 0.08;                     # O&M cost of the battery bank as a fraction of specific investment cost [-]
-param: Battery_Discharge_Battery_Efficiency := 0.93;        # Discharge efficiency of the battery bank [-]
-param: Battery_Charge_Battery_Efficiency := 0.93;           # Charge efficiency of the battery bank [-]
-param: Battery_Depth_of_Discharge := 0.4;                   # Minimum State of Charge of the battery bank [-]
-param: Maximum_Battery_Discharge_Time := 6;                 # Maximum time to discharge the battery bank [h]
-param: Maximum_Battery_Charge_Time := 6;                    # Maximum time to charge the battery bank [h]
-param: Battery_Cycles := 2500;                              # Maximum number of cycles before degradation of the battery [-]
-param: Battery_Initial_SOC := 1;                            # Battery initial state of charge [-]
-
+param: Battery_Specific_Investment_Cost := 0.22;              # Specific investment cost of the battery bank [USD/Wh]               
+param: Battery_Specific_Electronic_Investment_Cost := 0.18;   # Specific investment cost of non-replaceable parts (electronics) of the battery bank [USD/Wh]
+param: Battery_Specific_OM_Cost:= 0.02;                       # O&M cost of the battery bank as a fraction of specific investment cost [%]
+param: Battery_Discharge_Battery_Efficiency := 0.927;         # Discharge efficiency of the battery bank [%]
+param: Battery_Charge_Battery_Efficiency := 0.927;            # Charge efficiency of the battery bank [%]
+param: Battery_Depth_of_Discharge := 0.5;                     # Depth of discharge of the battery bank [%]                     
+param: Maximum_Battery_Discharge_Time := 5;                   # Maximum time to discharge the battery bank [h]                     
+param: Maximum_Battery_Charge_Time := 5;                      # Maximum time to charge the battery bank [h]
+param: Battery_Cycles := 2000;                                # Maximum number of cycles before degradation of the battery [-]  
+param: Battery_Initial_SOC := 1;                              # Battery initial state of charge [%]
+param: Battery_capacity := 1000 ;                             # Existing Battery capacity [Wh]
+param: BESS_unit_CO2_emission := 0;
 
 param: Generator_Types := 1;                                # Number of different types of gensets 
 param: Generator_Names :=                                   # Generator names
 1      'Diesel Genset';
 param: Generator_Efficiency :=                              # Average generator efficiency of each generator type [%]
-1      0.28;                                                   
+1      0.34;                                                   
 param: Generator_Specific_Investment_Cost :=                # Specific investment cost for each generator type [USD/W]
-1      0.4;
-param: Generator_Specific_OM_Cost :=                        # O&M cost for each generator type as a fraction of specific investment cost [-]
-1	   0.0625;                                                   
+1      0.2;
+param: Generator_Specific_OM_Cost :=                        # O&M cost for each generator type as a fraction of specific investment cost [%]
+1	   0.045;                                                   
 param: Generator_Lifetime :=
 1      20;
 param: Fuel_Names :=                                        # Fuel names (to be specified for each generator, even if they use the same fuel)
 1      'Diesel';
 param: Fuel_Specific_Cost :=                                # Specific fuel cost for each generator type [USD/lt]
-1      1.175;
+1      1.1;
 param: Fuel_LHV :=                                          # Fuel lower heating value (LHV) for each generator type [Wh/lt]
-1	   9972;
+1	   9840;
+param: Generator_capacity :=                                # Existing Generator capacity [W]
+1      5000;
+param: GEN_years :=                                         # How many years ago the component was installed [y]
+1      1;
+param: GEN_unit_CO2_emission :=                             # [kgCO2/kW]
+1      0;
+param: FUEL_unit_CO2_emission :=                            # [kgCO2/lt]
+1      3.15;
 
-param: Grid_Connection := 0;                    # 1 to select grid connection during project lifetime, 0 otherwise
-param: Year_Grid_Connection := 10;			                # Year at which microgrid is connected to the national grid (starting from 1)
+param: Grid_Connection := 1;                                # 1 to select grid connection during project lifetime, 0 otherwise
+param: Year_Grid_Connection := 1;			                # Year at which microgrid is connected to the national grid (starting from 1)
 param: Grid_Connection_Type:= 2;	                        # 2 for both sell and purchase, 1 for purchase only
-param: Grid_Sold_El_Price := 0.23;                          # Price at which electricity is sold to the grid [USD/kWh]
-param: Grid_Purchased_El_Price := 0.24;		               # Price at which electricity is purchased from the grid [USD/kWh]
-param: Grid_Distance := 10;				                   # Distance from grid connection point [km]
-param: Grid_Connection_Cost := 157470;			           # Investment cost of grid connection, i.e. extension of power line + transformer costs [USD/km]
-param: Grid_Maintenance_Cost := 0.02;                      # O&M cost for maintenance of the power line and transformer as a fraction of investment cost [-]
-param: Maximum_Grid_Power := 1000;			                # Maximum active power that can be injected/withdrawn to/from the grid [kW]
-param: Grid_Average_Number_Outages := 29;                  # Average number of outages in the national grid in a year 
-param: Grid_Average_Outage_Duration := 60;                  # Average duration of an outage [min]
-
+param: Grid_Sold_El_Price := 0.239;                          # Price at which electricity is sold to the grid [USD/kWh]
+param: Grid_Purchased_El_Price := 0.24;		                # Price at which electricity is purchased from the grid [USD/kWh]
+param: Grid_Distance := 10;				                    # Distance from grid connection point [km]
+param: Grid_Connection_Cost := 13892;			            # Investment cost of grid connection, i.e. extension of power line + transformer costs [USD/km]
+param: Grid_Maintenance_Cost := 0.02;                       # O&M cost for maintenance of the power line and transformer as a fraction of investment cost [-]
+param: Maximum_Grid_Power := 80;			                # Maximum active power that can be injected/withdrawn to/from the grid [kW]
+param: Grid_Average_Number_Outages := 20;                   # Average number of outages in the national grid in a year 
+param: Grid_Average_Outage_Duration := 60;                 # Average duration of an outage [min]
+param: National_Grid_Specific_CO2_emissions := 0.243;       # Specific CO2 emissions  by the considered national grid [kgCO2/kWh]
 
 param: Lost_Load_Fraction := 0.0;                           # Maximum admittable loss of load [-]
 param: Lost_Load_Specific_Cost := 0.0;                      # Value of the unmet load [USD/Wh]
 
 
 param: RES_Colors :=                                        # HEX color code for RES in the plots
-1      'FF8800';
+1      'FF8800'
+2      '43AA8B';
 param: Battery_Color := '4CC9F0';                           # HEX color code for the battery bank in the plots 
 param: Generator_Colors :=                                  # HEX color code for generators in the plots
 1      '00509D';
 param: Lost_Load_Color := 'F21B3F';                         # HEX color code for lost load in the plots
 param: Curtailment_Color := 'FFD500';                       # HEX color code for curtailment in the plots
-param: Energy_To_Grid_Color := '008000';                       # HEX color code for curtailment in the plots
-param: Energy_From_Grid_Color := '800080';                       # HEX color code for curtailment in the plots
+param: Energy_To_Grid_Color := '008000';                    # HEX color code for curtailment in the plots
+param: Energy_From_Grid_Color := '800080';                  # HEX color code for curtailment in the plots

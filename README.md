@@ -1,4 +1,4 @@
-MicroGridsPy - On-Grid Version
+MicroGridsPy - Version 2.0
 ========================
 
 ### Description
@@ -7,36 +7,26 @@ The MicroGridsPy model main objective is to provide an open-source alternative t
 
 Main features:
 
-    Optimal sizing of Lion-Ion batteries, diesel generators and PV panels in order to supply a demand with the lowest cost possible.
-    Optimal dispatch from different energy sources.
-    Calculation of the net present cost of the system for the project lifetime.
-    Determination of the LCOE for the optimal system.
+    Optimal sizing of PV panels, wind turbines, other renewable technologies, back-up genset and electrochemical storage system for least cost electricity supply in rural isolated areas.
+    Optimal dispatch from the identified supply systems.
+    Possibility to optimize on NPC or operation costs.
+    LCOE evaluation for the identified system.
+    
+Possible features:
 
-
-### Main developers
-
-Sergio Balderrana <br/>
-University of Liege, Belgium - Universidad Mayor de San Simon, Bolivia <br/>
-E-mail: slbalderrama@doct.ulg.ac.be <br/>
-
-Sylvain Quoilin <br/>
-University of Liege, Belgium <br/>
-E-mail: squoilin@ulg.ac.be  <br/>
-
-*TEACHING VERSION*<br/>
-Francesco Lombardi, Giulia Guidicini, Lorenzo Rinaldi, Nicolò Stevanato <br/>
-Politecnico di Milano, Italy <br/>
-E-mail: lorenzo.rinaldi@polimi.it <br/>
-        francesco.lombardi@polimi.it <br/>
+    Two-stage stochastic optimization.
+    Multi-year evolving load demand and multi-step capacity expansion.
+    Possibility of connecting to the national grid.
+    Two-objective optimization (economic and environmental objective functions).
+    Brownfield optimization.
+    Built-in load archetypes for rural users.
+    Endogenous calculation of renewable energy sources production.
+	
  
 ### Required libraries
 
-The python libraries needed to run Micro-Grids are the following:
-
-    -Pyomo Optimization object library, interface to LP solver (e.g. CPLEX)
-    -Pandas for input and result data handling
-    -Matplotlib for plotting
-
+In the current repository under the Environments branch MAC OS and Windows environment made available.
+Works with Gurobi, CPLEX, cbc, glpk.
 
 ### Licence
 This is a free software licensed under the “European Union Public Licence" EUPL v1.1. It 
@@ -44,5 +34,5 @@ can be redistributed and/or modified under the terms of this license.
 
 ### Getting started
 
-To start using the Micro-Grid library please Go to Documentation/_build/html and double click in the archive index.html. This will open a Documention in html format. Please read carefully the tutorial part of this documentation in order to understand how to setup and use Micro-Grids library.
+Run from the main file "Micro-Grids.py". In the folder "Inputs" all the required inputs can be provided.
 
