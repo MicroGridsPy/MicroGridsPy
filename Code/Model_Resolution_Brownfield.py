@@ -276,7 +276,7 @@ def Model_Resolution_Brownfield(model, Optimization_Goal, MultiObjective_Optimiz
             print ('\nNPC [kUSD] =' +str(f1_l))
             print ('\nCO2 emission [ton] =' +str(f2_l))
             CO2=(CO2emission_max-CO2emission_min)/1e3
-            NPC=NPC_max-NPC_min  
+            NPC=f1_l[0]*1000-NPC_min 
             print('Cost CO2 avoided [USD/ton] =' +str(round(NPC/CO2,3))) 
             plt.plot(f1_l, f2_l, 'o-', c='r', label='Pareto optimal front')
             plt.legend(loc='best')
