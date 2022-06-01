@@ -77,13 +77,9 @@ def Investment_Cost(model):
                     for (yt,ut) in tup_list) for g in model.generator_types)  
     Inv_Bat = ((model.Battery_Nominal_Capacity[1]*model.Battery_Specific_Investment_Cost)
                     + sum((((model.Battery_Nominal_Capacity[ut] - model.Battery_Nominal_Capacity[ut-1])*model.Battery_Specific_Investment_Cost))/((1+model.Discount_Rate)**(yt-1))
-                    for (yt,ut) in tup_list))
-    if model.Grid_Connection == 0:
-        Inv_Grid = 0
-    else:
-        Inv_Grid = (model.Grid_Connection_Cost*model.Grid_Distance)/((1+model.Discount_Rate)**(model.Year_Grid_Connection-1)) 
+                    for (yt,ut) in tup_list)) 
     
-    return model.Investment_Cost == Inv_Ren + Inv_Gen + Inv_Bat + Inv_Grid   
+    return model.Investment_Cost == Inv_Ren + Inv_Gen + Inv_Bat    
 
 def Investment_Cost_Limit(model):
     return model.Investment_Cost <= model.Investment_Cost_Limit
@@ -97,9 +93,7 @@ def Operation_Maintenance_Cost_Act(model):
                     1+model.Discount_Rate)**yt)for (yt,ut) in model.years_steps)for g in model.generator_types)
     OyM_Bat = sum((model.Battery_Nominal_Capacity[ut]*model.Battery_Specific_Investment_Cost*model.Battery_Specific_OM_Cost)/((
                     1+model.Discount_Rate)**yt)for (yt,ut) in model.years_steps)
-    OyM_Grid = sum((model.Grid_Connection_Cost*model.Grid_Distance*model.Grid_Maintenance_Cost*model.Grid_Connection)/((
-                    1+model.Discount_Rate)**yt) for yt in model.years_grid_connection)
-    return model.Operation_Maintenance_Cost_Act == OyM_Ren + OyM_Gen + OyM_Bat + OyM_Grid
+    return model.Operation_Maintenance_Cost_Act == OyM_Ren + OyM_Gen + OyM_Bat 
 
 
 def Operation_Maintenance_Cost_NonAct(model):
@@ -109,8 +103,7 @@ def Operation_Maintenance_Cost_NonAct(model):
                     for (yt,ut) in model.years_steps)for g in model.generator_types)
     OyM_Bat = sum((model.Battery_Nominal_Capacity[ut]*model.Battery_Specific_Investment_Cost*model.Battery_Specific_OM_Cost)
                     for (yt,ut) in model.years_steps)
-    OyM_Grid = sum((model.Grid_Connection_Cost*model.Grid_Distance*model.Grid_Maintenance_Cost*model.Grid_Connection) for yt in model.years_grid_connection)
-    return model.Operation_Maintenance_Cost_NonAct == OyM_Ren + OyM_Gen + OyM_Bat + OyM_Grid
+    return model.Operation_Maintenance_Cost_NonAct == OyM_Ren + OyM_Gen + OyM_Bat 
 
 
 "Variable costs"

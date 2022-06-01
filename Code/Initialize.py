@@ -45,6 +45,8 @@ for i in range(len(Data_import)):
         average_outage_duration = int((re.findall('\d+',Data_import[i])[0]))
     if "param: Grid_Connection " in Data_import[i]:      
         grid_connection = int((re.findall('\d+',Data_import[i])[0]))
+    if "param: Grid_Availability_Simulation" in Data_import[i]:      
+        grid_availability_simulation = int((re.findall('\d+',Data_import[i])[0]))
     if "param: Year_Grid_Connection " in Data_import[i]:      
         year_grid_connection = int((re.findall('\d+',Data_import[i])[0]))
     if "param: Grid_Connection_Type" in Data_import[i]:      
@@ -185,9 +187,12 @@ def Initialize_Battery_Minimum_Capacity(model,ut):
 def Initialize_Generator_Marginal_Cost(model,s,y,g):
     return model.Fuel_Specific_Cost[g]/(model.Fuel_LHV[g]*model.Generator_Efficiency[g])
 
+if grid_availability_simulation == 1:
+    grid_availability(average_n_outages, average_outage_duration, n_years, year_grid_connection)
+
 #initialize grid availability
 if grid_connection:  
-    availability = grid_availability(average_n_outages, average_outage_duration, n_years, year_grid_connection) 
+    availability = pd.read_excel('Inputs/Grid_availability.xlsx') 
 else:
     availability = pd.concat([pd.DataFrame(np.zeros(n_years)).T for ii in range(8760)])
     availability.set_axis([ii for ii in range(8760)], axis='index')

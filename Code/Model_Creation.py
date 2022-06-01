@@ -38,6 +38,7 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independence):
     model.RES_Sources     = Param(within=NonNegativeReals)
     model.Generator_Types = Param(within=NonNegativeReals)
     model.Grid_Connection = Param(within=NonNegativeReals)
+    model.Grid_Availability_Simulation = Param(within=NonNegativeReals)
     model.Year_Grid_Connection = Param(within=NonNegativeReals)                     
     model.RE_Supply_Calculation = Param(within=NonNegativeReals)
     model.Demand_Profile_Generation = Param(within=NonNegativeReals)

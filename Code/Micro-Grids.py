@@ -4,15 +4,6 @@ MicroGridsPy - Multi-year capacity-expansion (MYCE)
 Linear Programming framework for microgrids least-cost sizing,
 able to account for time-variable load demand evolution and capacity expansion.
 
-Authors: 
-    Giulia Guidicini   - Department of Energy, Politecnico di Milano 
-    Lorenzo Rinaldi    - Department of Energy, Politecnico di Milano
-    Nicolò Stevanato   - Department of Energy, Politecnico di Milano / Fondazione Eni Enrico Mattei
-    Francesco Lombardi - Department of Energy, Politecnico di Milano
-    Emanuela Colombo   - Department of Energy, Politecnico di Milano
-Based on the original model by:
-    Sergio Balderrama  - Department of Mechanical and Aerospace Engineering, University of Liège / San Simon University, Centro Universitario de Investigacion en Energia
-    Sylvain Quoilin    - Department of Mechanical Engineering Technology, KU Leuven
 """
 
 import time
@@ -30,7 +21,7 @@ model = AbstractModel()     # Define type of optimization problem
 #%% Input parameters
 Optimization_Goal = 'NPC'           # Options: NPC / Operation cost. It allows to switch between a NPC-oriented optimization and a NON-ACTUALIZED Operation Cost-oriented optimization
 MultiObjective_Optimization = 'yes'  # yes if optimization of NPC/operation cost and CO2 emissions,no otherwise
-Brownfield_Investment = 1           # 1 if Brownfield investment, 0 Greenfield investment
+Brownfield_Investment = 0           # 1 if Brownfield investment, 0 Greenfield investment
 Plot_maxCost = 1                     # 1 if the Pareto curve has to include the point at maxNPC/maxOperationCost, 0 otherwise
 Renewable_Penetration = 0           # Fraction of electricity produced by renewable sources. Number from 0 to 1.
 Battery_Independence  = 0           # Number of days of battery independence
