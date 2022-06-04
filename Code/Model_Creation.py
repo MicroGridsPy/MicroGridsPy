@@ -142,8 +142,11 @@ def Model_Creation(model, Renewable_Penetration,Battery_Independence):
     model.Grid_Average_Number_Outages  = Param(within=NonNegativeReals) 
     model.Grid_Average_Outage_Duration = Param(within=NonNegativeReals)                
     model.Grid_Connection_Type         = Param(within=NonNegativeReals)
-    model.National_Grid_Specific_CO2_emissions = Param(within=NonNegativeReals)   
- 
+    model.National_Grid_Specific_CO2_emissions = Param(within=NonNegativeReals)
+    model.National_Grid_Investment_Cost = Param(within=NonNegativeReals, 
+                                                initialize=Initialize_National_Grid_Inv_Cost)
+    model.National_Grid_OM_Cost = Param(within=NonNegativeReals, 
+                                                initialize=Initialize_National_Grid_OM_Cost)
     "Parameters of the electricity balance"                  
     model.Energy_Demand           = Param(model.scenarios, 
                                           model.years, 

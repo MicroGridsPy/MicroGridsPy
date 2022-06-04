@@ -21,7 +21,7 @@ model = AbstractModel()     # Define type of optimization problem
 #%% Input parameters
 Optimization_Goal = 'NPC'           # Options: NPC / Operation cost. It allows to switch between a NPC-oriented optimization and a NON-ACTUALIZED Operation Cost-oriented optimization
 MultiObjective_Optimization = 'yes'  # yes if optimization of NPC/operation cost and CO2 emissions,no otherwise
-Brownfield_Investment = 0           # 1 if Brownfield investment, 0 Greenfield investment
+Brownfield_Investment = 1           # 1 if Brownfield investment, 0 Greenfield investment
 Plot_maxCost = 1                     # 1 if the Pareto curve has to include the point at maxNPC/maxOperationCost, 0 otherwise
 Renewable_Penetration = 0           # Fraction of electricity produced by renewable sources. Number from 0 to 1.
 Battery_Independence  = 0           # Number of days of battery independence
@@ -43,13 +43,13 @@ Results    = ResultsSummary(instance, Optimization_Goal, TimeSeries)
 
 #%% Plot and print-out
 PlotScenario = 1                     # Plot scenario
-PlotDate = '01/01/2019 00:00:00'     # Month-Day-Year. If devoid of meaning: Day-Month-Year
+PlotDate = '01/01/2021 00:00:00'     # Month-Day-Year. If devoid of meaning: Day-Month-Year
 PlotTime = 3                         # Number of days to be shown in the plot
 PlotFormat = 'png'                   # Desired extension of the saved file (Valid formats: png, svg, pdf)
 PlotResolution = 400                 # Plot resolution in dpi (useful only for .png files, .svg and .pdf output a vector plot)
 
 PlotScenario1 = 1                    # Plot scenario
-PlotDate1 = '01/01/2025 00:00:00'    # Month-Day-Year. If devoid of meaning: Day-Month-Year
+PlotDate1 = '01/01/2026 00:00:00'    # Month-Day-Year. If devoid of meaning: Day-Month-Year
 PlotTime1 = 3                        # Number of days to be shown in the plot
 PlotFormat1 = 'png'                  # Desired extension of the saved file (Valid formats: png, svg, pdf)
 PlotResolution1 = 400                # Plot resolution in dpi (useful only for .png files, .svg and .pdf output a vector plot)
@@ -61,7 +61,7 @@ PlotFormat2 = 'png'                  # Desired extension of the saved file (Vali
 PlotResolution2 = 400                # Plot resolution in dpi (useful only for .png files, .svg and .pdf output a vector plot)
 
 PlotScenario3 = 1                    # Plot scenario
-PlotDate3 = '01/01/2038 00:00:00'    # Month-Day-Year. If devoid of meaning: Day-Month-Year
+PlotDate3 = '01/01/2037 00:00:00'    # Month-Day-Year. If devoid of meaning: Day-Month-Year
 PlotTime3 = 3                        # Number of days to be shown in the plot
 PlotFormat3 = 'png'                  # Desired extension of the saved file (Valid formats: png, svg, pdf)
 PlotResolution3 = 400                # Plot resolution in dpi (useful only for .png files, .svg and .pdf output a vector plot)

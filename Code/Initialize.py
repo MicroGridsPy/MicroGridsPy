@@ -226,3 +226,27 @@ elif grid_connection_type == "Purchase":
 
 def Initialize_Grid_Connection_Type(model):
     return grid_connection_type
+
+def Initialize_National_Grid_Inv_Cost(model):
+    Grid_Connection_Specific_Cost = model.Grid_Connection_Cost  
+    Grid_Distance = model.Grid_Distance  
+    return Grid_Distance[None]*Grid_Connection_Specific_Cost[None]* model.Grid_Connection[None]/((1+model.Discount_Rate)**(model.Year_Grid_Connection-1))
+    
+def Initialize_National_Grid_OM_Cost(model):
+    Grid_Connection_Specific_Cost = model.Grid_Connection_Cost  
+    Grid_Distance = model.Grid_Distance
+    Grid_Maintenance_Cost = model.Grid_Maintenance_Cost
+    Grid_OM_Cost=(Grid_Connection_Specific_Cost * model.Grid_Connection * Grid_Distance)* Grid_Maintenance_Cost
+    Grid_Fixed_Cost = pd.DataFrame()
+    g_fc = 0
+    for y in year:
+        if y < model.Year_Grid_Connection[None]:
+            g_fc += (0)/((1+model.Discount_Rate)**(y))
+        else:
+            g_fc += (Grid_OM_Cost)/((1+model.Discount_Rate)**(y))
+    grid_fc = pd.DataFrame(['Fixed cost', 'National Grid', '-', 'kUSD', g_fc]).T.set_index([0,1,2,3]) 
+    grid_fc.columns = ['Total']
+    grid_fc.index.names = ['Cost item', 'Component', 'Scenario', 'Unit']
+    Grid_Fixed_Cost = pd.concat([Grid_Fixed_Cost, grid_fc], axis=1).fillna(0) 
+    Grid_Fixed_Cost = Grid_Fixed_Cost.groupby(level=[0], axis=1, sort=False).sum()
+    return Grid_Fixed_Cost.iloc[0]['Total']

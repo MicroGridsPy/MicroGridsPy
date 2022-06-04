@@ -225,7 +225,7 @@ def Model_Resolution_Brownfield(model, Optimization_Goal, MultiObjective_Optimiz
             print('Calling solver...')
             opt.solve(instance, tee=True)
             print('Instance solved') 
-            NPC_min = value(instance.ObjectiveFuntion)
+            NPC_min = value(instance.ObjectiveFuntion)+value(instance.National_Grid_Investment_Cost)+value(instance.National_Grid_OM_Cost)
             CO2emission_max = value(instance.ObjectiveFuntion1)
             print('NPC_min [kUSD] =' +str(NPC_min/1e3),'CO2emission_max [ton] =' +str(CO2emission_max/1e3))
            
@@ -237,7 +237,7 @@ def Model_Resolution_Brownfield(model, Optimization_Goal, MultiObjective_Optimiz
             print('Calling solver...')
             opt.solve(instance, tee=True)
             print('Instance solved') 
-            NPC_max = value(instance.ObjectiveFuntion)
+            NPC_max = value(instance.ObjectiveFuntion)+value(instance.National_Grid_Investment_Cost)+value(instance.National_Grid_OM_Cost)
             CO2emission_min = value(instance.ObjectiveFuntion1)
             print('NPC_max [kUSD] =' +str(NPC_max/1e3),'CO2emission_min [ton] =' +str(CO2emission_min/1e3))
             r=CO2emission_max-CO2emission_min
@@ -264,10 +264,10 @@ def Model_Resolution_Brownfield(model, Optimization_Goal, MultiObjective_Optimiz
                print('Calling solver...')
                results = opt.solve(instance, tee=True) # Solving a model instance
                print('Instance solved')  # Loading solution into instance
-               f1_l.append(value(instance.f1)/1e3)
+               f1_l.append((value(instance.f1)+value(instance.National_Grid_Investment_Cost)+value(instance.National_Grid_OM_Cost))/1e3)
                f2_l.append(value(instance.f2)/1e3)
                instance.solutions.load_from(results)
-               print('NPC [kUSD] = ' +str(value(instance.f1)/1e3),'CO2 emission [ton] = ' +str(value(instance.f2)/1e3))
+               print('NPC [kUSD] = ' +str((value(instance.f1)+value(instance.National_Grid_Investment_Cost)+value(instance.National_Grid_OM_Cost))/1e3),'CO2 emission [ton] = ' +str(value(instance.f2)/1e3))
 
             if len(f1_l)<n:
                 f1_l.append(NPC_min/1e3)
@@ -301,7 +301,7 @@ def Model_Resolution_Brownfield(model, Optimization_Goal, MultiObjective_Optimiz
             results = opt.solve(instance, tee=True) # Solving a model instance
             print('Instance solved')  # Loading solution into instance
             instance.solutions.load_from(results)
-            print('NPC [kUSD] = ' +str(value(instance.f1)/1e3),'CO2 emission [ton] = ' +str(value(instance.f2)/1e3))
+            print('NPC [kUSD] = ' +str((value(instance.f1)+value(instance.National_Grid_Investment_Cost)+value(instance.National_Grid_OM_Cost))/1e3),'CO2 emission [ton] = ' +str(value(instance.f2)/1e3))
             return instance
         
         elif Optimization_Goal == 'Operation cost':
