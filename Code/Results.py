@@ -342,22 +342,13 @@ def EnergySystemCost(instance, Optimization_Goal):
     Grid_Connection_Specific_Cost = instance.Grid_Connection_Cost.extract_values()  
     Grid_Distance = instance.Grid_Distance.extract_values()   
     Grid_Investment_Cost = pd.DataFrame()
-    gr_inv = Grid_Distance[None]*Grid_Connection_Specific_Cost[None]* instance.Grid_Connection.extract_values()[None]
+    gr_inv = Grid_Distance[None]*Grid_Connection_Specific_Cost[None]* instance.Grid_Connection.extract_values()[None]/((1+Discount_Rate)**(instance.Year_Grid_Connection.value-1))
     grid_inv = pd.DataFrame(['Investment cost', 'National grid', '-', 'kUSD', gr_inv/1e3]).T.set_index([0,1,2,3]) 
     if ST == 1:
         grid_inv.columns = ['Total']
     else:
         grid_inv.columns = ['Step 1']
     Grid_Investment_Cost = pd.concat([Grid_Investment_Cost, grid_inv], axis=1).fillna(0)
-    for (y,st) in tup_list:
-        gr_inv = (Grid_Distance[None]*Grid_Connection_Specific_Cost[None])/((1+Discount_Rate)**(y-1))
-        grid_inv = pd.DataFrame(['Investment cost', 'National Grid', '-', 'kUSD', gr_inv/1e3]).T.set_index([0,1,2,3]) 
-        if ST == 1:
-            grid_inv.columns = ['Total']
-        else:
-            grid_inv.columns = ['Step '+str(st)]
-        grid_inv.index.names = ['Cost item', 'Component', 'Scenario', 'Unit']
-        Grid_Investment_Cost = pd.concat([Grid_Investment_Cost, grid_inv], axis=1).fillna(0)
     Grid_Investment_Cost = Grid_Investment_Cost.groupby(level=[0], axis=1, sort=False).sum()
     grid_inv_tot = Grid_Investment_Cost.sum(1).to_frame()
     grid_inv_tot.columns = ['Total']

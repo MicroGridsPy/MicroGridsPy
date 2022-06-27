@@ -63,7 +63,7 @@ param: Generator_Lifetime :=
 param: Fuel_Names :=                                        # Fuel names (to be specified for each generator, even if they use the same fuel)
 1      'Diesel';
 param: Fuel_Specific_Cost :=                                # Specific fuel cost for each generator type [USD/lt]
-1      1.1;
+1      1.375;
 param: Fuel_LHV :=                                          # Fuel lower heating value (LHV) for each generator type [Wh/lt]
 1	   9840;
 param: Generator_capacity :=                                # Existing Generator capacity [W]
@@ -75,12 +75,12 @@ param: GEN_unit_CO2_emission :=                             # [kgCO2/kW]
 param: FUEL_unit_CO2_emission :=                            # [kgCO2/lt]
 1      3.15;
 
-param: Grid_Connection := 1;                                # 1 to select grid connection during project lifetime, 0 otherwise
-param: Year_Grid_Connection := 10;			                # Year at which microgrid is connected to the national grid (starting from 1)
+param: Grid_Connection := 0;                                # 1 to select grid connection during project lifetime, 0 otherwise
+param: Year_Grid_Connection := 1;			                # Year at which microgrid is connected to the national grid (starting from 1)
 param: Grid_Connection_Type:= 2;	                        # 2 for both sell and purchase, 1 for purchase only
 param: Grid_Sold_El_Price := 0.209;                         # Price at which electricity is sold to the grid [USD/kWh]
 param: Grid_Purchased_El_Price := 0.21;		                # Price at which electricity is purchased from the grid [USD/kWh]
-param: Grid_Distance := 53;				                    # Distance from grid connection point [km]
+param: Grid_Distance := 16;				                    # Distance from grid connection point [km]
 param: Grid_Connection_Cost := 13892;			            # Investment cost of grid connection, i.e. extension of power line + transformer costs [USD/km]
 param: Grid_Maintenance_Cost := 0.02;                       # O&M cost for maintenance of the power line and transformer as a fraction of investment cost [-]
 param: Maximum_Grid_Power := 80;			                # Maximum active power that can be injected/withdrawn to/from the grid [kW]

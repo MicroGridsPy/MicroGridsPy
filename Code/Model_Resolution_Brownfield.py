@@ -221,7 +221,7 @@ def Model_Resolution_Brownfield(model, Optimization_Goal, MultiObjective_Optimiz
             model.ObjectiveFuntion1.deactivate()
             instance = model.create_instance(datapath)
             opt = SolverFactory('gurobi')
-            opt.set_options('Method=2 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000') # !! only works with GUROBI solver
+            opt.set_options('Method=2 BarHomogeneous=1 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000')
             print('Calling solver...')
             opt.solve(instance, tee=True)
             print('Instance solved') 
@@ -262,6 +262,7 @@ def Model_Resolution_Brownfield(model, Optimization_Goal, MultiObjective_Optimiz
                instance.e = i
                #print(value(instance.e))
                print('Calling solver...')
+               opt.set_options('Method=2 BarHomogeneous=1 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000')
                results = opt.solve(instance, tee=True) # Solving a model instance
                print('Instance solved')  # Loading solution into instance
                f1_l.append((value(instance.f1)+value(instance.National_Grid_Investment_Cost)+value(instance.National_Grid_OM_Cost))/1e3)
@@ -320,7 +321,7 @@ def Model_Resolution_Brownfield(model, Optimization_Goal, MultiObjective_Optimiz
             model.ObjectiveFuntion1.deactivate()
             instance = model.create_instance(datapath)
             opt = SolverFactory('gurobi')
-            opt.set_options('Method=2 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000') # !! only works with GUROBI solver
+            opt.set_options('Method=2 BarHomogeneous=1 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000')
             print('Calling solver...')
             opt.solve(instance, tee=True)
             print('Instance solved') 
@@ -362,6 +363,7 @@ def Model_Resolution_Brownfield(model, Optimization_Goal, MultiObjective_Optimiz
                instance.e = i
                #print(value(instance.e))
                print('Calling solver...')
+               opt.set_options('Method=2 BarHomogeneous=1 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000')
                results = opt.solve(instance, tee=True) # Solving a model instance
                print('Instance solved')  # Loading solution into instance
                f1_l.append(value(instance.f1)/1e3)
