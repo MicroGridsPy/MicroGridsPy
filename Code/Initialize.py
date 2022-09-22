@@ -108,7 +108,7 @@ if RE_Supply_Calculation:
 else:
    Renewable_Energy = pd.read_excel('Inputs/Renewable_Energy.xlsx')   
 if Demand_Profile_Generation:
-   Demand = demand_generation() 
+   Demand = demand_generation(n_years) 
 else:
    Demand = pd.read_excel('Inputs/Demand.xlsx')
        

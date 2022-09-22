@@ -115,22 +115,22 @@ def demand_calculation():
     return load_total
     
     #%% Export results to excel
-def excel_export(load):
+def excel_export(load, n_years):
     
-    load = load.set_axis(np.arange(1,21), axis=1, inplace=False)
+    load = load.set_axis(np.arange(1,n_years+1), axis=1, inplace=False)
     
     load.to_excel("Inputs/Demand.xlsx")
 
 
 #%% Calculates and export the load demand  time series of households and services for 20 years to Demand.xlsx
 
-def demand_generation():
+def demand_generation(n_years):
     start = time.time()
         
     print("Load demand calculation started, please remember to close Demand.xlsx... \n")
     load_tot = demand_calculation()
-    load_tot = load_tot.set_axis(np.arange(1,21), axis=1, inplace=False)
-    excel_export(load_tot)
+    load_tot = load_tot.set_axis(np.arange(1,n_years+1), axis=1, inplace=False)
+    excel_export(load_tot, n_years)
     
     
     end = time.time()
@@ -140,5 +140,5 @@ def demand_generation():
 
 if __name__ == "__Demand__":
     demand_calculation()
-    demand_generation()
+    demand_generation(n_years)
 
