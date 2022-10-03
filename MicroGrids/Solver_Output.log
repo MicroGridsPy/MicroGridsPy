@@ -28,11 +28,11 @@ CPLEX> New value for mixed integer optimality gap tolerance: 0.05
 
 CPLEX> New value for time limit in seconds: 36000
 
-CPLEX> Problem 'C:\Users\jhonnyvs\AppData\Local\Temp\tmpikkrs5zc.pyomo.lp' read.
+CPLEX> Problem 'C:\Users\jhonnyvs\AppData\Local\Temp\tmp2qne8m2m.pyomo.lp' read.
 
-Read time = 0.44 sec. (12.87 ticks)
+Read time = 0.27 sec. (12.87 ticks)
 
-CPLEX> Problem name         : C:\Users\jhonnyvs\AppData\Local\Temp\tmpikkrs5zc.pyomo.lp
+CPLEX> Problem name         : C:\Users\jhonnyvs\AppData\Local\Temp\tmp2qne8m2m.pyomo.lp
 
 Objective sense      : Minimize
 
@@ -74,11 +74,11 @@ Reduced MIP has 76558 rows, 52075 columns, and 195914 nonzeros.
 
 Reduced MIP has 1280 binaries, 6967 generals, 0 SOSs, and 0 indicators.
 
-Presolve time = 1.50 sec. (789.68 ticks)
+Presolve time = 1.20 sec. (789.68 ticks)
 
-Found incumbent of value 313866.288237 after 2.41 sec. (1233.70 ticks)
+Found incumbent of value 222949.357341 after 1.94 sec. (1233.70 ticks)
 
-Probing time = 0.02 sec. (2.80 ticks)
+Probing time = 0.08 sec. (2.80 ticks)
 
 Tried aggregator 1 time.
 
@@ -86,9 +86,9 @@ Reduced MIP has 76558 rows, 52075 columns, and 195914 nonzeros.
 
 Reduced MIP has 1280 binaries, 6967 generals, 0 SOSs, and 0 indicators.
 
-Presolve time = 0.33 sec. (126.55 ticks)
+Presolve time = 0.27 sec. (126.55 ticks)
 
-Probing time = 0.03 sec. (2.82 ticks)
+Probing time = 0.02 sec. (2.82 ticks)
 
 MIP emphasis: balance optimality and feasibility.
 
@@ -96,7 +96,7 @@ MIP search method: dynamic search.
 
 Parallel mode: deterministic, using up to 4 threads.
 
-Root relaxation solution time = 4.05 sec. (1745.98 ticks)
+Root relaxation solution time = 4.53 sec. (1322.09 ticks)
 
 
 
@@ -106,98 +106,156 @@ Root relaxation solution time = 4.05 sec. (1745.98 ticks)
 
 
 
-*     0+    0                       313866.2882   110125.7160            64.91%
+*     0+    0                       222949.3573   110125.7160            50.61%
 
-      0     0   152977.6720  7902   313866.2882   152977.6720       35   51.26%
+      0     0   147526.5768  6587   222949.3573   147526.5768       36   33.83%
 
-      0     0   157978.5358  7808   313866.2882   Cuts: 10000    17317   49.67%
+*     0+    0                       209891.8726   147526.5768            29.71%
 
-      0     0   160338.0380  6008   313866.2882    Cuts: 9975    26466   48.92%
+      0     0   151989.3052  5954   209891.8726   Cuts: 10000    14783   27.59%
 
-      0     0   161019.5546  4968   313866.2882    Cuts: 9836    32983   48.70%
+      0     0   153485.4298  4007   209891.8726    Cuts: 9996    22076   26.87%
 
-      0     0   161135.5205  4476   313866.2882    Cuts: 9368    35393   48.66%
+      0     0   153804.7338  3208   209891.8726    Cuts: 9803    27408   26.72%
 
-      0     0   161143.3458  4404   313866.2882    Cuts: 9090    35917   48.66%
+      0     0   153849.9620  3161   209891.8726    Cuts: 9248    28454   26.70%
 
-      0     0   161145.3927  4403   313866.2882    Cuts: 8261    36018   48.66%
+      0     0   153853.9265  3159   209891.8726    Cuts: 4274    28567   26.70%
 
-      0     0   161146.6873  4408   313866.2882    Cuts: 8246    36111   48.66%
+      0     0   153856.6640  3159   209891.8726    Cuts: 7023    28654   26.70%
 
 Heuristic still looking.
 
-      0     2   161146.6873  4408   313866.2882   161146.6873    36111   48.66%
+      0     2   153856.6640  3159   209891.8726   153856.6640    28654   26.70%
 
-Elapsed time = 144.67 sec. (55046.15 ticks, tree = 0.01 MB, solutions = 1)
+Elapsed time = 160.94 sec. (71446.77 ticks, tree = 0.01 MB, solutions = 2)
 
-     33    25   161150.5186  4402   313866.2882   161147.1520    36271   48.66%
+      4     6   153860.2063  3154   209891.8726   153856.6850    29024   26.70%
 
-     78    75   161173.4868  4381   313866.2882   161147.1520    36368   48.66%
+      7     9   157665.2161  3422   209891.8726   153856.6850    39784   26.70%
 
-    104   101   161155.8934  4396   313866.2882   161147.1520    36478   48.66%
+      9     4   155605.5855  3539   209891.8726   153856.6850    35701   26.70%
 
-    125   120   161181.0360  4375   313866.2882   161147.1520    36624   48.66%
+     13    12   156833.2572  3994   209891.8726   153858.5043    52700   26.70%
 
-    149   140   161185.0746  4372   313866.2882   161147.1520    36838   48.66%
+     16    15   156836.3639  3991   209891.8726   153858.5043    52845   26.70%
 
-    172   166   161167.2471  4388   313866.2882   161147.1520    37066   48.66%
+     18    17   156836.3342  3992   209891.8726   153858.5043    52971   26.70%
 
-    193   186   161192.4176  4367   313866.2882   161147.1520    37202   48.66%
+     22    21   156839.6489  3990   209891.8726   153858.5043    53020   26.70%
 
-    217   202   161174.4713  4382   313866.2882   161147.1520    37310   48.66%
+     26     5   157255.2231  3445   209891.8726   153858.5043    38027   26.70%
 
-    271   239   161211.9007  4346   313866.2882   161147.1520    37439   48.66%
+     30    29   158159.8544  2515   209891.8726   153859.5079    67118   26.70%
 
-    536   507   161266.8134  4277   313866.2882   161147.1520    37779   48.66%
+*    35+   29                       163651.9119   153859.5079             5.98%
 
-Elapsed time = 155.89 sec. (58229.88 ticks, tree = 10.19 MB, solutions = 1)
+     36    13   157721.1339  3417   163651.9119   153859.5079    50557    5.98%
 
-*   690+  652                       164864.8725   161147.1520             2.26%
+Elapsed time = 209.77 sec. (81132.23 ticks, tree = 6.51 MB, solutions = 3)
 
-*   690+  639                       164864.8678   161147.1520             2.26%
+     39    35   157232.2101  3444   163651.9119   153859.5079    79609    5.98%
+
+     45    16   163142.6114  2246   163651.9119   153859.5079    76819    5.98%
+
+     46    42   160238.2683  2883   163651.9119   153859.5079    90007    5.98%
+
+     50    49   157743.3099  3413   163651.9119   153863.7498   134479    5.98%
+
+     59    59   153869.4247  3138   163651.9119   153866.2409   162792    5.98%
+
+     75    64   153869.8018  3133   163651.9119   153866.2409   162799    5.98%
+
+     89    58   163163.1166  2223   163651.9119   153866.2409   172121    5.98%
+
+    103    97   160129.9387  3101   163651.9119   153867.7454   201882    5.98%
+
+    122   101   153873.4122  3119   163651.9119   153867.8041   206692    5.98%
+
+    127    80   159292.3967  3408   163651.9119   153867.8041   192855    5.98%
+
+Elapsed time = 245.36 sec. (92960.42 ticks, tree = 12.52 MB, solutions = 3)
+
+    146   114   160755.2103  3076   163651.9119   153869.4725   248567    5.98%
+
+    150   119   163197.6041  2147   163651.9119   153869.4725   213475    5.98%
+
+    166   130   160639.9077  3078   163651.9119   153869.4725   305544    5.98%
+
+    177   162   163211.6275  2085   163651.9119   153869.4725   290720    5.98%
+
+    196   177   163216.8081  2073   163651.9119   153869.4725   304469    5.98%
+
+    219   192   163223.8789  1965   163651.9119   153869.4725   305050    5.98%
+
+    247   190   157411.7019  3171   163651.9119   153869.4725   379492    5.98%
+
+    268   253   163243.0753  1930   163651.9119   153869.4725   392100    5.98%
+
+    291   262   163248.0490  1921   163651.9119   153869.4725   392243    5.98%
+
+    307   293   163252.0532  1914   163651.9119   153869.4725   429678    5.98%
+
+Elapsed time = 284.58 sec. (103380.92 ticks, tree = 47.15 MB, solutions = 3)
+
+    333   311   163258.8761  1898   163651.9119   153869.4725   429948    5.98%
+
+    362   328   163266.8170  1882   163651.9119   153869.4725   430264    5.98%
+
+    383   373   163273.9396  1865   163651.9119   153869.4725   478651    5.98%
+
+    392   379   163280.6563  1859   163651.9119   153869.4725   478688    5.98%
+
+*   403+  314                       161450.3727   153869.4725             4.70%
+
+    409   396   163285.6729  1842   161450.3727   153869.4725   478804    4.70%
+
+    424   410   163288.9735  1827   161450.3727   153869.4725   478888    4.70%
+
+    425   323   153898.4336  3080   161450.3727   153869.4725   483365    4.70%
 
 
 
-Flow cuts applied:  740
+Flow cuts applied:  29
 
-Mixed integer rounding cuts applied:  25304
+Mixed integer rounding cuts applied:  24937
 
-Gomory fractional cuts applied:  319
+Gomory fractional cuts applied:  86
 
 
 
 Root node processing (before b&c):
 
-  Real time             =  144.47 sec. (55004.44 ticks)
+  Real time             =  160.72 sec. (71406.12 ticks)
 
 Parallel b&c, 4 threads:
 
-  Real time             =   17.31 sec. (5163.87 ticks)
+  Real time             =  154.59 sec. (42517.76 ticks)
 
-  Sync time (average)   =    1.42 sec.
+  Sync time (average)   =   22.01 sec.
 
   Wait time (average)   =    0.06 sec.
 
                           ------------
 
-Total (root+branch&cut) =  161.78 sec. (60168.31 ticks)
+Total (root+branch&cut) =  315.31 sec. (113923.88 ticks)
 
 
 
-Solution pool: 5 solutions saved.
+Solution pool: 4 solutions saved.
 
 
 
-MIP - Integer optimal, tolerance (0.05/1e-06):  Objective =  1.6486486779e+05
+MIP - Integer optimal, tolerance (0.05/1e-06):  Objective =  1.6145037273e+05
 
-Current MIP best bound =  1.6114715201e+05 (gap = 3717.72, 2.26%)
+Current MIP best bound =  1.5386947246e+05 (gap = 7580.9, 4.70%)
 
-Solution time =  161.78 sec.  Iterations = 38000  Nodes = 690 (691)
+Solution time =  315.31 sec.  Iterations = 521437  Nodes = 426 (218)
 
-Deterministic time = 60168.59 ticks  (371.91 ticks/sec)
+Deterministic time = 113924.16 ticks  (361.31 ticks/sec)
 
 
 
-CPLEX> Incumbent solution written to file 'C:\Users\jhonnyvs\AppData\Local\Temp\tmp5nhoodwr.cplex.sol'.
+CPLEX> Incumbent solution written to file 'C:\Users\jhonnyvs\AppData\Local\Temp\tmpzj60wooj.cplex.sol'.
 
 CPLEX> 
