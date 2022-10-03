@@ -45,7 +45,7 @@ param: Renewable_Source := 1;
 
 param: Renewable_Invesment_Cost :=
 
-1   	1500 ; #4
+1   	6000 ; #4
 
 param: Renewable_Inverter_Efficiency :=
 
@@ -109,7 +109,7 @@ param: Combustor_Type := 1;
 
 param: Maximum_Fuel :=
 
-1   25;
+1   20;
 
 param: Combustor_Efficiency :=
 

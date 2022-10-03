@@ -74,7 +74,7 @@ def Model_Resolution(model,Renewable_Penetration, Battery_Independency,datapath=
         model.MaximunFuelEnergy = Constraint(model.scenario, model.generator_type,
                                          model.periods, rule=Maximun_Generator_Energy) 
         instance = model.create_instance(datapath) # load parameters       
-        opt = SolverFactory('gurobi') # Solver use during the optimization    
+        opt = SolverFactory('cplex') # Solver use during the optimization    
         results = opt.solve(instance, tee=True) # Solving a model instance 
         instance.solutions.load_from(results)  # Loading solution into instance
         
@@ -87,7 +87,7 @@ def Model_Resolution(model,Renewable_Penetration, Battery_Independency,datapath=
         model.EnergyGenaratorEnergyMax = Constraint(model.scenario, model.generator_type,
                                                 model.periods, rule=Energy_Genarator_Energy_Max_Integer)
         instance = model.create_instance("Example/data_Integer.dat") # load parameters       
-        opt = SolverFactory('gurobi') # Solver use during the optimization    
+        opt = SolverFactory('cplex') # Solver use during the optimization    
 #       opt.options['emphasis_memory'] = 'y'
         opt.options['timelimit'] = 36000
 #        opt.options['StartNodeLimit'] = 10 # 500 Default
@@ -218,7 +218,7 @@ def Model_Resolution_Dispatch(model,datapath="Example/data_Dispatch.dat"):
     
     
     instance = model.create_instance("Example/data_dispatch.dat") # load parameters       
-    opt = SolverFactory('gurobi') # Solver use during the optimization    
+    opt = SolverFactory('cplex') # Solver use during the optimization    
 #    opt.options['emphasis_memory'] = 'y'
 #    opt.options['node_select'] = 3
     results = opt.solve(instance, tee=True,options_string="mipgap=0.005") # Solving a model instance 
