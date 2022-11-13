@@ -1,8 +1,8 @@
 param: Periods := 8760;                                     # Periods considered in one year (8760h/y in the example)
-param: Years := 17;                                         # Total duration of the project
-param: Step_Duration := 17;                                 # Duration (in years) of each investment decision step in which the project lifetime will be split
+param: Years := 20;                                         # Total duration of the project
+param: Step_Duration := 20;                                 # Duration (in years) of each investment decision step in which the project lifetime will be split
 param: Min_Last_Step_Duration := 1;                         # Minimum duration (in years) of the last investment decision step, in case of non-homogeneous divisions of the project lifetime 
-param: StartDate := '01/01/2021 00:00:00';                  # Start date of the project
+param: StartDate := '01/01/2022 00:00:00';                  # Start date of the project
 param: Delta_Time := 1.0;                                   # Time step in hours [do not change]
 param: Scenarios := 1;                                      # Number of scenarios to consider within the optimisation
 param: Scenario_Weight :=                                   # Occurrence probability of each scenario [-]
@@ -22,7 +22,7 @@ param: RES_Names :=                                         # Renewable Energy S
 param: RES_Nominal_Capacity :=                              # Single unit capacity of each type of Renewable Energy Source (RES) [W] 
 1      1000;                                                                                                
 param: RES_Inverter_Efficiency :=                           # Efficiency [%] of the inverter connected to each Renewable Energy Source (RES) (put 1 in case of AC bus)
-1	   0.961;
+1	     0.961;
 param: RES_Specific_Investment_Cost :=                      # Specific investment cost for each type of Renewable Energy Source (RES) [USD/W]
 1      1.06;   
 param: RES_Specific_OM_Cost :=                              # O&M cost for each type of Renewable Energy Source (RES) as a fraction of specific investment cost [%]
