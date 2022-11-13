@@ -21,8 +21,8 @@ model = AbstractModel()     # Define type of optimization problem
 #%% Input parameters
 Optimization_Goal = 'NPC'           # Options: NPC / Operation cost. It allows to switch between a NPC-oriented optimization and a NON-ACTUALIZED Operation Cost-oriented optimization
 MultiObjective_Optimization = 'no'  # yes if optimization of NPC/operation cost and CO2 emissions,no otherwise
-Brownfield_Investment = 1           # 1 if Brownfield investment, 0 Greenfield investment
-Plot_maxCost = 1                     # 1 if the Pareto curve has to include the point at maxNPC/maxOperationCost, 0 otherwise
+Brownfield_Investment = 0           # 1 if Brownfield investment, 0 Greenfield investment
+Plot_maxCost = 0                     # 1 if the Pareto curve has to include the point at maxNPC/maxOperationCost, 0 otherwise
 Renewable_Penetration = 0           # Fraction of electricity produced by renewable sources. Number from 0 to 1.
 Battery_Independence  = 0           # Number of days of battery independence
 
@@ -43,7 +43,7 @@ Results    = ResultsSummary(instance, Optimization_Goal, TimeSeries)
 
 #%% Plot and print-out
 PlotScenario = 1                     # Plot scenario
-PlotDate = '01/01/2021 00:00:00'     # Month-Day-Year. If devoid of meaning: Day-Month-Year
+PlotDate = '01/01/2022 00:00:00'     # Month-Day-Year. If devoid of meaning: Day-Month-Year
 PlotTime = 3                         # Number of days to be shown in the plot
 PlotFormat = 'png'                   # Desired extension of the saved file (Valid formats: png, svg, pdf)
 PlotResolution = 400                 # Plot resolution in dpi (useful only for .png files, .svg and .pdf output a vector plot)
@@ -67,9 +67,9 @@ PlotFormat3 = 'png'                  # Desired extension of the saved file (Vali
 PlotResolution3 = 400                # Plot resolution in dpi (useful only for .png files, .svg and .pdf output a vector plot)
 
 DispatchPlot(instance,TimeSeries,PlotScenario,PlotDate,PlotTime,PlotResolution,PlotFormat)
-DispatchPlot1(instance,TimeSeries,PlotScenario1,PlotDate1,PlotTime1,PlotResolution1,PlotFormat1)
-DispatchPlot2(instance,TimeSeries,PlotScenario2,PlotDate2,PlotTime2,PlotResolution2,PlotFormat2)
-DispatchPlot3(instance,TimeSeries,PlotScenario3,PlotDate3,PlotTime3,PlotResolution3,PlotFormat3)
+#DispatchPlot1(instance,TimeSeries,PlotScenario1,PlotDate1,PlotTime1,PlotResolution1,PlotFormat1)
+#DispatchPlot2(instance,TimeSeries,PlotScenario2,PlotDate2,PlotTime2,PlotResolution2,PlotFormat2)
+#DispatchPlot3(instance,TimeSeries,PlotScenario3,PlotDate3,PlotTime3,PlotResolution3,PlotFormat3)
 #CashFlowPlot(instance,Results,PlotResolution,PlotFormat)
 #SizePlot(instance,Results,PlotResolution,PlotFormat)
 
