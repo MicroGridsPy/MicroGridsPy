@@ -20,9 +20,9 @@ model = AbstractModel()     # Define type of optimization problem
 
 #%% Input parameters
 Optimization_Goal = 'NPC'           # Options: NPC / Operation cost. It allows to switch between a NPC-oriented optimization and a NON-ACTUALIZED Operation Cost-oriented optimization
-MultiObjective_Optimization = 'no'  # yes if optimization of NPC/operation cost and CO2 emissions,no otherwise
+MultiObjective_Optimization = 'no'  # yes if optimization of NPC/operation cost and CO2 emissions, no otherwise
 Brownfield_Investment = 0           # 1 if Brownfield investment, 0 Greenfield investment
-Plot_maxCost = 0                     # 1 if the Pareto curve has to include the point at maxNPC/maxOperationCost, 0 otherwise
+Plot_maxCost = 0                    # 1 if the Pareto curve has to include the point at maxNPC/maxOperationCost, 0 otherwise
 Renewable_Penetration = 0           # Fraction of electricity produced by renewable sources. Number from 0 to 1.
 Battery_Independence  = 0           # Number of days of battery independence
 
@@ -38,7 +38,7 @@ else:
 
 #%% Results
 TimeSeries = TimeSeries(instance)
-Results    = ResultsSummary(instance, Optimization_Goal, TimeSeries) 
+Results    = ResultsSummary(instance, Optimization_Goal, TimeSeries, Brownfield_Investment) 
 
 
 #%% Plot and print-out

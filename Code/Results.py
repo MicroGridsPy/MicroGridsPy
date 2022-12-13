@@ -26,12 +26,12 @@ import warnings; warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 #%% Results summary
-def ResultsSummary(instance, Optimization_Goal, TimeSeries):
+def ResultsSummary(instance, Optimization_Goal, TimeSeries, Brownfield_Investment):
 
     from Results import EnergySystemCost, EnergySystemSize, YearlyCosts, YearlyEnergyParams, YearlyEnergyParamsSC  
     
     print('Results: exporting economic results...')
-    EnergySystemCost = EnergySystemCost(instance, Optimization_Goal)
+    EnergySystemCost = EnergySystemCost(instance, Optimization_Goal, Brownfield_Investment)
     YearlyCost       = YearlyCosts(instance) 
     print('         exporting technical results...')
     EnergySystemSize   = EnergySystemSize(instance)        
@@ -210,7 +210,7 @@ def TimeSeries(instance):
 
     
 #%% Economic output        
-def EnergySystemCost(instance, Optimization_Goal):
+def EnergySystemCost(instance, Optimization_Goal, Brownfield_Investment):
     
     #%% Importing parameters
     S  = int(instance.Scenarios.extract_values()[None])
@@ -258,7 +258,10 @@ def EnergySystemCost(instance, Optimization_Goal):
     RES_Inv_Specific_Cost = instance.RES_Specific_Investment_Cost.extract_values()
     RES_Investment_Cost = pd.DataFrame()
     for r in range(1,R+1):
-        r_inv = (RES_Units[1,r]-RES_units[r])*RES_Nominal_Capacity[r]*RES_Inv_Specific_Cost[r]
+        if Brownfield_Investment == 1:
+            r_inv = (RES_Units[1,r]-RES_units[r])*RES_Nominal_Capacity[r]*RES_Inv_Specific_Cost[r]
+        elif Brownfield_Investment == 0:
+            r_inv = (RES_Units[1,r])*RES_Nominal_Capacity[r]*RES_Inv_Specific_Cost[r]
         res_inv = pd.DataFrame(['Investment cost', RES_Names[r], '-', 'kUSD', r_inv/1e3]).T.set_index([0,1,2,3]) 
         if ST == 1:
             res_inv.columns = ['Total']
@@ -286,7 +289,10 @@ def EnergySystemCost(instance, Optimization_Goal):
     BESS_capacity = instance.Battery_capacity.value
     BESS_Inv_Specific_Cost = instance.Battery_Specific_Investment_Cost.value
     BESS_Investment_Cost = pd.DataFrame()
-    b_inv = (BESS_Nominal_Capacity[1]-BESS_capacity)*BESS_Inv_Specific_Cost
+    if Brownfield_Investment == 1:
+        b_inv = (BESS_Nominal_Capacity[1]-BESS_capacity)*BESS_Inv_Specific_Cost
+    elif Brownfield_Investment == 0:
+        b_inv = (BESS_Nominal_Capacity[1])*BESS_Inv_Specific_Cost
     bess_inv = pd.DataFrame(['Investment cost', 'Battery bank', '-', 'kUSD', b_inv/1e3]).T.set_index([0,1,2,3]) 
     if ST == 1:
         bess_inv.columns = ['Total']
@@ -315,7 +321,10 @@ def EnergySystemCost(instance, Optimization_Goal):
     Generator_capacity = instance.Generator_capacity.extract_values()     
     Generator_Investment_Cost = pd.DataFrame()
     for g in range(1,G+1):
-        g_inv = (Generator_Capacity[1,g]-Generator_capacity[g])*Generator_Inv_Specific_Cost[g]
+        if Brownfield_Investment == 1:
+            g_inv = (Generator_Capacity[1,g]-Generator_capacity[g])*Generator_Inv_Specific_Cost[g]
+        elif Brownfield_Investment == 0:
+            g_inv = (Generator_Capacity[1,g])*Generator_Inv_Specific_Cost[g]
         gen_inv = pd.DataFrame(['Investment cost', Generator_Names[g], '-', 'kUSD', g_inv/1e3]).T.set_index([0,1,2,3]) 
         if ST == 1:
             gen_inv.columns = ['Total']
@@ -508,7 +517,7 @@ def EnergySystemCost(instance, Optimization_Goal):
                                     
     elif Optimization_Goal == 'Operation cost':
         # Total_Variable_Cost_NonAct = instance.ObjectiveFunction.expr()
-        Net_Present_Cost = pd.DataFrame(['Weighted Net present cost', 'System', '-', 'kUSD', (instance.ObjectiveFuntion.expr() + Grid_Investment + Grid_Fixed_Cost.iloc[0]['Total']*1000)/1e3]).T.set_index([0,1,2,3]) 
+        Net_Present_Cost = pd.DataFrame(['Weighted Net present cost', 'System', '-', 'kUSD', ((sum(instance.Scenario_Net_Present_Cost.get_values()[s]*instance.Scenario_Weight.extract_values()[s] for s in range (1,S+1))) + Grid_Investment + Grid_Fixed_Cost.iloc[0]['Total']*1000)/1e3]).T.set_index([0,1,2,3]) 
         Net_Present_Cost.columns = ['Total']
         Net_Present_Cost.index.names = ['Cost item', 'Component', 'Scenario', 'Unit']
     
