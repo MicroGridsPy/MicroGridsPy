@@ -2,6 +2,7 @@ name: mgp
 channels:
   - http://conda.anaconda.org/gurobi
   - defaults
+  - conda-forge
 dependencies:
   - alabaster=0.7.12=py36_0
   - argh=0.26.2=py36_0
@@ -133,6 +134,14 @@ dependencies:
   - zeromq=4.3.1=h33f27b4_3
   - zipp=3.1.0=py_0
   - zlib=1.2.11=h62dcd97_4
+  - geopandas=0.3.0=py36_0  
+  - geopy=1.11.0=py36_0  
+  - networkx=2.1=py36_0
+  - osmnx=0.7.3=py36_0
+  - plotly=3.6.1=py36_0 
+  - scipy=1.5.3=py36h7ff6e69_0
+  - shapely=1.7.1=py36hee554fe_5
+  - scikit-learn=0.24.2=py36hf11a4ad_1
   - pip:
     - appdirs==1.4.4
     - cycler==0.10.0
