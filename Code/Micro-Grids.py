@@ -12,7 +12,7 @@ from Model_Creation import Model_Creation
 from Model_Resolution_Brownfield import Model_Resolution_Brownfield
 from Model_Resolution_Greenfield import Model_Resolution_Greenfield
 from Results import ResultsSummary, TimeSeries, PrintResults
-from Plots import DispatchPlot, DispatchPlot1, DispatchPlot2, DispatchPlot3, CashFlowPlot, SizePlot
+from Plots import DispatchPlot, CashFlowPlot, SizePlot
 
 start = time.time()         # Start time counter
 model = AbstractModel()     # Define type of optimization problem
