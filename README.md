@@ -1,5 +1,5 @@
 
-MicroGridsPy - Development_MILP version
+MicroGridsPy - Development_Interface version
 ======================== 
 
 <img src="https://user-images.githubusercontent.com/73618037/225138390-a5593e6d-6b9f-408b-ab28-60ac3a9871c8.png">
@@ -31,6 +31,7 @@ Possible features:
 - Brownfield optimization.
 - Built-in load archetypes for rural users.
 - Endogenous calculation of renewable energy sources production.
+- User Interface
 	
 
 ### Required libraries
