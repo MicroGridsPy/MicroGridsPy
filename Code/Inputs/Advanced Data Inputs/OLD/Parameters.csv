@@ -1,0 +1,190 @@
+﻿# ---Endogenous Resource Time Series: RES parameters (non-editable) ---;;
+;;
+base_URL;https//power.larc.nasa.gov/api/temporal/;# URL base for API 
+loc_id;point;# spatial resolution
+parameters_1;"ALLSKY_SFC_SW_DWN			";# parameters of daily data with resolution of 1° x 1°
+parameters_2;T2MWET, T2M, WS50M;# parameters of daily data
+parameters_3;WS50M, WS2M, WD50M, T2M;# parameters of hourly data
+date_start;"20150101						";# starting date for dataset (from 2001)
+date_end;"20201231						";# ending date for dataset (until 2020)
+community;"RE					";# community of data archive
+temp_res_1;"daily							";# temporal resolution for daily data
+temp_res_2;"hourly							";# temporal resolution for hourly data
+output_format;"JSON						";# output format
+user;"anonymous							";# user key
+;;
+# --- RES parameters (editable) ---;;
+;;
+lat;"-11 33 56.4			";# latitude  [-° -' -]
+lon;"30 21 3.4		";# longitude [-° -' -]
+time_zone;2;# UTC time zone [-]
+nom_power;300;"# Module nominal power [W]	"
+tilt;10;# tilt angle [°]
+azim;180;# azimuth angle [0° south facing]
+ro_ground;0.2;# ground reflectivity  [-]
+k_T;-0.37;# power variation coefficient with temperature [%/°C]
+NMOT;45;"# Nominal Module Operating Temperature [°C]		"
+T_NMOT;20;# ambient temperature of NMOT conditions [°C]
+G_NMOT;800;# irradiance in NMOT conditions [W/m^2]
+turbine_type;HA;# Horizontal Axis/Vertical Axis
+turbine_model;NPS100c-21;# model name of the turbine 
+drivetrain_efficiency;0.9;# average efficiency of turbine drivetrain (gearbox
+;;
+# --- Endogenous Demand Time Series (Load curve archetypes for sub-Sahara Africa) ---;;
+;;
+demand_growth;0;# yearly expected average percentage variation of the demand [%]
+cooling_period;AY;"# cooling period (NC = No Cooling; AY = All Year; OM = Oct-Mar; AS=Apr-Sept)"
+h_tier1;252;# number of households in the wealth tier 1
+h_tier2;160;# number of households in the wealth tier 2
+h_tier3;50;# number of households in the wealth tier 3
+h_tier4;36;# number of households in the wealth tier 4
+h_tier5;5;# number of households in the wealth tier 5
+schools;1;# number of schools
+hospital_1;0;# number of hospitals of type 1
+hospital_2;1;# number of hospitals of type 2
+hospital_3;0;# number of hospitals of type 3
+hospital_4;0;# number of hospitals of type 4
+hospital_5;0;# number of hospitals of type 5
+;;
+# --- Model General Settings ---;;
+;;
+Periods;8760;# Periods considered in one year (8760h/y in the example)
+Years;10;# Total duration of the project
+Step_Duration;1;# Duration (in years) of each investment decision step in which the project lifetime will be split
+Min_Last_Step_Duration;1;# Minimum duration (in years) of the last investment decision step
+StartDate;01/01/201900:00:00;# Start date of the project
+Delta_Time;1;# Time step in hours [do not change]
+Scenarios;1;# Number of scenarios to consider within the optimisation
+Scenario_Weight;;# Occurrence probability of each scenario [-]
+1;1;
+Discount_Rate;0.1;# Real discount rate accounting also for inflation
+Investment_Cost_Limit;500000;# Upper limit to investment cost [USD] (considered only in case Optimization_Goal='Operation cost')
+Renewable_Penetration;0;# Fraction of electricity produced by renewable sources. Number from 0 to 1.
+Battery_Independence;0;# Number of days of battery independence
+Solver;1;# 1 for Gurobi / 0 for HiGHS
+Lost_Load_Fraction;0;# Maximum admittable loss of load [-]
+Lost_Load_Specific_Cost;0;# Value of the unmet load [USD/Wh]
+;;
+# --- Model switches ---;;
+;;
+Optimization_Goal;1;# 1 = NPC / 2 = Operation cost. It allows to switch between a NPC-oriented optimization and a NON-ACTUALIZED Operation Cost-oriented optimization
+MILP_Formulation;0;# 1 to activate MILP formulation (for monodirectional energy flows)
+Generator_Partial_Load;0;#1 to activate Partial Load effect on the operation costs of the generator (VALID ONLY if MILP Formulation activated!), 0 otherwise
+Multiobjective_Optimization;0;# 1 if optimization of NPC/operation cost and CO2 emissions
+Greenfield_Investment;1;# 1 if Greenfield investment
+Plot_Max_Cost;1;# 1 if the Pareto curve has to include the point at maxNPC/maxOperationCost
+RE_Supply_Calculation;0;# 1 to select solar PV and wind production time series calculation (using NASA POWER data)
+Demand_Profile_Generation;0;# 1 to select load demand profile generation (with demand archetypes)
+Grid_Connection;0;# 1 to select grid connection during project lifetime
+Grid_Availability_Simulation;0;# 1 to simulate grid availability
+Grid_Connection_Type;1;# 2 for sell/purchase power with the national grid
+WACC_Calculation;1;# 1 to select Weighted Average Cost of Capital calculation, 0 otherwise
+Model_Components;0;# 0 for batteries and generators, 1 for batteries only, 2 for generators only
+;;
+# ---Weighted Average Cost of Capital parameters ---;;
+;;
+cost_of_equity;0.12;# Cost of equity, i.e., rate of return on equity capital from shareholders
+cost_of_debt;0.11;# Cost of debt, i.e., rate of return on loaned debt capital
+tax;0.02;# Corporate tax to be discounted from loaned debt
+equity_share;0.10;# Total level of equity as a share of the total investment cost [-]
+debt_share;0.9;# Total level of debt as a share of the total investment cost [-]
+;;
+# ---RES parameters ---;;
+;;
+RES_Sources;1;# Number of Renewable Energy Sources (RES) types
+RES_Names;;# Renewable Energy Sources (RES) names
+1;PV panels;
+RES_Nominal_Capacity;;# Single unit capacity of each type of Renewable Energy Source (RES) [W] 
+1;285;
+RES_Inverter_Efficiency;;# Efficiency [-] of the inverter connected to each Renewable Energy Source (RES) (put 1 in case of AC bus)
+1;0.96;
+RES_Specific_Investment_Cost;;# Specific investment cost for each type of Renewable Energy Source (RES) [USD/W]
+1;1.2;
+RES_Specific_OM_Cost;;# O&M cost for each type of Renewable Energy Source (RES) as a fraction of specific investment cost [%]
+1;0.02;
+RES_Lifetime;;# Lifetime of each Renewable Energy Source (RES) [y]
+1;20;
+RES_units;;# Existing RES units of RES_Nominal_Capacity [-]
+1;20;
+RES_years;;# How many years ago the component was installed [y]
+1;2;
+RES_unit_CO2_emission;;# [kgCO2/kW]
+1;0;
+;;
+# ---Battery bank---;;
+;;
+Battery_Specific_Investment_Cost;0.25;# Specific investment cost of the battery bank [USD/Wh]               
+Battery_Specific_Electronic_Investment_Cost;0.2;# Specific investment cost of non-replaceable parts (electronics) of the battery bank [USD/Wh]
+Battery_Specific_OM_Cost;0.08;# O&M cost of the battery bank as a fraction of specific investment cost [-]
+Battery_Discharge_Battery_Efficiency;0.93;# Discharge efficiency of the battery bank [-]
+Battery_Charge_Battery_Efficiency;0.93;# Charge efficiency of the battery bank [-]
+Battery_Depth_of_Discharge;0.4;# Depth of discharge of the battery bank [-]                     
+Maximum_Battery_Discharge_Time;5;# Maximum time to discharge the battery bank [h]                     
+Maximum_Battery_Charge_Time;5;# Maximum time to charge the battery bank [h]
+Battery_Cycles;3000;# Maximum number of cycles before degradation of the battery [-]  
+Battery_Initial_SOC;1;# Battery initial state of charge [%]
+Battery_capacity;0;# Existing Battery capacity [Wh]
+BESS_unit_CO2_emission;0;
+Battery_Nominal_Capacity_milp;5000;# Nominal Capacity of each battery [Wh]
+;;
+# ---Generators---;;
+;;
+Generator_Types;1;# Number of different types of gensets 
+Generator_Names;;# Generator names
+1;Diesel Genset;
+Generator_Efficiency;;# Average generator efficiency of each generator type [%]
+1;0.28;
+Generator_Specific_Investment_Cost;;# Specific investment cost for each generator type [USD/W]
+1;0.5;
+Generator_Specific_OM_Cost;;# O&M cost for each generator type as a fraction of specific investment cost [%]
+1;0.00625;
+Generator_Lifetime;;# Lifetime [years]
+1;20;
+Fuel_Names;;# Fuel names (to be specified for each generator
+1;Diesel;
+Fuel_Specific_Cost;;# Specific fuel cost for each generator type [USD/lt]
+1;2.5;
+Fuel_LHV;;# Fuel lower heating value (LHV) for each generator type [Wh/lt]
+1;9840;
+Generator_capacity;;# Existing Generator capacity [W] (brownfield option)
+1;50000;
+GEN_years;;# How many years ago the component was installed [y]
+1;3;
+GEN_unit_CO2_emission;;# [kgCO2/kW]
+1;0;
+FUEL_unit_CO2_emission;;# [kgCO2/lt]
+1;3.15;
+;;
+# ---Partial Load Effect---;;
+;;
+Generator_Min_output;;# Minimum percentage of energy output for the generator in part load [%]
+1;0.3;
+Generator_Nominal_Capacity_milp;;# Nominal capacity of each generator [W]
+1;30000;
+Generator_pgen;;# Percentage of the total operation cost of the generator system at full load [%]
+1;0.01;
+;;
+# ---Grid Connection---;;
+;;
+Year_Grid_Connection;1;# Year at which microgrid is connected to the national grid (starting from 1)
+Grid_Sold_El_Price;0.4;# Price at which electricity is sold to the grid [USD/kWh]
+Grid_Purchased_El_Price;0.3;# Price at which electricity is purchased from the grid [USD/kWh]
+Grid_Distance;3.6;# Distance from grid connection point [km]
+Grid_Connection_Cost;13892;# Investment cost of grid connection
+Grid_Maintenance_Cost;0.02;# O&M cost for maintenance of the power line and transformer as a fraction of investment cost [-]
+Maximum_Grid_Power;500;# Maximum active power that can be injected/withdrawn to/from the grid [kW]
+Grid_Average_Number_Outages;29;# Average number of outages in the national grid in a year (0 to simulate ideal power grid)
+Grid_Average_Outage_Duration;60;# Average duration of an outage [min] (0 to simulate ideal power grid)
+National_Grid_Specific_CO2_emissions;0.243;# Specific CO2 emissions  by the considered national grid [kgCO2/kWh]
+;;
+# ---Plots Settings---;;
+;;
+RES_Colors;;# HEX color code for RES in the plots
+1;FF8800;
+Battery_Color;4CC9F0;# HEX color code for the battery bank in the plots 
+Generator_Colors;;# HEX color code for generators in the plots
+1;00509D;
+Lost_Load_Color;F21B3F;# HEX color code for lost load in the plots
+Curtailment_Color;FFD500;# HEX color code for curtailment in the plots
+Energy_To_Grid_Color;8000;# HEX color code for curtailment in the plots
+Energy_From_Grid_Color;800080;# HEX color code for curtailment in the plots
