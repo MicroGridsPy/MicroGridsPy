@@ -1728,11 +1728,6 @@ def PrintResults(instance, Results, callback=None):
         wacc_value = float(instance.Discount_Rate.extract_values()[None])
         print_and_callback(f'\n\nWACC = {wacc_value:.4f} [-]')
 
-    print('ECCO LE TABELLE:')
-    print(Results['Costs'])
-    print(Results['Renewables Penetration'])
-    print(Results['Yearly energy parameters'])
-
     npc = float(Results['Costs'].iloc[0, 0])
     print_and_callback(f'\nNPC = {round(npc, 2)} kUSD')
 

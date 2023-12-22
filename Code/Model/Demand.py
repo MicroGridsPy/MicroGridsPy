@@ -97,12 +97,15 @@ def demand_calculation():
         
     households = []
     load_households = []  
-    for ii in range(1,len(num_h_tier)+1):
-        households.append(household(F, ii, cooling_period, num_h_tier[ii-1]))
-        h_load_name = households[ii-1].cooling + '_' + F + '_Tier-' + str(ii)
-        h_load = pd.DataFrame(pd.read_excel("Demand_archetypes/" + h_load_name +".xlsx", skiprows = 0, usecols = "B"))
+    demand_archetypes_path = "../Demand_archetypes/"
+
+    for ii in range(1, len(num_h_tier) + 1):
+        households.append(household(F, ii, cooling_period, num_h_tier[ii - 1]))
+        h_load_name = households[ii - 1].cooling + '_' + F + '_Tier-' + str(ii)
+        file_path = os.path.join(demand_archetypes_path, h_load_name + ".xlsx")
+        h_load = pd.DataFrame(pd.read_excel(file_path, skiprows=0, usecols="B"))
         h_load = aggregate_load(h_load, periods)
-        load_households.append(household.load_demand(households[ii-1], h_load))
+        load_households.append(household.load_demand(households[ii - 1], h_load))
         
     load_households = pd.concat([sum(load_households)]*years, axis = 1, ignore_index = True)       
             
@@ -115,7 +118,8 @@ def demand_calculation():
             service_load_name = "HOSPITAL_Tier-" + str(ii)
         else: 
             service_load_name = "SCHOOL"
-        service_load = pd.DataFrame(pd.read_excel("Demand_archetypes/" + service_load_name + ".xlsx", skiprows=0, usecols="B"))
+        file_path = os.path.join(demand_archetypes_path, service_load_name + ".xlsx")
+        service_load = pd.DataFrame(pd.read_excel(file_path, skiprows=0, usecols="B"))
         service_load = aggregate_load(service_load, periods)  # Aggregate service load data
         load_tot_services.append(services[ii-1].load_demand(service_load))
     

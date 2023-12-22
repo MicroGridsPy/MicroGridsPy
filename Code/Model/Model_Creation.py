@@ -93,6 +93,9 @@ def Model_Creation(model):
     model.equity_share                      = Param(within=NonNegativeReals)                             # Total level of equity [kUSD]
     model.debt_share                        = Param(within=NonNegativeReals)                             # Total level of debt [kUSD]
     
+    model.Pareto_points                     = Param(within=NonNegativeIntegers)                          # Points to be analysed in Multi-Objective Optimization
+    model.Pareto_solution                   = Param(within=NonNegativeIntegers)                          # Solution (from 1 to pareto_points) of the Multi_Objective Optimization to be displayed
+    
     "Model Switches"
     model.Optimization_Goal                 = Param(within=Binary)                                    # Options: 1 = NPC / 0 = Operation cost. It allows to switch between a NPC-oriented optimization and a NON-ACTUALIZED Operation Cost-oriented optimization
     model.Multiobjective_Optimization       = Param(within=Binary)                                    # 1 if optimization of NPC/operation cost and CO2 emissions,0 otherwise

@@ -78,6 +78,9 @@ param: Grid_Connection_Type := 0;
 param: WACC_Calculation := 0;
 param: Model_Components := 0;
 
+param: Pareto_points := 2;
+param: Pareto_solution := 1;
+
 param: cost_of_equity := 0.12;
 param: cost_of_debt := 0.11;
 param: tax := 0.02;

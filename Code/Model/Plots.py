@@ -724,3 +724,5 @@ def SizePlot(instance,Results,PlotResolution,PlotFormat):
     results_directory = os.path.join(current_directory, '..', 'Results/Plots')
     plot_path = os.path.join(results_directory, 'SizePlot.')
     fig.savefig(plot_path + PlotFormat, dpi=PlotResolution, bbox_inches='tight')
+
+

@@ -78,6 +78,9 @@ class RunPage(tk.Frame):
                 self.show_dispatch_plot_button['state'] = 'normal'
                 self.size_plot_button['state'] = 'normal'
                 self.cash_plot_button['state'] = 'normal'
+                if self.instance.Multiobjective_Optimization.value:  # Assuming this is how you check the condition
+                    self.show_pareto_curve_button = ttk.Button(self.controls_frame, text="Show Pareto Curve", command=self.show_pareto_plot, state='normal')
+                    self.show_pareto_curve_button.pack(side='left', pady=5, padx=5)
         
     def show_size_plot(self):
         # Load the saved plot image
@@ -133,6 +136,26 @@ class RunPage(tk.Frame):
         # Create a new window or use an existing frame
         plot_window = tk.Toplevel(self)
         plot_window.title("Dispatch Plot")
+
+        # Display the image in a label widget
+        plot_label = tk.Label(plot_window, image=plot_photo)
+        plot_label.image = plot_photo  # Keep a reference!
+        plot_label.pack()
+        
+    def show_pareto_plot(self):
+        # Load the saved plot image
+        current_directory = os.path.dirname(os.path.abspath(__file__))
+        results_directory = os.path.join(current_directory, '..', 'Results/Plots')
+        plot_path = os.path.join(results_directory, 'ParetoCurve.png')
+        plot_image = Image.open(plot_path)
+        plot_photo = ImageTk.PhotoImage(plot_image)
+        
+        resized_image = plot_image.resize((700, 400))
+        plot_photo = ImageTk.PhotoImage(resized_image)
+
+        # Create a new window or use an existing frame
+        plot_window = tk.Toplevel(self)
+        plot_window.title("Pareto Curve")
 
         # Display the image in a label widget
         plot_label = tk.Label(plot_window, image=plot_photo)
@@ -200,12 +223,12 @@ class RunPage(tk.Frame):
         self.output_scrollbar.pack(side='right', fill='y')
         self.output_text['yscrollcommand'] = self.output_scrollbar.set
         
-        '''
+        
         # Redirect output
         self.output_redirection = RedirectOutput(self.output_text)
         sys.stdout = self.output_redirection
         sys.stderr = self.output_redirection
-        '''
+        
         # Title label
         self.title_label = ttk.Label(self.controls_frame, text="Run the Model", font=("Helvetica", 16))
         self.title_label.pack(side='top', pady=10)
@@ -244,10 +267,12 @@ class RunPage(tk.Frame):
         # Show Dispatch Plot button (initially disabled)
         self.show_dispatch_plot_button = ttk.Button(self.controls_frame, text="Show Dispatch Plot", command=self.show_dispatch_plot, state='disabled')
         self.show_dispatch_plot_button.pack(side='left', pady=5)
+        
+        # Show Size Plot button (initially disabled)
         self.size_plot_button = ttk.Button(self.show_plots_frame, text="Show Size Plot", command=self.show_size_plot, state='disabled')
         self.size_plot_button.pack(side='left', pady=5, padx=5)
 
-        # Show Cash Flow Plot button
+        # Show Cash Flow Plot button (initially disabled)
         self.cash_plot_button = ttk.Button(self.show_plots_frame, text="Cash Flow Plot", command=self.show_cash_plot,state='disabled')
         self.cash_plot_button.pack(side='left', pady=5, padx=5)
 

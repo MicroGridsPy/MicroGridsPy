@@ -108,16 +108,41 @@ class StartPage(tk.Frame):
             
 
     # Function to toggle the state of Plot Max Cost
-    def toggle_Plot_Max_Cost(self,*args):
-            if self.Multiobjective_Optimization_var.get() == 1:
-                self.Plot_Max_Cost_label.config(state='normal')
-                self.Plot_Max_Cost_radio1.config(state='normal')
-                self.Plot_Max_Cost_radio0.config(state='normal')
+    def toggle_MultiObjective(self, *args):
+        if self.Multiobjective_Optimization_var.get() == 1:
+            self.Plot_Max_Cost_label.config(state='normal')
+            self.Plot_Max_Cost_radio1.config(state='normal')
+            self.Plot_Max_Cost_radio0.config(state='normal')
+            self.pareto_points_label.config(state='normal')
+            self.pareto_points_entry.config(state='normal')
+            self.pareto_solution_label.config(state='normal')
+            self.pareto_solution_entry.config(state='normal')
+
+        else:
+            self.Plot_Max_Cost_var.set(0)  # Reset to No if Multi-Objective Optimization is not selected
+            self.Plot_Max_Cost_label.config(state='disabled')
+            self.Plot_Max_Cost_radio1.config(state='disabled')
+            self.Plot_Max_Cost_radio0.config(state='disabled')
+            self.pareto_points_label.config(state='disabled')
+            self.pareto_points_entry.config(state='disabled')
+            self.pareto_solution_label.config(state='disabled')
+            self.pareto_solution_entry.config(state='disabled')
+
+    def validate_pareto_solution(self, P):
+        # Validate Pareto solution ensuring it's an integer between 1 and Pareto points.
+        if P.isdigit():
+            pareto_solution = int(P)
+            pareto_points = self.pareto_points_var.get()
+            if 1 <= pareto_solution <= pareto_points:
+                return True
             else:
-                self.Plot_Max_Cost_var.set(0)  # Reset to No if Multi-Objective Optimization is not selected
-                self.Plot_Max_Cost_label.config(state='disabled')
-                self.Plot_Max_Cost_radio1.config(state='disabled')
-                self.Plot_Max_Cost_radio0.config(state='disabled')
+                self.bell()  # System bell if invalid input
+                return False
+        elif P == "":
+            return True
+        else:
+            self.bell()  # System bell if invalid input
+            return False
         
     # Function to toggle the grid options based on the grid connection
     def toggle_grid_options(self,*args):
@@ -486,7 +511,7 @@ class StartPage(tk.Frame):
         self.Multiobjective_Optimization_checkbutton = ttk.Checkbutton(self.inner_frame, text="Activate", variable=self.Multiobjective_Optimization_var, onvalue=1, offvalue=0)
         self.Multiobjective_Optimization_checkbutton.grid(row=16, column=1, sticky='w')
         create_tooltip(self.Multiobjective_Optimization_checkbutton, "Optimization of NPC/operation cost and CO2 emissions")
-        self.Multiobjective_Optimization_var.trace('w', self.toggle_Plot_Max_Cost)
+        self.Multiobjective_Optimization_var.trace('w', self.toggle_MultiObjective)
 
         # Define the variable for Plot Max Cost options
         self.Plot_Max_Cost_var = tk.IntVar(value=0)
@@ -498,43 +523,61 @@ class StartPage(tk.Frame):
         self.Plot_Max_Cost_radio0 = ttk.Radiobutton(self.inner_frame, text="No", variable=self.Plot_Max_Cost_var, value=0, state='disabled')
         self.Plot_Max_Cost_radio0.grid(row=17, column=1, sticky='e')
         self.Plot_Max_Cost_label.config(state='disabled')
-        self.toggle_Plot_Max_Cost()
+        
+        # Number of Pareto points
+        self.pareto_points_label = ttk.Label(self.inner_frame, text="Pareto points:", anchor='w', state='disabled')
+        self.pareto_points_label.grid(row=18, column=0, sticky='w')
+        self.pareto_points_var = tk.IntVar(value=2)
+        vcmd = (self.register(self.validate_integer), '%P')
+        self.pareto_points_entry = ttk.Entry(self.inner_frame, textvariable=self.pareto_points_var, state='disabled',validate='key', validatecommand=vcmd)
+        self.pareto_points_entry.grid(row=18, column=1, sticky='w')
+        create_tooltip(self.pareto_points_entry, "Pareto curve points to be analysed during optimization")
+        
+        # Number of Pareto solution
+        self.pareto_solution_label = ttk.Label(self.inner_frame, text="Pareto solution:", anchor='w', state='disabled')
+        self.pareto_solution_label.grid(row=19, column=0, sticky='w')
+        self.pareto_solution_var = tk.IntVar(value=1)
+        vcmd = (self.register(self.validate_pareto_solution), '%P')
+        self.pareto_solution_entry = ttk.Entry(self.inner_frame, textvariable=self.pareto_solution_var, state='disabled',validate='key', validatecommand=vcmd)
+        self.pareto_solution_entry.grid(row=19, column=1, sticky='w')
+        create_tooltip(self.pareto_points_entry, "Multi-Objective optimization solution to be run (from 1 to Pareto points value in CO2 emission")
 
+        self.toggle_MultiObjective()
 
         # Greenfield
         self.Greenfield_Investment_var = tk.IntVar(value=1)
-        ttk.Label(self.inner_frame, text="Type of Investment:",anchor='w').grid(row=18, column=0,sticky='w')
-        self.Greenfield_radio = ttk.Radiobutton(self.inner_frame, text="Greenfield", variable=self.Greenfield_Investment_var, value=1).grid(row=18, column=1, sticky='w')
-        self.Brownfield_radio = ttk.Radiobutton(self.inner_frame, text="Brownfield", variable=self.Greenfield_Investment_var, value=0).grid(row=18, column=1, sticky='e')
+        ttk.Label(self.inner_frame, text="Type of Investment:",anchor='w').grid(row=20, column=0,sticky='w')
+        self.Greenfield_radio = ttk.Radiobutton(self.inner_frame, text="Greenfield", variable=self.Greenfield_Investment_var, value=1).grid(row=20, column=1, sticky='w')
+        self.Brownfield_radio = ttk.Radiobutton(self.inner_frame, text="Brownfield", variable=self.Greenfield_Investment_var, value=0).grid(row=20, column=1, sticky='e')
 
 
         # Grid Connection Radiobuttons
         self.Grid_Connection_var = tk.IntVar(value=0)
         self.Grid_Connection_var.trace('w', self.toggle_grid_options)
-        ttk.Label(self.inner_frame, text="Grid Connection:", anchor='w').grid(row=19, column=0, sticky='w')
+        ttk.Label(self.inner_frame, text="Grid Connection:", anchor='w').grid(row=21, column=0, sticky='w')
         self.Grid_Connection_radio = ttk.Radiobutton(self.inner_frame, text="On-grid", variable=self.Grid_Connection_var, value=1)
-        self.Grid_Connection_radio.grid(row=19, column=1, sticky='w')
+        self.Grid_Connection_radio.grid(row=21, column=1, sticky='w')
         create_tooltip(self.Grid_Connection_radio, "Simulate grid connection during project lifetime")
-        ttk.Radiobutton(self.inner_frame, text="Off-grid", variable=self.Grid_Connection_var, value=0).grid(row=19, column=1, sticky='e')
+        ttk.Radiobutton(self.inner_frame, text="Off-grid", variable=self.Grid_Connection_var, value=0).grid(row=21, column=1, sticky='e')
 
         # Grid Availability Simulation
         self.Grid_Availability_Simulation_var = tk.IntVar(value=0)
         self.Grid_Availability_Simulation_label = ttk.Label(self.inner_frame, text="Grid Availability:", anchor='w')
-        self.Grid_Availability_Simulation_label.grid(row=20, column=0, sticky='w')
+        self.Grid_Availability_Simulation_label.grid(row=22, column=0, sticky='w')
         self.Grid_Availability_Simulation_label.config(state='disabled')
         self.Grid_Availability_Simulation_checkbutton = ttk.Checkbutton(self.inner_frame, text="Activate", variable=self.Grid_Availability_Simulation_var, onvalue=1, offvalue=0)
         create_tooltip(self.Grid_Availability_Simulation_checkbutton, "Simulate grid availability matrix")
-        self.Grid_Availability_Simulation_checkbutton.grid(row=20, column=1, sticky='w')
+        self.Grid_Availability_Simulation_checkbutton.grid(row=22, column=1, sticky='w')
         self.Grid_Availability_Simulation_checkbutton.config(state='disabled')
 
         # Grid Connection Type Radiobuttons
         self.Grid_Connection_Type_var = tk.IntVar(value=0)
         self.Grid_Connection_Type_label = ttk.Label(self.inner_frame, text="Grid Connection Type:", anchor='w', state='disabled')
-        self.Grid_Connection_Type_label.grid(row=21, column=0, sticky='w')
+        self.Grid_Connection_Type_label.grid(row=23, column=0, sticky='w')
         self.Grid_Connection_Type_radio1 = ttk.Radiobutton(self.inner_frame, text="Buy Only", variable=self.Grid_Connection_Type_var, value=0, state='disabled')
-        self.Grid_Connection_Type_radio1.grid(row=21, column=1, sticky='w')
+        self.Grid_Connection_Type_radio1.grid(row=23, column=1, sticky='w')
         self.Grid_Connection_Type_radio2 = ttk.Radiobutton(self.inner_frame, text="Buy/Sell", variable=self.Grid_Connection_Type_var, value=1, state='disabled')
-        self.Grid_Connection_Type_radio2.grid(row=21, column=1, sticky='e')
+        self.Grid_Connection_Type_radio2.grid(row=23, column=1, sticky='e')
         self.toggle_grid_options()
 
 
@@ -618,6 +661,8 @@ class StartPage(tk.Frame):
         'Generator_Partial_Load': self.Generator_Partial_Load_var.get(),
         'Multiobjective_Optimization': self.Multiobjective_Optimization_var.get(),
         'Plot_Max_Cost': self.Plot_Max_Cost_var.get(),
+        'Pareto_points': self.pareto_points_var.get(),
+        'Pareto_solution': self.pareto_solution_var.get(),
         'Greenfield_Investment': self.Greenfield_Investment_var.get(),
         'Grid_Connection': self.Grid_Connection_var.get(),
         'Grid_Availability_Simulation': self.Grid_Availability_Simulation_var.get(),

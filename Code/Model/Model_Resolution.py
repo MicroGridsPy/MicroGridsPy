@@ -44,8 +44,10 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
             Model_Components = int((re.findall('\d+',Data_import[i])[0]))
         if "param: Solver" in Data_import[i]:      
             Solver = int((re.findall('\d+',Data_import[i])[0]))
-        if "param: WACC_Calculation" in Data_import[i]:      
-            WACC_Calculation = int((re.findall('\d+',Data_import[i])[0]))
+        if "param: Pareto_points" in Data_import[i]:      
+            n = int((re.findall('\d+',Data_import[i])[0]))
+        if "param: Pareto_solution" in Data_import[i]:      
+            i = int((re.findall('\d+',Data_import[i])[0]))
     
     if (Generator_Partial_Load == 1 and MILP_Formulation == 0):
         print('###########################################################')
@@ -368,7 +370,7 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
             model.ObjectiveFuntion1 = Objective(expr = model.f2, 
                                                    sense=minimize)
         
-            n = int(input("please indicate how many points (n) you want to analyse: "))
+            # n = int(input("please indicate how many points (n) you want to analyse: "))
             
             #NPC min and CO2 emission max calculation
             model.ObjectiveFuntion1.deactivate()
@@ -433,14 +435,37 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
             print ('\nCO2 emission [ton] =' +str(f2_l))
             CO2=(CO2emission_max-CO2emission_min)/1e3
             NPC=f1_l[0]*1000-NPC_min  
-            print('Cost CO2 avoided [USD/ton] =' +str(round(NPC/CO2,3)))       
-            plt.plot(f1_l, f2_l, 'o-', c='r', label='Pareto optimal front')
-            plt.legend(loc='best')
-            plt.xlabel('NPC(kUSD)')
-            plt.ylabel('CO2 emission(ton)')
-            plt.grid(True)
+            print('Cost CO2 avoided [USD/ton] =' +str(round(NPC/CO2,3))) 
+            
+            ####################### PARETO CURVE ###########################################################
+            print('       plotting Pareto curve...')
+            fontticks = 18
+            fontaxis = 20
+            fontlegend = 20
+            PlotFormat = 'png'                   # Desired extension of the saved file (Valid formats: png, svg, pdf)
+            PlotResolution = 400                 # Plot resolution in dpi (useful only for .png files, .svg and .pdf output a vector plot)
+
+            #%% Plotting
+            fig, ax = plt.subplots(figsize=(15, 10))
+            ax.plot(f1_l, f2_l, 'o-', c='r', label='Pareto optimal front')
+
+            ax.set_xlabel('NPC(kUSD)', fontsize=fontaxis)
+            ax.set_ylabel('CO2 emission(ton)', fontsize=fontaxis)
+            ax.legend(loc='best', fontsize=fontlegend)
+            ax.grid(True)
+            ax.tick_params(axis='both', which='major', labelsize=fontticks)
+
             plt.tight_layout()
-            plt.show()
+    
+            #%% Saving Plot
+            current_directory = os.path.dirname(os.path.abspath(__file__))
+            results_directory = os.path.join(current_directory, '..', 'Results/Plots')
+            plot_path = os.path.join(results_directory, 'ParetoCurve.')
+            fig.savefig(plot_path + PlotFormat, dpi=PlotResolution, bbox_inches='tight')
+            plt.close(fig)  # Close the figure to free memory
+
+            print('Pareto curve plot saved.')
+            #################################################################################################
             
             steps = list(range(int(CO2emission_min),int(CO2emission_max),step)) 
                         
@@ -450,7 +475,7 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
             if Plot_Max_Cost:
                 steps.insert(0,0)                
                 
-            i = int(input("please indicate which solution you prefer (starting from 1 to n in CO2 emission): ")) #asks the user how many profiles (i.e. code runs) he wants
+            # i = int(input("please indicate which solution you prefer (starting from 1 to n in CO2 emission): ")) #asks the user how many profiles (i.e. code runs) he wants
 
             instance.e = steps[i] 
             print('Calling solver...')
@@ -470,7 +495,7 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
             model.ObjectiveFuntion1 = Objective(expr = model.f2, 
                                                    sense=minimize)
         
-            n = int(input("please indicate how many points (n) you want to analyse: "))
+            # n = int(input("please indicate how many points (n) you want to analyse: "))
                         
             #NPC min and CO2 emission max calculation
             model.ObjectiveFuntion1.deactivate()
@@ -547,7 +572,7 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
             if Plot_Max_Cost:
                 steps.insert(0,0) 
 
-            i = int(input("please indicate which solution you prefer (starting from 1 to n in CO2 emission): ")) #asks the user how many profiles (i.e. code runs) he wants
+            # i = int(input("please indicate which solution you prefer (starting from 1 to n in CO2 emission): ")) #asks the user how many profiles (i.e. code runs) he wants
                            
             instance.e = steps[i] 
             #print(value(instance.e))
