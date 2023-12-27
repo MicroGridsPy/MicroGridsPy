@@ -223,12 +223,12 @@ class RunPage(tk.Frame):
         self.output_scrollbar.pack(side='right', fill='y')
         self.output_text['yscrollcommand'] = self.output_scrollbar.set
         
-        
+        '''
         # Redirect output
         self.output_redirection = RedirectOutput(self.output_text)
         sys.stdout = self.output_redirection
         sys.stderr = self.output_redirection
-        
+        '''
         # Title label
         self.title_label = ttk.Label(self.controls_frame, text="Run the Model", font=("Helvetica", 16))
         self.title_label.pack(side='top', pady=10)

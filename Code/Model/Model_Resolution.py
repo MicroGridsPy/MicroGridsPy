@@ -47,7 +47,7 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
         if "param: Pareto_points" in Data_import[i]:      
             n = int((re.findall('\d+',Data_import[i])[0]))
         if "param: Pareto_solution" in Data_import[i]:      
-            i = int((re.findall('\d+',Data_import[i])[0]))
+            p = int((re.findall('\d+',Data_import[i])[0]))
     
     if (Generator_Partial_Load == 1 and MILP_Formulation == 0):
         print('###########################################################')
@@ -438,7 +438,7 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
             print('Cost CO2 avoided [USD/ton] =' +str(round(NPC/CO2,3))) 
             
             ####################### PARETO CURVE ###########################################################
-            print('       plotting Pareto curve...')
+            print('plotting Pareto curve...')
             fontticks = 18
             fontaxis = 20
             fontlegend = 20
@@ -467,8 +467,9 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
             print('Pareto curve plot saved.')
             #################################################################################################
             
+            step = int((CO2emission_max - CO2emission_min)/(n-1))
             steps = list(range(int(CO2emission_min),int(CO2emission_max),step)) 
-                        
+
             if len(steps)<=n:
                 steps.append(CO2emission_max)
             
@@ -477,7 +478,7 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
                 
             # i = int(input("please indicate which solution you prefer (starting from 1 to n in CO2 emission): ")) #asks the user how many profiles (i.e. code runs) he wants
 
-            instance.e = steps[i] 
+            instance.e = steps[p] 
             print('Calling solver...')
             results = opt.solve(instance, tee=True) # Solving a model instance
             print('Instance solved')  # Loading solution into instance
@@ -574,7 +575,7 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
 
             # i = int(input("please indicate which solution you prefer (starting from 1 to n in CO2 emission): ")) #asks the user how many profiles (i.e. code runs) he wants
                            
-            instance.e = steps[i] 
+            instance.e = steps[p] 
             #print(value(instance.e))
             print('Calling solver...')
             results = opt.solve(instance, tee=True) # Solving a model instance
