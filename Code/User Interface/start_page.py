@@ -540,7 +540,7 @@ class StartPage(tk.Frame):
         vcmd = (self.register(self.validate_pareto_solution), '%P')
         self.pareto_solution_entry = ttk.Entry(self.inner_frame, textvariable=self.pareto_solution_var, state='disabled',validate='key', validatecommand=vcmd)
         self.pareto_solution_entry.grid(row=19, column=1, sticky='w')
-        create_tooltip(self.pareto_points_entry, "Multi-Objective optimization solution to be run (from 1 to Pareto points value in CO2 emission")
+        create_tooltip(self.pareto_points_entry, "Multi-Objective optimization solution to be displayed (1 for minimal CO2 emission solution, Pareto points for minimal costs one")
 
         self.toggle_MultiObjective()
 
@@ -620,6 +620,7 @@ class StartPage(tk.Frame):
         self.num_scenarios_entry = ttk.Entry(self.inner_frame, textvariable=self.num_scenarios_var,validate='key', validatecommand=vcmd)
         self.num_scenarios_entry.grid(row=20, column=3, sticky='w')
         self.num_scenarios_entry.bind("<FocusOut>", self.update_scenario_weights)
+        create_tooltip(self.num_scenarios_entry, "Multi-Scenarios Optimization")
         
         # Initialize Scenario Weights with one entry and disabled
         self.scenario_weights_label = ttk.Label(self.inner_frame, text="Scenario Weights:", anchor='w', state='disabled')
