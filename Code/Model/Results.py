@@ -1637,24 +1637,26 @@ def YearlyEnergyParamsSC(instance, TimeSeries):
      res_pen_sc = res_pen_sc.groupby(level=[0],axis=0,sort=False).sum()
     
     curt_load_sc = pd.DataFrame()
-    for s in range(1,S+1):
+    for s in range(1, S+1):
         curt_sc = pd.DataFrame()
-        for (y,st) in ys_tuples_list:
-            if instance.MILP_Formulation.value:
-                
-                if instance.Model_Components.value == 0 or instance.Model_Components.value == 2:
-                    curt_load = pd.DataFrame(['Year '+str(y), sum(Curtailment[(s,y,t)] for t in range(1,P+1))/sum(sum(RES_Energy_Production[(s,y,r,t)] for r in range(1,R+1))+sum(Generator_Energy_Total[(s,y,g,t)] for g in range(1,G+1)) for t in range(1,P+1))]).T.set_index([0]) 
-                if instance.Model_Components.value == 1:
-                    curt_load = pd.DataFrame(['Year '+str(y), sum(Curtailment[(s,y,t)] for t in range(1,P+1))/sum(sum(RES_Energy_Production[(s,y,r,t)] for r in range(1,R+1)) for t in range(1,P+1))]).T.set_index([0]) 
+        for (y, st) in ys_tuples_list:
+            total_energy_production = sum(
+                sum(RES_Energy_Production[(s, y, r, t)] if RES_Energy_Production.get((s, y, r, t)) is not None else 0 for r in range(1, R+1)) +
+                sum(Generator_Energy_Total[(s, y, g, t)] if Generator_Energy_Total.get((s, y, g, t)) is not None else 0 for g in range(1, G+1))
+                for t in range(1, P+1)
+            )
+
+            if total_energy_production > 0:
+                curt_load = pd.DataFrame(
+                    ['Year ' + str(y), sum(Curtailment.get((s, y, t), 0) for t in range(1, P+1)) / total_energy_production]
+                ).T.set_index([0])
             else:
-                if instance.Model_Components.value == 0 or instance.Model_Components.value == 2:
-                    curt_load = pd.DataFrame(['Year '+str(y), sum(Curtailment[(s,y,t)] for t in range(1,P+1))/sum(sum(RES_Energy_Production[(s,y,r,t)] for r in range(1,R+1))+sum(Generator_Energy_Production[(s,y,g,t)] for g in range(1,G+1)) for t in range(1,P+1))]).T.set_index([0])
-                if instance.Model_Components.value == 1:
-                    curt_load = pd.DataFrame(['Year '+str(y), sum(Curtailment[(s,y,t)] for t in range(1,P+1))/sum(sum(RES_Energy_Production[(s,y,r,t)] for r in range(1,R+1)) for t in range(1,P+1))]).T.set_index([0])
-            
-            curt_load.columns  = pd.MultiIndex.from_arrays([['Curtailment share'],['-'],[s],['%']], names=['','Component','Scenario',' '])
+                curt_load = pd.DataFrame(['Year ' + str(y), 0]).T.set_index([0])  # Set a default value (e.g., 0) when there's no production
+
+            curt_load.columns = pd.MultiIndex.from_arrays([['Curtailment share'], ['-'], [s], ['%']], names=['', 'Component', 'Scenario', ' '])
             curt_sc = pd.concat([curt_sc, curt_load], axis=0)
         curt_load_sc = pd.concat([curt_load_sc, curt_sc], axis=1).fillna(0)
+
     
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:
         BESS_Outflow = instance.Battery_Outflow.get_values()    
