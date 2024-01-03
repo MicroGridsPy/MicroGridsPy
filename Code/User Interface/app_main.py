@@ -72,10 +72,10 @@ class Application(ThemedTk):
         return self.frames["GeneratorPage"].Generator_Types_var.get()
     
     def get_grid_connection_value(self):
-        return self.frames["StartPage"].Grid_Connection_var.get()
+        return self.frames["AdvancedPage"].Grid_Connection_var.get()
 
     def get_grid_availability_value(self):
-        return self.frames["StartPage"].Grid_Availability_Simulation_var.get()
+        return self.frames["AdvancedPage"].Grid_Availability_Simulation_var.get()
     
     def get_archetypes_value(self):
         return self.frames["ArchetypesPage"].Demand_Profile_Generation_var.get()
@@ -84,13 +84,13 @@ class Application(ThemedTk):
         return self.frames["RECalculationPage"].RE_Supply_Calculation_var.get()
     
     def get_milp_formulation_value(self):
-        return self.frames["StartPage"].MILP_Formulation_var.get()
+        return self.frames["AdvancedPage"].MILP_Formulation_var.get()
     
     def get_brownfield_value(self):
-        return self.frames["StartPage"].Greenfield_Investment_var.get()
+        return self.frames["AdvancedPage"].Greenfield_Investment_var.get()
     
     def get_partial_load_value(self):
-        return self.frames["StartPage"].Generator_Partial_Load_var.get()
+        return self.frames["AdvancedPage"].Generator_Partial_Load_var.get()
     
         
     def show_next_page(self):

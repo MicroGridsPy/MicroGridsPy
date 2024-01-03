@@ -119,27 +119,6 @@ class StartPage(tk.Frame):
         else:
             self.Investment_Cost_Limit_entry.config(state='disabled')
             self.Investment_Cost_Limit_label.config(state='disabled')
-                
-    def on_next_button(self):
-        # First, update the GeneratorPage parameters
-        milp_formulation = self.MILP_Formulation_var.get()
-        partial_load = self.Generator_Partial_Load_var.get()
-        brownfield = self.Greenfield_Investment_var.get()
-        res_page = self.controller.frames.get("TechnologiesPage")
-        generator_page = self.controller.frames.get("GeneratorPage")
-        battery_page = self.controller.frames.get("BatteryPage")
-        if milp_formulation == 1 and partial_load == 1:
-            battery_page.toggle_milp_parameters()
-            generator_page.toggle_milp_partial_parameters()
-        if milp_formulation == 1 and partial_load == 0:
-            battery_page.toggle_milp_parameters()
-            generator_page.toggle_milp_parameters()
-        if brownfield == 0:
-            res_page.toggle_brownfield_parameters()
-            battery_page.toggle_brownfield_parameters()
-            generator_page.toggle_brownfield_parameters() 
-        # Then, navigate to the RECalculationPage
-        self.controller.show_frame("RECalculationPage")
         
 
     def setup_scrollable_area(self):
@@ -294,29 +273,75 @@ class StartPage(tk.Frame):
         descriptive_text = ("Configure essential optimization parameters to tailor the project's analytical model:\n")
         self.description_label = ttk.Label(self.inner_frame, text=descriptive_text, font=self.italic_font, wraplength=850, justify="left")
         self.description_label.grid(row=9, column=0, columnspan=2, sticky='w')
+        
+        # Periods
+        ttk.Label(self.inner_frame, text="Time Resolution [periods/year]:",anchor='w').grid(row=10, column=0, sticky='w')
+        self.Periods_var = tk.IntVar(value=8760)
+        vcmd = (self.register(self.validate_integer), '%P')
+        self.Periods_entry = ttk.Entry(self.inner_frame, textvariable=self.Periods_var,validate='key', validatecommand=vcmd)
+        self.Periods_entry.grid(row=10, column=1,sticky='w')
+        create_tooltip(self.Periods_entry, "Units of time for which the model performs calculations")
+        # Bind the callback function to the change in "Time Resolution (periods)"
+        self.Periods_var.trace('w', self.check_battery_independence)
 
+        # Optimization Goal
+        self.Optimization_Goal_var = tk.IntVar(value=1)
+        ttk.Label(self.inner_frame, text="Optimization Goal:",anchor='w').grid(row=11, column=0,sticky='w',ipady=10)
+        self.Optimization_Goal_radio1 = ttk.Radiobutton(self.inner_frame, text="NPC", variable=self.Optimization_Goal_var, value=1)
+        self.Optimization_Goal_radio1.grid(row=11, column=1, sticky='w')
+        self.Optimization_Goal_radio0 = ttk.Radiobutton(self.inner_frame, text="Operation cost", variable=self.Optimization_Goal_var, value=0)
+        self.Optimization_Goal_radio0.grid(row=11, column=1, sticky='e')
+        create_tooltip(self.Optimization_Goal_radio1, "Net Present Cost oriented optimization")
+        create_tooltip(self.Optimization_Goal_radio0, "Non-Actualized Operation Cost-oriented optimization")
+        self.Optimization_Goal_var.trace('w', self.toggle_investment_limit)
+        
+        # Investment_Cost_Limit
+        self.Investment_Cost_Limit_label = ttk.Label(self.inner_frame, text="Investment Cost Limit [USD]:",anchor='w')
+        self.Investment_Cost_Limit_label.grid(row=11, column=2,sticky='w',padx=(30, 0))
+        self.Investment_Cost_Limit_var = tk.DoubleVar(value=500000)
+        vcmd = (self.register(self.validate_float), '%P')
+        self.Investment_Cost_Limit_entry = ttk.Entry(self.inner_frame, textvariable=self.Investment_Cost_Limit_var,validate='key', validatecommand=vcmd)
+        self.Investment_Cost_Limit_entry.grid(row=11, column=3,padx=(30, 0))
+        create_tooltip(self.Investment_Cost_Limit_entry, "Upper limit to investment cost (considered only in case Optimization_Goal='Operation cost')")
+        self.toggle_investment_limit()
+
+        # Model Components
+        self.Model_Components_var = tk.IntVar(value=0)
+        ttk.Label(self.inner_frame, text="Backup Systems:", anchor='w').grid(row=13, column=0, sticky='w')
+        self.Model_Components_radio0 = ttk.Radiobutton(self.inner_frame, text="Batteries and Generators", variable=self.Model_Components_var, value=0)
+        self.Model_Components_radio0.grid(row=12, column=1, sticky='w')
+        self.Model_Components_radio1 = ttk.Radiobutton(self.inner_frame, text="Batteries Only", variable=self.Model_Components_var, value=1)
+        self.Model_Components_radio1.grid(row=13, column=1, sticky='w')
+        self.Model_Components_radio2 = ttk.Radiobutton(self.inner_frame, text="Generators Only", variable=self.Model_Components_var, value=2)
+        self.Model_Components_radio2.grid(row=14, column=1, sticky='w')
+        
+        # Descriptive Text Below the Images
+        descriptive_text = ("")
+        self.description_label = ttk.Label(self.inner_frame, text=descriptive_text, font=self.italic_font, wraplength=850, justify="left")
+        self.description_label.grid(row=15, column=0, columnspan=2, sticky='w')
+        
         # Renewable Penetration
-        ttk.Label(self.inner_frame, text="Renewable Penetration [-]", anchor='w').grid(row=10, column=0, sticky='w')
+        ttk.Label(self.inner_frame, text="Renewable Penetration [-]", anchor='w').grid(row=16, column=0, sticky='w')
         self.Renewable_Penetration_var = tk.DoubleVar(value=0.0)
         vcmd = (self.register(self.validate_fraction), '%P')
         self.Renewable_Penetration_entry = ttk.Entry(self.inner_frame, textvariable=self.Renewable_Penetration_var,validate='key', validatecommand=vcmd)
-        self.Renewable_Penetration_entry.grid(row=10, column=1)
+        self.Renewable_Penetration_entry.grid(row=16, column=1,sticky='w')
         create_tooltip(self.Renewable_Penetration_entry, "Minimum fraction of electricity produced by renewable sources")
 
         # Battery Independence
-        ttk.Label(self.inner_frame, text="Battery Independence [Days]", anchor='w').grid(row=11, column=0, sticky='w')
+        ttk.Label(self.inner_frame, text="Battery Independence [Days]", anchor='w').grid(row=17, column=0, sticky='w')
         self.Battery_Independence_var = tk.IntVar(value=0)
         vcmd = (self.register(self.validate_integer), '%P')
         self.Battery_Independence_entry = ttk.Entry(self.inner_frame, textvariable=self.Battery_Independence_var,validate='key', validatecommand=vcmd)
-        self.Battery_Independence_entry.grid(row=11, column=1)
+        self.Battery_Independence_entry.grid(row=17, column=1,sticky='w')
         create_tooltip(self.Battery_Independence_entry, "Number of days of battery independence")
 
         # Lost Load Fraction
-        ttk.Label(self.inner_frame, text="Lost Load Fraction [-]", anchor='w').grid(row=12, column=0, sticky='w')
+        ttk.Label(self.inner_frame, text="Lost Load Fraction [-]", anchor='w').grid(row=18, column=0, sticky='w')
         self.Lost_Load_Fraction_var = tk.DoubleVar(value=0.0)
         vcmd = (self.register(self.validate_float), '%P')
         self.Lost_Load_Fraction_entry = ttk.Entry(self.inner_frame, textvariable=self.Lost_Load_Fraction_var,validate='key', validatecommand=vcmd)
-        self.Lost_Load_Fraction_entry.grid(row=12, column=1)
+        self.Lost_Load_Fraction_entry.grid(row=18, column=1,sticky='w')
         create_tooltip(self.Lost_Load_Fraction_entry, "Maximum admissible loss of load as a fraction")
         self.Lost_Load_Fraction_var.trace('w', self.check_lost_load_fraction)
 
@@ -324,77 +349,34 @@ class StartPage(tk.Frame):
         self.Lost_Load_Specific_Cost_var = tk.DoubleVar(value=0.0)
         vcmd = (self.register(self.validate_float), '%P')
         self.Lost_Load_Specific_Cost_label = ttk.Label(self.inner_frame, text="Lost Load Specific Cost [USD/Wh]", anchor='w')
-        self.Lost_Load_Specific_Cost_label.grid(row=13, column=0, sticky='w')
+        self.Lost_Load_Specific_Cost_label.grid(row=19, column=0, sticky='w')
         self.Lost_Load_Specific_Cost_entry = ttk.Entry(self.inner_frame, textvariable=self.Lost_Load_Specific_Cost_var,validate='key', validatecommand=vcmd)
-        self.Lost_Load_Specific_Cost_entry.grid(row=13, column=1)
+        self.Lost_Load_Specific_Cost_entry.grid(row=19, column=1,sticky='w')
         create_tooltip(self.Lost_Load_Specific_Cost_entry, "Value of the unmet load in USD per Wh.")
         self.Lost_Load_Specific_Cost_label.config(state='disabled')
         self.Lost_Load_Specific_Cost_entry.config(state='disabled')
         
-        # Periods
-        ttk.Label(self.inner_frame, text="Time Resolution [periods/year]:",anchor='w').grid(row=14, column=0, sticky='w')
-        self.Periods_var = tk.IntVar(value=8760)
-        vcmd = (self.register(self.validate_integer), '%P')
-        self.Periods_entry = ttk.Entry(self.inner_frame, textvariable=self.Periods_var,validate='key', validatecommand=vcmd)
-        self.Periods_entry.grid(row=14, column=1)
-        create_tooltip(self.Periods_entry, "Units of time for which the model performs calculations")
-        # Bind the callback function to the change in "Time Resolution (periods)"
-        self.Periods_var.trace('w', self.check_battery_independence)
-
-
-        #----------------------------------------------------------------------------------------------------------------------------
-
-        # Optimization Goal
-        self.Optimization_Goal_var = tk.IntVar(value=1)
-        ttk.Label(self.inner_frame, text="Optimization Goal:",anchor='w').grid(row=15, column=0,sticky='w',ipady=20)
-        self.Optimization_Goal_radio1 = ttk.Radiobutton(self.inner_frame, text="NPC", variable=self.Optimization_Goal_var, value=1)
-        self.Optimization_Goal_radio1.grid(row=15, column=1, sticky='w')
-        self.Optimization_Goal_radio0 = ttk.Radiobutton(self.inner_frame, text="Operation cost", variable=self.Optimization_Goal_var, value=0)
-        self.Optimization_Goal_radio0.grid(row=15, column=1, sticky='e')
-        create_tooltip(self.Optimization_Goal_radio1, "Net Present Cost oriented optimization")
-        create_tooltip(self.Optimization_Goal_radio0, "Non-Actualized Operation Cost-oriented optimization")
-        self.Optimization_Goal_var.trace('w', self.toggle_investment_limit)
-        
-        # Investment_Cost_Limit
-        self.Investment_Cost_Limit_label = ttk.Label(self.inner_frame, text="Investment Cost Limit [USD]",anchor='w')
-        self.Investment_Cost_Limit_label.grid(row=15, column=2,sticky='w',padx=(30, 0))
-        self.Investment_Cost_Limit_var = tk.DoubleVar(value=500000)
-        vcmd = (self.register(self.validate_float), '%P')
-        self.Investment_Cost_Limit_entry = ttk.Entry(self.inner_frame, textvariable=self.Investment_Cost_Limit_var,validate='key', validatecommand=vcmd)
-        self.Investment_Cost_Limit_entry.grid(row=15, column=3,padx=(30, 0))
-        create_tooltip(self.Investment_Cost_Limit_entry, "Upper limit to investment cost (considered only in case Optimization_Goal='Operation cost')")
-        self.toggle_investment_limit()
-
-        # Model Components
-        self.Model_Components_var = tk.IntVar(value=0)
-        ttk.Label(self.inner_frame, text="Backup Systems:", anchor='w').grid(row=16, column=0, sticky='w')
-        self.Model_Components_radio0 = ttk.Radiobutton(self.inner_frame, text="Batteries and Generators", variable=self.Model_Components_var, value=0)
-        self.Model_Components_radio0.grid(row=16, column=1, sticky='w')
-        self.Model_Components_radio1 = ttk.Radiobutton(self.inner_frame, text="Batteries Only", variable=self.Model_Components_var, value=1)
-        self.Model_Components_radio1.grid(row=17, column=1, sticky='w')
-        self.Model_Components_radio2 = ttk.Radiobutton(self.inner_frame, text="Generators Only", variable=self.Model_Components_var, value=2)
-        self.Model_Components_radio2.grid(row=18, column=1, sticky='w')
         
         # Advanced Features Frame
-        self.advanced_frame = tk.Frame(self.inner_frame, borderwidth=2, relief="groove")
-        self.advanced_frame.grid(row=20, column=0, padx=10, pady=10, sticky='ew')
+        self.advanced_frame = tk.Frame(self.inner_frame, background='#FFFFFF')
+        self.advanced_frame.grid(row=21, column=0, padx=10, pady=10, sticky='ew')
 
         # Advanced Features Icon
         advanced_icon = Image.open('Images/advanced_icon.png')  # Load the image
-        resized_icon = advanced_icon.resize((24, 24), Image.Resampling.LANCZOS)  # Resize the image
-        self.advanced_icon_image = ImageTk.PhotoImage(resized_icon)  # Create PhotoImage
-        self.advanced_icon_label = tk.Label(self.advanced_frame, image=self.advanced_icon_image)  # Use Label to display the image
+        resized_icon = advanced_icon.resize((30, 30), Image.Resampling.LANCZOS)  # Resize the image
+        self.advanced_icon_image = ImageTk.PhotoImage(resized_icon)  
+        self.advanced_icon_label = ttk.Label(self.advanced_frame, image=self.advanced_icon_image)  
         self.advanced_icon_label.grid(row=0, column=0, padx=5, pady=5)
 
         # Advanced Features Button
-        self.advanced_button = ttk.Button(self.advanced_frame, text="Advanced Features", command=lambda: controller.show_frame('advanced_page'))
+        self.advanced_button = ttk.Button(self.advanced_frame, text="Advanced Features", command=lambda: controller.show_frame('AdvancedPage'))
         self.advanced_button.grid(row=0, column=1, padx=5, pady=5)
 
         # Keep a reference to the image to avoid garbage collection
         self.advanced_icon_label.image = self.advanced_icon_image
         
         # Navigation Frame at the bottom
-        self.nav_frame = NavigationFrame(self, self.on_next_button)
+        self.nav_frame = NavigationFrame(self, next_command=lambda: controller.show_frame('RECalculationPage'))
         self.nav_frame.grid(row=30, column=0, columnspan=4, sticky='ew')
 
         
@@ -402,8 +384,6 @@ class StartPage(tk.Frame):
      # Start with the predefined variables.
      input_data = {
         'Years': self.Years_var.get(),
-        'Step_Duration': self.Step_Duration_var.get(),
-        'Min_Last_Step_Duration': self.Min_Step_Duration_var.get(),
         'Discount_Rate': self.Real_Discount_Rate_var.get(),
         'Start_Date': self.StartDate_var.get(),
         'Periods': self.Periods_var.get(),
