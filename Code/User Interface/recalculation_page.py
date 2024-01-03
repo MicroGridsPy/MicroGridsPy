@@ -107,12 +107,6 @@ class RECalculationPage(tk.Frame):
             entry.config(state=state)
             if state == 'disabled':
                 var.set('')  # Clear the entry when disabling
-                
-    def update_warning(self, *args):
-        if self.RE_Supply_Calculation_var.get() == 0:  # If RES calculation is NOT activated
-            self.warning_label.grid(row=0, column=1, padx=10, pady=10, sticky="ew")  # Show the warning
-        else:
-            self.warning_label.grid_remove()  # Hide the warning
             
     def setup_scrollable_area(self):
         # Create the main container frame
@@ -213,7 +207,6 @@ class RECalculationPage(tk.Frame):
         self.RE_Supply_Calculation_checkbutton = ttk.Checkbutton(self.inner_frame, text="Activate", variable=self.RE_Supply_Calculation_var, onvalue=1, offvalue=0,command=self.toggle_re_calc_parameters)
         self.RE_Supply_Calculation_checkbutton.grid(row=5, column=0, sticky='e')
         create_tooltip(self.RE_Supply_Calculation_checkbutton, "Select to simulate solar PV and wind production time series using NASA POWER data")
-        self.RE_Supply_Calculation_var.trace('w', self.update_warning)
         
         text_parameters = ['lat', 'lon','time_zone','turbine_type','turbine_model']
         

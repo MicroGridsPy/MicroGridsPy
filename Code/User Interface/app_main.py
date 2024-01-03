@@ -3,6 +3,7 @@ import os
 import tkinter as tk
 from tkinter import ttk
 from ttkthemes import ThemedTk
+from initial_page import InitialPage
 from start_page import StartPage
 from recalculation_page import RECalculationPage
 from archetypes_page import ArchetypesPage
@@ -39,12 +40,12 @@ class Application(ThemedTk):
         
         # Initialize frames
         self.frames = {}
-        for F in (StartPage, RECalculationPage, ArchetypesPage, TechnologiesPage, BatteryPage, GeneratorPage, GridPage, PlotPage, RunPage):
+        for F in (InitialPage, StartPage, RECalculationPage, ArchetypesPage, TechnologiesPage, BatteryPage, GeneratorPage, GridPage, PlotPage, RunPage):
             frame = F(parent=container, controller=self)
             self.frames[F.__name__] = frame
             frame.grid(row=0, column=0, sticky="nsew")
 
-        self.show_frame("StartPage")
+        self.show_frame("InitialPage")
 
     def show_frame(self, page_name):
         frame = self.frames[page_name]

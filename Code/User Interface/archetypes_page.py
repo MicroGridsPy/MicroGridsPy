@@ -108,12 +108,6 @@ class ArchetypesPage(tk.Frame):
             entry.config(state=state)
             if state == 'disabled':
                 var.set('')  # Clear the entry when disabling
-                
-    def update_warning(self,*args):
-        if self.Demand_Profile_Generation_var.get() == 0:
-            self.warning_label.grid(row=0, column=1, padx=10, pady=10, sticky="ew")  # Show the warning
-        else:
-            self.warning_label.grid_remove()  # Hide the warning
             
     def setup_scrollable_area(self):
         # Create the main container frame
@@ -214,7 +208,6 @@ class ArchetypesPage(tk.Frame):
         self.Demand_Profile_Generation_checkbutton = ttk.Checkbutton(self.inner_frame, text="Activate", variable=self.Demand_Profile_Generation_var, onvalue=1, offvalue=0,command=self.toggle_demand_calc_parameters)
         self.Demand_Profile_Generation_checkbutton.grid(row=3, column=0, sticky='e')
         create_tooltip(self.Demand_Profile_Generation_checkbutton, "Select to simulate a load demand profile with built-in demand archetypes")
-        self.Demand_Profile_Generation_var.trace('w', self.update_warning)
         
         # Define and grid the parameters as labels and entries
         self.demand_calc_params = {

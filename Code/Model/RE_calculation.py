@@ -164,7 +164,10 @@ def wind_parameters(Data_import):
     elif type_turb == 'VA':
         skipf = 0
         skiprow = 36
-    data1 = pd.read_csv('Inputs/WT_Power_Curve.csv', skiprows = skiprow,  skipfooter = skipf, delimiter=';', decimal=',') 
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    inputs_directory = os.path.join(current_directory, '..', 'Inputs')
+    data_file_path = os.path.join(inputs_directory, 'WT_Power_Curve.csv')
+    data1 = pd.read_csv(data_file_path, skiprows = skiprow,  skipfooter = skipf, delimiter=';', decimal=',') 
     df = pd.DataFrame(data1, columns= [turb_model])
     power_curve = (df[turb_model][4:34]).values.tolist()
     rot_diam = df[turb_model][1]

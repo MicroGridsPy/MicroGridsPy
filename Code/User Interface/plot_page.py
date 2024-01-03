@@ -99,7 +99,7 @@ class PlotPage(tk.Frame):
 
     def create_multiple_color_inputs(self, label_text, default_color_text, row_start, num_sources, entries_list):
      if not entries_list: 
-            ttk.Label(self.inner_frame, text=label_text).grid(row=row_start, column=0, pady=5, sticky='e')
+            ttk.Label(self.inner_frame, text=label_text).grid(row=row_start, column=0, pady=5, sticky='w')
 
      # Initialize entries_list with default colors for each combobox
      default_color_hex = self.color_options[default_color_text]
@@ -112,7 +112,7 @@ class PlotPage(tk.Frame):
         label_column = combobox_column + 1  # Place label right next to the combobox
 
         # Create and grid the color combobox
-        color_combobox = ttk.Combobox(self.inner_frame, values=list(self.color_options.keys()), width=10)
+        color_combobox = ttk.Combobox(self.inner_frame, values=list(self.color_options.keys()), width=15)
         color_combobox.set(default_color_text)
         color_combobox.grid(row=row_start, column=combobox_column, padx=5, pady=2)
         
@@ -136,9 +136,9 @@ class PlotPage(tk.Frame):
 
     def create_single_color_inputs(self, row_start):
      for param, default_color_text in self.plot_params_defaults.items():
-        ttk.Label(self.inner_frame, text=param).grid(row=row_start, column=0, pady=5, sticky='e')
+        ttk.Label(self.inner_frame, text=param).grid(row=row_start, column=0, pady=5, sticky='w')
             
-        color_combobox = ttk.Combobox(self.inner_frame, values=list(self.color_options.keys()), width=10)
+        color_combobox = ttk.Combobox(self.inner_frame, values=list(self.color_options.keys()), width=15)
         color_combobox.set(default_color_text)
         color_combobox.grid(row=row_start, column=1, padx=5, pady=2)
         
@@ -226,8 +226,10 @@ class PlotPage(tk.Frame):
         self.subtitle_font = tkFont.Font(family="Helvetica", size=12,underline=True)
 
         # Section title: Model Configuration
-        self.title_label = ttk.Label(self.inner_frame, text="Plot Colors", font=self.subtitle_font)
-        self.title_label.grid(row=1, column=0, columnspan=1, pady=10, sticky='w')
+        self.title_label = ttk.Label(self.inner_frame, text="Results Layout Parameters", font=self.title_font)
+        self.title_label.grid(row=1, column=0,pady=10, sticky='w')
+        self.subtitle_label = ttk.Label(self.inner_frame, text="Plot Colors", font=self.subtitle_font)
+        self.subtitle_label.grid(row=2, column=0, pady=10, sticky='w')
         
         self.color_options = {
             'Orange': '#FF8800', 

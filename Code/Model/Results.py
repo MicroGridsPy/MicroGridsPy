@@ -1640,12 +1640,19 @@ def YearlyEnergyParamsSC(instance, TimeSeries):
     for s in range(1, S+1):
         curt_sc = pd.DataFrame()
         for (y, st) in ys_tuples_list:
-            total_energy_production = sum(
-                sum(RES_Energy_Production[(s, y, r, t)] if RES_Energy_Production.get((s, y, r, t)) is not None else 0 for r in range(1, R+1)) +
-                sum(Generator_Energy_Total[(s, y, g, t)] if Generator_Energy_Total.get((s, y, g, t)) is not None else 0 for g in range(1, G+1))
-                for t in range(1, P+1)
-            )
-
+            if instance.MILP_Formulation.value:
+                total_energy_production = sum(
+                    sum(RES_Energy_Production[(s, y, r, t)] if RES_Energy_Production.get((s, y, r, t)) is not None else 0 for r in range(1, R+1)) +
+                    sum(Generator_Energy_Total[(s, y, g, t)] if Generator_Energy_Total.get((s, y, g, t)) is not None else 0 for g in range(1, G+1))
+                    for t in range(1, P+1)
+                )
+            else:
+                total_energy_production = sum(
+                    sum(RES_Energy_Production[(s, y, r, t)] if RES_Energy_Production.get((s, y, r, t)) is not None else 0 for r in range(1, R+1)) +
+                    sum(Generator_Energy_Production[(s, y, g, t)] if Generator_Energy_Production.get((s, y, g, t)) is not None else 0 for g in range(1, G+1))
+                    for t in range(1, P+1)
+                )
+                
             if total_energy_production > 0:
                 curt_load = pd.DataFrame(
                     ['Year ' + str(y), sum(Curtailment.get((s, y, t), 0) for t in range(1, P+1)) / total_energy_production]
@@ -1719,84 +1726,80 @@ def YearlyEnergyParamsSC(instance, TimeSeries):
                   
 #%%
 def PrintResults(instance, Results, callback=None):
-    def print_and_callback(message):
-        print(message)
-        if callback:
-            callback('\n' + message)
 
     Y = int(instance.Years.extract_values()[None])
     
     if int(instance.WACC_Calculation.extract_values()[None]) == 1:
         wacc_value = float(instance.Discount_Rate.extract_values()[None])
-        print_and_callback(f'\n\nWACC = {wacc_value:.4f} [-]')
+        print(f'\n\nWACC = {wacc_value:.4f} [-]')
 
     npc = float(Results['Costs'].iloc[0, 0])
-    print_and_callback(f'\nNPC = {round(npc, 2)} kUSD')
+    print(f'\nNPC = {round(npc, 2)} kUSD')
 
     total_investment_cost = float(Results['Costs'].iloc[2, 0])
-    print_and_callback(f'Total actualized Investment Cost = {round(total_investment_cost, 2)} kUSD')
+    print(f'Total actualized Investment Cost = {round(total_investment_cost, 2)} kUSD')
 
     operation_cost = float(Results['Costs'].iloc[3, 0]) + float(Results['Costs'].iloc[4, 0])
-    print_and_callback(f'Total actualized Operation Cost = {round(operation_cost, 2)} kUSD')
+    print(f'Total actualized Operation Cost = {round(operation_cost, 2)} kUSD')
 
     if instance.Grid_Connection.value == 1:
         electricity_revenues = float(Results['Costs'].iloc[20, 0])
-        print_and_callback(f'Total actualized Electricity Selling Revenues = {round(electricity_revenues, 2)} kUSD')
+        print(f'Total actualized Electricity Selling Revenues = {round(electricity_revenues, 2)} kUSD')
 
     salvage_value = float(Results['Costs'].iloc[5, 0])
-    print_and_callback(f'Salvage Value = {round(salvage_value, 2)} kUSD')
+    print(f'Salvage Value = {round(salvage_value, 2)} kUSD')
 
     lcoe = float(Results['Costs'].iloc[6, 0])
-    print_and_callback(f'LCOE = {lcoe} USD/kWh')
+    print(f'LCOE = {lcoe} USD/kWh')
 
     renewable_penetration = Results['Renewables Penetration'].sum().sum() / Y
-    print_and_callback(f'\nAverage renewable penetration per year = {round(renewable_penetration, 2)} %')
+    print(f'\nAverage renewable penetration per year = {round(renewable_penetration, 2)} %')
     
     if instance.Model_Components.value == 1 and instance.Grid_Connection == 1:
         battery_usage = Results['Yearly energy parameters'].iloc[:, -2].sum().sum() / Y
-        print_and_callback(f'Average battery usage per year = {round(battery_usage, 2)} %')
+        print(f'Average battery usage per year = {round(battery_usage, 2)} %')
         grid_usage = Results['Yearly energy parameters'].iloc[:, -1].sum().sum() / Y
-        print_and_callback(f'Average national grid usage per year = {round(grid_usage, 2)} %')
+        print(f'Average national grid usage per year = {round(grid_usage, 2)} %')
         curtailment = Results['Yearly energy parameters'].iloc[:, -3].sum().sum() / Y
-        print_and_callback(f'Average curtailment per year = {round(curtailment, 2)} %')
+        print(f'Average curtailment per year = {round(curtailment, 2)} %')
 
     if instance.Model_Components.value == 1 and instance.Grid_Connection == 0:
         battery_usage = Results['Yearly energy parameters'].iloc[:, -1].sum().sum() / Y
-        print_and_callback(f'Average battery usage per year = {round(battery_usage, 2)} %')
+        print(f'Average battery usage per year = {round(battery_usage, 2)} %')
         curtailment = Results['Yearly energy parameters'].iloc[:, -2].sum().sum() / Y
-        print_and_callback(f'Average curtailment per year = {round(curtailment, 2)} %')
+        print(f'Average curtailment per year = {round(curtailment, 2)} %')
     
     if instance.Model_Components.value == 2 and instance.Grid_Connection == 1:
         generator_share = Results['Yearly energy parameters'].iloc[:, 0].sum().sum() / Y
-        print_and_callback(f'Average generator share per year = {round(generator_share, 2)} %')
+        print(f'Average generator share per year = {round(generator_share, 2)} %')
         grid_usage = Results['Yearly energy parameters'].iloc[:, -1].sum().sum() / Y
-        print_and_callback(f'Average national grid usage per year = {round(grid_usage, 2)} %')      
+        print(f'Average national grid usage per year = {round(grid_usage, 2)} %')      
         curtailment = Results['Yearly energy parameters'].iloc[:, -2].sum().sum() / Y
-        print_and_callback(f'Average curtailment per year = {round(curtailment, 2)} %')
+        print(f'Average curtailment per year = {round(curtailment, 2)} %')
 
     if instance.Model_Components.value == 2 and instance.Grid_Connection == 0:
         generator_share = Results['Yearly energy parameters'].iloc[:, 0].sum().sum() / Y
-        print_and_callback(f'Average generator share per year = {round(generator_share, 2)} %')
+        print(f'Average generator share per year = {round(generator_share, 2)} %')
         curtailment = Results['Yearly energy parameters'].iloc[:, -1].sum().sum() / Y
-        print_and_callback(f'Average curtailment per year = {round(curtailment, 2)} %')
+        print(f'Average curtailment per year = {round(curtailment, 2)} %')
 
     if instance.Model_Components.value == 0 and instance.Grid_Connection == 1:
         generator_share = Results['Yearly energy parameters'].iloc[:, 0].sum().sum() / Y
-        print_and_callback(f'Average generator share per year = {round(generator_share, 2)} %')
+        print(f'Average generator share per year = {round(generator_share, 2)} %')
         battery_usage = Results['Yearly energy parameters'].iloc[:, -2].sum().sum() / Y
-        print_and_callback(f'Average battery usage per year = {round(battery_usage, 2)} %')
+        print(f'Average battery usage per year = {round(battery_usage, 2)} %')
         grid_usage = Results['Yearly energy parameters'].iloc[:, -1].sum().sum() / Y
-        print_and_callback(f'Average national grid usage per year = {round(grid_usage, 2)} %')
+        print(f'Average national grid usage per year = {round(grid_usage, 2)} %')
         curtailment = Results['Yearly energy parameters'].iloc[:, -3].sum().sum() / Y
-        print_and_callback(f'Average curtailment per year = {round(curtailment, 2)} %')
+        print(f'Average curtailment per year = {round(curtailment, 2)} %')
 
     if instance.Model_Components.value == 0 and instance.Grid_Connection == 0:
         generator_share = Results['Yearly energy parameters'].iloc[:, 0].sum().sum() / Y
-        print_and_callback(f'Average generator share per year = {round(generator_share, 2)} %')
+        print(f'Average generator share per year = {round(generator_share, 2)} %')
         battery_usage = Results['Yearly energy parameters'].iloc[:, -1].sum().sum() / Y
-        print_and_callback(f'Average battery usage per year = {round(battery_usage, 2)} %')
+        print(f'Average battery usage per year = {round(battery_usage, 2)} %')
         curtailment = Results['Yearly energy parameters'].iloc[:, -2].sum().sum() / Y
-        print_and_callback(f'Average curtailment per year = {round(curtailment, 2)} %')
+        print(f'Average curtailment per year = {round(curtailment, 2)} %')
             
 
 

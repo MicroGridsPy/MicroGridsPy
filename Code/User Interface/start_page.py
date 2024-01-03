@@ -348,7 +348,7 @@ class StartPage(tk.Frame):
 
         # Total Project Duration 
         ttk.Label(self.inner_frame, text="Total Project Duration [Years]:", anchor='w',style='TLabel').grid(row=3, column=0, sticky='w')
-        self.Years_var = tk.IntVar(value=10)
+        self.Years_var = tk.IntVar(value=20)
         vcmd = (self.register(self.validate_integer), '%P')
         self.Years_entry = ttk.Entry(self.inner_frame, textvariable=self.Years_var, validate='key', validatecommand=vcmd)
         self.Years_entry.grid(row=3, column=1, sticky='w')
@@ -356,7 +356,7 @@ class StartPage(tk.Frame):
 
         # Step Duration
         ttk.Label(self.inner_frame, text="Step Duration [Years]:", anchor='w').grid(row=4, column=0, sticky='w')
-        self.Step_Duration_var = tk.IntVar(value=1)
+        self.Step_Duration_var = tk.IntVar(value=20)
         vcmd = (self.register(self.validate_integer), '%P')
         self.Step_Duration_entry = ttk.Entry(self.inner_frame, textvariable=self.Step_Duration_var,validate='key', validatecommand=vcmd)
         self.Step_Duration_entry.grid(row=4, column=1,sticky='w')
