@@ -1,8 +1,7 @@
 import tkinter as tk
 from tkinter import font as tkFont
-#import ttkbootstrap as ttkk
-#from ttkbootstrap import Style
 from tkinter import ttk
+from PIL import Image, ImageTk
 
 class TopSectionFrame(tk.Frame):
     def __init__(self, parent, university_name,  *args, **kwargs):
@@ -95,38 +94,6 @@ class StartPage(tk.Frame):
         else:
             self.Lost_Load_Specific_Cost_entry.config(state='disabled')
             self.Lost_Load_Specific_Cost_label.config(state='disabled')
-    
-    # Function to toggle the state of Generator Partial Load
-    def toggle_generator_partial_load(self,*args):
-        if self.MILP_Formulation_var.get() == 1:
-            self.Generator_Partial_Load_label.config(state='normal')
-            self.Generator_Partial_Load_checkbutton.config(state='normal')
-        else:
-            self.Generator_Partial_Load_var.set(0)  # Reset to 0 if MILP is not selected
-            self.Generator_Partial_Load_label.config(state='disabled')
-            self.Generator_Partial_Load_checkbutton.config(state='disabled')
-            
-
-    # Function to toggle the state of Plot Max Cost
-    def toggle_MultiObjective(self, *args):
-        if self.Multiobjective_Optimization_var.get() == 1:
-            self.Plot_Max_Cost_label.config(state='normal')
-            self.Plot_Max_Cost_radio1.config(state='normal')
-            self.Plot_Max_Cost_radio0.config(state='normal')
-            self.pareto_points_label.config(state='normal')
-            self.pareto_points_entry.config(state='normal')
-            self.pareto_solution_label.config(state='normal')
-            self.pareto_solution_entry.config(state='normal')
-
-        else:
-            self.Plot_Max_Cost_var.set(0)  # Reset to No if Multi-Objective Optimization is not selected
-            self.Plot_Max_Cost_label.config(state='disabled')
-            self.Plot_Max_Cost_radio1.config(state='disabled')
-            self.Plot_Max_Cost_radio0.config(state='disabled')
-            self.pareto_points_label.config(state='disabled')
-            self.pareto_points_entry.config(state='disabled')
-            self.pareto_solution_label.config(state='disabled')
-            self.pareto_solution_entry.config(state='disabled')
 
     def validate_pareto_solution(self, P):
         # Validate Pareto solution ensuring it's an integer between 1 and Pareto points.
@@ -144,30 +111,6 @@ class StartPage(tk.Frame):
             self.bell()  # System bell if invalid input
             return False
         
-    # Function to toggle the grid options based on the grid connection
-    def toggle_grid_options(self,*args):
-            if self.Grid_Connection_var.get() == 1: 
-                self.Grid_Availability_Simulation_checkbutton.config(state='normal')
-                self.Grid_Availability_Simulation_label.config(state='normal')
-                self.Grid_Connection_Type_label.config(state='normal')
-                self.Grid_Connection_Type_radio1.config(state='normal')
-                self.Grid_Connection_Type_radio2.config(state='normal')
-            else: 
-                self.Grid_Availability_Simulation_var.set(0)
-                self.Grid_Connection_Type_var.set(0)
-                self.Grid_Availability_Simulation_checkbutton.config(state='disabled')
-                self.Grid_Availability_Simulation_label.config(state='disabled')
-                self.Grid_Connection_Type_label.config(state='disabled')
-                self.Grid_Connection_Type_radio1.config(state='disabled')
-                self.Grid_Connection_Type_radio2.config(state='disabled')
-        
-    # Function to toggle the state of WACC parameters
-    def toggle_wacc_parameters(self):
-        state = 'normal' if self.WACC_Calculation_var.get() == 1 else 'disabled'
-        for var, label, entry in self.wacc_parameters_entries:  # Updated to unpack three elements
-            label.config(state=state)
-            entry.config(state=state)
-            if state == 'disabled': var.set('')
             
     def toggle_investment_limit(self, *args):
         if self.Optimization_Goal_var.get() == 0:  # Assuming 0 is the value for 'Operation Cost'
@@ -198,47 +141,6 @@ class StartPage(tk.Frame):
         # Then, navigate to the RECalculationPage
         self.controller.show_frame("RECalculationPage")
         
-    def update_scenario_weights(self, event=None):
-        # Clear existing weight entries
-        for entry in self.scenario_weights_entries:
-            entry.destroy()
-        self.scenario_weights_entries.clear()
-        self.scenario_weights_vars.clear()
-
-        # Validate and get the number of scenarios
-        try:
-            num_scenarios = int(self.num_scenarios_var.get())
-        except ValueError:
-            return  # Invalid input, do nothing
-
-        # Update the scrollable area
-        self.canvas.after_idle(lambda: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
-        # Create new entries for scenario weights
-        if num_scenarios > 1:
-            for i in range(num_scenarios):
-                var = tk.DoubleVar(value=1.0 / num_scenarios)
-                vcmd = (self.register(self.validate_fraction), '%P')
-                entry = ttk.Entry(self.inner_frame, textvariable=var,validate='key', validatecommand=vcmd)
-                entry.grid(row=21 + i, column=3, sticky='w')
-                self.scenario_weights_vars.append(var)
-                self.scenario_weights_entries.append(entry)
-            self.scenario_weights_label.config(state='normal')
-        else:
-            # If only one scenario, add one entry with default value 1
-            self.scenario_weight_var = tk.DoubleVar(value=1.0)
-            self.scenario_weight_entry = ttk.Entry(self.inner_frame, textvariable=self.scenario_weight_var)
-            self.scenario_weight_entry.grid(row=21, column=3, sticky='w')
-            self.scenario_weight_entry.config(state='disabled')
-            self.scenario_weights_label.config(state='disabled')
-            
-        # Check if total weight exceeds 1
-        total_weight = sum(var.get() for var in self.scenario_weights_vars)
-        if total_weight > 1:
-            tk.messagebox.showerror("Error", "Total weights of scenarios can not exceed 1")
-            return False
-        # Update the scrollregion
-        self.canvas.after_idle(lambda: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
-        return True
 
     def setup_scrollable_area(self):
         # Create the main container frame
@@ -333,6 +235,7 @@ class StartPage(tk.Frame):
         # Define custom font
         self.title_font = tkFont.Font(family="Helvetica", size=14, weight="bold")
         self.subtitle_font = tkFont.Font(family="Helvetica", size=12,underline=True)
+        self.italic_font = tkFont.Font(family="Helvetica", size=10, slant="italic")
 
         # Section title: MicroGridsPy - Data Input
         self.title_label = ttk.Label(self.inner_frame, text="MicroGridsPy - Data Input", font=self.title_font,style='TLabel')
@@ -340,50 +243,43 @@ class StartPage(tk.Frame):
 
         # Section title: Model Configuration
         self.title_label = ttk.Label(self.inner_frame, text="Model Configuration", font=self.subtitle_font,style='TLabel')
-        self.title_label.grid(row=2, column=0, columnspan=1, sticky='w')
+        self.title_label.grid(row=2, column=0, columnspan=1, pady=10, sticky='w')
+        
+
+        # Descriptive Text Below the Images
+        descriptive_text = ("Configure key aspects of the project's timeline and financial settings:\n")
+        self.description_label = ttk.Label(self.inner_frame, text=descriptive_text, font=self.italic_font, wraplength=850, justify="left")
+        self.description_label.grid(row=3, column=0, columnspan=2, sticky='w')
 
 
         # Model Configuration Parameters
         #-------------------------------
 
         # Total Project Duration 
-        ttk.Label(self.inner_frame, text="Total Project Duration [Years]:", anchor='w',style='TLabel').grid(row=3, column=0, sticky='w')
+        ttk.Label(self.inner_frame, text="Total Project Duration [Years]:", anchor='w',style='TLabel').grid(row=4, column=0, sticky='w')
         self.Years_var = tk.IntVar(value=20)
         vcmd = (self.register(self.validate_integer), '%P')
         self.Years_entry = ttk.Entry(self.inner_frame, textvariable=self.Years_var, validate='key', validatecommand=vcmd)
-        self.Years_entry.grid(row=3, column=1, sticky='w')
+        self.Years_entry.grid(row=4, column=1, sticky='w')
         create_tooltip(self.Years_entry, "Enter the duration of the project in years")
 
-        # Step Duration
-        ttk.Label(self.inner_frame, text="Step Duration [Years]:", anchor='w').grid(row=4, column=0, sticky='w')
-        self.Step_Duration_var = tk.IntVar(value=20)
-        vcmd = (self.register(self.validate_integer), '%P')
-        self.Step_Duration_entry = ttk.Entry(self.inner_frame, textvariable=self.Step_Duration_var,validate='key', validatecommand=vcmd)
-        self.Step_Duration_entry.grid(row=4, column=1,sticky='w')
-        create_tooltip(self.Step_Duration_entry, "Duration of each investment decision step in which the project lifetime will be split")
-
-        # Min_Last_Step_Duration
-        ttk.Label(self.inner_frame, text="Minimum Last Step Duration [Years]:", anchor='w').grid(row=5, column=0, sticky='w')
-        self.Min_Step_Duration_var = tk.IntVar(value=1)
-        vcmd = (self.register(self.validate_integer), '%P')
-        self.Min_Step_Duration_entry = ttk.Entry(self.inner_frame, textvariable=self.Min_Step_Duration_var,validate='key', validatecommand=vcmd)
-        self.Min_Step_Duration_entry.grid(row=5, column=1,sticky='w')
-        create_tooltip(self.Min_Step_Duration_entry, "Minimum duration of the last investment decision step, in case of non-homogeneous divisions of the project lifetime")
-
         # Real_Discount_Rate
-        ttk.Label(self.inner_frame, text="Discount Rate [-]:", anchor='w').grid(row=6, column=0, sticky='w')
+        ttk.Label(self.inner_frame, text="Discount Rate [-]:", anchor='w').grid(row=5, column=0, sticky='w')
         self.Real_Discount_Rate_var = tk.DoubleVar(value=0.1)
         vcmd = (self.register(self.validate_float), '%P')
         self.Real_Discount_Rate_entry = ttk.Entry(self.inner_frame, textvariable=self.Real_Discount_Rate_var,validate='key', validatecommand=vcmd)
-        self.Real_Discount_Rate_entry.grid(row=6, column=1,sticky='w')
+        self.Real_Discount_Rate_entry.grid(row=5, column=1,sticky='w')
         create_tooltip(self.Real_Discount_Rate_entry, "Real discount rate accounting also for inflation")
 
         # Start Date Entry
-        ttk.Label(self.inner_frame, text="Start Date of the Project:",anchor='w').grid(row=7, column=0, sticky='w')
+        ttk.Label(self.inner_frame, text="Start Date of the Project:",anchor='w').grid(row=6, column=0, sticky='w')
         self.StartDate_var = tk.StringVar(value="01/01/2023 00:00:00")
         self.StartDate_entry = ttk.Entry(self.inner_frame, textvariable=self.StartDate_var)
-        self.StartDate_entry.grid(row=7, column=1,sticky='w')
+        self.StartDate_entry.grid(row=6, column=1,sticky='w')
         create_tooltip(self.StartDate_entry, "MM/DD/YYYY HH:MM:SS format")
+        
+        separator = ttk.Separator(self.inner_frame, orient='horizontal')
+        separator.grid(row=7, column=0, columnspan=4, sticky='ew', padx=5, pady=10)
 
 
 
@@ -392,30 +288,35 @@ class StartPage(tk.Frame):
 
         # Section title: Optimization setup
         self.title_label = ttk.Label(self.inner_frame, text="Optimization setup", font=self.subtitle_font)
-        self.title_label.grid(row=2, column=2, columnspan=1, pady=5, sticky='w', padx=(30, 0))  # Align to west (left), start from column 2
+        self.title_label.grid(row=8, column=0, columnspan=1, pady=10, sticky='w')
+        
+        # Descriptive Text Below the Images
+        descriptive_text = ("Configure essential optimization parameters to tailor the project's analytical model:\n")
+        self.description_label = ttk.Label(self.inner_frame, text=descriptive_text, font=self.italic_font, wraplength=850, justify="left")
+        self.description_label.grid(row=9, column=0, columnspan=2, sticky='w')
 
         # Renewable Penetration
-        ttk.Label(self.inner_frame, text="Renewable Penetration [-]", anchor='w').grid(row=3, column=2, sticky='w',padx=(30, 0))
+        ttk.Label(self.inner_frame, text="Renewable Penetration [-]", anchor='w').grid(row=10, column=0, sticky='w')
         self.Renewable_Penetration_var = tk.DoubleVar(value=0.0)
         vcmd = (self.register(self.validate_fraction), '%P')
         self.Renewable_Penetration_entry = ttk.Entry(self.inner_frame, textvariable=self.Renewable_Penetration_var,validate='key', validatecommand=vcmd)
-        self.Renewable_Penetration_entry.grid(row=3, column=3,padx=(30, 0))
+        self.Renewable_Penetration_entry.grid(row=10, column=1)
         create_tooltip(self.Renewable_Penetration_entry, "Minimum fraction of electricity produced by renewable sources")
 
         # Battery Independence
-        ttk.Label(self.inner_frame, text="Battery Independence [Days]", anchor='w').grid(row=4, column=2, sticky='w',padx=(30, 0))
+        ttk.Label(self.inner_frame, text="Battery Independence [Days]", anchor='w').grid(row=11, column=0, sticky='w')
         self.Battery_Independence_var = tk.IntVar(value=0)
         vcmd = (self.register(self.validate_integer), '%P')
         self.Battery_Independence_entry = ttk.Entry(self.inner_frame, textvariable=self.Battery_Independence_var,validate='key', validatecommand=vcmd)
-        self.Battery_Independence_entry.grid(row=4, column=3,padx=(30, 0))
+        self.Battery_Independence_entry.grid(row=11, column=1)
         create_tooltip(self.Battery_Independence_entry, "Number of days of battery independence")
 
         # Lost Load Fraction
-        ttk.Label(self.inner_frame, text="Lost Load Fraction [-]", anchor='w').grid(row=5, column=2, sticky='w',padx=(30, 0))
+        ttk.Label(self.inner_frame, text="Lost Load Fraction [-]", anchor='w').grid(row=12, column=0, sticky='w')
         self.Lost_Load_Fraction_var = tk.DoubleVar(value=0.0)
         vcmd = (self.register(self.validate_float), '%P')
         self.Lost_Load_Fraction_entry = ttk.Entry(self.inner_frame, textvariable=self.Lost_Load_Fraction_var,validate='key', validatecommand=vcmd)
-        self.Lost_Load_Fraction_entry.grid(row=5, column=3,padx=(30, 0))
+        self.Lost_Load_Fraction_entry.grid(row=12, column=1)
         create_tooltip(self.Lost_Load_Fraction_entry, "Maximum admissible loss of load as a fraction")
         self.Lost_Load_Fraction_var.trace('w', self.check_lost_load_fraction)
 
@@ -423,19 +324,19 @@ class StartPage(tk.Frame):
         self.Lost_Load_Specific_Cost_var = tk.DoubleVar(value=0.0)
         vcmd = (self.register(self.validate_float), '%P')
         self.Lost_Load_Specific_Cost_label = ttk.Label(self.inner_frame, text="Lost Load Specific Cost [USD/Wh]", anchor='w')
-        self.Lost_Load_Specific_Cost_label.grid(row=6, column=2, sticky='w',padx=(30, 0))
+        self.Lost_Load_Specific_Cost_label.grid(row=13, column=0, sticky='w')
         self.Lost_Load_Specific_Cost_entry = ttk.Entry(self.inner_frame, textvariable=self.Lost_Load_Specific_Cost_var,validate='key', validatecommand=vcmd)
-        self.Lost_Load_Specific_Cost_entry.grid(row=6, column=3,padx=(30, 0))
+        self.Lost_Load_Specific_Cost_entry.grid(row=13, column=1)
         create_tooltip(self.Lost_Load_Specific_Cost_entry, "Value of the unmet load in USD per Wh.")
         self.Lost_Load_Specific_Cost_label.config(state='disabled')
         self.Lost_Load_Specific_Cost_entry.config(state='disabled')
         
         # Periods
-        ttk.Label(self.inner_frame, text="Time Resolution [periods/year]:",anchor='w').grid(row=7, column=2, sticky='w',padx=(30, 0))
+        ttk.Label(self.inner_frame, text="Time Resolution [periods/year]:",anchor='w').grid(row=14, column=0, sticky='w')
         self.Periods_var = tk.IntVar(value=8760)
         vcmd = (self.register(self.validate_integer), '%P')
         self.Periods_entry = ttk.Entry(self.inner_frame, textvariable=self.Periods_var,validate='key', validatecommand=vcmd)
-        self.Periods_entry.grid(row=7, column=3,padx=(30, 0))
+        self.Periods_entry.grid(row=14, column=1)
         create_tooltip(self.Periods_entry, "Units of time for which the model performs calculations")
         # Bind the callback function to the change in "Time Resolution (periods)"
         self.Periods_var.trace('w', self.check_battery_independence)
@@ -445,201 +346,56 @@ class StartPage(tk.Frame):
 
         # Optimization Goal
         self.Optimization_Goal_var = tk.IntVar(value=1)
-        ttk.Label(self.inner_frame, text="Optimization Goal:",anchor='w').grid(row=9, column=0,sticky='w',ipady=20)
+        ttk.Label(self.inner_frame, text="Optimization Goal:",anchor='w').grid(row=15, column=0,sticky='w',ipady=20)
         self.Optimization_Goal_radio1 = ttk.Radiobutton(self.inner_frame, text="NPC", variable=self.Optimization_Goal_var, value=1)
-        self.Optimization_Goal_radio1.grid(row=9, column=1, sticky='w')
+        self.Optimization_Goal_radio1.grid(row=15, column=1, sticky='w')
         self.Optimization_Goal_radio0 = ttk.Radiobutton(self.inner_frame, text="Operation cost", variable=self.Optimization_Goal_var, value=0)
-        self.Optimization_Goal_radio0.grid(row=9, column=1, sticky='e')
+        self.Optimization_Goal_radio0.grid(row=15, column=1, sticky='e')
         create_tooltip(self.Optimization_Goal_radio1, "Net Present Cost oriented optimization")
         create_tooltip(self.Optimization_Goal_radio0, "Non-Actualized Operation Cost-oriented optimization")
         self.Optimization_Goal_var.trace('w', self.toggle_investment_limit)
         
         # Investment_Cost_Limit
         self.Investment_Cost_Limit_label = ttk.Label(self.inner_frame, text="Investment Cost Limit [USD]",anchor='w')
-        self.Investment_Cost_Limit_label.grid(row=9, column=2,sticky='w',padx=(30, 0))
+        self.Investment_Cost_Limit_label.grid(row=15, column=2,sticky='w',padx=(30, 0))
         self.Investment_Cost_Limit_var = tk.DoubleVar(value=500000)
         vcmd = (self.register(self.validate_float), '%P')
         self.Investment_Cost_Limit_entry = ttk.Entry(self.inner_frame, textvariable=self.Investment_Cost_Limit_var,validate='key', validatecommand=vcmd)
-        self.Investment_Cost_Limit_entry.grid(row=9, column=3,padx=(30, 0))
+        self.Investment_Cost_Limit_entry.grid(row=15, column=3,padx=(30, 0))
         create_tooltip(self.Investment_Cost_Limit_entry, "Upper limit to investment cost (considered only in case Optimization_Goal='Operation cost')")
         self.toggle_investment_limit()
 
         # Model Components
         self.Model_Components_var = tk.IntVar(value=0)
-        ttk.Label(self.inner_frame, text="Backup Systems:", anchor='w').grid(row=10, column=0, sticky='w')
+        ttk.Label(self.inner_frame, text="Backup Systems:", anchor='w').grid(row=16, column=0, sticky='w')
         self.Model_Components_radio0 = ttk.Radiobutton(self.inner_frame, text="Batteries and Generators", variable=self.Model_Components_var, value=0)
-        self.Model_Components_radio0.grid(row=10, column=1, sticky='w')
+        self.Model_Components_radio0.grid(row=16, column=1, sticky='w')
         self.Model_Components_radio1 = ttk.Radiobutton(self.inner_frame, text="Batteries Only", variable=self.Model_Components_var, value=1)
-        self.Model_Components_radio1.grid(row=11, column=1, sticky='w')
+        self.Model_Components_radio1.grid(row=17, column=1, sticky='w')
         self.Model_Components_radio2 = ttk.Radiobutton(self.inner_frame, text="Generators Only", variable=self.Model_Components_var, value=2)
-        self.Model_Components_radio2.grid(row=12, column=1, sticky='w')
+        self.Model_Components_radio2.grid(row=18, column=1, sticky='w')
         
+        # Advanced Features Frame
+        self.advanced_frame = tk.Frame(self.inner_frame, borderwidth=2, relief="groove")
+        self.advanced_frame.grid(row=20, column=0, padx=10, pady=10, sticky='ew')
 
-        
-        # Model Advanced Features
-        #-------------------------------
+        # Advanced Features Icon
+        advanced_icon = Image.open('Images/advanced_icon.png')  # Load the image
+        resized_icon = advanced_icon.resize((24, 24), Image.Resampling.LANCZOS)  # Resize the image
+        self.advanced_icon_image = ImageTk.PhotoImage(resized_icon)  # Create PhotoImage
+        self.advanced_icon_label = tk.Label(self.advanced_frame, image=self.advanced_icon_image)  # Use Label to display the image
+        self.advanced_icon_label.grid(row=0, column=0, padx=5, pady=5)
 
-        self.title_label = ttk.Label(self.inner_frame, text="Advanced Features", font=self.subtitle_font)
-        self.title_label.grid(row=13, column=0, columnspan=1, pady=10, sticky='w')
+        # Advanced Features Button
+        self.advanced_button = ttk.Button(self.advanced_frame, text="Advanced Features", command=lambda: controller.show_frame('advanced_page'))
+        self.advanced_button.grid(row=0, column=1, padx=5, pady=5)
 
-
-        # MILP Formulation
-        self.MILP_Formulation_var = tk.IntVar(value=0)
-        ttk.Label(self.inner_frame, text="Model Formulation:", anchor='w').grid(row=14, column=0, sticky='w')
-        self.MILP_Formulation_radio0 = ttk.Radiobutton(self.inner_frame, text="LP", variable=self.MILP_Formulation_var, value=0)
-        self.MILP_Formulation_radio0.grid(row=14, column=1, sticky='w')
-        self.MILP_Formulation_radio1 = ttk.Radiobutton(self.inner_frame, text="MILP", variable=self.MILP_Formulation_var, value=1)
-        self.MILP_Formulation_radio1.grid(row=14, column=1, sticky='e')
-        self.MILP_Formulation_var.trace('w', self.toggle_generator_partial_load)
-        create_tooltip(self.MILP_Formulation_radio0, "Linear Programming")
-        create_tooltip(self.MILP_Formulation_radio1, "Multiple Integers Linear Programming")
-
-        # Generator Partial Load
-        self.Generator_Partial_Load_var = tk.IntVar(value=0)
-        self.Generator_Partial_Load_label = ttk.Label(self.inner_frame, text="Generator Partial Load:", anchor='w')
-        self.Generator_Partial_Load_label.grid(row=15, column=0, sticky='w')
-        self.Generator_Partial_Load_checkbutton = ttk.Checkbutton(self.inner_frame, text="Activate", variable=self.Generator_Partial_Load_var, onvalue=1, offvalue=0)
-        self.Generator_Partial_Load_checkbutton.grid(row=15, column=1, sticky='w')
-        self.Generator_Partial_Load_label.config(state='disabled')
-        self.Generator_Partial_Load_checkbutton.config(state='disabled')
-        self.toggle_generator_partial_load()
-
-
-        # Multiobjective Optimization
-        self.Multiobjective_Optimization_var = tk.IntVar(value=0)
-        ttk.Label(self.inner_frame, text="Multi-Objective Optimization:", anchor='w').grid(row=16, column=0, sticky='w')
-        self.Multiobjective_Optimization_checkbutton = ttk.Checkbutton(self.inner_frame, text="Activate", variable=self.Multiobjective_Optimization_var, onvalue=1, offvalue=0)
-        self.Multiobjective_Optimization_checkbutton.grid(row=16, column=1, sticky='w')
-        create_tooltip(self.Multiobjective_Optimization_checkbutton, "Optimization of NPC/operation cost and CO2 emissions")
-        self.Multiobjective_Optimization_var.trace('w', self.toggle_MultiObjective)
-
-        # Define the variable for Plot Max Cost options
-        self.Plot_Max_Cost_var = tk.IntVar(value=0)
-        self.Plot_Max_Cost_label = ttk.Label(self.inner_frame, text="Plot Max Cost:", anchor='w')
-        self.Plot_Max_Cost_label.grid(row=17, column=0, sticky='w')
-        self.Plot_Max_Cost_radio1 = ttk.Radiobutton(self.inner_frame, text="Yes", variable=self.Plot_Max_Cost_var, value=1, state='disabled')
-        self.Plot_Max_Cost_radio1.grid(row=17, column=1, sticky='w')
-        create_tooltip(self.Plot_Max_Cost_radio1, "Pareto curve has to include the point at maxNPC/maxOperationCost")
-        self.Plot_Max_Cost_radio0 = ttk.Radiobutton(self.inner_frame, text="No", variable=self.Plot_Max_Cost_var, value=0, state='disabled')
-        self.Plot_Max_Cost_radio0.grid(row=17, column=1, sticky='e')
-        self.Plot_Max_Cost_label.config(state='disabled')
-        
-        # Number of Pareto points
-        self.pareto_points_label = ttk.Label(self.inner_frame, text="Pareto points:", anchor='w', state='disabled')
-        self.pareto_points_label.grid(row=18, column=0, sticky='w')
-        self.pareto_points_var = tk.IntVar(value=2)
-        vcmd = (self.register(self.validate_integer), '%P')
-        self.pareto_points_entry = ttk.Entry(self.inner_frame, textvariable=self.pareto_points_var, state='disabled',validate='key', validatecommand=vcmd)
-        self.pareto_points_entry.grid(row=18, column=1, sticky='w')
-        create_tooltip(self.pareto_points_entry, "Pareto curve points to be analysed during optimization")
-        
-        # Number of Pareto solution
-        self.pareto_solution_label = ttk.Label(self.inner_frame, text="Pareto solution:", anchor='w', state='disabled')
-        self.pareto_solution_label.grid(row=19, column=0, sticky='w')
-        self.pareto_solution_var = tk.IntVar(value=1)
-        vcmd = (self.register(self.validate_pareto_solution), '%P')
-        self.pareto_solution_entry = ttk.Entry(self.inner_frame, textvariable=self.pareto_solution_var, state='disabled',validate='key', validatecommand=vcmd)
-        self.pareto_solution_entry.grid(row=19, column=1, sticky='w')
-        create_tooltip(self.pareto_points_entry, "Multi-Objective optimization solution to be displayed (1 for minimal CO2 emission solution, Pareto points for minimal costs one")
-
-        self.toggle_MultiObjective()
-
-        # Greenfield
-        self.Greenfield_Investment_var = tk.IntVar(value=1)
-        ttk.Label(self.inner_frame, text="Type of Investment:",anchor='w').grid(row=20, column=0,sticky='w')
-        self.Greenfield_radio = ttk.Radiobutton(self.inner_frame, text="Greenfield", variable=self.Greenfield_Investment_var, value=1).grid(row=20, column=1, sticky='w')
-        self.Brownfield_radio = ttk.Radiobutton(self.inner_frame, text="Brownfield", variable=self.Greenfield_Investment_var, value=0).grid(row=20, column=1, sticky='e')
-
-
-        # Grid Connection Radiobuttons
-        self.Grid_Connection_var = tk.IntVar(value=0)
-        self.Grid_Connection_var.trace('w', self.toggle_grid_options)
-        ttk.Label(self.inner_frame, text="Grid Connection:", anchor='w').grid(row=21, column=0, sticky='w')
-        self.Grid_Connection_radio = ttk.Radiobutton(self.inner_frame, text="On-grid", variable=self.Grid_Connection_var, value=1)
-        self.Grid_Connection_radio.grid(row=21, column=1, sticky='w')
-        create_tooltip(self.Grid_Connection_radio, "Simulate grid connection during project lifetime")
-        ttk.Radiobutton(self.inner_frame, text="Off-grid", variable=self.Grid_Connection_var, value=0).grid(row=21, column=1, sticky='e')
-
-        # Grid Availability Simulation
-        self.Grid_Availability_Simulation_var = tk.IntVar(value=0)
-        self.Grid_Availability_Simulation_label = ttk.Label(self.inner_frame, text="Grid Availability:", anchor='w')
-        self.Grid_Availability_Simulation_label.grid(row=22, column=0, sticky='w')
-        self.Grid_Availability_Simulation_label.config(state='disabled')
-        self.Grid_Availability_Simulation_checkbutton = ttk.Checkbutton(self.inner_frame, text="Activate", variable=self.Grid_Availability_Simulation_var, onvalue=1, offvalue=0)
-        create_tooltip(self.Grid_Availability_Simulation_checkbutton, "Simulate grid availability matrix")
-        self.Grid_Availability_Simulation_checkbutton.grid(row=22, column=1, sticky='w')
-        self.Grid_Availability_Simulation_checkbutton.config(state='disabled')
-
-        # Grid Connection Type Radiobuttons
-        self.Grid_Connection_Type_var = tk.IntVar(value=0)
-        self.Grid_Connection_Type_label = ttk.Label(self.inner_frame, text="Grid Connection Type:", anchor='w', state='disabled')
-        self.Grid_Connection_Type_label.grid(row=23, column=0, sticky='w')
-        self.Grid_Connection_Type_radio1 = ttk.Radiobutton(self.inner_frame, text="Buy Only", variable=self.Grid_Connection_Type_var, value=0, state='disabled')
-        self.Grid_Connection_Type_radio1.grid(row=23, column=1, sticky='w')
-        self.Grid_Connection_Type_radio2 = ttk.Radiobutton(self.inner_frame, text="Buy/Sell", variable=self.Grid_Connection_Type_var, value=1, state='disabled')
-        self.Grid_Connection_Type_radio2.grid(row=23, column=1, sticky='e')
-        self.toggle_grid_options()
-
-
-        # WACC Calculation Checkbutton
-        self.WACC_Calculation_var = tk.IntVar(value=0)
-        self.WACC_Calculation_label = ttk.Label(self.inner_frame, text="WACC Calculation:", anchor='w')
-        self.WACC_Calculation_label.grid(row=14, column=2, sticky='w',padx=(30, 0))
-        self.WACC_Calculation_checkbutton = ttk.Checkbutton(self.inner_frame, text="Activate", variable=self.WACC_Calculation_var, onvalue=1, offvalue=0, command=self.toggle_wacc_parameters)
-        self.WACC_Calculation_checkbutton.grid(row=14, column=3, sticky='w')
-        
-        vcmd = (self.register(self.validate_float), '%P')
-
-        # WACC Parameters
-        wacc_parameters = {
-            "cost_of_equity": 0.12,
-            "cost_of_debt": 0.11,
-            "tax": 0.02,
-            "equity_share": 0.10,
-            "debt_share": 0.90
-            }
-
-        # Create labels and entries for WACC parameters in the adjusted columns
-        self.wacc_parameters_entries = []
-        for i, (param, value) in enumerate(wacc_parameters.items(), start=15):  # Adjust the starting row accordingly
-            label = ttk.Label(self.inner_frame, text=param)
-            label.grid(row=i, column=2, sticky='w',padx=(40, 0))  # Place the labels in column 3
-            var = tk.DoubleVar(value=value)
-            entry = ttk.Entry(self.inner_frame, textvariable=var, state='normal', validate='key', validatecommand=vcmd)  # Initially set state to 'normal' to show the value
-            entry.var = var
-            entry.grid(row=i, column=3, sticky='w')  # Place the entry fields in column 4
-            label.config(state='disabled')  # Then disable the entry
-            entry.config(state='disabled')  # Then disable the entry
-            self.wacc_parameters_entries.append((var, label, entry))
-            
-        # Number of Scenarios
-        self.num_scenarios_var = tk.IntVar(value=1)
-        self.num_scenarios_label = ttk.Label(self.inner_frame, text="Number of Scenarios:", anchor='w')
-        self.num_scenarios_label.grid(row=20, column=2, sticky='w', padx=(30, 0))
-        vcmd = (self.register(self.validate_integer), '%P')
-        self.num_scenarios_entry = ttk.Entry(self.inner_frame, textvariable=self.num_scenarios_var,validate='key', validatecommand=vcmd)
-        self.num_scenarios_entry.grid(row=20, column=3, sticky='w')
-        self.num_scenarios_entry.bind("<FocusOut>", self.update_scenario_weights)
-        create_tooltip(self.num_scenarios_entry, "Multi-Scenarios Optimization")
-        
-        # Initialize Scenario Weights with one entry and disabled
-        self.scenario_weights_label = ttk.Label(self.inner_frame, text="Scenario Weights:", anchor='w', state='disabled')
-        self.scenario_weights_label.grid(row=21, column=2, sticky='w', padx=(30, 0))
-        self.scenario_weight_var = tk.DoubleVar(value=1.0)
-        self.scenario_weight_entry = ttk.Entry(self.inner_frame, textvariable=self.scenario_weight_var, state='disabled')
-        self.scenario_weight_entry.grid(row=21, column=3, sticky='w')
-
-        # Update Configuration Button
-        self.update_config_button = ttk.Button(self.inner_frame, text="Update", command=self.update_scenario_weights)
-        self.update_config_button.grid(row=20, column=4, sticky='w')
-
-        # Scenario Weights
-        self.scenario_weights_vars = []
-        self.scenario_weights_entries = []
+        # Keep a reference to the image to avoid garbage collection
+        self.advanced_icon_label.image = self.advanced_icon_image
         
         # Navigation Frame at the bottom
         self.nav_frame = NavigationFrame(self, self.on_next_button)
-        self.nav_frame.grid(row=1000, column=0, columnspan=4, sticky='ew')
+        self.nav_frame.grid(row=30, column=0, columnspan=4, sticky='ew')
 
         
     def get_input_data(self):
@@ -658,30 +414,7 @@ class StartPage(tk.Frame):
         'Investment_Cost_Limit': self.Investment_Cost_Limit_var.get(),
         'Optimization_Goal': self.Optimization_Goal_var.get(),
         'Model_Components': self.Model_Components_var.get(),
-        'MILP_Formulation': self.MILP_Formulation_var.get(),
-        'Generator_Partial_Load': self.Generator_Partial_Load_var.get(),
-        'Multiobjective_Optimization': self.Multiobjective_Optimization_var.get(),
-        'Plot_Max_Cost': self.Plot_Max_Cost_var.get(),
-        'Pareto_points': self.pareto_points_var.get(),
-        'Pareto_solution': self.pareto_solution_var.get(),
-        'Greenfield_Investment': self.Greenfield_Investment_var.get(),
-        'Grid_Connection': self.Grid_Connection_var.get(),
-        'Grid_Availability_Simulation': self.Grid_Availability_Simulation_var.get(),
-        'Grid_Connection_Type': self.Grid_Connection_Type_var.get(),
-        'WACC_Calculation': self.WACC_Calculation_var.get(),
-        'Scenarios': self.num_scenarios_var.get()
      }
-
-     # Loop through each entry for the WACC parameters and add them to the input_data dictionary.
-     for var, label, entry in self.wacc_parameters_entries:
-        param = label.cget("text")
-        try: input_data[param] = var.get()
-        except: continue
-    # Check if the number of scenarios is more than one and add scenario weights
-     num_scenarios = self.num_scenarios_var.get()
-     if num_scenarios > 1:
-        scenario_weights = [var.get() for var in self.scenario_weights_vars]
-        input_data['Scenario_Weight'] = scenario_weights
 
      return input_data
 

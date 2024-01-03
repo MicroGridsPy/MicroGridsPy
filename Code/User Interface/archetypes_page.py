@@ -148,7 +148,7 @@ class ArchetypesPage(tk.Frame):
         
     def setup_warning(self):
         # Load the warning icon image
-        warning_icon = Image.open('Images/attention.png')  # Replace with your image's path
+        warning_icon = Image.open('Images/attention.png')  
         warning_icon = warning_icon.resize((24, 24), Image.Resampling.LANCZOS)
         self.warning_icon_image = ImageTk.PhotoImage(warning_icon)
 

@@ -5,6 +5,7 @@ from tkinter import ttk
 from ttkthemes import ThemedTk
 from initial_page import InitialPage
 from start_page import StartPage
+from advanced_page import AdvancedPage
 from recalculation_page import RECalculationPage
 from archetypes_page import ArchetypesPage
 from technologies_page import TechnologiesPage
@@ -40,7 +41,7 @@ class Application(ThemedTk):
         
         # Initialize frames
         self.frames = {}
-        for F in (InitialPage, StartPage, RECalculationPage, ArchetypesPage, TechnologiesPage, BatteryPage, GeneratorPage, GridPage, PlotPage, RunPage):
+        for F in (InitialPage, StartPage, AdvancedPage, RECalculationPage, ArchetypesPage, TechnologiesPage, BatteryPage, GeneratorPage, GridPage, PlotPage, RunPage):
             frame = F(parent=container, controller=self)
             self.frames[F.__name__] = frame
             frame.grid(row=0, column=0, sticky="nsew")
