@@ -551,6 +551,8 @@ class AdvancedPage(tk.Frame):
     def get_input_data(self):
      # Start with the predefined variables.
      input_data = {
+        'Step_Duration': self.Step_Duration_var.get(),
+        'Min_Last_Step_Duration': self.Min_Step_Duration_var.get(),
         'MILP_Formulation': self.MILP_Formulation_var.get(),
         'Generator_Partial_Load': self.Generator_Partial_Load_var.get(),
         'Multiobjective_Optimization': self.Multiobjective_Optimization_var.get(),

@@ -43,8 +43,8 @@ param: hospital_4 := '0';
 param: hospital_5 := '0';
 
 param: Periods := 8760;
-param: Years := 5;
-param: Step_Duration := 1;
+param: Years := 20;
+param: Step_Duration := 20;
 param: Min_Last_Step_Duration := 1;
 param: StartDate := '01/01/2023 00:00:00';
 param: Delta_Time := 1.0;

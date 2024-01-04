@@ -166,6 +166,8 @@ class Application(ThemedTk):
         # Initialize the data dictionary
         startpage_data = {'StartPage': self.frames['StartPage'].get_input_data()}
         data = startpage_data
+        advancedpage_data = {'AdvancedPage': self.frames['AdvancedPage'].get_input_data()}
+        data.update(advancedpage_data)
         if model_components == 1:
             battery_data = {'BatteryPage' : self.frames['BatteryPage'].get_input_data()}
             data.update(battery_data)
