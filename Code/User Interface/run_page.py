@@ -178,7 +178,7 @@ class RunPage(tk.Frame):
             self.Time_Series = TimeSeries(self.instance)
             Optimization_Goal = self.instance.Optimization_Goal.extract_values()[None]
             self.Results = ResultsSummary(self.instance, Optimization_Goal, self.Time_Series)
-            PrintResults(self.instance, self.Results, self.update_output)
+            PrintResults(self.instance, self.Results)
              
             end = time.time()
             elapsed = end - start
@@ -191,6 +191,46 @@ class RunPage(tk.Frame):
         thread = threading.Thread(target=self.run_model_thread)
         thread.start()
 
+    def setup_parameters_frame(self):
+        # Parameters Initialization Frame setup with grid layout
+        ttk.Label(self.parameters_frame, text="Start Date for Plot:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.start_date_entry = ttk.Entry(self.parameters_frame)
+        self.start_date_entry.insert(0, "01/01/2023 00:00:00")
+        self.start_date_entry.grid(row=0, column=1, padx=5, pady=5, sticky="w")
+
+        ttk.Label(self.parameters_frame, text="Number of days to plot:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        vcmd = (self.register(self.validate_integer), '%P')
+        self.plot_time_entry = ttk.Entry(self.parameters_frame, validate='key', validatecommand=vcmd)
+        self.plot_time_entry.insert(0, "3")
+        self.plot_time_entry.grid(row=1, column=1, padx=5, pady=5, sticky="w")
+
+
+    def setup_plots_frame(self):
+        
+        # Generate Plot button
+        self.generate_plot_button = ttk.Button(self.plots_frame, text="Generate Plots:", command=self.generate_plot)
+        self.generate_plot_button.grid(row=0, column=0, padx=5, pady=5)
+        
+        # Plots Frame setup with grid layout
+        self.show_dispatch_plot_button = ttk.Button(self.plots_frame, text="Show Dispatch Plot", command=self.show_dispatch_plot, state='disabled')
+        self.show_dispatch_plot_button.grid(row=0, column=1, padx=5, pady=5)
+
+        self.size_plot_button = ttk.Button(self.plots_frame, text="Show Size Plot", command=self.show_size_plot, state='disabled')
+        self.size_plot_button.grid(row=0, column=2, padx=5, pady=5)
+
+        self.cash_plot_button = ttk.Button(self.plots_frame, text="Cash Flow Plot", command=self.show_cash_plot, state='disabled')
+        self.cash_plot_button.grid(row=0, column=3, padx=5, pady=5)
+
+        # Placeholder for Pareto Curve Button (if needed)
+        self.show_pareto_curve_button = ttk.Button(self.plots_frame, text="Show Pareto Curve", command=self.show_pareto_plot, state='disabled')
+        self.show_pareto_curve_button.grid(row=0, column=3, padx=5, pady=5)
+        
+    def setup_output_frame(self):
+        self.output_text = tk.Text(self.output_frame, height=15)
+        self.output_text.pack(side='left', fill='both', expand=True)
+        self.output_scrollbar = ttk.Scrollbar(self.output_frame, command=self.output_text.yview)
+        self.output_scrollbar.pack(side='right', fill='y')
+        self.output_text['yscrollcommand'] = self.output_scrollbar.set
 
         
     def __init__(self, parent, controller):
@@ -198,90 +238,52 @@ class RunPage(tk.Frame):
         self.controller = controller
         
         # Add Top Section first
-        university_name = "MicroGridsPy"
+        university_name = "MicroGridsPy "
         self.top_section = TopSectionFrame(self, university_name)
         self.top_section.pack(side='top', fill='x')
 
-        # Main frame to contain all other frames except for the navigation frame
-        self.main_frame = ttk.Frame(self)
-        self.main_frame.pack(side='top', fill='both', expand=True, padx=10, pady=10)
-
-        # Frame for the controls
-        self.controls_frame = ttk.Frame(self.main_frame)
-        self.controls_frame.pack(side='top', fill='x', expand=False)
-
-        # Frame for the output
-        self.output_frame = ttk.Frame(self.main_frame)
-        self.output_frame.pack(side='top', fill='both', expand=True)
-
-        # Setup the text widget for output
-        self.output_text = tk.Text(self.output_frame, height=15)
-        self.output_text.pack(side='left', fill='both', expand=True)
-
-        # Scrollbar for the output text widget
-        self.output_scrollbar = ttk.Scrollbar(self.output_frame, command=self.output_text.yview)
-        self.output_scrollbar.pack(side='right', fill='y')
-        self.output_text['yscrollcommand'] = self.output_scrollbar.set
+        # 1. Run Button Frame
+        self.run_button_frame = ttk.Frame(self)
+        self.run_button_frame.pack(side='top', fill='x', padx=10, pady=5)
         
+        # Title label
+        self.title_label = ttk.Label(self.run_button_frame, text="Run the Model:", font=("Helvetica", 16))
+        self.title_label.pack(side='left', padx=10)
+        
+        self.run_button = ttk.Button(self.run_button_frame, text="RUN", command=self.run_model)
+        self.run_button.pack(side='left', padx=20, pady=5)
+        
+        '''
+        # Add Icon to Run Button Frame
+        run_icon = Image.open('Images/run.png')  # Load the image
+        run_icon = run_icon.resize((20, 20), Image.Resampling.LANCZOS)  # Resize the image
+        self.run_icon_image = ImageTk.PhotoImage(run_icon)  
+        self.run_icon_label = ttk.Label(self.run_button_frame, image=self.run_icon_image)  
+        self.run_icon_label.pack(side='left', padx=5)    
+        '''
+
+        # 2. Output Frame
+        self.output_frame = tk.Frame(self, highlightbackground="black", highlightthickness=1)
+        self.output_frame.pack(side='top', fill='both', expand=True, padx=10, pady=5)
+        self.setup_output_frame()
         
         # Redirect output
         self.output_redirection = RedirectOutput(self.output_text)
         sys.stdout = self.output_redirection
         sys.stderr = self.output_redirection
         
+        # 3. Parameters Initialization Frame
+        self.parameters_frame = ttk.Frame(self)
+        self.parameters_frame.pack(side='top', fill='x', padx=10, pady=5)
+        self.setup_parameters_frame()
         
-        # Title label
-        self.title_label = ttk.Label(self.controls_frame, text="Run the Model", font=("Helvetica", 16))
-        self.title_label.pack(side='top', pady=10)
+        # 4. Plots Frame
+        self.plots_frame = ttk.Frame(self)
+        self.plots_frame.pack(side='top', fill='x', padx=10, pady=5)
+        self.setup_plots_frame()
 
-        # Run button
-        self.run_button = ttk.Button(self.controls_frame, text="RUN", command=self.run_model)
-        self.run_button.pack(side='top', pady=10)
-
-        # Start Date Entry for Plot
-        start_date_frame = ttk.Frame(self.controls_frame)
-        start_date_frame.pack(fill='x', pady=5)
-        ttk.Label(start_date_frame, text="Start Date for Plot:").pack(side='left')
-        self.start_date_entry = ttk.Entry(start_date_frame)
-        self.start_date_entry.insert(0, "01/01/2023 00:00:00")
-        self.start_date_entry.pack(side='left')
-
-        # Number of days to plot
-        plot_time_frame = ttk.Frame(self.controls_frame)
-        plot_time_frame.pack(fill='x', pady=5)
-        ttk.Label(plot_time_frame, text="Number of days to plot:").pack(side='left')
-        vcmd = (self.register(self.validate_integer), '%P')
-        self.plot_time_entry = ttk.Entry(plot_time_frame, validate='key', validatecommand=vcmd)
-        self.plot_time_entry.insert(0, "3")
-        self.plot_time_entry.pack(side='left')
-
-        # Frame for the Generate Plot button
-        self.plot_button_frame = ttk.Frame(self.controls_frame)
-        self.plot_button_frame.pack(side='top', fill='x', pady=5)
-
-        # Generate Plot button
-        self.generate_plot_button = ttk.Button(self.plot_button_frame, text="Generate Plots", command=self.generate_plot)
-        self.generate_plot_button.pack(side='left', pady=5)
-        self.show_plots_frame = ttk.Frame(self.controls_frame)
-        self.show_plots_frame.pack(side='left', fill='x', pady=5)
-
-        # Show Dispatch Plot button (initially disabled)
-        self.show_dispatch_plot_button = ttk.Button(self.controls_frame, text="Show Dispatch Plot", command=self.show_dispatch_plot, state='disabled')
-        self.show_dispatch_plot_button.pack(side='left', pady=5)
-        
-        # Show Size Plot button (initially disabled)
-        self.size_plot_button = ttk.Button(self.show_plots_frame, text="Show Size Plot", command=self.show_size_plot, state='disabled')
-        self.size_plot_button.pack(side='left', pady=5, padx=5)
-
-        # Show Cash Flow Plot button (initially disabled)
-        self.cash_plot_button = ttk.Button(self.show_plots_frame, text="Cash Flow Plot", command=self.show_cash_plot,state='disabled')
-        self.cash_plot_button.pack(side='left', pady=5, padx=5)
-
-        # Navigation frame at the very bottom of the window, outside the main_frame
+        # Navigation Frame
         self.nav_frame = NavigationFrame(self)
         self.nav_frame.pack(side='bottom', fill='x')
-
-        # Ensure that the main_frame does not expand vertically anymore than necessary
-        self.pack_propagate(False)
         
 

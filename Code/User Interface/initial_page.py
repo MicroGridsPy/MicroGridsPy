@@ -128,7 +128,7 @@ class InitialPage(tk.Frame):
         self.load_and_display_image()
         # Caption for the Image Beside the Carousel
         self.model_scheme_caption = ttk.Label(self.inner_frame, text="Model scheme", font=("Arial", 10, "italic"))
-        self.model_scheme_caption.grid(row=4, column=0, padx=10, pady=0, sticky='n')
+        self.model_scheme_caption.grid(row=4, column=0, pady=0, sticky='n')
 
         # Image Carousel (to the right of the main image)
         self.setup_image_carousel(['Images/Carousel/1.png', 'Images/Carousel/2.png', 'Images/Carousel/3.png','Images/Carousel/4.png','Images/Carousel/5.png'])  # Example image paths        # Add Horizontal Separator
