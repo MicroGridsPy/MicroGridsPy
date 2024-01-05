@@ -617,6 +617,7 @@ def SizePlot(instance,Results,PlotResolution,PlotFormat):
 
 
     if ST==1:
+        print(Results['Size'])
         fig, ax1 = plt.subplots(nrows=1,ncols=1,figsize = (20,15))
         x_positions = np.arange(R+G+1)
         x_ticks = []
@@ -649,6 +650,16 @@ def SizePlot(instance,Results,PlotResolution,PlotFormat):
                     label='Battery bank',
                     zorder = 3)
             x_ticks += ['Battery bank']
+            
+        # Get the maximum kW and kWh values
+        max_kW_value = Results['Size'].loc[idx[:, 'kW'], 'Total'].max()
+        max_kW = max_kW_value if pd.notna(max_kW_value) else 0
+
+        max_kWh_value = Results['Size'].loc[idx[:, 'kWh'], 'Total'].max()
+        max_kWh = max_kWh_value if pd.notna(max_kWh_value) else 0
+
+        ax1.set_ylim(0, max_kW * 1.1)  # For kW, add some margin
+        ax2.set_ylim(0, max_kWh * 1.1) # For kWh, add some margin
 
         ax1.set_xlabel('Components', fontsize=fontaxis)
         ax1.set_ylabel('Installed capacity [kW]', fontsize=fontaxis)
@@ -664,6 +675,10 @@ def SizePlot(instance,Results,PlotResolution,PlotFormat):
         ax1.set_yticklabels(ax1.get_yticks(), fontsize=fontticks) 
         ax1.grid(True, zorder=2)
         ax2.set_yticklabels(ax1.get_yticks(), fontsize=fontticks) 
+        # Correctly set the y-tick labels for ax1 and ax2
+        ax1.set_yticklabels(['{:.2f}'.format(y) for y in ax1.get_yticks()])
+        ax2.set_yticklabels(['{:.2f}'.format(y) for y in ax2.get_yticks()])
+
         
     if ST!=1:
         fig,(ax1,ax2) = plt.subplots(nrows=2,ncols=1,figsize = (20,15))
