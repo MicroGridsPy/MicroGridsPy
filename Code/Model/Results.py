@@ -1095,8 +1095,9 @@ def EnergySystemSize(instance):
                                 round(Generator_Size.astype(float),2)], axis=0).fillna('-')
         
         
+    print("\n------------------------------------------------------------------------------------")
     print(SystemSize)
-    print("------------------------------------------------------------------------------------")
+    print("\n------------------------------------------------------------------------------------")
     return SystemSize
 #%% Yearly costs
 def YearlyCosts(instance):
@@ -1753,6 +1754,8 @@ def PrintResults(instance, Results, callback=None):
 
     lcoe = float(Results['Costs'].iloc[6, 0])
     print(f'LCOE = {lcoe} USD/kWh')
+    
+    print("\n------------------------------------------------------------------------------------")
 
     renewable_penetration = Results['Renewables Penetration'].sum().sum() / Y
     print(f'\nAverage renewable penetration per year = {round(renewable_penetration, 2)} %')
