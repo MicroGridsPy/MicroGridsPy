@@ -106,8 +106,6 @@ class ArchetypesPage(tk.Frame):
         for var, label, entry in self.demand_calc_params_entries:
             label.config(state=state)
             entry.config(state=state)
-            if state == 'disabled':
-                var.set('')  # Clear the entry when disabling
             
     def setup_scrollable_area(self):
         # Create the main container frame
@@ -197,10 +195,14 @@ class ArchetypesPage(tk.Frame):
         # Define custom font
         self.title_font = tkFont.Font(family="Helvetica", size=16, weight="bold")
         self.subtitle_font = tkFont.Font(family="Helvetica", size=12,underline=True)
+        self.italic_font = tkFont.Font(family="Helvetica", size=10, slant="italic")
 
         # Section title: Model Configuration
-        self.title_label = ttk.Label(self.inner_frame, text="Endogenous Demand Time Series Calculation", font=self.subtitle_font)
+        self.title_label = ttk.Label(self.inner_frame, text="Demand Time Series Calculation", font=self.title_font)
         self.title_label.grid(row=1, column=0, columnspan=1, pady=10, sticky='w')
+        
+        self.intro_label = ttk.Label(self.inner_frame, text="Generate the load curve demand using build-in Sub-Sahara Africa village archetypes:", font=self.italic_font, wraplength=850, justify="left")
+        self.intro_label.grid(row=2, column=0, columnspan=2, pady=10, sticky='w')
         
         # RE_Supply_Calculation Checkbutton
         self.Demand_Profile_Generation_var = tk.IntVar(value=0)
@@ -225,6 +227,22 @@ class ArchetypesPage(tk.Frame):
             "hospital_4": "0",
             "hospital_5": "0"
             }
+        
+        tooltips = {
+            "demand_growth": "Yearly expected average percentage variation of the demand [%]",
+            "cooling_period": "Cooling period (NC = No Cooling; AY = All Year; OM = Oct-Mar; AS = Apr-Sept)",
+            "h_tier1": "Number of users in tier 1",
+            "h_tier2": "Number of users in tier 2",
+            "h_tier3": "Number of users in tier 3",
+            "h_tier4": "Number of users in tier 4",
+            "h_tier5": "Number of users in tier 5",
+            "schools": "Number of schools",
+            "hospital_1": "Number of hospitals in tier 1",
+            "hospital_2": "Number of hospitals in tier 2",
+            "hospital_3": "Number of hospitals in tier 3",
+            "hospital_4": "Number of hospitals in tier 4",
+            "hospital_5": "Number of hospitals in tier 5"
+            }
 
         self.demand_calc_params_entries = []
         for i, (param, value) in enumerate(self.demand_calc_params.items(), start=4):  # Adjust the starting row
@@ -237,7 +255,13 @@ class ArchetypesPage(tk.Frame):
             # Initially disable the entries
             label.config(state='disabled')
             entry.config(state='disabled')
+
+            # Add tooltip
+            tooltip_text = tooltips.get(param, "No description available.")
+            create_tooltip(entry, tooltip_text)
+
             self.demand_calc_params_entries.append((var, label, entry))
+
             
 
         # Create the warning label and grid it

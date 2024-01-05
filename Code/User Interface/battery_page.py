@@ -236,12 +236,13 @@ class BatteryPage(tk.Frame):
         # Define custom font
         self.title_font = tkFont.Font(family="Helvetica", size=14, weight="bold")
         self.subtitle_font = tkFont.Font(family="Helvetica", size=12,underline=True)
+        self.italic_font = tkFont.Font(family="Helvetica", size=10, slant="italic")
         
-        self.title_label = ttk.Label(self.inner_frame, text="Backup System", font=self.title_font)
+        self.title_label = ttk.Label(self.inner_frame, text="Battery Bank Parameters", font=self.title_font)
         self.title_label.grid(row=1, column=0, columnspan=1, pady=10, sticky='w')
         
-        self.title_label = ttk.Label(self.inner_frame, text="Battery bank", font=self.subtitle_font)
-        self.title_label.grid(row=2, column=0, columnspan=1, pady=10, sticky='w')
+        self.intro_label = ttk.Label(self.inner_frame, text="Define the parameters related to the battery bank system:", font=self.italic_font, wraplength=850, justify="left")
+        self.intro_label.grid(row=2, column=0, columnspan=2, pady=10, sticky='w')
         
         # Define and grid the parameters as labels and entries
         self.battery_calc_params = {
@@ -279,7 +280,7 @@ class BatteryPage(tk.Frame):
         self.brownfield_parameters = ['Battery_capacity']
 
         self.battery_calc_params_entries = []
-        for i, (param, value) in enumerate(self.battery_calc_params.items(), start=4): 
+        for i, (param, value) in enumerate(self.battery_calc_params.items(), start=3): 
             label_text = param
             label = ttk.Label(self.inner_frame, text=label_text)
             label.grid(row=i, column=0, sticky='w')

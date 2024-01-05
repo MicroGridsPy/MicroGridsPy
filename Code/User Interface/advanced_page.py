@@ -216,7 +216,7 @@ class AdvancedPage(tk.Frame):
                 var = tk.DoubleVar(value=1.0 / num_scenarios)
                 vcmd = (self.register(self.validate_fraction), '%P')
                 entry = ttk.Entry(self.inner_frame, textvariable=var,validate='key', validatecommand=vcmd)
-                entry.grid(row=21 + i, column=3, sticky='w')
+                entry.grid(row=24 + i, column=1, sticky='w')
                 self.scenario_weights_vars.append(var)
                 self.scenario_weights_entries.append(entry)
             self.scenario_weights_label.config(state='normal')
@@ -224,7 +224,7 @@ class AdvancedPage(tk.Frame):
             # If only one scenario, add one entry with default value 1
             self.scenario_weight_var = tk.DoubleVar(value=1.0)
             self.scenario_weight_entry = ttk.Entry(self.inner_frame, textvariable=self.scenario_weight_var)
-            self.scenario_weight_entry.grid(row=21, column=3, sticky='w')
+            self.scenario_weight_entry.grid(row=24, column=1, sticky='w')
             self.scenario_weight_entry.config(state='disabled')
             self.scenario_weights_label.config(state='disabled')
             
@@ -347,6 +347,7 @@ class AdvancedPage(tk.Frame):
         self.Capacity_expansion_checkbutton = ttk.Checkbutton(self.inner_frame, text="Activate", variable=self.Capacity_expansion_var, onvalue=1, offvalue=0)
         self.Capacity_expansion_checkbutton.grid(row=3, column=1, sticky='w')
         self.Capacity_expansion_var.trace('w', self.toggle_Capacity)
+        create_tooltip(self.Capacity_expansion_checkbutton, "Allow capacity expansion and different investment steps during the time horizon")
 
         # Step Duration
         self.Step_Duration_label = ttk.Label(self.inner_frame, text="Step Duration [Years]:", anchor='w', state='disabled')

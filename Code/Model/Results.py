@@ -1095,6 +1095,8 @@ def EnergySystemSize(instance):
                                 round(Generator_Size.astype(float),2)], axis=0).fillna('-')
         
         
+    print(SystemSize)
+    print("------------------------------------------------------------------------------------")
     return SystemSize
 #%% Yearly costs
 def YearlyCosts(instance):

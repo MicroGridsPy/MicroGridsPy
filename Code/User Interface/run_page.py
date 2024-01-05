@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
+from tkinter import font as tkFont
 import sys
 import os
 import threading
@@ -242,42 +243,43 @@ class RunPage(tk.Frame):
         self.top_section = TopSectionFrame(self, university_name)
         self.top_section.pack(side='top', fill='x')
 
-        # 1. Run Button Frame
         self.run_button_frame = ttk.Frame(self)
         self.run_button_frame.pack(side='top', fill='x', padx=10, pady=5)
         
-        # Title label
         self.title_label = ttk.Label(self.run_button_frame, text="Run the Model:", font=("Helvetica", 16))
         self.title_label.pack(side='left', padx=10)
         
         self.run_button = ttk.Button(self.run_button_frame, text="RUN", command=self.run_model)
         self.run_button.pack(side='left', padx=20, pady=5)
         
-        '''
+        
         # Add Icon to Run Button Frame
         run_icon = Image.open('Images/run.png')  # Load the image
         run_icon = run_icon.resize((20, 20), Image.Resampling.LANCZOS)  # Resize the image
         self.run_icon_image = ImageTk.PhotoImage(run_icon)  
         self.run_icon_label = ttk.Label(self.run_button_frame, image=self.run_icon_image)  
         self.run_icon_label.pack(side='left', padx=5)    
-        '''
+        
 
-        # 2. Output Frame
+        self.intro_label_frame = ttk.Frame(self)
+        self.intro_label_frame.pack(side='top', fill='x', padx=10, pady=5)
+
+        self.italic_font = tkFont.Font(family="Helvetica", size=10, slant="italic")
+        self.intro_label = ttk.Label(self.intro_label_frame, text="Output panel to visualize model operation, solver log and key results:", font=self.italic_font)
+        self.intro_label.pack(side='left', padx=5)
+
         self.output_frame = tk.Frame(self, highlightbackground="black", highlightthickness=1)
         self.output_frame.pack(side='top', fill='both', expand=True, padx=10, pady=5)
         self.setup_output_frame()
         
-        # Redirect output
         self.output_redirection = RedirectOutput(self.output_text)
         sys.stdout = self.output_redirection
         sys.stderr = self.output_redirection
         
-        # 3. Parameters Initialization Frame
         self.parameters_frame = ttk.Frame(self)
         self.parameters_frame.pack(side='top', fill='x', padx=10, pady=5)
         self.setup_parameters_frame()
         
-        # 4. Plots Frame
         self.plots_frame = ttk.Frame(self)
         self.plots_frame.pack(side='top', fill='x', padx=10, pady=5)
         self.setup_plots_frame()

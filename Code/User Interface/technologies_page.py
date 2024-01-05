@@ -344,6 +344,8 @@ class TechnologiesPage(tk.Frame):
         }
         
         self.res_params_tooltips = {
+            "RES_Names":"Renewable technology name",
+            "RES_Nominal_Capacity":"Capacity linked to the electricity production time series (read below for further info)",
             "RES_Inverter_Efficiency": "Average efficiency the inverter [%]",
             "RES_Specific_Investment_Cost": "Specific investment cost for each renewable technology [USD/W]",
             "RES_Specific_OM_Cost": "O&M cost for each renewable technology as a fraction of specific investment cost [%]",
@@ -363,14 +365,15 @@ class TechnologiesPage(tk.Frame):
         # Custom font definitions
         self.title_font = tkFont.Font(family="Helvetica", size=14, weight="bold")
         self.subtitle_font = tkFont.Font(family="Helvetica", size=12, underline=True)
+        self.italic_font = tkFont.Font(family="Helvetica", size=10, slant="italic")
 
         # Title label
-        self.title_label = ttk.Label(self.inner_frame, text="Technologies Parameters", font=self.title_font)
+        self.title_label = ttk.Label(self.inner_frame, text="Renewables Parameters", font=self.title_font)
         self.title_label.grid(row=1, column=0, columnspan=1, pady=10, sticky='w')
 
         # Renewable parameters label
-        self.title_label = ttk.Label(self.inner_frame, text="Renewables", font=self.subtitle_font)
-        self.title_label.grid(row=2, column=0, columnspan=1, pady=10, sticky='w')
+        self.intro_label = ttk.Label(self.inner_frame, text="Define the number and type of renewable sources to be considered:", font=self.italic_font, wraplength=850, justify="left")
+        self.intro_label.grid(row=2, column=0, columnspan=2, pady=10, sticky='w')
 
         # RES types entry
         ttk.Label(self.inner_frame, text="RES_Sources").grid(row=3, column=0, pady=(0,15), sticky='w')
@@ -378,6 +381,7 @@ class TechnologiesPage(tk.Frame):
         vcmd = (self.register(self.validate_integer), '%P')  # Validation command
         self.RES_Sources_entry = ttk.Entry(self.inner_frame, textvariable=self.RES_Sources_var, validate='key', validatecommand=vcmd)
         self.RES_Sources_entry.grid(row=3, column=1, pady=(0,15), sticky='w')
+        create_tooltip(self.RES_Sources_entry, "Type the number of renewable sources and press the update button to visualize the additional parameters")
 
         # Update configuration button
         self.update_button = ttk.Button(self.inner_frame, text="Update Parameters Configuration", command=self.update_res_configuration)

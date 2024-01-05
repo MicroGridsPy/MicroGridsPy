@@ -50,7 +50,7 @@ class InitialPage(tk.Frame):
         # Create a label to display the image
         image_label = ttk.Label(self.inner_frame, image=tk_image)
         image_label.image = tk_image  # Keep a reference to avoid garbage collection
-        image_label.grid(row=3, column=0, padx=10, sticky='nsew')  # Adjust grid position as needed
+        image_label.grid(row=3, column=0, padx=10, sticky='n')  # Adjust grid position as needed
 
 
     def setup_scrollable_area(self):
@@ -127,7 +127,7 @@ class InitialPage(tk.Frame):
         # Load and Display Image
         self.load_and_display_image()
         # Caption for the Image Beside the Carousel
-        self.model_scheme_caption = ttk.Label(self.inner_frame, text="Model scheme", font=("Arial", 10, "italic"))
+        self.model_scheme_caption = ttk.Label(self.inner_frame, text="Model exemplative scheme", font=("Arial", 10, "italic"))
         self.model_scheme_caption.grid(row=4, column=0, pady=0, sticky='n')
 
         # Image Carousel (to the right of the main image)

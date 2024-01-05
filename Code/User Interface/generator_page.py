@@ -84,12 +84,6 @@ def create_tooltip(widget, text):
         widget.bind('<Leave>', lambda event: tool_tip.hide_tip())
 
 class GeneratorPage(tk.Frame):
-    
-    def update_warning(self,*args):
-        if self.Fuel_Specific_Cost_Calculation_var.get() == 1:  
-            self.warning_label.grid(row=0, column=1, padx=10, pady=10, sticky="ew")  # Show the warning
-        else:
-            self.warning_label.grid_remove()  # Hide the warning
 
         
     def setup_warning(self):
@@ -159,6 +153,7 @@ class GeneratorPage(tk.Frame):
     def update_gen_configuration(self):
      # First, clear all existing entries.
      self.clear_gen_entries()
+     self.clear_fuel_entries()
 
      # Get the number of generator sources to configure
      try: 
@@ -167,16 +162,17 @@ class GeneratorPage(tk.Frame):
 
      # Reset the gen_entries list
      self.gen_entries = []
+     self.fuel_entries = []
 
      text_parameters = ['Generator_Names', 'Fuel_Names']
 
      # Start adding new entries from the fourth row
-     row_start = 5
+     row_start_gen = 5
 
      for param, default in self.gen_params_defaults.items():
         for i in range(gen_sources):
             # Calculate the row for the current parameter
-            row = row_start + list(self.gen_params_defaults.keys()).index(param)
+            row = row_start_gen + list(self.gen_params_defaults.keys()).index(param)
             vcmd = self.get_validation_command(param, default)
             
             initial_label_state = self.initial_states[param]['label']
@@ -203,10 +199,51 @@ class GeneratorPage(tk.Frame):
 
             # Append the new entry to gen_entries
             self.gen_entries.append((temp_var, label, entry))
+            
+     row_start_fuel = 23
+            
+     for param, default in self.fuel_params_defaults.items():
+        for i in range(gen_sources):
+            # Calculate the row for the current parameter
+            row = row_start_fuel + list(self.fuel_params_defaults.keys()).index(param)
+            vcmd = self.get_validation_command(param, default)
+            
+            initial_label_state = self.initial_states[param]['label']
+            initial_entry_state = self.initial_states[param]['entry']
+
+            # Check if it's a text parameter and set the appropriate variable type
+            if param in text_parameters:
+                temp_var = tk.StringVar(value=default)
+            else:
+                temp_var = tk.DoubleVar(value=default)
+                
+            label = ttk.Label(self.inner_frame, text=param)
+
+            # Place the label only for the first column
+            if i == 0:
+                label.grid(row=row, column=0, sticky='w')
+                label.config(state=initial_label_state)
+            else:
+                label = None
+
+            # Create the entry
+            entry = ttk.Entry(self.inner_frame, textvariable=temp_var, validate='key', validatecommand=vcmd)
+            entry.grid(row=row, column=1 + i, sticky='w')
+            entry.config(state=initial_entry_state)
+
+            # Append the new entry to gen_entries
+            self.fuel_entries.append((temp_var, label, entry))
+        
 
 
     def clear_gen_entries(self):
      for var, label, entry in self.gen_entries:
+        if label: 
+            label.destroy()
+        entry.destroy()
+        
+    def clear_fuel_entries(self):
+     for var, label, entry in self.fuel_entries:
         if label: 
             label.destroy()
         entry.destroy()
@@ -239,7 +276,28 @@ class GeneratorPage(tk.Frame):
          gen_data[param] = values
          
      gen_data['Fuel_Specific_Cost_Calculation'] = self.Fuel_Specific_Cost_Calculation_var.get()
+     
+     # Initialize a dictionary to store the values for each parameter
+     param_values = {param: [] for param in self.fuel_params_defaults}
 
+     # Iterate over the entries and aggregate values by parameter
+     for var, label, entry in self.fuel_entries:
+        if label:
+            param = label.cget('text')
+            # Reset the current list for this parameter if we're on the first generator type
+            if len(param_values[param]) >= num_gen_types:
+                param_values[param] = [var.get()]
+            else:
+                param_values[param].append(var.get())
+        else:
+            # Find the parameter this value belongs to by matching the variable in param_values
+            for key, values in param_values.items():
+                if len(values) < num_gen_types:
+                    param_values[key].append(var.get())
+                    break
+
+     for param, values in param_values.items():
+         gen_data[param] = values
 
      return gen_data
             
@@ -249,6 +307,16 @@ class GeneratorPage(tk.Frame):
     def on_confirm_and_next(self):
      all_filled = True
      for var, label, entry in self.gen_entries:
+         try : value = str(entry.get())
+         except: value = ''
+         if not str(value).strip():  
+            # Use the label's text to show which field needs to be filled
+            messagebox.showwarning("Warning", f"Please fill in the required field for {label.cget('text') if label else 'unknown parameter'}.")
+            entry.focus_set()  # Set focus to the empty entry
+            all_filled = False
+            break
+        
+     for var, label, entry in self.fuel_entries:
          try : value = str(entry.get())
          except: value = ''
          if not str(value).strip():  
@@ -267,18 +335,26 @@ class GeneratorPage(tk.Frame):
      self.controller.show_GridPage()
      
     def toggle_fuel_specific_cost(self):
-     # Check if the checkbutton is checked or not
-     is_checked = self.Fuel_Specific_Cost_Calculation_var.get() == 1
+        # Check if the checkbutton is checked or not
+        is_checked = self.Fuel_Specific_Cost_Calculation_var.get() == 1
 
-     # Iterate over all entries and labels to find the specific parameters
-     for (var, label, entry) in self.gen_entries:
-        if label and label.cget('text') in self.fuel_parameters:
-            new_state = 'disabled' if is_checked else 'normal'
-            label.config(state=new_state)
-            entry.config(state=new_state)
+        # Determine the new state based on whether the checkbox is checked
+        new_state = 'disabled' if is_checked else 'normal'
 
-            # Update the stored initial state
-            self.initial_states[label.cget('text')] = {'label': new_state, 'entry': new_state}
+        # Define the fuel parameters to be toggled
+        toggle_params = ['Fuel_Specific_Start_Cost', 'Fuel_Specific_Cost_Rate']
+
+        # Iterate over all fuel entries
+        num_gen_types = int(self.Generator_Types_var.get())
+        for i in range(num_gen_types):
+         for var, label, entry in self.fuel_entries:
+            # Check if the label's text matches one of the parameters to be toggled
+            if label and label.cget('text') in toggle_params:
+                label.config(state=new_state)
+                entry.config(state=new_state)
+
+                # Update the stored initial state for the parameter
+                self.initial_states[label.cget('text')] = {'label': new_state, 'entry': new_state}
                
     def toggle_milp_parameters(self):
         for (var, label, entry) in self.gen_entries:
@@ -364,12 +440,7 @@ class GeneratorPage(tk.Frame):
             "Generator_Specific_Investment_Cost": 0.4,
             "Generator_Specific_OM_Cost": 0.08,
             "Generator_Lifetime": 20,
-            "Fuel_Names": "Diesel",
-            "Fuel_LHV": 10140.0,
             "GEN_unit_CO2_emission": 0.0,
-            "FUEL_unit_CO2_emission": 2.68,
-            "Fuel_Specific_Start_Cost": 1.17,
-            "Fuel_Specific_Cost_Rate": 0.0,
             "Generator_capacity": 0.0,
             "GEN_years": 0,
             "Generator_Nominal_Capacity_milp": 5000,
@@ -377,22 +448,33 @@ class GeneratorPage(tk.Frame):
             "Generator_pgen": 0.01
             }
         
+        self.fuel_params_defaults = {
+            "Fuel_Names": "Diesel",
+            "Fuel_LHV": 10140.0,
+            "FUEL_unit_CO2_emission": 2.68,
+            "Fuel_Specific_Start_Cost": 1.17,
+            "Fuel_Specific_Cost_Rate": 0.0
+            }
+        
         self.gen_params_tooltips = {
             "Generator_Efficiency": "Average generator efficiency of each generator type [%]",
             "Generator_Specific_Investment_Cost": "Specific investment cost for each generator type [USD/W]",
             "Generator_Specific_OM_Cost": "O&M cost for each generator type as a fraction of specific investment cost [%]",
             "Generator_Lifetime": "Generator Lifetime [years]",
-            "Fuel_Names": "Fuel names (to be specified for each generator, even if they use the same fuel)",
-            "Fuel_LHV": "Fuel lower heating value (LHV) for each generator type [Wh/lt]",
             "GEN_unit_CO2_emission": "Specific CO2 emissions associated to each generator type[kgCO2/kW]",
-            "FUEL_unit_CO2_emission": "Specific CO2 emissions associated to the fuel [kgCO2/lt]",
-            "Fuel_Specific_Start_Cost": "Initial fuel specific cost [USD/Wh] at year 1",
-            "Fuel_Specific_Cost_Rate": "Change rate in fuel specific cost [% per year]",
             "Generator_capacity": "Existing Generator capacity [W]",
             "GEN_years": "How many years ago the component was installed [years]",
             "Generator_Nominal_Capacity_milp": "Nominal capacity of each generator [W]",
             "Generator_Min_output":"Minimum percentage of energy output for the generator in part load [%]",
             "Generator_pgen":"Percentage of the total operation cost of the generator system at full load [%]"
+        }
+        
+        self.fuel_params_tooltips = {
+            "Fuel_Names": "Fuel names (to be specified for each generator, even if they use the same fuel)",
+            "Fuel_LHV": "Fuel lower heating value (LHV) for each generator type [Wh/lt]",
+            "FUEL_unit_CO2_emission": "Specific CO2 emissions associated to the fuel [kgCO2/lt]",
+            "Fuel_Specific_Start_Cost": "Initial fuel specific cost [USD/Wh] at year 1",
+            "Fuel_Specific_Cost_Rate": "Change rate in fuel specific cost [% per year]"
         }
         
         text_parameters = ['Generator_Names', 'Fuel_Names']
@@ -408,36 +490,21 @@ class GeneratorPage(tk.Frame):
         self.title_font = tkFont.Font(family="Helvetica", size=14, weight="bold")
         self.subtitle_font = tkFont.Font(family="Helvetica", size=12, underline=True)
 
-        # Title label
-        self.title_label = ttk.Label(self.inner_frame, text="Backup System", font=self.title_font)
-        self.title_label.grid(row=1, column=0, columnspan=1, pady=10, sticky='w')
-
         # Renewable parameters label
-        self.title_label = ttk.Label(self.inner_frame, text="Generator", font=self.subtitle_font)
-        self.title_label.grid(row=2, column=0, columnspan=1, pady=10, sticky='w')
+        self.title_label = ttk.Label(self.inner_frame, text="Generator Parameters", font=self.title_font)
+        self.title_label.grid(row=1, column=0, columnspan=1, pady=10, sticky='w')
         
-        self.Fuel_Specific_Cost_Calculation_var = tk.IntVar(value=0)
-
-        # Step 2: Create the checkbutton
-        self.Fuel_Specific_Cost_Calculation_checkbutton = ttk.Checkbutton(
-                self.inner_frame, text="Fuel Specific Cost Import",
-                variable=self.Fuel_Specific_Cost_Calculation_var,
-                command=self.toggle_fuel_specific_cost)
-        
-        self.Fuel_Specific_Cost_Calculation_checkbutton.grid(row=3, column=0, sticky='w')
-        create_tooltip(self.Fuel_Specific_Cost_Calculation_checkbutton, "Check to import the fuel specific cost values from a csv file")
-        self.Fuel_Specific_Cost_Calculation_var.trace('w', self.update_warning)
 
         # RES types entry
-        ttk.Label(self.inner_frame, text="Generator Types:").grid(row=4, column=0, pady=(0,15), sticky='w')
+        ttk.Label(self.inner_frame, text="Generator Types:").grid(row=3, column=0, pady=(0,15), sticky='w')
         self.Generator_Types_var = tk.IntVar(value=1)  # Default value set to 1
         vcmd = (self.register(self.validate_integer), '%P')  # Validation command
         self.Generator_Types_entry = ttk.Entry(self.inner_frame, textvariable=self.Generator_Types_var, validate='key', validatecommand=vcmd)
-        self.Generator_Types_entry.grid(row=4, column=1, pady=(0,15), sticky='w')
+        self.Generator_Types_entry.grid(row=3, column=1, pady=(0,15), sticky='w')
 
         # Update configuration button
         self.update_button = ttk.Button(self.inner_frame, text="Update Parameters Configuration", command=self.update_gen_configuration)
-        self.update_button.grid(row=4, pady=(0,15), column=2)
+        self.update_button.grid(row=3, pady=(0,15), column=2)
 
         self.gen_entries = []
         for i, (param, value) in enumerate(self.gen_params_defaults.items(), start=5):  
@@ -474,6 +541,52 @@ class GeneratorPage(tk.Frame):
 
             # Append to gen_entries
             self.gen_entries.append((var, label, entry))
+            
+        separator = ttk.Separator(self.inner_frame, orient='horizontal')
+        separator.grid(row=21, column=0, columnspan=3, pady=10, sticky='ew')
+            
+        self.Fuel_Specific_Cost_Calculation_var = tk.IntVar(value=0)
+
+        # Step 2: Create the checkbutton
+        self.Fuel_Specific_Cost_Calculation_checkbutton = ttk.Checkbutton(
+                    self.inner_frame, text="Fuel Specific Cost Import",
+                    variable=self.Fuel_Specific_Cost_Calculation_var,
+                    command=self.toggle_fuel_specific_cost)
+            
+        self.Fuel_Specific_Cost_Calculation_checkbutton.grid(row=22, column=0, sticky='w')
+        create_tooltip(self.Fuel_Specific_Cost_Calculation_checkbutton, "Check to import the fuel specific cost values from a csv file")
+        
+        self.fuel_entries = []
+        for i, (param, value) in enumerate(self.fuel_params_defaults.items(), start=23):  
+            label_text = param
+            label = ttk.Label(self.inner_frame, text=label_text)
+            label.grid(row=i, column=0, sticky='w')
+
+            # Determine the variable type
+            if param in text_parameters: var = tk.StringVar(value=value)
+            else: var = tk.DoubleVar(value=value)
+
+            # Initially, set the entry state to 'normal' (enabled)
+            entry_state = 'normal'
+            label_state = 'normal'
+                
+            # Create the entry
+            vcmd = self.get_validation_command(param, value)
+            entry = ttk.Entry(self.inner_frame, textvariable=var, validate='key', validatecommand=vcmd, state=entry_state)
+            entry.grid(row=i, column=1, sticky='w')
+
+            # Configure the label state
+            label.config(state=label_state)
+
+            # Add tooltip
+            tooltip_text = self.fuel_params_tooltips.get(param, "No description available")
+            create_tooltip(entry, tooltip_text)
+            
+            self.initial_states[param] = {'label': label_state, 'entry': entry_state}
+
+            # Append to gen_entries
+            self.fuel_entries.append((var, label, entry))
+        
             
         # Create the warning label and grid it
         self.setup_warning()
