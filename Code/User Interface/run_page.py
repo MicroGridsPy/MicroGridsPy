@@ -164,7 +164,8 @@ class RunPage(tk.Frame):
         plot_label.pack()
         
     def run_model_thread(self):
-
+        try:
+            self.run_button.configure(state='disabled')
             import time
             from pyomo.environ import AbstractModel
             from Model_Creation import Model_Creation
@@ -185,6 +186,8 @@ class RunPage(tk.Frame):
             elapsed = end - start
             elapsed_message = f'\n\nModel run complete (overall time: {round(elapsed, 0)} s, {round(elapsed / 60, 1)} m)\n'
             self.update_output(elapsed_message)
+        finally:
+            self.run_button.configure(state='normal')
             
     def run_model(self):
         self.clear_output()
@@ -224,7 +227,7 @@ class RunPage(tk.Frame):
 
         # Placeholder for Pareto Curve Button (if needed)
         self.show_pareto_curve_button = ttk.Button(self.plots_frame, text="Show Pareto Curve", command=self.show_pareto_plot, state='disabled')
-        self.show_pareto_curve_button.grid(row=0, column=3, padx=5, pady=5)
+        self.show_pareto_curve_button.grid(row=0, column=4, padx=5, pady=5)
         
     def setup_output_frame(self):
         self.output_text = tk.Text(self.output_frame, height=15)
