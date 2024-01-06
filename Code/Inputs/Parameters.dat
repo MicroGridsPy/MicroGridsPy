@@ -16,19 +16,19 @@ param: lat := '-11 33 56.4';
 param: lon := '30 21 3.4';
 param: time_zone := +2;
 
-param: nom_power := 1000.0;
-param: tilt := 10.0;
-param: azim := 180.0;
+param: nom_power := 300;
+param: tilt := 10;
+param: azim := 180;
 param: ro_ground := 0.2;
 param: k_T := -0.37;
-param: NMOT := 45.0;
-param: T_NMOT := 20.0;
-param: G_NMOT := 800.0;
+param: NMOT := 45 ;	
+param: T_NMOT := 20;
+param: G_NMOT := 800;
 param: turbine_type := 'HA';
 param: turbine_model := 'NPS100c-21';
 param: drivetrain_efficiency := 0.9;
 
-param: demand_growth := '5';
+param: demand_growth := '0';
 param: cooling_period := 'AY';
 param: h_tier1 := '252';
 param: h_tier2 := '160';
@@ -44,7 +44,7 @@ param: hospital_5 := '0';
 
 param: Periods := 8760;
 param: Years := 20;
-param: Step_Duration := 5;
+param: Step_Duration := 20;
 param: Min_Last_Step_Duration := 1;
 param: StartDate := '01/01/2023 00:00:00';
 param: Delta_Time := 1.0;
@@ -70,10 +70,10 @@ param: Generator_Partial_Load := 0;
 param: Multiobjective_Optimization := 0;
 param: Greenfield_Investment := 1;
 param: Plot_Max_Cost := 0;
-param: RE_Supply_Calculation := 1;
-param: Demand_Profile_Generation := 1;
-param: Grid_Connection := 1;
-param: Grid_Availability_Simulation := 1;
+param: RE_Supply_Calculation := 0;
+param: Demand_Profile_Generation := 0;
+param: Grid_Connection := 0;
+param: Grid_Availability_Simulation := 0;
 param: Grid_Connection_Type := 0;
 param: WACC_Calculation := 0;
 param: Model_Components := 0;
@@ -183,15 +183,15 @@ param: Generator_pgen :=
 1	0.01
 ;
 
-param: Year_Grid_Connection := 10.0;
-param: Grid_Sold_El_Price := 0.0;
+param: Year_Grid_Connection := 1;
+param: Grid_Sold_El_Price := 0;
 param: Grid_Purchased_El_Price := 0.138;
 param: Grid_Distance := 0.5;
-param: Grid_Connection_Cost := 14000.0;
+param: Grid_Connection_Cost := 14000;
 param: Grid_Maintenance_Cost := 0.025;
-param: Maximum_Grid_Power := 80.0;
+param: Maximum_Grid_Power := 80;
 param: Grid_Average_Number_Outages := 43.48;
-param: Grid_Average_Outage_Duration := 455.0;
+param: Grid_Average_Outage_Duration := 455;
 param: National_Grid_Specific_CO2_emissions := 0.1495;
 
 param: RES_Colors :=
