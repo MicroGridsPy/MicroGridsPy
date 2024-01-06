@@ -205,8 +205,11 @@ class GridPage(tk.Frame):
         self.title_label = ttk.Label(self.inner_frame, text="On-Grid Model", font=self.title_font)
         self.title_label.grid(row=1, column=0, columnspan=1, pady=10, sticky='w')
         
-        self.title_label = ttk.Label(self.inner_frame, text="Grid Connection", font=self.subtitle_font)
-        self.title_label.grid(row=2, column=0, columnspan=1, pady=10, sticky='w')
+        self.italic_font = tkFont.Font(family="Helvetica", size=10, slant="italic")
+        
+        self.intro_label = ttk.Label(self.inner_frame, text="Simulate the connection with the main grid taking into account its costs and availability:", font=self.italic_font, wraplength=850, justify="left")
+        self.intro_label.grid(row=2, column=0, columnspan=2, pady=10, sticky='w')
+
         
         # Define and grid the parameters as labels and entries
         self.grid_params = {

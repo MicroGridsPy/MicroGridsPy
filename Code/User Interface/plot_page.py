@@ -226,10 +226,13 @@ class PlotPage(tk.Frame):
         self.subtitle_font = tkFont.Font(family="Helvetica", size=12,underline=True)
 
         # Section title: Model Configuration
-        self.title_label = ttk.Label(self.inner_frame, text="Results Layout Parameters", font=self.title_font)
+        self.title_label = ttk.Label(self.inner_frame, text="Plot Colors", font=self.title_font)
         self.title_label.grid(row=1, column=0,pady=10, sticky='w')
-        self.subtitle_label = ttk.Label(self.inner_frame, text="Plot Colors", font=self.subtitle_font)
-        self.subtitle_label.grid(row=2, column=0, pady=10, sticky='w')
+        
+        self.italic_font = tkFont.Font(family="Helvetica", size=10, slant="italic")
+        
+        self.intro_label = ttk.Label(self.inner_frame, text="Select the plot colors from the drop-down menu:", font=self.italic_font, wraplength=850, justify="left")
+        self.intro_label.grid(row=2, column=0, columnspan=2, pady=10, sticky='w')
         
         self.color_options = {
             'Orange': '#FF8800', 
