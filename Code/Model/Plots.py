@@ -617,7 +617,6 @@ def SizePlot(instance,Results,PlotResolution,PlotFormat):
 
 
     if ST==1:
-        print(Results['Size'])
         fig, ax1 = plt.subplots(nrows=1,ncols=1,figsize = (20,15))
         x_positions = np.arange(R+G+1)
         x_ticks = []
@@ -671,11 +670,7 @@ def SizePlot(instance,Results,PlotResolution,PlotFormat):
         ax2.set_xticks(x_positions)
         ax2.set_xticklabels(x_ticks, fontsize=fontticks)
         ax2.margins(x=0.009)
-            
-        ax1.set_yticklabels(ax1.get_yticks(), fontsize=fontticks) 
-        ax1.grid(True, zorder=2)
-        ax2.set_yticklabels(ax1.get_yticks(), fontsize=fontticks) 
-        # Correctly set the y-tick labels for ax1 and ax2
+        
         ax1.set_yticklabels(['{:.2f}'.format(y) for y in ax1.get_yticks()])
         ax2.set_yticklabels(['{:.2f}'.format(y) for y in ax2.get_yticks()])
 
