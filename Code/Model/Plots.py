@@ -310,34 +310,29 @@ def CashFlowPlot(instance,Results,PlotResolution,PlotFormat):
     for g in range(1,G+1):
         Investment_Gen[Generator_Names[g]] = [0 for y in range(Y)]
 
-    # Initialize the aggregated investment for each year
-    Total_Investment = [0 for y in range(Y)]
-
     if ST == 1:
-        # Summing up the investment costs for the first year
         if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:
-            Total_Investment[0] += Results['Costs'].loc[idx['Investment cost', 'Battery bank', :, :], 'Total'].values[0]
+            Investment_BESS[0] = Results['Costs'].loc[idx['Investment cost','Battery bank',:,:],'Total'].values[0]
         if instance.Grid_Connection.value == 1:
-            Total_Investment[0] += Results['Costs'].loc[idx['Investment cost', 'National Grid', :, :], 'Total'].values[0]
-        for r in range(1, R + 1):
-            Total_Investment[0] += Results['Costs'].loc[idx['Investment cost', RES_Names[r], :, :], 'Total'].values[0]
+            Investment_Grid[0] = Results['Costs'].loc[idx['Investment cost','National Grid',:,:],'Total'].values[0]
+        for r in range(1,R+1):
+            Investment_RES[RES_Names[r]][0] = Results['Costs'].loc[idx['Investment cost',RES_Names[r],:,:],'Total'].values[0]
         if instance.Model_Components.value == 0 or instance.Model_Components.value == 2:
-            for g in range(1, G + 1):
-                Total_Investment[0] += Results['Costs'].loc[idx['Investment cost', Generator_Names[g], :, :], 'Total'].values[0]
+            for g in range(1,G+1):
+                Investment_Gen[Generator_Names[g]][0] = Results['Costs'].loc[idx['Investment cost',Generator_Names[g],:,:],'Total'].values[0]
     else:
-        for st in range(1, ST + 1):
-            for y in range(1, Y + 1):
-                if y == 1:
-                    # Aggregate all investments for the first year for each component
+        for st in range(1,ST+1):
+            for y in range(1,Y+1):
+                if y==1:
                     if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:
-                        Total_Investment[0] += Results['Costs'].loc[idx['Investment cost', 'Battery bank', :, :], 'Step 1'].values[0]
+                        Investment_BESS[y-1] = Results['Costs'].loc[idx['Investment cost','Battery bank',:,:],'Step 1'].values[0]
                     if instance.Grid_Connection.value == 1:
-                        Total_Investment[0] += Results['Costs'].loc[idx['Investment cost', 'National Grid', :, :], 'Step 1'].values[0]
-                    for r in range(1, R + 1):
-                        Total_Investment[0] += Results['Costs'].loc[idx['Investment cost', RES_Names[r], :, :], 'Step 1'].values[0]
+                        Investment_Grid[0] = Results['Costs'].loc[idx['Investment cost','National Grid',:,:],'Step 1'].values[0]
+                    for r in range(1,R+1):
+                        Investment_RES[RES_Names[r]][y-1] = Results['Costs'].loc[idx['Investment cost',RES_Names[r],:,:],'Step 1'].values[0]
                     if instance.Model_Components.value == 0 or instance.Model_Components.value == 2:
-                        for g in range(1, G + 1):
-                            Total_Investment[0] += Results['Costs'].loc[idx['Investment cost', Generator_Names[g], :, :], 'Step 1'].values[0]              
+                        for g in range(1,G+1):
+                            Investment_Gen[Generator_Names[g]][y-1] = Results['Costs'].loc[idx['Investment cost',Generator_Names[g],:,:],'Step 1'].values[0]                
                 if st!=1:
                     if y==tup_list[st-2][0]:
                         if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:
@@ -349,8 +344,6 @@ def CashFlowPlot(instance,Results,PlotResolution,PlotFormat):
                         if instance.Model_Components.value == 0 or instance.Model_Components.value == 2:
                             for g in range(1,G+1):
                                 Investment_Gen[Generator_Names[g]][y-1] = Results['Costs'].loc[idx['Investment cost',Generator_Names[g],:,:],'Step '+str(st)].values[0]
-    
-
 #%% Yearly cash flows
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:
         Fixed_costs_BESS = Results['Yearly cash flows'].loc[:,idx['Fixed costs', 'Battery bank', :, :]].values
@@ -412,47 +405,50 @@ def CashFlowPlot(instance,Results,PlotResolution,PlotFormat):
     x_positions = np.arange(Y)
     years = [pd.to_datetime(instance.StartDate()).year+y for y in range(Y)]
 
+    # Base initialization for investment costs
+    base = [0] * Y
+
     "Investment costs"
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:
         plt.bar(x_positions, 
-                Investment_BESS, 
-                color='#'+BESS_Color,
-                edgecolor= 'black',
-                label='Battery bank',
-                zorder = 3) 
+            Investment_BESS, 
+            color='#'+BESS_Color,
+            edgecolor= 'black',
+            label='Battery bank',
+            zorder=3) 
         base = Investment_BESS
 
     if instance.Grid_Connection.value == 1:
         plt.bar(x_positions, 
-                Investment_Grid, 
-                color='#'+Grid_Color,
-                edgecolor= 'black',
-                label='National Grid',
-                zorder = 3) 
-        base = Investment_Grid
-    
-    for r in range(1,R+1):
-        base = Investment_RES[RES_Names[1]]
-        base = [a+b for (a,b) in zip(base, Investment_RES[RES_Names[r]])]
+            Investment_Grid, 
+            color='#'+Grid_Color,
+            edgecolor= 'black',
+            label='National Grid',
+            bottom=base,  
+            zorder=3)
+        base = [a+b for a, b in zip(base, Investment_Grid)]
+
+    for r in range(1, R+1):
         plt.bar(x_positions, 
-                Investment_RES[RES_Names[r]], 
-                color='#'+RES_Colors[r], 
-                edgecolor= 'black',
-                label=RES_Names[r],
-                bottom=base,
-                zorder = 3)   
-        # base = [a+b for (a,b) in zip(base, Investment_RES[RES_Names[r]])]
-        
+            Investment_RES[RES_Names[r]], 
+            color='#'+RES_Colors[r], 
+            edgecolor= 'black',
+            label=RES_Names[r],
+            bottom=base,  
+            zorder=3)
+        base = [a+b for a, b in zip(base, Investment_RES[RES_Names[r]])]
+
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 2:
-        for g in range(1,G+1):
+        for g in range(1, G+1):
             plt.bar(x_positions, 
-                    Investment_Gen[Generator_Names[g]],
-                    color='#'+Generator_Colors[g], 
-                    edgecolor= 'black',
-                    label=Generator_Names[g],
-                    bottom=base,
-                    zorder = 3)   
-            base = [a+b for (a,b) in zip(base, Investment_Gen[Generator_Names[g]])]
+                Investment_Gen[Generator_Names[g]],
+                color='#'+Generator_Colors[g], 
+                edgecolor= 'black',
+                label=Generator_Names[g],
+                bottom=base,  
+                zorder=3)
+            base = [a+b for a, b in zip(base, Investment_Gen[Generator_Names[g]])]
+
 
     "Fixed costs"
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:
@@ -623,7 +619,12 @@ def SizePlot(instance,Results,PlotResolution,PlotFormat):
 
     if ST == 1:
         fig, ax1 = plt.subplots(nrows=1, ncols=1, figsize=(20, 15))
-        x_positions = np.arange(R + G + 1)
+        if instance.Model_Components.value == 0:
+            x_positions = np.arange(R + G + 1)
+        elif instance.Model_Components.value == 1:
+            x_positions = np.arange(R + 1)
+        elif instance.Model_Components.value == 2:
+            x_positions = np.arange(R + G)
         x_ticks = []
         ax2 = ax1.twinx()
 
@@ -646,7 +647,7 @@ def SizePlot(instance,Results,PlotResolution,PlotFormat):
                         zorder=3)
                 x_ticks.append(Generator_Names[g])
 
-        if instance.Battery_Present and (instance.Model_Components.value == 0 or instance.Model_Components.value == 1):
+        if (instance.Model_Components.value == 0 or instance.Model_Components.value == 1):
             ax2.bar(x_positions[-1],
                     Results['Size'].loc[idx['Battery bank', :], 'Total'].values[0],
                     color='#' + BESS_Color,
