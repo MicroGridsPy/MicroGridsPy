@@ -310,29 +310,34 @@ def CashFlowPlot(instance,Results,PlotResolution,PlotFormat):
     for g in range(1,G+1):
         Investment_Gen[Generator_Names[g]] = [0 for y in range(Y)]
 
+    # Initialize the aggregated investment for each year
+    Total_Investment = [0 for y in range(Y)]
+
     if ST == 1:
+        # Summing up the investment costs for the first year
         if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:
-            Investment_BESS[0] = Results['Costs'].loc[idx['Investment cost','Battery bank',:,:],'Total'].values[0]
+            Total_Investment[0] += Results['Costs'].loc[idx['Investment cost', 'Battery bank', :, :], 'Total'].values[0]
         if instance.Grid_Connection.value == 1:
-            Investment_Grid[0] = Results['Costs'].loc[idx['Investment cost','National Grid',:,:],'Total'].values[0]
-        for r in range(1,R+1):
-            Investment_RES[RES_Names[r]][0] = Results['Costs'].loc[idx['Investment cost',RES_Names[r],:,:],'Total'].values[0]
+            Total_Investment[0] += Results['Costs'].loc[idx['Investment cost', 'National Grid', :, :], 'Total'].values[0]
+        for r in range(1, R + 1):
+            Total_Investment[0] += Results['Costs'].loc[idx['Investment cost', RES_Names[r], :, :], 'Total'].values[0]
         if instance.Model_Components.value == 0 or instance.Model_Components.value == 2:
-            for g in range(1,G+1):
-                Investment_Gen[Generator_Names[g]][0] = Results['Costs'].loc[idx['Investment cost',Generator_Names[g],:,:],'Total'].values[0]
+            for g in range(1, G + 1):
+                Total_Investment[0] += Results['Costs'].loc[idx['Investment cost', Generator_Names[g], :, :], 'Total'].values[0]
     else:
-        for st in range(1,ST+1):
-            for y in range(1,Y+1):
-                if y==1:
+        for st in range(1, ST + 1):
+            for y in range(1, Y + 1):
+                if y == 1:
+                    # Aggregate all investments for the first year for each component
                     if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:
-                        Investment_BESS[y-1] = Results['Costs'].loc[idx['Investment cost','Battery bank',:,:],'Step 1'].values[0]
+                        Total_Investment[0] += Results['Costs'].loc[idx['Investment cost', 'Battery bank', :, :], 'Step 1'].values[0]
                     if instance.Grid_Connection.value == 1:
-                        Investment_Grid[0] = Results['Costs'].loc[idx['Investment cost','National Grid',:,:],'Step 1'].values[0]
-                    for r in range(1,R+1):
-                        Investment_RES[RES_Names[r]][y-1] = Results['Costs'].loc[idx['Investment cost',RES_Names[r],:,:],'Step 1'].values[0]
+                        Total_Investment[0] += Results['Costs'].loc[idx['Investment cost', 'National Grid', :, :], 'Step 1'].values[0]
+                    for r in range(1, R + 1):
+                        Total_Investment[0] += Results['Costs'].loc[idx['Investment cost', RES_Names[r], :, :], 'Step 1'].values[0]
                     if instance.Model_Components.value == 0 or instance.Model_Components.value == 2:
-                        for g in range(1,G+1):
-                            Investment_Gen[Generator_Names[g]][y-1] = Results['Costs'].loc[idx['Investment cost',Generator_Names[g],:,:],'Step 1'].values[0]                
+                        for g in range(1, G + 1):
+                            Total_Investment[0] += Results['Costs'].loc[idx['Investment cost', Generator_Names[g], :, :], 'Step 1'].values[0]              
                 if st!=1:
                     if y==tup_list[st-2][0]:
                         if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:
@@ -616,39 +621,39 @@ def SizePlot(instance,Results,PlotResolution,PlotFormat):
     Generator_Colors = instance.Generator_Colors.extract_values()
 
 
-    if ST==1:
-        fig, ax1 = plt.subplots(nrows=1,ncols=1,figsize = (20,15))
-        x_positions = np.arange(R+G+1)
+    if ST == 1:
+        fig, ax1 = plt.subplots(nrows=1, ncols=1, figsize=(20, 15))
+        x_positions = np.arange(R + G + 1)
         x_ticks = []
         ax2 = ax1.twinx()
-        
-        for r in range(1,R+1):
-            ax1.bar(x_positions[r-1], 
-                    Results['Size'].loc[idx[RES_Names[r],:],'Total'].values[0], 
-                    color='#'+RES_Colors[r],
-                    edgecolor= 'black',
-                    label=RES_Names[r],
-                    zorder = 3)
-            x_ticks += [RES_Names[r]]
-        
-        if instance.Model_Components.value == 0 or instance.Model_Components.value == 2:
-            for g in range(1,G+1):
-                ax1.bar(x_positions[R+g-1], 
-                        Results['Size'].loc[idx[Generator_Names[g],:],'Total'].values[0], 
-                        color='#'+Generator_Colors[g],
-                        edgecolor= 'black',
-                        label=Generator_Names[g],
-                        zorder = 3)
-                x_ticks += [Generator_Names[g]]
 
-        if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:
-            ax2.bar(x_positions[-1], 
-                    Results['Size'].loc[idx['Battery bank',:],'Total'].values[0], 
-                    color='#'+BESS_Color,
-                    edgecolor= 'black',
+        for r in range(1, R + 1):
+            ax1.bar(x_positions[r - 1],
+                    Results['Size'].loc[idx[RES_Names[r], :], 'Total'].values[0],
+                    color='#' + RES_Colors[r],
+                    edgecolor='black',
+                    label=RES_Names[r],
+                    zorder=3)
+            x_ticks.append(RES_Names[r])
+
+        if G > 0 and (instance.Model_Components.value == 0 or instance.Model_Components.value == 2):
+            for g in range(1, G + 1):
+                ax1.bar(x_positions[R + g - 1],
+                        Results['Size'].loc[idx[Generator_Names[g], :], 'Total'].values[0],
+                        color='#' + Generator_Colors[g],
+                        edgecolor='black',
+                        label=Generator_Names[g],
+                        zorder=3)
+                x_ticks.append(Generator_Names[g])
+
+        if instance.Battery_Present and (instance.Model_Components.value == 0 or instance.Model_Components.value == 1):
+            ax2.bar(x_positions[-1],
+                    Results['Size'].loc[idx['Battery bank', :], 'Total'].values[0],
+                    color='#' + BESS_Color,
+                    edgecolor='black',
                     label='Battery bank',
-                    zorder = 3)
-            x_ticks += ['Battery bank']
+                    zorder=3)
+            x_ticks.append('Battery bank')
             
         # Get the maximum kW and kWh values
         max_kW_value = Results['Size'].loc[idx[:, 'kW'], 'Total'].max()
