@@ -394,7 +394,7 @@ def CashFlowPlot(instance,Results,PlotResolution,PlotFormat):
             Fuel_cost[g] = [i/S for i in Fuel_cost[g]]
             
 #%% Plotting
-    fig = plt.figure(figsize=(20,15))
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(20, 30))
 
     RES_Colors  = instance.RES_Colors.extract_values()
     BESS_Color  = instance.Battery_Color()
@@ -406,162 +406,164 @@ def CashFlowPlot(instance,Results,PlotResolution,PlotFormat):
     years = [pd.to_datetime(instance.StartDate()).year+y for y in range(Y)]
 
     # Base initialization for investment costs
-    base = [0] * Y
+    investment_base = [0] * Y
 
     "Investment costs"
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:
-        plt.bar(x_positions, 
+        ax1.bar(x_positions, 
             Investment_BESS, 
             color='#'+BESS_Color,
             edgecolor= 'black',
             label='Battery bank',
             zorder=3) 
-        base = Investment_BESS
+        investment_base = Investment_BESS
 
     if instance.Grid_Connection.value == 1:
-        plt.bar(x_positions, 
+        ax1.bar(x_positions, 
             Investment_Grid, 
             color='#'+Grid_Color,
             edgecolor= 'black',
             label='National Grid',
-            bottom=base,  
+            bottom=investment_base,  
             zorder=3)
-        base = [a+b for a, b in zip(base, Investment_Grid)]
+        investment_base = [a+b for a, b in zip(investment_base, Investment_Grid)]
 
     for r in range(1, R+1):
-        plt.bar(x_positions, 
+        ax1.bar(x_positions, 
             Investment_RES[RES_Names[r]], 
             color='#'+RES_Colors[r], 
             edgecolor= 'black',
             label=RES_Names[r],
-            bottom=base,  
+            bottom=investment_base,  
             zorder=3)
-        base = [a+b for a, b in zip(base, Investment_RES[RES_Names[r]])]
+        investment_base = [a+b for a, b in zip(investment_base, Investment_RES[RES_Names[r]])]
 
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 2:
         for g in range(1, G+1):
-            plt.bar(x_positions, 
+            ax1.bar(x_positions, 
                 Investment_Gen[Generator_Names[g]],
                 color='#'+Generator_Colors[g], 
                 edgecolor= 'black',
                 label=Generator_Names[g],
-                bottom=base,  
+                bottom=investment_base,  
                 zorder=3)
-            base = [a+b for a, b in zip(base, Investment_Gen[Generator_Names[g]])]
+            investment_base = [a+b for a, b in zip(investment_base, Investment_Gen[Generator_Names[g]])]
 
+    # Set the labels, legends, and titles for the investment costs graph (ax1)
+    ax1.set_xticks(x_positions)
+    ax1.set_xticklabels(years)
+    ax1.set_ylabel('Investment Costs (Thousand USD)')
+    ax1.set_title('Investment Costs Over Time')
+    ax1.legend()
 
+    # O&M costs graph (ax2)
+    om_base = [0] * Y
     "Fixed costs"
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:
-        plt.bar(x_positions, 
+        ax2.bar(x_positions, 
                 [Fixed_costs_BESS[i][0] for i in range(len(Fixed_costs_BESS))], 
                 color='#'+BESS_Color,
                 edgecolor= 'black',
                 label='_nolegend_',
                 hatch='x',
-                bottom = base,
+                bottom = om_base,
                 zorder = 3) 
-        base = [a+b for (a,b) in zip(base, [Fixed_costs_BESS[i][0] for i in range(len(Fixed_costs_BESS))])]   
+        om_base = [a+b for (a,b) in zip(om_base, [Fixed_costs_BESS[i][0] for i in range(len(Fixed_costs_BESS))])]   
     
     if instance.Grid_Connection.value == 1:
-        plt.bar(x_positions, 
+        ax2.bar(x_positions, 
                 [Fixed_costs_Grid[i][0] for i in range(len(Fixed_costs_Grid))], 
                 color='#'+Grid_Color,
                 edgecolor= 'black',
                 label='_nolegend_',
                 hatch='x',
-                bottom = base,
+                bottom = om_base,
                 zorder = 3) 
-        base = [a+b for (a,b) in zip(base, [Fixed_costs_Grid[i][0] for i in range(len(Fixed_costs_Grid))])]
+        om_base = [a+b for (a,b) in zip(om_base, [Fixed_costs_Grid[i][0] for i in range(len(Fixed_costs_Grid))])]
         
     for r in range(1,R+1):
-        plt.bar(x_positions, 
+        ax2.bar(x_positions, 
                 [Fixed_costs_RES[r][i][0] for i in range(len(Fixed_costs_RES[r]))], 
                 color='#'+RES_Colors[r], 
                 edgecolor= 'black',
                 hatch='x',
                 label='_nolegend_',
-                bottom=base,
+                bottom=om_base,
                 zorder = 3)   
-        base = [a+b for (a,b) in zip(base, [Fixed_costs_RES[r][i][0] for i in range(len(Fixed_costs_RES[r]))])]
+        om_base = [a+b for (a,b) in zip(om_base, [Fixed_costs_RES[r][i][0] for i in range(len(Fixed_costs_RES[r]))])]
         
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 2:
         for g in range(1,G+1):
-            plt.bar(x_positions, 
+            ax2.bar(x_positions, 
                     [Fixed_costs_Gen[g][i][0] for i in range(len(Fixed_costs_Gen[g]))], 
                     color='#'+Generator_Colors[g], 
                     edgecolor= 'black',
                     hatch='x',
                     label='_nolegend_',
-                    bottom=base,
+                    bottom=om_base,
                     zorder = 3)   
-            base = [a+b for (a,b) in zip(base, [Fixed_costs_Gen[g][i][0] for i in range(len(Fixed_costs_Gen[g]))])]
+            om_base = [a+b for (a,b) in zip(om_base, [Fixed_costs_Gen[g][i][0] for i in range(len(Fixed_costs_Gen[g]))])]
 
     "Variable costs"
-    plt.bar(x_positions, 
+    ax2.bar(x_positions, 
             Lost_load_cost, 
             color='#'+Lost_Load_Color,
             edgecolor= 'black',
             label='_nolegend_',
             hatch='//',
-            bottom = base,
+            bottom = om_base,
             zorder = 3) 
-    base = [a+b for (a,b) in zip(base, Lost_load_cost)]        
+    om_base = [a+b for (a,b) in zip(om_base, Lost_load_cost)]        
     
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:
-        plt.bar(x_positions, 
+        ax2.bar(x_positions, 
                 BESS_replacement_cost, 
                 color='#'+BESS_Color,
                 edgecolor= 'black',
                 label='_nolegend_',
                 hatch='//',                     
-                bottom = base,
+                bottom = om_base,
                 zorder = 3) 
-        base = [a+b for (a,b) in zip(base, BESS_replacement_cost)]        
+        om_base = [a+b for (a,b) in zip(om_base, BESS_replacement_cost)]        
     
     if instance.Grid_Connection.value == 1:
-            plt.bar(x_positions, 
+            ax2.bar(x_positions, 
                     Grid_Electricity_cost, 
                     color='#'+Grid_Color,
                     edgecolor= 'black',
                     label='_nolegend_',
                     hatch='//',                     
-                    bottom = base,
+                    bottom = om_base,
                     zorder = 3) 
-            base = [a+b for (a,b) in zip(base, Grid_Electricity_cost)] 
+            om_base = [a+b for (a,b) in zip(om_base, Grid_Electricity_cost)] 
         
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 2:
         for g in range(1,G+1):        
-            plt.bar(x_positions, 
+            ax2.bar(x_positions, 
                     Fuel_cost[g], 
                     color='#'+Generator_Colors[g],
                     edgecolor= 'black',
                     label='_nolegend_',
                     hatch='//',                     
-                    bottom = base,
+                    bottom = om_base,
                     zorder = 3) 
-            base = [a+b for (a,b) in zip(base, Fuel_cost[g])]  
+            om_base = [a+b for (a,b) in zip(om_base, Fuel_cost[g])]  
 
 
     "Hatch legend traces"
-    plt.bar(x_positions, 
+    ax2.bar(x_positions, 
             [0 for i in range(len(x_positions))], 
             color='white',
             label=' ',
-            zorder = 3) 
-    plt.bar(x_positions, 
-            [0 for i in range(len(x_positions))], 
-            color='white',
-            label='Investment cost',
-            edgecolor= 'black',
-            zorder = 3) 
-    plt.bar(x_positions, 
+            zorder = 3)  
+    ax2.bar(x_positions, 
             [0 for i in range(len(x_positions))], 
             color='white',
             label='Fixed O&M cost',
             edgecolor= 'black',
             hatch='x',                     
             zorder = 3) 
-    plt.bar(x_positions, 
+    ax2.bar(x_positions, 
             [0 for i in range(len(x_positions))], 
             color='white',
             label='Variable O&M cost',
@@ -569,14 +571,19 @@ def CashFlowPlot(instance,Results,PlotResolution,PlotFormat):
             hatch='//',                     
             zorder = 3) 
 
-    plt.xlabel('Years', fontsize=fontaxis)
-    plt.ylabel('Thousand USD', fontsize=fontaxis)
-    plt.xticks(x_positions, years, fontsize=fontticks)
-    plt.yticks(fontsize=fontticks)
-    plt.grid(True, axis='y', zorder=2)
-    plt.margins(x=0.009)
-    
-    fig.legend(bbox_to_anchor=(1.19,0.98), ncol=1, fontsize=fontlegend, frameon=True)
+    # Set the labels, ticks, and grid for the second subplot (ax2)
+    ax2.set_xlabel('Years', fontsize='large')  # Set the font size as needed
+    ax2.set_ylabel('Thousand USD', fontsize='large')  # Set the font size as needed
+    ax2.set_xticks(x_positions)
+    ax2.set_xticklabels(years, fontsize='medium')  # Set the font size as needed
+    ax2.set_yticks(ax2.get_yticks())
+    ax2.set_yticklabels(ax2.get_yticklabels(), fontsize='medium')  # Set the font size as needed
+    ax2.grid(True, which='both', axis='y', linestyle='--', linewidth=0.5)
+    ax2.margins(x=0.01)  # Set the margins as needed
+
+    # Create a legend for the second subplot (ax2)
+    ax2.legend(title='Legend', fontsize='medium', title_fontsize='large')  # Set the font size as needed
+
     fig.tight_layout()  
     
     current_directory = os.path.dirname(os.path.abspath(__file__))
