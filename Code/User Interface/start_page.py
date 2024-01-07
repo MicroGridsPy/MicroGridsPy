@@ -157,6 +157,11 @@ class StartPage(tk.Frame):
         self.canvas.itemconfig(self.canvas_window, width=event.width, height=event.height)
         # Update the scrollable area to encompass the inner_frame after all content is placed
         self.canvas.after_idle(lambda: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+        
+    def on_next_button(self):
+        advanced_page = self.controller.frames.get("AdvancedPage")
+        advanced_page.Step_Duration_var.set(value=self.Years_var.get())
+        self.controller.show_frame("AdvancedPage")
 
 
                 
@@ -369,7 +374,7 @@ class StartPage(tk.Frame):
         self.advanced_icon_label.grid(row=0, column=0, padx=5, pady=5)
 
         # Advanced Features Button
-        self.advanced_button = ttk.Button(self.advanced_frame, text="Advanced Features", command=lambda: controller.show_frame('AdvancedPage'))
+        self.advanced_button = ttk.Button(self.advanced_frame, text="Advanced Features", command=self.on_next_button)
         self.advanced_button.grid(row=0, column=1, padx=5, pady=5)
 
         # Keep a reference to the image to avoid garbage collection
