@@ -275,7 +275,7 @@ class GeneratorPage(tk.Frame):
      for param, values in param_values.items():
          gen_data[param] = values
          
-     gen_data['Fuel_Specific_Cost_Calculation'] = self.Fuel_Specific_Cost_Calculation_var.get()
+     gen_data['Fuel_Specific_Cost_Import'] = self.Fuel_Specific_Cost_Import_var.get()
      
      # Initialize a dictionary to store the values for each parameter
      param_values = {param: [] for param in self.fuel_params_defaults}
@@ -336,7 +336,7 @@ class GeneratorPage(tk.Frame):
      
     def toggle_fuel_specific_cost(self):
         # Check if the checkbutton is checked or not
-        is_checked = self.Fuel_Specific_Cost_Calculation_var.get() == 1
+        is_checked = self.Fuel_Specific_Cost_Import_var.get() == 1
 
         # Determine the new state based on whether the checkbox is checked
         new_state = 'disabled' if is_checked else 'normal'
@@ -359,6 +359,12 @@ class GeneratorPage(tk.Frame):
     def toggle_milp_parameters(self):
         for (var, label, entry) in self.gen_entries:
             if label.cget('text') in self.milp_parameters:
+               label.config(state='normal')  
+               entry.config(state='normal')
+               
+    def toggle_fuel_cost_parameters(self):
+        for (var, label, entry) in self.gen_entries:
+            if label.cget('text') in self.fuel_cost_parameters:
                label.config(state='normal')  
                entry.config(state='normal')
                
@@ -479,6 +485,7 @@ class GeneratorPage(tk.Frame):
         
         text_parameters = ['Generator_Names', 'Fuel_Names']
         self.fuel_parameters = ['Fuel_Specific_Start_Cost','Fuel_Specific_Cost_Rate']
+        self.fuel_cost_parameters = ['Fuel_Specific_Cost_Import', 'Fuel_Specific_Start_Cost','Fuel_Specific_Cost_Rate']
         self.milp_parameters = ['Generator_Nominal_Capacity_milp']
         self.milp_partial_parameters = ['Generator_Nominal_Capacity_milp','Generator_Min_output', 'Generator_pgen']
         self.brownfield_parameters = ['Generator_capacity','GEN_years']
@@ -521,7 +528,7 @@ class GeneratorPage(tk.Frame):
             label_state = 'normal'
 
             # Conditionally disable entries based on specific parameters
-            if  param in self.milp_partial_parameters or param in self.brownfield_parameters:
+            if  param in self.milp_partial_parameters or param in self.brownfield_parameters or self.fuel_cost_parameters:
                 entry_state = 'disabled'
                 label_state = 'disabled'
                 
@@ -545,16 +552,13 @@ class GeneratorPage(tk.Frame):
         separator = ttk.Separator(self.inner_frame, orient='horizontal')
         separator.grid(row=21, column=0, columnspan=3, pady=10, sticky='ew')
             
-        self.Fuel_Specific_Cost_Calculation_var = tk.IntVar(value=0)
-
-        # Step 2: Create the checkbutton
-        self.Fuel_Specific_Cost_Calculation_checkbutton = ttk.Checkbutton(
-                    self.inner_frame, text="Fuel Specific Cost Import",
-                    variable=self.Fuel_Specific_Cost_Calculation_var,
+        self.Fuel_Specific_Cost_Import_var = tk.IntVar(value=0)
+        self.Fuel_Specific_Cost_Import_checkbutton = ttk.Checkbutton(
+                    self.inner_frame, text="Fuel_Specific_Cost_Import",
+                    variable=self.Fuel_Specific_Cost_Import_var,
                     command=self.toggle_fuel_specific_cost)
-            
-        self.Fuel_Specific_Cost_Calculation_checkbutton.grid(row=22, column=0, sticky='w')
-        create_tooltip(self.Fuel_Specific_Cost_Calculation_checkbutton, "Check to import the fuel specific cost values from a csv file")
+        self.Fuel_Specific_Cost_Import_checkbutton.grid(row=22, column=0, sticky='w')
+        create_tooltip(self.Fuel_Specific_Cost_Import_checkbutton, "Check to import the fuel specific cost values from a csv file")
         
         self.fuel_entries = []
         for i, (param, value) in enumerate(self.fuel_params_defaults.items(), start=23):  

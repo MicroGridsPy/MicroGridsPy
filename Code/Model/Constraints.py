@@ -9,6 +9,14 @@ import os
 # --- Greenfield ---
 
 class Constraints_Greenfield():
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    inputs_directory = os.path.join(current_directory, '..', 'Inputs')
+    data_file_path = os.path.join(inputs_directory, 'Parameters.dat')
+    Data_import = open(data_file_path).readlines()
+    for i in range(len(Data_import)):
+        if "param: Fuel_Specific_Cost_Calculation" in Data_import[i]:      
+            Fuel_Specific_Cost_Calculation = int((re.findall('\d+',Data_import[i])[0]))
+        
     "Objective function"
     def Net_Present_Cost_Obj(model): 
         return (sum(model.Scenario_Net_Present_Cost[s]*model.Scenario_Weight[s] for s in model.scenarios))
@@ -164,19 +172,34 @@ class Constraints_Greenfield():
             Cost_Lost_Load += Num
         return  model.Scenario_Lost_Load_Cost_NonAct[s] == Cost_Lost_Load
     
-    def Total_Fuel_Cost_Act(model,s,g):
-        Fuel_Cost_Tot = 0
-        for y in range(1, model.Years +1):
-            Num = sum(model.Generator_Energy_Production[s,y,g,t]*model.Generator_Marginal_Cost[g,y] for t in model.periods)
-            Fuel_Cost_Tot += Num/((1+model.Discount_Rate)**y)
-        return model.Total_Fuel_Cost_Act[s,g] == Fuel_Cost_Tot
-       
-    def Total_Fuel_Cost_NonAct(model,s,g):
-        Fuel_Cost_Tot = 0
-        for y in range(1, model.Years +1):
-            Num = sum(model.Generator_Energy_Production[s,y,g,t]*model.Generator_Marginal_Cost[g,y] for t in model.periods)
-            Fuel_Cost_Tot += Num
-        return model.Total_Fuel_Cost_NonAct[s,g] == Fuel_Cost_Tot
+    if Fuel_Specific_Cost_Calculation == 0:
+        def Total_Fuel_Cost_Act(model,s,g):
+            Fuel_Cost_Tot = 0
+            for y in range(1, model.Years +1):
+                Num = sum(model.Generator_Energy_Production[s,y,g,t]*model.Generator_Marginal_Cost_1[g] for t in model.periods)
+                Fuel_Cost_Tot += Num/((1+model.Discount_Rate)**y)
+            return model.Total_Fuel_Cost_Act[s,g] == Fuel_Cost_Tot
+        
+        def Total_Fuel_Cost_NonAct(model,s,g):
+            Fuel_Cost_Tot = 0
+            for y in range(1, model.Years +1):
+                Num = sum(model.Generator_Energy_Production[s,y,g,t]*model.Generator_Marginal_Cost_1[g] for t in model.periods)
+                Fuel_Cost_Tot += Num
+            return model.Total_Fuel_Cost_NonAct[s,g] == Fuel_Cost_Tot
+    else:
+        def Total_Fuel_Cost_Act(model,s,g):
+            Fuel_Cost_Tot = 0
+            for y in range(1, model.Years +1):
+                Num = sum(model.Generator_Energy_Production[s,y,g,t]*model.Generator_Marginal_Cost[g,y] for t in model.periods)
+                Fuel_Cost_Tot += Num/((1+model.Discount_Rate)**y)
+            return model.Total_Fuel_Cost_Act[s,g] == Fuel_Cost_Tot
+        
+        def Total_Fuel_Cost_NonAct(model,s,g):
+            Fuel_Cost_Tot = 0
+            for y in range(1, model.Years +1):
+                Num = sum(model.Generator_Energy_Production[s,y,g,t]*model.Generator_Marginal_Cost[g,y] for t in model.periods)
+                Fuel_Cost_Tot += Num
+            return model.Total_Fuel_Cost_NonAct[s,g] == Fuel_Cost_Tot
 
     
     def Total_Electricity_Cost_Act(model,s): 
@@ -552,6 +575,13 @@ class Constraints_Greenfield():
 # --- Brownfield ---
 
 class Constraints_Brownfield():
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    inputs_directory = os.path.join(current_directory, '..', 'Inputs')
+    data_file_path = os.path.join(inputs_directory, 'Parameters.dat')
+    Data_import = open(data_file_path).readlines()
+    for i in range(len(Data_import)):
+        if "param: Fuel_Specific_Cost_Calculation" in Data_import[i]:      
+            Fuel_Specific_Cost_Calculation = int((re.findall('\d+',Data_import[i])[0]))
     
     "Objective function"
     def Net_Present_Cost_Obj(model): 
@@ -709,19 +739,34 @@ class Constraints_Brownfield():
             Cost_Lost_Load += Num
         return  model.Scenario_Lost_Load_Cost_NonAct[s] == Cost_Lost_Load
     
-    def Total_Fuel_Cost_Act(model,s,g):
-        Fuel_Cost_Tot = 0
-        for y in range(1, model.Years +1):
-            Num = sum(model.Generator_Energy_Production[s,y,g,t]*model.Generator_Marginal_Cost[g,y] for t in model.periods)
-            Fuel_Cost_Tot += Num/((1+model.Discount_Rate)**y)
-        return model.Total_Fuel_Cost_Act[s,g] == Fuel_Cost_Tot
-       
-    def Total_Fuel_Cost_NonAct(model,s,g):
-        Fuel_Cost_Tot = 0
-        for y in range(1, model.Years +1):
-            Num = sum(model.Generator_Energy_Production[s,y,g,t]*model.Generator_Marginal_Cost[g,y] for t in model.periods)
-            Fuel_Cost_Tot += Num
-        return model.Total_Fuel_Cost_NonAct[s,g] == Fuel_Cost_Tot
+    if Fuel_Specific_Cost_Calculation == 0:
+        def Total_Fuel_Cost_Act(model,s,g):
+            Fuel_Cost_Tot = 0
+            for y in range(1, model.Years +1):
+                Num = sum(model.Generator_Energy_Production[s,y,g,t]*model.Generator_Marginal_Cost_1[g] for t in model.periods)
+                Fuel_Cost_Tot += Num/((1+model.Discount_Rate)**y)
+            return model.Total_Fuel_Cost_Act[s,g] == Fuel_Cost_Tot
+        
+        def Total_Fuel_Cost_NonAct(model,s,g):
+            Fuel_Cost_Tot = 0
+            for y in range(1, model.Years +1):
+                Num = sum(model.Generator_Energy_Production[s,y,g,t]*model.Generator_Marginal_Cost_1[g] for t in model.periods)
+                Fuel_Cost_Tot += Num
+            return model.Total_Fuel_Cost_NonAct[s,g] == Fuel_Cost_Tot
+    else:
+        def Total_Fuel_Cost_Act(model,s,g):
+            Fuel_Cost_Tot = 0
+            for y in range(1, model.Years +1):
+                Num = sum(model.Generator_Energy_Production[s,y,g,t]*model.Generator_Marginal_Cost[g,y] for t in model.periods)
+                Fuel_Cost_Tot += Num/((1+model.Discount_Rate)**y)
+            return model.Total_Fuel_Cost_Act[s,g] == Fuel_Cost_Tot
+        
+        def Total_Fuel_Cost_NonAct(model,s,g):
+            Fuel_Cost_Tot = 0
+            for y in range(1, model.Years +1):
+                Num = sum(model.Generator_Energy_Production[s,y,g,t]*model.Generator_Marginal_Cost[g,y] for t in model.periods)
+                Fuel_Cost_Tot += Num
+            return model.Total_Fuel_Cost_NonAct[s,g] == Fuel_Cost_Tot
 
     def Total_Electricity_Cost_Act(model,s): 
         Electricity_Cost_Tot = 0
@@ -1120,6 +1165,8 @@ class Constraints_Greenfield_Milp():
     for i in range(len(Data_import)):
      if "param: Generator_Partial_Load" in Data_import[i]:      
         Generator_Partial_Load = int((re.findall('\d+',Data_import[i])[0]))
+     if "param: Fuel_Specific_Cost_Calculation" in Data_import[i]:      
+            Fuel_Specific_Cost_Calculation = int((re.findall('\d+',Data_import[i])[0]))
         
     "Objective function"
     def Net_Present_Cost_Obj(model): 
@@ -1277,8 +1324,22 @@ class Constraints_Greenfield_Milp():
             Cost_Lost_Load += Num
         return  model.Scenario_Lost_Load_Cost_NonAct[s] == Cost_Lost_Load
     
-    if Generator_Partial_Load:
+    if Generator_Partial_Load == 1 and Fuel_Specific_Cost_Calculation == 0:
      "Partial Load Effect"
+     def Total_Fuel_Cost_Act(model,s,g):
+        Fuel_Cost_Tot = 0
+        for y in range(1, model.Years +1):
+            Num = sum(((model.Generator_Full[s,y,g,t]*model.Generator_Nominal_Capacity_milp[g]*model.Generator_Marginal_Cost_1[g])+(model.Generator_Marginal_Cost_milp_1[g]*model.Generator_Energy_Partial[s,y,g,t])+(model.Generator_Partial[s,y,g,t]*model.Generator_Start_Cost_1[g])) for t in model.periods)
+            Fuel_Cost_Tot += Num/((1+model.Discount_Rate)**y)
+        return model.Total_Fuel_Cost_Act[s,g] == Fuel_Cost_Tot
+       
+     def Total_Fuel_Cost_NonAct(model,s,g):
+        Fuel_Cost_Tot = 0
+        for y in range(1, model.Years +1):
+            Num = sum(((model.Generator_Full[s,y,g,t]*model.Generator_Nominal_Capacity_milp[g]*model.Generator_Marginal_Cost_1[g])+(model.Generator_Marginal_Cost_milp_1[g]*model.Generator_Energy_Partial[s,y,g,t])+(model.Generator_Partial[s,y,g,t]*model.Generator_Start_Cost_1[g])) for t in model.periods)
+            Fuel_Cost_Tot += Num
+        return model.Total_Fuel_Cost_NonAct[s,g] == Fuel_Cost_Tot
+    elif Generator_Partial_Load == 1 and Fuel_Specific_Cost_Calculation == 1:
      def Total_Fuel_Cost_Act(model,s,g):
         Fuel_Cost_Tot = 0
         for y in range(1, model.Years +1):
@@ -1292,7 +1353,21 @@ class Constraints_Greenfield_Milp():
             Num = sum(((model.Generator_Full[s,y,g,t]*model.Generator_Nominal_Capacity_milp[g]*model.Generator_Marginal_Cost[g,y])+(model.Generator_Marginal_Cost_milp[g,y]*model.Generator_Energy_Partial[s,y,g,t])+(model.Generator_Partial[s,y,g,t]*model.Generator_Start_Cost[g,y])) for t in model.periods)
             Fuel_Cost_Tot += Num
         return model.Total_Fuel_Cost_NonAct[s,g] == Fuel_Cost_Tot
-    else:
+    elif Generator_Partial_Load == 0 and Fuel_Specific_Cost_Calculation == 0:
+     def Total_Fuel_Cost_Act(model,s,g):
+        Fuel_Cost_Tot = 0
+        for y in range(1, model.Years +1):
+            Num = sum(model.Generator_Energy_Total[s,y,g,t]*model.Generator_Marginal_Cost_1[g] for t in model.periods)
+            Fuel_Cost_Tot += Num/((1+model.Discount_Rate)**y)
+        return model.Total_Fuel_Cost_Act[s,g] == Fuel_Cost_Tot
+       
+     def Total_Fuel_Cost_NonAct(model,s,g):
+        Fuel_Cost_Tot = 0
+        for y in range(1, model.Years +1):
+            Num = sum(model.Generator_Energy_Total[s,y,g,t]*model.Generator_Marginal_Cost_1[g] for t in model.periods)
+            Fuel_Cost_Tot += Num
+        return model.Total_Fuel_Cost_NonAct[s,g] == Fuel_Cost_Tot
+    elif Generator_Partial_Load == 0 and Fuel_Specific_Cost_Calculation == 1:
      def Total_Fuel_Cost_Act(model,s,g):
         Fuel_Cost_Tot = 0
         for y in range(1, model.Years +1):
@@ -1704,6 +1779,8 @@ class Constraints_Brownfield_Milp():
     for i in range(len(Data_import)):
      if "param: Generator_Partial_Load" in Data_import[i]:      
         Generator_Partial_Load = int((re.findall('\d+',Data_import[i])[0]))
+     if "param: Fuel_Specific_Cost_Calculation" in Data_import[i]:      
+            Fuel_Specific_Cost_Calculation = int((re.findall('\d+',Data_import[i])[0]))
     "Objective function"
     def Net_Present_Cost_Obj(model): 
         return (sum(model.Scenario_Net_Present_Cost[s]*model.Scenario_Weight[s] for s in model.scenarios))
@@ -1857,8 +1934,22 @@ class Constraints_Brownfield_Milp():
             Cost_Lost_Load += Num
         return  model.Scenario_Lost_Load_Cost_NonAct[s] == Cost_Lost_Load
 
-    if Generator_Partial_Load:
+    if Generator_Partial_Load == 1 and Fuel_Specific_Cost_Calculation == 0:
      "Partial Load Effect"
+     def Total_Fuel_Cost_Act(model,s,g):
+        Fuel_Cost_Tot = 0
+        for y in range(1, model.Years +1):
+            Num = sum(((model.Generator_Full[s,y,g,t]*model.Generator_Nominal_Capacity_milp[g]*model.Generator_Marginal_Cost_1[g])+(model.Generator_Marginal_Cost_milp_1[g]*model.Generator_Energy_Partial[s,y,g,t])+(model.Generator_Partial[s,y,g,t]*model.Generator_Start_Cost_1[g])) for t in model.periods)
+            Fuel_Cost_Tot += Num/((1+model.Discount_Rate)**y)
+        return model.Total_Fuel_Cost_Act[s,g] == Fuel_Cost_Tot
+       
+     def Total_Fuel_Cost_NonAct(model,s,g):
+        Fuel_Cost_Tot = 0
+        for y in range(1, model.Years +1):
+            Num = sum(((model.Generator_Full[s,y,g,t]*model.Generator_Nominal_Capacity_milp[g]*model.Generator_Marginal_Cost_1[g])+(model.Generator_Marginal_Cost_milp_1[g]*model.Generator_Energy_Partial[s,y,g,t])+(model.Generator_Partial[s,y,g,t]*model.Generator_Start_Cost_1[g])) for t in model.periods)
+            Fuel_Cost_Tot += Num
+        return model.Total_Fuel_Cost_NonAct[s,g] == Fuel_Cost_Tot
+    elif Generator_Partial_Load == 1 and Fuel_Specific_Cost_Calculation == 1:
      def Total_Fuel_Cost_Act(model,s,g):
         Fuel_Cost_Tot = 0
         for y in range(1, model.Years +1):
@@ -1872,7 +1963,21 @@ class Constraints_Brownfield_Milp():
             Num = sum(((model.Generator_Full[s,y,g,t]*model.Generator_Nominal_Capacity_milp[g]*model.Generator_Marginal_Cost[g,y])+(model.Generator_Marginal_Cost_milp[g,y]*model.Generator_Energy_Partial[s,y,g,t])+(model.Generator_Partial[s,y,g,t]*model.Generator_Start_Cost[g,y])) for t in model.periods)
             Fuel_Cost_Tot += Num
         return model.Total_Fuel_Cost_NonAct[s,g] == Fuel_Cost_Tot
-    else:
+    elif Generator_Partial_Load == 0 and Fuel_Specific_Cost_Calculation == 0:
+     def Total_Fuel_Cost_Act(model,s,g):
+        Fuel_Cost_Tot = 0
+        for y in range(1, model.Years +1):
+            Num = sum(model.Generator_Energy_Total[s,y,g,t]*model.Generator_Marginal_Cost_1[g] for t in model.periods)
+            Fuel_Cost_Tot += Num/((1+model.Discount_Rate)**y)
+        return model.Total_Fuel_Cost_Act[s,g] == Fuel_Cost_Tot
+       
+     def Total_Fuel_Cost_NonAct(model,s,g):
+        Fuel_Cost_Tot = 0
+        for y in range(1, model.Years +1):
+            Num = sum(model.Generator_Energy_Total[s,y,g,t]*model.Generator_Marginal_Cost_1[g] for t in model.periods)
+            Fuel_Cost_Tot += Num
+        return model.Total_Fuel_Cost_NonAct[s,g] == Fuel_Cost_Tot
+    elif Generator_Partial_Load == 0 and Fuel_Specific_Cost_Calculation == 1:
      def Total_Fuel_Cost_Act(model,s,g):
         Fuel_Cost_Tot = 0
         for y in range(1, model.Years +1):

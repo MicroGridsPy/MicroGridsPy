@@ -70,6 +70,8 @@ for i in range(len(Data_import)):
         Demand_Profile_Generation = int((re.findall('\d+',Data_import[i])[0]))
     if "param: Fuel_Specific_Cost_Calculation" in Data_import[i]:      
         Fuel_Specific_Cost_Calculation = int((re.findall('\d+',Data_import[i])[0]))
+    if "param: Fuel_Specific_Cost_Import" in Data_import[i]:      
+        Fuel_Specific_Cost_Import = int((re.findall('\d+',Data_import[i])[0]))
     if "param: Grid_Average_Number_Outages" in Data_import[i]:      
         average_n_outages = int((re.findall('\d+',Data_import[i])[0]))
     if "param: Grid_Average_Outage_Duration" in Data_import[i]:       
@@ -251,14 +253,15 @@ def Initialize_Battery_Minimum_Capacity(model,ut):
 
 
 def Initialize_Fuel_Specific_Cost(model, g, y):
-    if Fuel_Specific_Cost_Calculation == 1:
+    if Fuel_Specific_Cost_Calculation == 1 and Fuel_Specific_Cost_Import == 1:
         fuel_cost_data = pd.read_csv(fuel_file_path, delimiter=';', decimal=',',index_col=0)
 
         # Create a dictionary for fuel costs
         fuel_cost_dict = {(int(gen_type), int(year)): fuel_cost_data.at[year, gen_type]
                       for gen_type in fuel_cost_data.columns
                       for year in fuel_cost_data.index}
-    else:
+        return fuel_cost_dict[(g, y)]
+    elif Fuel_Specific_Cost_Calculation == 1 and Fuel_Specific_Cost_Import == 0:
         years = range(1, n_years+1)
         fuel_cost_dict = {}
         for gen_type in range(n_generators):
@@ -269,22 +272,32 @@ def Initialize_Fuel_Specific_Cost(model, g, y):
                 else: cost = previous_cost * (1 + Fuel_Specific_Cost_Rate[gen_type])
                 fuel_cost_dict[(gen_type + 1, year)] = cost
                 previous_cost = cost
-    try: 
         return fuel_cost_dict[(g, y)]
-    except KeyError:
-        raise ValueError(f"Fuel cost data not found for generator type {g} and year {y}")
+        
+def Initialize_Fuel_Specific_Cost_1(model, g):
+    return model.Fuel_Specific_Start_Cost[g] 
+
 
 
 #%% 
 def Initialize_Generator_Marginal_Cost(model,g,y):
-    return model.Fuel_Specific_Cost[g,y]/(model.Fuel_LHV[g]*model.Generator_Efficiency[g])
+    if Fuel_Specific_Cost_Calculation == 1: return model.Fuel_Specific_Cost[g,y]/(model.Fuel_LHV[g]*model.Generator_Efficiency[g])
+
+def Initialize_Generator_Marginal_Cost_1(model,g):
+    if Fuel_Specific_Cost_Calculation == 0: return model.Fuel_Specific_Cost_1[g]/(model.Fuel_LHV[g]*model.Generator_Efficiency[g])
 
 "Partial Load Effect"
 def Initialize_Generator_Start_Cost(model,g,y):
-    return model.Generator_Marginal_Cost[g,y]*model.Generator_Nominal_Capacity_milp[g]*model.Generator_pgen[g]
+    if Fuel_Specific_Cost_Calculation == 1: return model.Generator_Marginal_Cost[g,y]*model.Generator_Nominal_Capacity_milp[g]*model.Generator_pgen[g]
+
+def Initialize_Generator_Start_Cost_1(model,g):
+    if Fuel_Specific_Cost_Calculation == 0: return model.Generator_Marginal_Cost_1[g]*model.Generator_Nominal_Capacity_milp[g]*model.Generator_pgen[g]
 
 def Initialize_Generator_Marginal_Cost_milp(model,g,y):
-    return ((model.Generator_Marginal_Cost[g,y]*model.Generator_Nominal_Capacity_milp[g])-model.Generator_Start_Cost[g,y])/model.Generator_Nominal_Capacity_milp[g] 
+    if Fuel_Specific_Cost_Calculation == 1: return ((model.Generator_Marginal_Cost[g,y]*model.Generator_Nominal_Capacity_milp[g])-model.Generator_Start_Cost[g,y])/model.Generator_Nominal_Capacity_milp[g] 
+
+def Initialize_Generator_Marginal_Cost_milp_1(model,g):
+    if Fuel_Specific_Cost_Calculation == 0: return ((model.Generator_Marginal_Cost_1[g]*model.Generator_Nominal_Capacity_milp[g])-model.Generator_Start_Cost_1[g])/model.Generator_Nominal_Capacity_milp[g] 
 
 "Grid Connection"
 if Grid_Availability_Simulation:

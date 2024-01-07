@@ -1297,13 +1297,16 @@ def YearlyCosts(instance):
         else:
          Generator_Energy_Production = instance.Generator_Energy_Production.get_values()
          Generator_Marginal_Cost = instance.Generator_Marginal_Cost.extract_values()
+         Generator_Marginal_Cost_1 = instance.Generator_Marginal_Cost_1.extract_values()
          Fuel_Cost_Yearly_Cost = pd.DataFrame()
          for s in range(1,S+1):
             fuel_s = pd.DataFrame()
             for g in range(1,Generator_Types+1):
                 fuel_yc_types = pd.DataFrame()
                 for (y,st) in ys_tuples_list:
-                    fuel_yc = pd.DataFrame(['Year '+str(y), sum(Generator_Energy_Production[(s,y,g,t)] for t in range(1,P+1))*Generator_Marginal_Cost[g,y]/1e3]).T.set_index([0]) 
+                    if instance.Fuel_Specific_Cost_Calculation.value == 1:
+                     fuel_yc = pd.DataFrame(['Year '+str(y), sum(Generator_Energy_Production[(s,y,g,t)] for t in range(1,P+1))*Generator_Marginal_Cost[g,y]/1e3]).T.set_index([0]) 
+                    else: fuel_yc = pd.DataFrame(['Year '+str(y), sum(Generator_Energy_Production[(s,y,g,t)] for t in range(1,P+1))*Generator_Marginal_Cost_1[g]/1e3]).T.set_index([0]) 
                     fuel_yc.columns = pd.MultiIndex.from_arrays([['Fuel cost'],[Fuel_Names[g]],[s],['kUSD']], names=['','Component','Scenario','Unit'])
                     fuel_yc_types = pd.concat([fuel_yc_types,fuel_yc], axis=0)
                 fuel_s = pd.concat([fuel_s,fuel_yc_types], axis=0)            

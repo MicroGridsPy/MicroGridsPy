@@ -124,6 +124,7 @@ param: Battery_Nominal_Capacity_milp := 1000;
 
 param: Generator_Types := 1;
 param: Fuel_Specific_Cost_Calculation := 0; 
+param: Fuel_Specific_Cost_Import := 0; 
 param: Generator_Names :=
 1      'Diesel Genset 1';
 param: Generator_Efficiency :=

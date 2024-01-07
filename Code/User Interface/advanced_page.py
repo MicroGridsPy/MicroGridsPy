@@ -90,6 +90,7 @@ class AdvancedPage(tk.Frame):
             self.Generator_Partial_Load_label.config(state='disabled')
             self.Generator_Partial_Load_checkbutton.config(state='disabled')
             
+            
 
     # Function to toggle the state of Plot Max Cost
     def toggle_MultiObjective(self, *args):
@@ -111,6 +112,16 @@ class AdvancedPage(tk.Frame):
             self.pareto_points_entry.config(state='disabled')
             self.pareto_solution_label.config(state='disabled')
             self.pareto_solution_entry.config(state='disabled')
+            
+    def toggle_MultiScenario(self, *args):
+        if self.Multiobjective_Optimization_var.get() == 1:
+            self.num_scenarios_label.config(state='normal')
+            self.num_scenarios_entry.config(state='normal')
+        else:
+            self.Multiobjective_Optimization_var.set(0)
+            self.num_scenarios_label.config(state='disabled')
+            self.num_scenarios_entry.config(state='disabled')
+
             
     def toggle_Capacity(self, *args):
         if self.Capacity_expansion_var.get() == 1:
@@ -179,6 +190,7 @@ class AdvancedPage(tk.Frame):
         milp_formulation = self.MILP_Formulation_var.get()
         partial_load = self.Generator_Partial_Load_var.get()
         brownfield = self.Greenfield_Investment_var.get()
+        fuel_cost = self.Fuel_Specific_Cost_Calculation_var.get()
         res_page = self.controller.frames.get("TechnologiesPage")
         generator_page = self.controller.frames.get("GeneratorPage")
         battery_page = self.controller.frames.get("BatteryPage")
@@ -191,7 +203,9 @@ class AdvancedPage(tk.Frame):
         if brownfield == 0:
             res_page.toggle_brownfield_parameters()
             battery_page.toggle_brownfield_parameters()
-            generator_page.toggle_brownfield_parameters() 
+            generator_page.toggle_brownfield_parameters()
+        if fuel_cost == 1:
+            generator_page.toggle_fuel_cost_parameters()
         # Then, navigate to the RECalculationPage
         self.controller.show_frame("RECalculationPage")
         
@@ -215,16 +229,20 @@ class AdvancedPage(tk.Frame):
             for i in range(num_scenarios):
                 var = tk.DoubleVar(value=1.0 / num_scenarios)
                 vcmd = (self.register(self.validate_fraction), '%P')
+                label = ttk.Label(self.inner_frame, text="Scenario_weights")
                 entry = ttk.Entry(self.inner_frame, textvariable=var,validate='key', validatecommand=vcmd)
-                entry.grid(row=24 + i, column=1, sticky='w')
+                label.grid(row=21 + i, column=3, sticky='w')
+                entry.grid(row=21 + i, column=3, sticky='e')
                 self.scenario_weights_vars.append(var)
                 self.scenario_weights_entries.append(entry)
             self.scenario_weights_label.config(state='normal')
         else:
             # If only one scenario, add one entry with default value 1
             self.scenario_weight_var = tk.DoubleVar(value=1.0)
+            self.scenario_weights_label = ttk.Label(self.inner_frame, text="Scenario_weights")
             self.scenario_weight_entry = ttk.Entry(self.inner_frame, textvariable=self.scenario_weight_var)
-            self.scenario_weight_entry.grid(row=24, column=1, sticky='w')
+            self.scenario_weights_label.grid(row=21, column=3, sticky='w')
+            self.scenario_weight_entry.grid(row=21, column=3, sticky='e')
             self.scenario_weight_entry.config(state='disabled')
             self.scenario_weights_label.config(state='disabled')
             
@@ -438,6 +456,19 @@ class AdvancedPage(tk.Frame):
         self.Grid_Connection_Type_radio2 = ttk.Radiobutton(self.inner_frame, text="Purchase/Sell", variable=self.Grid_Connection_Type_var, value=1, state='disabled')
         self.Grid_Connection_Type_radio2.grid(row=14, column=2, sticky='w')
         self.toggle_grid_options()
+        
+        # Descriptive Text Below the Images
+        descriptive_text = ("")
+        self.description_label = ttk.Label(self.inner_frame, text=descriptive_text, wraplength=850, justify="left")
+        self.description_label.grid(row=15, column=0, columnspan=2, sticky='w')
+        
+        # Generator Partial Load
+        self.Fuel_Specific_Cost_Calculation_var = tk.IntVar(value=0)
+        self.Fuel_Specific_Cost_Calculation_label = ttk.Label(self.inner_frame, text="Fuel Specific Cost Calculation:", anchor='w')
+        self.Fuel_Specific_Cost_Calculation_label.grid(row=16, column=0, sticky='w')
+        self.Fuel_Specific_Cost_Calculation_checkbutton = ttk.Checkbutton(self.inner_frame, text="Activate", variable=self.Fuel_Specific_Cost_Calculation_var, onvalue=1, offvalue=0)
+        self.Fuel_Specific_Cost_Calculation_checkbutton.grid(row=16, column=1, sticky='w')
+        create_tooltip(self.Fuel_Specific_Cost_Calculation_checkbutton, "Allow for variable fuel costs across the years")
 
 
         # WACC Calculation Checkbutton
@@ -473,7 +504,7 @@ class AdvancedPage(tk.Frame):
             
         # Section title: Model Configuration
         self.title_label = ttk.Label(self.inner_frame, text="Advanced Optimization Configuration", font=self.subtitle_font,style='TLabel')
-        self.title_label.grid(row=16, column=0, columnspan=1, pady=10, sticky='w')
+        self.title_label.grid(row=17, column=0, columnspan=1, pady=10, sticky='w')
             
         # Multiobjective Optimization
         self.Multiobjective_Optimization_var = tk.IntVar(value=0)
@@ -514,35 +545,30 @@ class AdvancedPage(tk.Frame):
 
         self.toggle_MultiObjective()
         
-        # Descriptive Text Below the Images
-        descriptive_text = ("")
-        self.description_label = ttk.Label(self.inner_frame, text=descriptive_text, wraplength=850, justify="left")
-        self.description_label.grid(row=22, column=0, columnspan=2, sticky='w')
+        # Multiobjective Optimization
+        self.Multiscenario_Optimization_var = tk.IntVar(value=0)
+        ttk.Label(self.inner_frame, text="Multi-Scenario Optimization:", anchor='w').grid(row=18, column=3, sticky='w')
+        self.Multiscenario_Optimization_checkbutton = ttk.Checkbutton(self.inner_frame, text="Activate", variable=self.Multiscenario_Optimization_var, onvalue=1, offvalue=0)
+        self.Multiscenario_Optimization_checkbutton.grid(row=18, column=4, sticky='w')
+        create_tooltip(self.Multiscenario_Optimization_checkbutton, "Optimization of NPC/operation cost and CO2 emissions")
+        self.Multiscenario_Optimization_var.trace('w', self.toggle_MultiScenario)
             
         # Number of Scenarios
         self.num_scenarios_var = tk.IntVar(value=1)
         self.num_scenarios_label = ttk.Label(self.inner_frame, text="Number of Scenarios:", anchor='w')
-        self.num_scenarios_label.grid(row=23, column=0, sticky='w')
+        self.num_scenarios_label.grid(row=19, column=3, sticky='w')
         vcmd = (self.register(self.validate_integer), '%P')
         self.num_scenarios_entry = ttk.Entry(self.inner_frame, textvariable=self.num_scenarios_var,validate='key', validatecommand=vcmd)
-        self.num_scenarios_entry.grid(row=23, column=1, sticky='w')
+        self.num_scenarios_entry.grid(row=19, column=4, sticky='w')
         self.num_scenarios_entry.bind("<FocusOut>", self.update_scenario_weights)
         create_tooltip(self.num_scenarios_entry, "Multi-Scenarios Optimization")
-        
-        # Initialize Scenario Weights with one entry and disabled
-        self.scenario_weights_label = ttk.Label(self.inner_frame, text="Scenario Weights:", anchor='w', state='disabled')
-        self.scenario_weights_label.grid(row=24, column=0, sticky='w')
-        self.scenario_weight_var = tk.DoubleVar(value=1.0)
-        self.scenario_weight_entry = ttk.Entry(self.inner_frame, textvariable=self.scenario_weight_var, state='disabled')
-        self.scenario_weight_entry.grid(row=24, column=1, sticky='w')
 
         # Update Configuration Button
         self.update_config_button = ttk.Button(self.inner_frame, text="Update", command=self.update_scenario_weights)
-        self.update_config_button.grid(row=23, column=2, sticky='w',padx=15)
-
-        # Scenario Weights
-        self.scenario_weights_vars = []
+        self.update_config_button.grid(row=19, column=4, sticky='e',padx=5)
+        
         self.scenario_weights_entries = []
+        self.scenario_weights_vars = []
         
         # Navigation Frame at the bottom
         self.nav_frame = NavigationFrame(self, back_command=lambda: controller.show_frame("StartPage"), next_command=self.on_next_button)
@@ -562,6 +588,7 @@ class AdvancedPage(tk.Frame):
         'Pareto_solution': self.pareto_solution_var.get(),
         'Greenfield_Investment': self.Greenfield_Investment_var.get(),
         'Grid_Connection': self.Grid_Connection_var.get(),
+        'Fuel_Specific_Cost_Calculation': self.Fuel_Specific_Cost_Calculation_var.get(),
         'Grid_Availability_Simulation': self.Grid_Availability_Simulation_var.get(),
         'Grid_Connection_Type': self.Grid_Connection_Type_var.get(),
         'WACC_Calculation': self.WACC_Calculation_var.get(),

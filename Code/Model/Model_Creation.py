@@ -111,8 +111,9 @@ def Model_Creation(model):
     model.Solver                            = Param(within=Binary)                                    # 1 for Gurobi solver, 0 for default
     model.Model_Components                  = Param(within=NonNegativeIntegers)                       # 0 for batteries and generators, 1 for batteries only, 2 for generators only
     model.WACC_Calculation                  = Param(within=Binary)                                    # 1 to select Weighted Average Cost of Capital calculation, 0 otherwise
-    model.Fuel_Specific_Cost_Calculation    = Param(within=Binary)                                    # 1 to allow variable fule specific cost across the years (calculation), 0 otherwise
-
+    model.Fuel_Specific_Cost_Import         = Param(within=Binary)                                    # 1 to import variable fuel specific cost from csv file (only if Fuel_Specific_Cost_Calculation activated)
+    model.Fuel_Specific_Cost_Calculation    = Param(within=Binary)                                    # 1 to allows variable fuel specific cost across the years, 0 otherwise
+    
     "Sets"
     model.periods                           = RangeSet(1, model.Periods)                                  # Creation of a set from 1 to the number of periods in each year
     model.years                             = RangeSet(1, model.Years)                                    # Creation of a set from 1 to the number of years of the project
@@ -197,6 +198,8 @@ def Model_Creation(model):
                                                      within=NonNegativeReals)
     model.FUEL_unit_CO2_emission             = Param(model.generator_types,
                                                      within=NonNegativeReals)
+    # Variable Fuel Cost
+    #----------------------------------------------------------------------------------------------
     model.Fuel_Specific_Cost                 = Param(model.generator_types,
                                                      model.years,
                                                      initialize=Initialize_Fuel_Specific_Cost)
@@ -207,6 +210,17 @@ def Model_Creation(model):
     model.Generator_Marginal_Cost            = Param(model.generator_types,
                                                      model.years,
                                                      initialize=Initialize_Generator_Marginal_Cost)
+    model.Generator_Start_Cost                = Param(model.generator_types,
+                                                      model.years,
+                                                      initialize=Initialize_Generator_Start_Cost)
+    #------------------------------------------------------------------------------------------------
+    model.Fuel_Specific_Cost_1               = Param(model.generator_types,
+                                                     initialize=Initialize_Fuel_Specific_Cost_1)
+    model.Generator_Marginal_Cost_1          = Param(model.generator_types,
+                                                     initialize=Initialize_Generator_Marginal_Cost_1)
+    model.Generator_Marginal_Cost_milp        = Param(model.generator_types,
+                                                      model.years,
+                                                      initialize=Initialize_Generator_Marginal_Cost_milp)
     model.Generator_capacity                  = Param(model.generator_types,
                                                       within=NonNegativeReals)                             # Existing capacity of generator
     # MILP Formulation 
@@ -217,12 +231,10 @@ def Model_Creation(model):
                                                       within=NonNegativeReals)                             # Minimum percentage of energy output for the generator in part load
     model.Generator_pgen                      = Param(model.generator_types,
                                                       within=NonNegativeReals)                             # Percentage of the total operation cost of the generator system at full load
-    model.Generator_Start_Cost                = Param(model.generator_types,
-                                                      model.years,
-                                                      initialize=Initialize_Generator_Start_Cost)          # # Origin of the cost curve of the part load generator
-    model.Generator_Marginal_Cost_milp        = Param(model.generator_types,
-                                                      model.years,
-                                                      initialize=Initialize_Generator_Marginal_Cost_milp)  # Slope of the cost curve of the part load generator
+    model.Generator_Start_Cost_1              = Param(model.generator_types,
+                                                      initialize=Initialize_Generator_Start_Cost_1)          # # Origin of the cost curve of the part load generator
+    model.Generator_Marginal_Cost_milp_1      = Param(model.generator_types,
+                                                      initialize=Initialize_Generator_Marginal_Cost_milp_1)  # Slope of the cost curve of the part load generator
 
 # --- National Grid ---
 
