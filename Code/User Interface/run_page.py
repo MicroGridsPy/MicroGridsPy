@@ -111,7 +111,7 @@ class RunPage(tk.Frame):
         plot_image = Image.open(plot_path)
         plot_photo = ImageTk.PhotoImage(plot_image)
         
-        resized_image = plot_image.resize((500, 500))
+        resized_image = plot_image.resize((700, 700))
         plot_photo = ImageTk.PhotoImage(resized_image)
 
         # Create a new window or use an existing frame
@@ -275,11 +275,11 @@ class RunPage(tk.Frame):
         self.output_frame.pack(side='top', fill='both', expand=True, padx=10, pady=5)
         self.setup_output_frame()
         
-        '''
+        
         self.output_redirection = RedirectOutput(self.output_text)
         sys.stdout = self.output_redirection
         sys.stderr = self.output_redirection
-        '''
+        
         self.parameters_frame = ttk.Frame(self)
         self.parameters_frame.pack(side='top', fill='x', padx=10, pady=5)
         self.setup_parameters_frame()

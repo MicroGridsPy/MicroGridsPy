@@ -363,8 +363,10 @@ class GeneratorPage(tk.Frame):
                entry.config(state='normal')
                
     def toggle_fuel_cost_parameters(self):
-        for (var, label, entry) in self.gen_entries:
-            if label.cget('text') in self.fuel_cost_parameters:
+        self.Fuel_Specific_Cost_Import_checkbutton.config(state='normal')
+        for (var, label, entry) in self.fuel_entries:
+            if label.cget('text') == 'Fuel_Specific_Cost_Rate':
+               print('ECCOMI')
                label.config(state='normal')  
                entry.config(state='normal')
                
@@ -490,8 +492,6 @@ class GeneratorPage(tk.Frame):
         self.milp_partial_parameters = ['Generator_Nominal_Capacity_milp','Generator_Min_output', 'Generator_pgen']
         self.brownfield_parameters = ['Generator_capacity','GEN_years']
         self.initial_states = {}
-        
-        self.gen_entries_widgets = []  # List to hold entry widgets for clearing
 
         # Custom font definitions
         self.title_font = tkFont.Font(family="Helvetica", size=14, weight="bold")
@@ -523,14 +523,13 @@ class GeneratorPage(tk.Frame):
             if param in text_parameters: var = tk.StringVar(value=value)
             else: var = tk.DoubleVar(value=value)
 
-            # Initially, set the entry state to 'normal' (enabled)
-            entry_state = 'normal'
-            label_state = 'normal'
-
             # Conditionally disable entries based on specific parameters
-            if  param in self.milp_partial_parameters or param in self.brownfield_parameters or self.fuel_cost_parameters:
+            if  (param in self.milp_partial_parameters) or (param in self.brownfield_parameters):
                 entry_state = 'disabled'
                 label_state = 'disabled'
+            else:
+                entry_state = 'normal'
+                label_state = 'normal'
                 
             # Create the entry
             vcmd = self.get_validation_command(param, value)
@@ -556,11 +555,13 @@ class GeneratorPage(tk.Frame):
         self.Fuel_Specific_Cost_Import_checkbutton = ttk.Checkbutton(
                     self.inner_frame, text="Fuel_Specific_Cost_Import",
                     variable=self.Fuel_Specific_Cost_Import_var,
-                    command=self.toggle_fuel_specific_cost)
-        self.Fuel_Specific_Cost_Import_checkbutton.grid(row=22, column=0, sticky='w')
+                    command=self.toggle_fuel_specific_cost,
+                    state='disabled')
+        self.Fuel_Specific_Cost_Import_checkbutton.grid(row=29, column=0, sticky='w')
         create_tooltip(self.Fuel_Specific_Cost_Import_checkbutton, "Check to import the fuel specific cost values from a csv file")
         
         self.fuel_entries = []
+        
         for i, (param, value) in enumerate(self.fuel_params_defaults.items(), start=23):  
             label_text = param
             label = ttk.Label(self.inner_frame, text=label_text)
@@ -573,6 +574,11 @@ class GeneratorPage(tk.Frame):
             # Initially, set the entry state to 'normal' (enabled)
             entry_state = 'normal'
             label_state = 'normal'
+            
+            # Conditionally disable entries based on specific parameters
+            if  param == 'Fuel_Specific_Cost_Rate':
+                entry_state = 'disabled'
+                label_state = 'disabled'
                 
             # Create the entry
             vcmd = self.get_validation_command(param, value)

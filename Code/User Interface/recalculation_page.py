@@ -20,7 +20,7 @@ class TopSectionFrame(tk.Frame):
         self.grid_columnconfigure(1, weight=1) 
 
 class NavigationFrame(tk.Frame):
-    def __init__(self, parent, back_command, next_command, *args, **kwargs):
+    def __init__(self, parent, next_command, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
 
         parent_row_index = 35
@@ -34,10 +34,6 @@ class NavigationFrame(tk.Frame):
         # Grid configuration for the buttons within the NavigationFrame
         self.next_button = ttk.Button(self, text="Next", command=next_command)
         self.next_button.grid(row=0, column=2, sticky='e', padx=10, pady=10)
-        
-        # Grid configuration for the buttons within the NavigationFrame
-        self.back_button = ttk.Button(self, text="Back", command=back_command)
-        self.back_button.grid(row=0, column=0, sticky='w', padx=10, pady=10)
 
         # Configure the grid within NavigationFrame to align the buttons properly
         self.grid_columnconfigure(0, weight=1)  # The column for the back button, if used
@@ -198,7 +194,7 @@ class RECalculationPage(tk.Frame):
         self.load_and_display_image()
         
         # Add NavigationFrame at the very bottom
-        self.nav_frame = NavigationFrame(self, back_command=lambda: controller.show_frame("StartPage"), next_command=lambda: controller.show_frame("ArchetypesPage"))
+        self.nav_frame = NavigationFrame(self, next_command=lambda: controller.show_frame("ArchetypesPage"))
         self.nav_frame.grid(row=2, column=0, sticky='ew', columnspan=self.grid_size()[0])
 
         # Define custom font

@@ -241,7 +241,7 @@ class BatteryPage(tk.Frame):
         self.title_label = ttk.Label(self.inner_frame, text="Battery Bank Parameters", font=self.title_font)
         self.title_label.grid(row=1, column=0, columnspan=1, pady=10, sticky='w')
         
-        self.intro_label = ttk.Label(self.inner_frame, text="Define the parameters related to the battery bank system:", font=self.italic_font, wraplength=850, justify="left")
+        self.intro_label = ttk.Label(self.inner_frame, text="Initialize the parameters related to the battery bank system:", font=self.italic_font, wraplength=850, justify="left")
         self.intro_label.grid(row=2, column=0, columnspan=2, pady=10, sticky='w')
         
         # Define and grid the parameters as labels and entries

@@ -62,6 +62,8 @@ for i in range(len(Data_import)):
         Optimization_Goal = int((re.findall('\d+',Data_import[i])[0]))
     if "param: MILP_Formulation" in Data_import[i]:      
         MILP_Formulation = int((re.findall('\d+',Data_import[i])[0]))
+    if "param: Generator_Partial_Load" in Data_import[i]:      
+        Generator_Partial_Load = int((re.findall('\d+',Data_import[i])[0]))
     if "param: Plot_Max_Cost" in Data_import[i]:      
         Plot_Max_Cost = int((re.findall('\d+',Data_import[i])[0]))
     if "param: RE_Supply_Calculation" in Data_import[i]:      
@@ -288,16 +290,16 @@ def Initialize_Generator_Marginal_Cost_1(model,g):
 
 "Partial Load Effect"
 def Initialize_Generator_Start_Cost(model,g,y):
-    if Fuel_Specific_Cost_Calculation == 1: return model.Generator_Marginal_Cost[g,y]*model.Generator_Nominal_Capacity_milp[g]*model.Generator_pgen[g]
+    if Fuel_Specific_Cost_Calculation == 1 and MILP_Formulation == 1: return model.Generator_Marginal_Cost[g,y]*model.Generator_Nominal_Capacity_milp[g]*model.Generator_pgen[g]
 
 def Initialize_Generator_Start_Cost_1(model,g):
-    if Fuel_Specific_Cost_Calculation == 0: return model.Generator_Marginal_Cost_1[g]*model.Generator_Nominal_Capacity_milp[g]*model.Generator_pgen[g]
+    if Fuel_Specific_Cost_Calculation == 0 and MILP_Formulation == 1 and Generator_Partial_Load == 1: return model.Generator_Marginal_Cost_1[g]*model.Generator_Nominal_Capacity_milp[g]*model.Generator_pgen[g]
 
 def Initialize_Generator_Marginal_Cost_milp(model,g,y):
-    if Fuel_Specific_Cost_Calculation == 1: return ((model.Generator_Marginal_Cost[g,y]*model.Generator_Nominal_Capacity_milp[g])-model.Generator_Start_Cost[g,y])/model.Generator_Nominal_Capacity_milp[g] 
+    if Fuel_Specific_Cost_Calculation == 1 and MILP_Formulation == 1: return ((model.Generator_Marginal_Cost[g,y]*model.Generator_Nominal_Capacity_milp[g])-model.Generator_Start_Cost[g,y])/model.Generator_Nominal_Capacity_milp[g] 
 
 def Initialize_Generator_Marginal_Cost_milp_1(model,g):
-    if Fuel_Specific_Cost_Calculation == 0: return ((model.Generator_Marginal_Cost_1[g]*model.Generator_Nominal_Capacity_milp[g])-model.Generator_Start_Cost_1[g])/model.Generator_Nominal_Capacity_milp[g] 
+    if Fuel_Specific_Cost_Calculation == 0 and MILP_Formulation == 1 and Generator_Partial_Load == 1: return ((model.Generator_Marginal_Cost_1[g]*model.Generator_Nominal_Capacity_milp[g])-model.Generator_Start_Cost_1[g])/model.Generator_Nominal_Capacity_milp[g] 
 
 "Grid Connection"
 if Grid_Availability_Simulation:

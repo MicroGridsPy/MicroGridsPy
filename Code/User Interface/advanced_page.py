@@ -114,13 +114,22 @@ class AdvancedPage(tk.Frame):
             self.pareto_solution_entry.config(state='disabled')
             
     def toggle_MultiScenario(self, *args):
-        if self.Multiobjective_Optimization_var.get() == 1:
+        if self.Multiscenario_Optimization_var.get() == 1:
             self.num_scenarios_label.config(state='normal')
             self.num_scenarios_entry.config(state='normal')
+            self.update_config_button.configure(state='normal')
         else:
-            self.Multiobjective_Optimization_var.set(0)
+            for entry in self.scenario_weights_entries:
+                entry.destroy()
+            for label in self.scenario_weights_labels:
+                label.destroy()
+            self.scenario_weights_entries.clear()
+            self.scenario_weights_vars.clear()
+            self.Multiscenario_Optimization_var.set(0)
+            self.num_scenarios_var.set(1)
             self.num_scenarios_label.config(state='disabled')
             self.num_scenarios_entry.config(state='disabled')
+            self.update_config_button.configure(state='disabled')
 
             
     def toggle_Capacity(self, *args):
@@ -197,7 +206,7 @@ class AdvancedPage(tk.Frame):
         if milp_formulation == 1 and partial_load == 1:
             battery_page.toggle_milp_parameters()
             generator_page.toggle_milp_partial_parameters()
-        if milp_formulation == 1 and partial_load == 0:
+        elif milp_formulation == 1 and partial_load == 0:
             battery_page.toggle_milp_parameters()
             generator_page.toggle_milp_parameters()
         if brownfield == 0:
@@ -213,6 +222,8 @@ class AdvancedPage(tk.Frame):
         # Clear existing weight entries
         for entry in self.scenario_weights_entries:
             entry.destroy()
+        for label in self.scenario_weights_labels:
+            label.destroy()
         self.scenario_weights_entries.clear()
         self.scenario_weights_vars.clear()
 
@@ -229,31 +240,22 @@ class AdvancedPage(tk.Frame):
             for i in range(num_scenarios):
                 var = tk.DoubleVar(value=1.0 / num_scenarios)
                 vcmd = (self.register(self.validate_fraction), '%P')
-                label = ttk.Label(self.inner_frame, text="Scenario_weights")
+                label = ttk.Label(self.inner_frame, text="Scenario weight")
                 entry = ttk.Entry(self.inner_frame, textvariable=var,validate='key', validatecommand=vcmd)
-                label.grid(row=21 + i, column=3, sticky='w')
-                entry.grid(row=21 + i, column=3, sticky='e')
+                label.grid(row=20 + i, column=3, sticky='w')
+                entry.grid(row=20 + i, column=4, sticky='w')
                 self.scenario_weights_vars.append(var)
                 self.scenario_weights_entries.append(entry)
-            self.scenario_weights_label.config(state='normal')
-        else:
-            # If only one scenario, add one entry with default value 1
-            self.scenario_weight_var = tk.DoubleVar(value=1.0)
-            self.scenario_weights_label = ttk.Label(self.inner_frame, text="Scenario_weights")
-            self.scenario_weight_entry = ttk.Entry(self.inner_frame, textvariable=self.scenario_weight_var)
-            self.scenario_weights_label.grid(row=21, column=3, sticky='w')
-            self.scenario_weight_entry.grid(row=21, column=3, sticky='e')
-            self.scenario_weight_entry.config(state='disabled')
-            self.scenario_weights_label.config(state='disabled')
+                self.scenario_weights_labels.append(label)
             
-        # Check if total weight exceeds 1
-        total_weight = sum(var.get() for var in self.scenario_weights_vars)
-        if total_weight > 1:
-            tk.messagebox.showerror("Error", "Total weights of scenarios can not exceed 1")
-            return False
-        # Update the scrollregion
-        self.canvas.after_idle(lambda: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
-        return True
+            # Check if total weight exceeds 1
+            total_weight = sum(var.get() for var in self.scenario_weights_vars)
+            if total_weight > 1:
+                tk.messagebox.showerror("Error", "Total weights of scenarios can not exceed 1")
+                return False
+            # Update the scrollregion
+            self.canvas.after_idle(lambda: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+            return True
 
     def setup_scrollable_area(self):
         # Create the main container frame
@@ -541,7 +543,7 @@ class AdvancedPage(tk.Frame):
         vcmd = (self.register(self.validate_pareto_solution), '%P')
         self.pareto_solution_entry = ttk.Entry(self.inner_frame, textvariable=self.pareto_solution_var, state='disabled',validate='key', validatecommand=vcmd)
         self.pareto_solution_entry.grid(row=21, column=1, sticky='w')
-        create_tooltip(self.pareto_points_entry, "Multi-Objective optimization solution to be displayed (1 for minimal CO2 emission solution, Pareto points for minimal costs one")
+        create_tooltip(self.pareto_solution_entry, "Multi-Objective optimization solution to be displayed (1 for minimal CO2 emission solution, Pareto points for minimal costs one")
 
         self.toggle_MultiObjective()
         
@@ -550,25 +552,26 @@ class AdvancedPage(tk.Frame):
         ttk.Label(self.inner_frame, text="Multi-Scenario Optimization:", anchor='w').grid(row=18, column=3, sticky='w')
         self.Multiscenario_Optimization_checkbutton = ttk.Checkbutton(self.inner_frame, text="Activate", variable=self.Multiscenario_Optimization_var, onvalue=1, offvalue=0)
         self.Multiscenario_Optimization_checkbutton.grid(row=18, column=4, sticky='w')
-        create_tooltip(self.Multiscenario_Optimization_checkbutton, "Optimization of NPC/operation cost and CO2 emissions")
+        create_tooltip(self.Multiscenario_Optimization_checkbutton, "Simulate different scenarios of demand and RES time series")
         self.Multiscenario_Optimization_var.trace('w', self.toggle_MultiScenario)
             
         # Number of Scenarios
         self.num_scenarios_var = tk.IntVar(value=1)
-        self.num_scenarios_label = ttk.Label(self.inner_frame, text="Number of Scenarios:", anchor='w')
+        self.num_scenarios_label = ttk.Label(self.inner_frame, text="Number of Scenarios:", anchor='w',state='disabled')
         self.num_scenarios_label.grid(row=19, column=3, sticky='w')
         vcmd = (self.register(self.validate_integer), '%P')
-        self.num_scenarios_entry = ttk.Entry(self.inner_frame, textvariable=self.num_scenarios_var,validate='key', validatecommand=vcmd)
+        self.num_scenarios_entry = ttk.Entry(self.inner_frame, textvariable=self.num_scenarios_var,validate='key', validatecommand=vcmd,state='disabled')
         self.num_scenarios_entry.grid(row=19, column=4, sticky='w')
         self.num_scenarios_entry.bind("<FocusOut>", self.update_scenario_weights)
-        create_tooltip(self.num_scenarios_entry, "Multi-Scenarios Optimization")
 
         # Update Configuration Button
         self.update_config_button = ttk.Button(self.inner_frame, text="Update", command=self.update_scenario_weights)
         self.update_config_button.grid(row=19, column=4, sticky='e',padx=5)
+        self.update_config_button.configure(state='disabled')
         
         self.scenario_weights_entries = []
         self.scenario_weights_vars = []
+        self.scenario_weights_labels = []
         
         # Navigation Frame at the bottom
         self.nav_frame = NavigationFrame(self, back_command=lambda: controller.show_frame("StartPage"), next_command=self.on_next_button)
