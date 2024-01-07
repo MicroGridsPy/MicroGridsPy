@@ -210,7 +210,6 @@ class RunPage(tk.Frame):
 
 
     def setup_plots_frame(self):
-        
         # Generate Plot button
         self.generate_plot_button = ttk.Button(self.plots_frame, text="Generate Plots:", command=self.generate_plot)
         self.generate_plot_button.grid(row=0, column=0, padx=5, pady=5)
