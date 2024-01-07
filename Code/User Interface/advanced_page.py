@@ -215,6 +215,10 @@ class AdvancedPage(tk.Frame):
             generator_page.toggle_brownfield_parameters()
         if fuel_cost == 1:
             generator_page.toggle_fuel_cost_parameters()
+            
+        if self.Step_Duration_var.get() > self.backup_var.get():
+                tk.messagebox.showerror("Error", "Step Duration can not exceed the Total Project Duration")
+                return False
         # Then, navigate to the RECalculationPage
         self.controller.show_frame("RECalculationPage")
         
@@ -377,7 +381,8 @@ class AdvancedPage(tk.Frame):
         self.Step_Duration_entry = ttk.Entry(self.inner_frame, textvariable=self.Step_Duration_var,validate='key', validatecommand=vcmd,state='disabled')
         self.Step_Duration_entry.grid(row=4, column=1,sticky='w')
         create_tooltip(self.Step_Duration_entry, "Duration of each investment decision step in which the project lifetime will be split")
-
+        self.backup_var = tk.IntVar(value=20)
+        
         # Min_Last_Step_Duration
         self.Min_Step_Duration_label = ttk.Label(self.inner_frame, text="Minimum Last Step Duration [Years]:", anchor='w',state='disabled')
         self.Min_Step_Duration_label.grid(row=5, column=0, sticky='w')
