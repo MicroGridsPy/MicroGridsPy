@@ -160,8 +160,10 @@ class StartPage(tk.Frame):
         
     def on_next_button(self):
         advanced_page = self.controller.frames.get("AdvancedPage")
+        grid_page = self.controller.frames.get("GridPage")
         advanced_page.Step_Duration_var.set(value=self.Years_var.get())
         advanced_page.backup_var.set(value=self.Years_var.get())
+        grid_page.backup_var.set(value=self.Years_var.get())
         self.controller.show_frame("AdvancedPage")
 
 

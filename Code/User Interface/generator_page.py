@@ -363,10 +363,10 @@ class GeneratorPage(tk.Frame):
                entry.config(state='normal')
                
     def toggle_fuel_cost_parameters(self):
+        self.Fuel_Specific_Cost_Import_label.config(state='normal')
         self.Fuel_Specific_Cost_Import_checkbutton.config(state='normal')
         for (var, label, entry) in self.fuel_entries:
             if label.cget('text') == 'Fuel_Specific_Cost_Rate':
-               print('ECCOMI')
                label.config(state='normal')  
                entry.config(state='normal')
                
@@ -540,7 +540,7 @@ class GeneratorPage(tk.Frame):
             label.config(state=label_state)
 
             # Add tooltip
-            tooltip_text = self.gen_params_tooltips.get(param, "No description available")
+            tooltip_text = self.gen_params_tooltips.get(param)
             create_tooltip(entry, tooltip_text)
             
             self.initial_states[param] = {'label': label_state, 'entry': entry_state}
@@ -552,12 +552,14 @@ class GeneratorPage(tk.Frame):
         separator.grid(row=21, column=0, columnspan=3, pady=10, sticky='ew')
             
         self.Fuel_Specific_Cost_Import_var = tk.IntVar(value=0)
+        self.Fuel_Specific_Cost_Import_label = ttk.Label(self.inner_frame, text='Fuel_Specific_Cost_Import', state='disabled')
+        self.Fuel_Specific_Cost_Import_label.grid(row=29, column=0, sticky='w')
         self.Fuel_Specific_Cost_Import_checkbutton = ttk.Checkbutton(
-                    self.inner_frame, text="Fuel_Specific_Cost_Import",
+                    self.inner_frame, text="Activate",
                     variable=self.Fuel_Specific_Cost_Import_var,
                     command=self.toggle_fuel_specific_cost,
                     state='disabled')
-        self.Fuel_Specific_Cost_Import_checkbutton.grid(row=29, column=0, sticky='w')
+        self.Fuel_Specific_Cost_Import_checkbutton.grid(row=29, column=1, sticky='w')
         create_tooltip(self.Fuel_Specific_Cost_Import_checkbutton, "Check to import the fuel specific cost values from a csv file")
         
         self.fuel_entries = []

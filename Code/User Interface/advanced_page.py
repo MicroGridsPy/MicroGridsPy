@@ -3,7 +3,6 @@ from tkinter import font as tkFont
 #import ttkbootstrap as ttkk
 #from ttkbootstrap import Style
 from tkinter import ttk
-
 class TopSectionFrame(tk.Frame):
     def __init__(self, parent, university_name,  *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
@@ -372,7 +371,9 @@ class AdvancedPage(tk.Frame):
         self.Capacity_expansion_checkbutton.grid(row=3, column=1, sticky='w')
         self.Capacity_expansion_var.trace('w', self.toggle_Capacity)
         create_tooltip(self.Capacity_expansion_checkbutton, "Allow capacity expansion and different investment steps during the time horizon")
-
+        
+        self.backup_var = tk.IntVar(value=20)
+        
         # Step Duration
         self.Step_Duration_label = ttk.Label(self.inner_frame, text="Step Duration [Years]:", anchor='w', state='disabled')
         self.Step_Duration_label.grid(row=4, column=0, sticky='w')
@@ -381,7 +382,7 @@ class AdvancedPage(tk.Frame):
         self.Step_Duration_entry = ttk.Entry(self.inner_frame, textvariable=self.Step_Duration_var,validate='key', validatecommand=vcmd,state='disabled')
         self.Step_Duration_entry.grid(row=4, column=1,sticky='w')
         create_tooltip(self.Step_Duration_entry, "Duration of each investment decision step in which the project lifetime will be split")
-        self.backup_var = tk.IntVar(value=20)
+
         
         # Min_Last_Step_Duration
         self.Min_Step_Duration_label = ttk.Label(self.inner_frame, text="Minimum Last Step Duration [Years]:", anchor='w',state='disabled')
@@ -484,6 +485,7 @@ class AdvancedPage(tk.Frame):
         self.WACC_Calculation_label.grid(row=3, column=3, sticky='w', padx=30)
         self.WACC_Calculation_checkbutton = ttk.Checkbutton(self.inner_frame, text="Activate", variable=self.WACC_Calculation_var, onvalue=1, offvalue=0, command=self.toggle_wacc_parameters)
         self.WACC_Calculation_checkbutton.grid(row=3, column=4, sticky='w',padx=30)
+        create_tooltip(self.WACC_Calculation_checkbutton, "Allow for Weighted Average Cost of Capital (WACC) in place of the standard discount rate")
         
         vcmd = (self.register(self.validate_float), '%P')
 
@@ -496,6 +498,13 @@ class AdvancedPage(tk.Frame):
             "debt_share": 0.90
             }
 
+        wacc_tooltips = {
+            "cost_of_equity": "Cost of equity (i.e., the return required by the equity shareholders)",
+            "cost_of_debt": "Cost of debt (i.e., the interest rate)",
+            "tax": "Corporate tax deduction (debt is assumed as tax deducible)",
+            "equity_share": "Total level of equity",
+            "debt_share": "Total level of debt"
+            }
         # Create labels and entries for WACC parameters in the adjusted columns
         self.wacc_parameters_entries = []
         for i, (param, value) in enumerate(wacc_parameters.items(), start=4):  # Adjust the starting row accordingly
@@ -504,9 +513,12 @@ class AdvancedPage(tk.Frame):
             var = tk.DoubleVar(value=value)
             entry = ttk.Entry(self.inner_frame, textvariable=var, state='normal', validate='key', validatecommand=vcmd)  # Initially set state to 'normal' to show the value
             entry.var = var
-            entry.grid(row=i, column=4, sticky='w',padx=30)  # Place the entry fields in column 4
-            label.config(state='disabled')  # Then disable the entry
-            entry.config(state='disabled')  # Then disable the entry
+            entry.grid(row=i, column=4, sticky='w',padx=30)
+            # Add tooltip
+            tooltip_text = wacc_tooltips.get(param)
+            create_tooltip(entry, tooltip_text)
+            label.config(state='disabled')  
+            entry.config(state='disabled')  
             self.wacc_parameters_entries.append((var, label, entry))
             
         # Section title: Model Configuration

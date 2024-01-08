@@ -92,6 +92,9 @@ class GridPage(tk.Frame):
                 break  
     
         if not all_filled: return
+        if self.Year_Grid_Connection_var.get() > self.backup_var.get():
+                tk.messagebox.showerror("Error", "Year Grid Connection can not exceed the Total Project Duration")
+                return False
         self.controller.show_frame("PlotPage")
     
     def validate_integer(self, P):
@@ -209,11 +212,18 @@ class GridPage(tk.Frame):
         
         self.intro_label = ttk.Label(self.inner_frame, text="Simulate the connection with the main grid taking into account its costs and availability:", font=self.italic_font, wraplength=850, justify="left")
         self.intro_label.grid(row=2, column=0, columnspan=2, pady=10, sticky='w')
+        
+        self.backup_var = tk.IntVar(value=20)
 
+        ttk.Label(self.inner_frame, text="Year Grid Connection:", anchor='w',style='TLabel').grid(row=3, column=0, sticky='w')
+        self.Year_Grid_Connection_var = tk.IntVar(value=1)
+        vcmd = (self.register(self.validate_integer), '%P')
+        self.Year_Grid_Connection_entry = ttk.Entry(self.inner_frame, textvariable=self.Year_Grid_Connection_var, validate='key', validatecommand=vcmd)
+        self.Year_Grid_Connection_entry.grid(row=3, column=1, sticky='w')
+        create_tooltip(self.Year_Grid_Connection_entry, "Year at which microgrid is connected to the national grid (starting from 1)")
         
         # Define and grid the parameters as labels and entries
         self.grid_params = {
-            "Year_Grid_Connection": 1,
             "Grid_Sold_El_Price": 0.0,
             "Grid_Purchased_El_Price": 0.138,
             "Grid_Distance": 0.5,
@@ -226,7 +236,6 @@ class GridPage(tk.Frame):
         }
         
         self.grid_params_tooltips = {
-            "Year_Grid_Connection": "Year at which microgrid is connected to the national grid (starting from 1)",
             "Grid_Sold_El_Price": "Price at which electricity is sold to the grid [USD/kWh]",
             "Grid_Purchased_El_Price": "Price at which electricity is purchased from the grid [USD/kWh]",
             "Grid_Distance": "Distance from grid connection point [km]",
@@ -239,7 +248,7 @@ class GridPage(tk.Frame):
             }
 
         self.grid_params_entries = []
-        for i, (param, value) in enumerate(self.grid_params.items(), start=3):  # Adjust the starting row index if needed
+        for i, (param, value) in enumerate(self.grid_params.items(), start=4):
             label = ttk.Label(self.inner_frame, text=param)
             label.grid(row=i, column=0, sticky='w')
             var = tk.DoubleVar(value=value)
@@ -253,10 +262,11 @@ class GridPage(tk.Frame):
         
         
     def get_input_data(self):
-        input_data = {}
+        grid_data = {}
+        grid_data['Year_Grid_Connection'] = self.Year_Grid_Connection_var.get()
         for var, label, entry in self.grid_params_entries:
             param = label.cget("text")
-            input_data[param] = var.get()  # Retrieve the value from the entry widget
-        return input_data
+            grid_data[param] = var.get()  # Retrieve the value from the entry widget
+        return grid_data
 
 

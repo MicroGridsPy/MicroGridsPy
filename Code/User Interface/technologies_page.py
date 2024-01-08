@@ -415,7 +415,7 @@ class TechnologiesPage(tk.Frame):
             label.config(state=label_state)
 
             # Add tooltip
-            tooltip_text = self.res_params_tooltips.get(param, "No description available")
+            tooltip_text = self.res_params_tooltips.get(param)
             create_tooltip(entry, tooltip_text)
             
             self.initial_states[param] = {'label': label_state, 'entry': entry_state}
