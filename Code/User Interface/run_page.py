@@ -196,17 +196,21 @@ class RunPage(tk.Frame):
         thread.start()
 
     def setup_parameters_frame(self):
+        
+        self.title_label = ttk.Label(self.parameters_frame, text="Plot the Results:", font=("Helvetica", 16))
+        self.title_label.grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        
         # Parameters Initialization Frame setup with grid layout
-        ttk.Label(self.parameters_frame, text="Start Date for Plot:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        ttk.Label(self.parameters_frame, text="Start Date for Plot:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
         self.start_date_entry = ttk.Entry(self.parameters_frame)
         self.start_date_entry.insert(0, "01/01/2023 00:00:00")
-        self.start_date_entry.grid(row=0, column=1, padx=5, pady=5, sticky="w")
+        self.start_date_entry.grid(row=1, column=1, padx=5, pady=5, sticky="w")
 
-        ttk.Label(self.parameters_frame, text="Number of days to plot:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        ttk.Label(self.parameters_frame, text="Number of days to plot:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
         vcmd = (self.register(self.validate_integer), '%P')
         self.plot_time_entry = ttk.Entry(self.parameters_frame, validate='key', validatecommand=vcmd)
         self.plot_time_entry.insert(0, "3")
-        self.plot_time_entry.grid(row=1, column=1, padx=5, pady=5, sticky="w")
+        self.plot_time_entry.grid(row=2, column=1, padx=5, pady=5, sticky="w")
 
 
     def setup_plots_frame(self):
@@ -251,16 +255,15 @@ class RunPage(tk.Frame):
         self.title_label = ttk.Label(self.run_button_frame, text="Run the Model:", font=("Helvetica", 16))
         self.title_label.pack(side='left', padx=10)
         
-        self.run_button = ttk.Button(self.run_button_frame, text="RUN", command=self.run_model)
-        self.run_button.pack(side='left', padx=20, pady=5)
-        
-        
         # Add Icon to Run Button Frame
         run_icon = Image.open('Images/run.png')  # Load the image
         run_icon = run_icon.resize((20, 20), Image.Resampling.LANCZOS)  # Resize the image
         self.run_icon_image = ImageTk.PhotoImage(run_icon)  
         self.run_icon_label = ttk.Label(self.run_button_frame, image=self.run_icon_image)  
-        self.run_icon_label.pack(side='left', padx=5)    
+        self.run_icon_label.pack(side='left', padx=5)   
+        
+        self.run_button = ttk.Button(self.run_button_frame, text="RUN", command=self.run_model)
+        self.run_button.pack(side='left', padx=20, pady=5)
         
 
         self.intro_label_frame = ttk.Frame(self)
