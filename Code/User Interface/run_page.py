@@ -23,8 +23,8 @@ class NavigationFrame(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
         self.configure(background='#0f2c53', highlightbackground='#0f2c53', highlightthickness=2)
-        self.quit_button = ttk.Button(self, text="Stop", command=parent.quit)
-        self.quit_button.pack(side='right', padx=10, pady=10)
+        self.exit_button = ttk.Button(self, text="Exit", command=parent.destroy)
+        self.exit_button.pack(side='right', padx=10, pady=10)
         self.pack(side='bottom', fill='x')
 
 class RedirectOutput:
@@ -163,6 +163,9 @@ class RunPage(tk.Frame):
         plot_label.image = plot_photo  # Keep a reference!
         plot_label.pack()
         
+    def stop_simulation(self):
+        self.stop_simulation_flag = True
+        
     def run_model_thread(self):
         try:
             self.run_button.configure(state='disabled')
@@ -173,21 +176,35 @@ class RunPage(tk.Frame):
             from Results import ResultsSummary, TimeSeries, PrintResults
             
             start = time.time()      # Start time counter
-            model = AbstractModel()  # Define type of optimization problem
-            Model_Creation(model)    # Creation of the Sets, parameters and variables.
+            if self.stop_simulation_flag == False:
+                model = AbstractModel()  # Define type of optimization problem
+            else: print('Model interrupted by the user\n')
+            if self.stop_simulation_flag == False:
+                Model_Creation(model)    # Creation of the Sets, parameters and variables
+            else: print('Model interrupted by the user\n')
             # Resolve the model instance
-            self.instance = Model_Resolution(model)
-            self.Time_Series = TimeSeries(self.instance)
-            Optimization_Goal = self.instance.Optimization_Goal.extract_values()[None]
-            self.Results = ResultsSummary(self.instance, Optimization_Goal, self.Time_Series)
-            PrintResults(self.instance, self.Results)
-             
+            if self.stop_simulation_flag == False:
+                self.instance = Model_Resolution(model)
+            else: print('Model interrupted by the user\n')
+            if self.stop_simulation_flag == False:
+                self.Time_Series = TimeSeries(self.instance)
+            else: print('Model interrupted by the user\n')
+            if self.stop_simulation_flag == False:
+                Optimization_Goal = self.instance.Optimization_Goal.extract_values()[None]
+            else: print('Model interrupted by the user\n')
+            if self.stop_simulation_flag == False:
+                self.Results = ResultsSummary(self.instance, Optimization_Goal, self.Time_Series)
+            else: print('Model interrupted by the user\n')
+            if self.stop_simulation_flag == False:
+                PrintResults(self.instance, self.Results)
+            else: print('Model interrupted by the user\n')
             end = time.time()
             elapsed = end - start
             elapsed_message = f'\n\nModel run complete (overall time: {round(elapsed, 0)} s, {round(elapsed / 60, 1)} m)\n'
             self.update_output(elapsed_message)
         finally:
             self.run_button.configure(state='normal')
+            self.stop_simulation_flag == True
             
     def run_model(self):
         self.clear_output()
@@ -243,6 +260,7 @@ class RunPage(tk.Frame):
     def __init__(self, parent, controller):
         ttk.Frame.__init__(self, parent)
         self.controller = controller
+        self.stop_simulation_flag = False
         
         # Add Top Section first
         university_name = "MicroGridsPy "
@@ -260,10 +278,20 @@ class RunPage(tk.Frame):
         run_icon = run_icon.resize((20, 20), Image.Resampling.LANCZOS)  # Resize the image
         self.run_icon_image = ImageTk.PhotoImage(run_icon)  
         self.run_icon_label = ttk.Label(self.run_button_frame, image=self.run_icon_image)  
-        self.run_icon_label.pack(side='left', padx=5)   
+        self.run_icon_label.pack(side='left')   
         
         self.run_button = ttk.Button(self.run_button_frame, text="RUN", command=self.run_model)
         self.run_button.pack(side='left', padx=20, pady=5)
+        
+        # Add Icon to Run Button Frame
+        pause_icon = Image.open('Images/pause.png')  # Load the image
+        pause_icon = pause_icon.resize((20, 20), Image.Resampling.LANCZOS)  # Resize the image
+        self.pause_icon_image = ImageTk.PhotoImage(pause_icon)  
+        self.pause_icon_label = ttk.Label(self.run_button_frame, image=self.pause_icon_image)  
+        self.pause_icon_label.pack(side='left') 
+        
+        self.quit_button = ttk.Button(self.run_button_frame, text="Stop", command=self.stop_simulation)
+        self.quit_button.pack(side='left', padx=5, pady=5)
         
 
         self.intro_label_frame = ttk.Frame(self)

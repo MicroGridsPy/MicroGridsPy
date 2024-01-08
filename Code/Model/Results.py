@@ -1276,19 +1276,26 @@ def YearlyCosts(instance):
          Generator_Full = instance.Generator_Full.get_values()
          Generator_Partial = instance.Generator_Partial.get_values()
          Generator_Marginal_Cost = instance.Generator_Marginal_Cost.extract_values()
+         Generator_Marginal_Cost_1 = instance.Generator_Marginal_Cost_1.extract_values()
          Generator_Marginal_Cost_milp = instance.Generator_Marginal_Cost_milp.extract_values()
+         Generator_Marginal_Cost_milp_1 = instance.Generator_Marginal_Cost_milp_1.extract_values()
          Generator_Nominal_Capacity_milp = instance.Generator_Nominal_Capacity_milp.extract_values()
          Generator_Start_Cost = instance.Generator_Start_Cost.extract_values()
+         Generator_Start_Cost_1 = instance.Generator_Start_Cost_1.extract_values()
          Fuel_Cost_Yearly_Cost = pd.DataFrame()
          for s in range(1,S+1):
             fuel_s = pd.DataFrame()
             for g in range(1,Generator_Types+1):
                 fuel_yc_types = pd.DataFrame()
                 for (y,st) in ys_tuples_list:
-                    if instance.Generator_Partial_Load.value == 1:
+                    if instance.Generator_Partial_Load.value == 1 and instance.Fuel_Specific_Cost_Calculation.value == 1:
                        fuel_yc = pd.DataFrame(['Year '+str(y), (sum(Generator_Full[(s,y,g,t)] for t in range(1,P+1))*Generator_Marginal_Cost[g,y]*Generator_Nominal_Capacity_milp[g]/1e3) + (sum(Generator_Energy_Partial[(s,y,g,t)] for t in range(1,P+1))*Generator_Marginal_Cost_milp[g,y]/1e3) + (sum(Generator_Partial[(s,y,g,t)] for t in range(1,P+1))*Generator_Start_Cost[g,y])/1e3]).T.set_index([0])
+                    elif instance.Generator_Partial_Load.value == 1 and instance.Fuel_Specific_Cost_Calculation.value == 0:
+                        fuel_yc = pd.DataFrame(['Year '+str(y), (sum(Generator_Full[(s,y,g,t)] for t in range(1,P+1))*Generator_Marginal_Cost_1[g]*Generator_Nominal_Capacity_milp[g]/1e3) + (sum(Generator_Energy_Partial[(s,y,g,t)] for t in range(1,P+1))*Generator_Marginal_Cost_milp_1[g]/1e3) + (sum(Generator_Partial[(s,y,g,t)] for t in range(1,P+1))*Generator_Start_Cost_1[g])/1e3]).T.set_index([0])
+                    elif instance.Generator_Partial_Load.value == 0 and instance.Fuel_Specific_Cost_Calculation.value == 1:
+                       fuel_yc = pd.DataFrame(['Year '+str(y), sum(Generator_Energy_Total[(s,y,g,t)] for t in range(1,P+1))*Generator_Marginal_Cost[g,y]/1e3]).T.set_index([0])
                     else:
-                       fuel_yc = pd.DataFrame(['Year '+str(y), sum(Generator_Energy_Total[(s,y,g,t)] for t in range(1,P+1))*Generator_Marginal_Cost[g,y]/1e3]).T.set_index([0]) 
+                        fuel_yc = pd.DataFrame(['Year '+str(y), sum(Generator_Energy_Total[(s,y,g,t)] for t in range(1,P+1))*Generator_Marginal_Cost_1[g]/1e3]).T.set_index([0]) 
                     fuel_yc.columns = pd.MultiIndex.from_arrays([['Fuel cost'],[Fuel_Names[g]],[s],['kUSD']], names=['','Component','Scenario','Unit'])
                     fuel_yc_types = pd.concat([fuel_yc_types,fuel_yc], axis=0)
                 fuel_s = pd.concat([fuel_s,fuel_yc_types], axis=0)            
