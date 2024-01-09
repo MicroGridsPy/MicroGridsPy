@@ -16,7 +16,8 @@ Main features:
 - Possibility to optimize on NPC or operation costs
 - LCOE evaluation for the identified system
 - Two-stage stochastic optimization
-- User Interface \n
+- User Interface
+  
   <img align="center" src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Interface.png?raw=true">
 
 - Advanced features:
@@ -25,11 +26,14 @@ Main features:
 - Unit commitment of generation sources with MILP formulation
 - Partal Load operation of diesel genset with MILP formulation
 - Optimization at 1 minute time-step (suited for coupling with RAMP load profiles)
-- Multi-year evolving load demand and multi-step capacity expansion \n
+- Multi-year evolving load demand and multi-step capacity expansion
+  
   <img align="center" src="https://user-images.githubusercontent.com/73618037/225139304-0c1d2ee3-5f2d-4b45-8c9f-21d967883f1b.png" width="50%" height="50%">
-- Possibility of optimizing grid-connected microgrids \n
+- Possibility of optimizing grid-connected microgrids
+  
   <img align="center" src="https://user-images.githubusercontent.com/73618037/225138883-b5085bb1-6378-4743-9ce5-b81bdab8dcba.png" width="50%" height="50%">
-- Two-objective optimization (minimum Net Present Cost or CO2 emissions objective functions) \n
+- Two-objective optimization (minimum Net Present Cost or CO2 emissions objective functions)
+  
   <img align="center" src="https://user-images.githubusercontent.com/73618037/225139420-01a71137-c7be-4dda-a5e3-ba766f3780b4.png">
 - Brownfield optimization
 - Built-in load archetypes for rural users in Sub-Sahara Africa.
