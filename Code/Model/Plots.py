@@ -664,7 +664,10 @@ def SizePlot(instance,Results,PlotResolution,PlotFormat):
             x_ticks.append('Battery bank')
             
         # Get the maximum kW and kWh values
-        max_kW_value = Results['Size'].loc[idx[:, 'kW'], 'Total'].max()
+        if instance.MILP_Formulation:
+            max_kW_value = Results['Size'].loc[idx[:, 'Unit'], 'Total'].max()
+        else:
+            max_kW_value = Results['Size'].loc[idx[:, 'kW'], 'Total'].max()
         max_kW = max_kW_value if pd.notna(max_kW_value) else 0
 
         max_kWh_value = Results['Size'].loc[idx[:, 'kWh'], 'Total'].max()
