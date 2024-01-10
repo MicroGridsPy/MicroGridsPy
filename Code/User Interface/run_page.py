@@ -79,9 +79,7 @@ class RunPage(tk.Frame):
                 self.show_dispatch_plot_button['state'] = 'normal'
                 self.size_plot_button['state'] = 'normal'
                 self.cash_plot_button['state'] = 'normal'
-                if self.instance.Multiobjective_Optimization.value:  # Assuming this is how you check the condition
-                    self.show_pareto_curve_button = ttk.Button(self.controls_frame, text="Show Pareto Curve", command=self.show_pareto_plot, state='normal')
-                    self.show_pareto_curve_button.pack(side='left', pady=5, padx=5)
+                if self.instance.Multiobjective_Optimization.value: self.show_pareto_curve_button.configure(state='normal')
         
     def show_size_plot(self):
         # Load the saved plot image

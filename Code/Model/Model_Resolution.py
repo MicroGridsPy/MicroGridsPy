@@ -48,14 +48,6 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
             n = int((re.findall('\d+',Data_import[i])[0]))
         if "param: Pareto_solution" in Data_import[i]:      
             p = int((re.findall('\d+',Data_import[i])[0]))
-    
-    if (Generator_Partial_Load == 1 and MILP_Formulation == 0):
-        print('###########################################################')
-        print('INPUT NOT VALID: if MILP_Formulation NOT activated (= 0), Generator_Partial_Load must be NOT activated (= 0) too!')
-        print('Please, edit file "Parameters.dat" and try again')
-        print('ABORT')
-        print('###########################################################')
-        sys.exit()
         
 
     if Greenfield_Investment == 1 and MILP_Formulation == 1 :

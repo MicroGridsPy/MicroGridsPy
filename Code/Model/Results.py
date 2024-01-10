@@ -22,14 +22,14 @@ def ResultsSummary(instance, Optimization_Goal, TimeSeries):
     
     current_directory = os.path.dirname(os.path.abspath(__file__))
     results_directory = os.path.join(current_directory, '..', 'Results')
-    results_path = os.path.join(results_directory, 'Results_Summary.xlsx')
     
-    with pd.ExcelWriter(results_path) as writer:
-        EnergySystemSize.to_excel(writer, sheet_name='Size')
-        EnergySystemCost.to_excel(writer, sheet_name='Cost')
-        YearlyCost.to_excel(writer, sheet_name='Yearly cash flows')
-        YearlyEnergyParams.to_excel(writer, sheet_name='Yearly energy parameters')
-        YearlyEnergyParamsSC.to_excel(writer, sheet_name='Yearly energy parameters SC')
+    # Export each DataFrame to a separate CSV file
+    EnergySystemSize.to_csv(os.path.join(results_directory, 'Size.csv'), index=False)
+    EnergySystemCost.to_csv(os.path.join(results_directory, 'Cost.csv'), index=False)
+    YearlyCost.to_csv(os.path.join(results_directory, 'Yearly_cash_flows.csv'), index=False)
+    YearlyEnergyParams.to_csv(os.path.join(results_directory, 'Yearly_energy_parameters.csv'), index=False)
+    YearlyEnergyParamsSC.to_csv(os.path.join(results_directory, 'Yearly_energy_parameters_SC.csv'), index=False)
+
 
     Results = {
                'Costs': EnergySystemCost,
