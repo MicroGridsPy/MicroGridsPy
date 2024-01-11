@@ -132,7 +132,7 @@ param: BESS_unit_CO2_emission := 0.0;
 param: Battery_Nominal_Capacity_milp := 1000.0;
 
 param: Generator_Types := 1;
-param: Fuel_Specific_Cost_Calculation := 1;
+param: Fuel_Specific_Cost_Calculation := 0;
 param: Fuel_Specific_Cost_Import := 0;
 param: Generator_Names :=
 1	'Diesel Genset 1'
@@ -159,7 +159,7 @@ param: Fuel_Specific_Start_Cost :=
 1	1.17
 ;
 param: Fuel_Specific_Cost_Rate :=
-1	0.1
+1	0.0
 ;
 param: Generator_capacity :=
 1	0.0
