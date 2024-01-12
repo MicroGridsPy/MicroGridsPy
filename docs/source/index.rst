@@ -1,9 +1,13 @@
 
 =======================================
-MicroGridsPy Documentation
+Introduction
 =======================================
 
-**MicroGridsPy** is an open-source optimization model built on `Pyomo <https://pyomo.readthedocs.io/en/stable/>`_, a Python library for modeling optimization problems. Developed in 2016 by the University of Liege, MicroGridsPy focuses on *energy scaling and dispatch* in mini-grids, particularly in remote areas. The model, available on `GitHub <https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/tree/Development_MILP>`_, optimizes micro-grid size and dispatch strategy with a 1-hour temporal resolution. It calculates fixed and variable costs, LCOE, and allows for the selection of capacities for batteries, generators, and renewable sources to minimize Net Present Cost (NPC) or Operation and Maintenance (O&M) expenses while adhering to system limitations.
+**MicroGridsPy** is a *bottom-up, open-source optimization model*, running on `Pyomo <https://pyomo.readthedocs.io/en/stable/>`_, a Python library used to model optimisation problems, whose primary goal is 
+to offer an open-source approach to the issue of **energy scaling and dispatch in micro grids** in remote locations. 
+It was firstly developed in 2016 by University of Liege and the code is freely available on `GitHub <https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/>`_ [40]. 
+The model enables the optimization of micro-grid size and its dispatch strategy, typically at *1-hour temporal resolution*, returning also as output the fixed and variable costs associated with each technology and the **Levelized Cost of Energy (LCOE)** of the system. 
+It is based on Linear Programming, and it enables the choice of the installed capacities of batteries, generators, and renewable energy sources that results in the lowest Net Present Cost (NPC) or lowest Operation and Maintenance expenses (O&M) during the project's lifespan while achieving the system limitations. 
 
 .. figure:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Mgpy_Scheme_2.png?raw=true
    :width: 700
