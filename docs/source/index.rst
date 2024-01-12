@@ -31,7 +31,7 @@ In the latest version of MicroGridsPy, these advanced features have been impleme
 
 .. note::
 
-   This project is under active development.
+   This project is under active development!
 
 Table of Contents
 -------------------
