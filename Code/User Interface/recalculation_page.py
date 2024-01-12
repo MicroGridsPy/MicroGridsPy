@@ -166,7 +166,7 @@ class RECalculationPage(tk.Frame):
         icon_label.grid(row=0, column=0, padx=(10, 0), pady=10, sticky="w")
 
         # Create the warning label with text
-        self.warning_label = ttk.Label(warning_frame, text="WARNING: If RES Supply Calculation is deactivated, you must provide the RES Time Series Data as CSV file located in 'Inputs' folder (refer to the online documentation for more details https://mgpy-docs.readthedocs.io/en/latest/index.html). In addition, please consider that the NASA POWER server may not work during the weekend.",  wraplength=700, justify="left")
+        self.warning_label = ttk.Label(warning_frame, text="WARNING: If RES Supply Calculation is deactivated, you must provide the RES Time Series Data as CSV file located in 'Inputs' folder (refer to the online documentation for more details https://microgridspy-documentation.readthedocs.io/en/latest/). In addition, please consider that the NASA POWER server may not work during the weekend.",  wraplength=700, justify="left")
         self.warning_label.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
 
         # Ensure the text spans the rest of the grid

@@ -104,7 +104,7 @@ class GeneratorPage(tk.Frame):
         icon_label.grid(row=0, column=0, padx=(10, 0), pady=10, sticky="w")
 
         # Create the warning label with text
-        self.warning_label = ttk.Label(warning_frame, text="WARNING: If Fuel Specific Cost Import is activated, you must provide the fuel cost values in a CSV file located in 'Inputs' folder (refer to the online documentation for more details https://mgpy-docs.readthedocs.io/en/latest/index.html)",  wraplength=700, justify="left")
+        self.warning_label = ttk.Label(warning_frame, text="WARNING: If Fuel Specific Cost Import is activated, you must provide the fuel cost values in a CSV file located in 'Inputs' folder (refer to the online documentation for more details https://microgridspy-documentation.readthedocs.io/en/latest/)",  wraplength=700, justify="left")
         self.warning_label.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
 
         # Ensure the text spans the rest of the grid
