@@ -30,7 +30,7 @@ For code development and debugging, consider using an Integrated Development Env
    conda activate mgp
    spyder
 
-========
+
 Solvers
 ========
 
@@ -53,7 +53,8 @@ This command installs GLPK and ensures that it is added to your environment's pa
 .. warning::
 
    While GLPK is a capable solver for many optimization problems, it may have longer operational times compared to commercial solvers like Gurobi, especially for large or complex problems. 
-   It is advisable to consider this factor when choosing a solver for time-sensitive or large-scale applications.
+   The difference can often be substantial, potentially ranging from several times to orders of magnitude faster, depending on the specifics of the problem even if 
+   it's important to note that these are general observations, and actual performance will vary with each unique problem. It is advisable to consider this factor when choosing a solver for time-sensitive or large-scale applications.
 
 
 Gurobi
@@ -88,7 +89,7 @@ More info at `HiGHS documentation <https://ergo-code.github.io/HiGHS/dev/>`_
 .. warning::
    The HiGHS solver integration is currently under active development and will be available soon. This feature is being tested and optimized to ensure seamless performance with MicroGridsPy.
 
-========================
+
 Setting the environment
 ========================
 
