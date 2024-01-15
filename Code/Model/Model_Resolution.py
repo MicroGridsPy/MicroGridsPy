@@ -44,7 +44,6 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
             Model_Components = int((re.findall('\d+',Data_import[i])[0]))
         if "param: Solver" in Data_import[i]:      
             Solver = int((re.findall('\d+',Data_import[i])[0]))
-            print('ECCOLO: ', Solver)
         if "param: Pareto_points" in Data_import[i]:      
             n = int((re.findall('\d+',Data_import[i])[0]))
         if "param: Pareto_solution" in Data_import[i]:      
@@ -349,12 +348,16 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
            results = opt.solve(instance, tee=True, keepfiles=keepfiles, logfile=logfile) # Solving a model instance 
            print('Instance solved')
         elif Solver == 2:
-#          solver = HiGHS(time_limit=10000, mip_heuristic_effort=0.2, mip_detect_symmetry="on")
-#          results = solver.solve(instance)
-#          print(results)
-           opt = SolverFactory('highs', executable="C:/Users/onori/HiGHS_Static/bin/highs.exe")
+           from pyomo.contrib.appsi.solvers.highs import HiGHS
+           solver = HiGHS()
            print('Calling HiGHS solver...')
-           results = opt.solve(instance, tee=True) # Solving a model instance
+           results = solver.solve(instance)
+           # solver = HiGHS(time_limit=10000, mip_heuristic_effort=0.2, mip_detect_symmetry="on")
+           # results = solver.solve(instance)
+           # print(results)
+           # opt = SolverFactory('highs')
+           # print('Calling HiGHS solver...')
+           # results = opt.solve(instance, tee=True) # Solving a model instance
            print('Instance solved')
 
            instance.solutions.load_from(results)  # Loading solution into instance
