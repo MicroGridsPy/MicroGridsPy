@@ -10,8 +10,7 @@ The MicroGridsPy model main objective is to provide an open-source alternative t
 
 Check out the **Documentation** for more details: https://microgridspy-documentation.readthedocs.io/en/latest/
 
-.. warning::
-   For a MACOS compatible version, please refer to version 2.0. 
+> :warning: **Warning**: For a MACOS compatible version, please refer to version 2.0. The project is under active development. 
 
 
 Main features:
