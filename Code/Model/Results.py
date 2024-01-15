@@ -23,25 +23,25 @@ def ResultsSummary(instance, Optimization_Goal, TimeSeries):
     current_directory = os.path.dirname(os.path.abspath(__file__))
     results_directory = os.path.join(current_directory, '..', 'Results/Results_Summary.xlsx')
     
-    "Exporting excel"
     Excel = ExcelWriter(results_directory)
+
     EnergySystemSize.to_excel(Excel, sheet_name='Size')
     EnergySystemCost.to_excel(Excel, sheet_name='Cost')
     YearlyCost.to_excel(Excel, sheet_name='Yearly cash flows')
     YearlyEnergyParams.to_excel(Excel, sheet_name='Yearly energy parameters')
     YearlyEnergyParamsSC.to_excel(Excel, sheet_name='Yearly energy parameters SC')
-    
-    Excel.save()
+
+    Excel.close()
 
     Results = {
-               'Costs': EnergySystemCost,
-               'Size': EnergySystemSize,
-               'Yearly cash flows': YearlyCost,
-               'Yearly energy parameters': YearlyEnergyParams,
-               'Renewables Penetration': RenewablePenetration,
-               'Yearly energy parameters SC': YearlyEnergyParamsSC,
-               'Renewables Penetration SC': RenewablePenetrationSC,
-               }
+        'Costs': EnergySystemCost,
+        'Size': EnergySystemSize,
+        'Yearly cash flows': YearlyCost,
+        'Yearly energy parameters': YearlyEnergyParams,
+        'Renewables Penetration': RenewablePenetration,
+        'Yearly energy parameters SC': YearlyEnergyParamsSC,
+        'Renewables Penetration SC': RenewablePenetrationSC,
+    }
     
     return Results
 
