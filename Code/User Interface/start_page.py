@@ -291,6 +291,27 @@ class StartPage(tk.Frame):
         create_tooltip(self.Periods_entry, "Units of time for which the model performs calculations")
         # Bind the callback function to the change in "Time Resolution (periods)"
         self.Periods_var.trace('w', self.check_battery_independence)
+        
+        # Mapping of solver names to numeric values
+        solver_mapping = {'Gurobi': 0, 'GLPK': 1, 'HiGHS': 2}
+
+        # Solver selection
+        ttk.Label(self.inner_frame, text="Select Solver:", anchor='w').grid(row=10, column=2, sticky='w', padx=(30, 0))
+        self.Solver_var = tk.StringVar()
+        self.Solver_numeric_var = tk.IntVar()  # Variable to store the numeric value
+
+        self.Solver_combobox = ttk.Combobox(self.inner_frame, textvariable=self.Solver_var, state='readonly')
+        self.Solver_combobox['values'] = list(solver_mapping.keys())
+        self.Solver_combobox.grid(row=10, column=3, sticky='w', padx=(30, 0))
+        self.Solver_combobox.current(0)  # Default to first solver
+        # Bind the callback function to the selection event
+        # Callback function to update numeric variable
+        def update_solver_numeric_var(event):
+            solver_name = self.Solver_var.get()
+            self.Solver_numeric_var.set(solver_mapping[solver_name])
+        self.Solver_combobox.bind('<<ComboboxSelected>>', update_solver_numeric_var)
+
+
 
         # Optimization Goal
         self.Optimization_Goal_var = tk.IntVar(value=1)
@@ -402,6 +423,7 @@ class StartPage(tk.Frame):
         'Investment_Cost_Limit': self.Investment_Cost_Limit_var.get(),
         'Optimization_Goal': self.Optimization_Goal_var.get(),
         'Model_Components': self.Model_Components_var.get(),
+        'Solver': self.Solver_numeric_var.get()
      }
 
      return input_data

@@ -201,6 +201,7 @@ class RunPage(tk.Frame):
             elapsed_message = f'\n\nModel run complete (overall time: {round(elapsed, 0)} s, {round(elapsed / 60, 1)} m)\n'
             self.update_output(elapsed_message)
         finally:
+            self.generate_plot_button.configure(state='normal')
             self.run_button.configure(state='normal')
             self.stop_simulation_flag == True
             
@@ -232,6 +233,7 @@ class RunPage(tk.Frame):
         # Generate Plot button
         self.generate_plot_button = ttk.Button(self.plots_frame, text="Generate Plots:", command=self.generate_plot)
         self.generate_plot_button.grid(row=0, column=0, padx=5, pady=5)
+        self.generate_plot_button.configure(state='disabled')
         
         # Plots Frame setup with grid layout
         self.show_dispatch_plot_button = ttk.Button(self.plots_frame, text="Show Dispatch Plot", command=self.show_dispatch_plot, state='disabled')
@@ -303,11 +305,11 @@ class RunPage(tk.Frame):
         self.output_frame.pack(side='top', fill='both', expand=True, padx=10, pady=5)
         self.setup_output_frame()
         
-        
+        '''
         self.output_redirection = RedirectOutput(self.output_text)
         sys.stdout = self.output_redirection
         sys.stderr = self.output_redirection
-        
+        '''
         self.parameters_frame = ttk.Frame(self)
         self.parameters_frame.pack(side='top', fill='x', padx=10, pady=5)
         self.setup_parameters_frame()

@@ -43,7 +43,7 @@ param: hospital_4 := '0';
 param: hospital_5 := '0';
 
 param: Periods := 8760;
-param: Years := 20;
+param: Years := 2;
 param: Step_Duration := 20;
 param: Min_Last_Step_Duration := 1;
 param: StartDate := '01/01/2023 00:00:00';
@@ -77,6 +77,8 @@ param: Grid_Availability_Simulation := 0;
 param: Grid_Connection_Type := 0;
 param: WACC_Calculation := 0;
 param: Model_Components := 0;
+
+
 
 param: Pareto_points := 2;
 param: Pareto_solution := 1;

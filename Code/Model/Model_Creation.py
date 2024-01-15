@@ -108,11 +108,12 @@ def Model_Creation(model):
     model.Grid_Availability_Simulation      = Param(within=Binary)                                    # 1 to simulate grid availability, 0 otherwise
     model.Grid_Connection_Type              = Param(within=Binary)                                    # 0 for sell/purchase power with the national grid, 1 for purchase only
     model.Plot_Max_Cost                     = Param(within=Binary)                                    # 1 if the Pareto curve has to include the point at maxNPC/maxOperationCost, 0 otherwise
-    model.Solver                            = Param(within=Binary)                                    # 1 for Gurobi solver, 0 for HiGHS
     model.Model_Components                  = Param(within=NonNegativeIntegers)                       # 0 for batteries and generators, 1 for batteries only, 2 for generators only
     model.WACC_Calculation                  = Param(within=Binary)                                    # 1 to select Weighted Average Cost of Capital calculation, 0 otherwise
     model.Fuel_Specific_Cost_Import         = Param(within=Binary)                                    # 1 to import variable fuel specific cost from csv file (only if Fuel_Specific_Cost_Calculation activated)
     model.Fuel_Specific_Cost_Calculation    = Param(within=Binary)                                    # 1 to allows variable fuel specific cost across the years, 0 otherwise
+    
+    model.Solver                            = Param(within=NonNegativeIntegers)                       # 0 for Gurobi, 1 for GLPK and 2 for HiGHS (currently NOT available)
     
     "Sets"
     model.periods                           = RangeSet(1, model.Periods)                                  # Creation of a set from 1 to the number of periods in each year

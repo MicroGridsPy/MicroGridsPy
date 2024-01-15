@@ -62,7 +62,7 @@ param: Battery_Independence := 0;
 param: Lost_Load_Fraction := 0.0;
 param: Lost_Load_Specific_Cost := 0.0;
 
-param: Solver := 1;
+param: Solver := 0;
 
 param: Optimization_Goal := 1;
 param: MILP_Formulation := 0;
@@ -77,6 +77,8 @@ param: Grid_Availability_Simulation := 0;
 param: Grid_Connection_Type := 0;
 param: WACC_Calculation := 0;
 param: Model_Components := 0;
+
+
 
 param: Pareto_points := 2;
 param: Pareto_solution := 1;

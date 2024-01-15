@@ -44,6 +44,7 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
             Model_Components = int((re.findall('\d+',Data_import[i])[0]))
         if "param: Solver" in Data_import[i]:      
             Solver = int((re.findall('\d+',Data_import[i])[0]))
+            print('ECCOLO: ', Solver)
         if "param: Pareto_points" in Data_import[i]:      
             n = int((re.findall('\d+',Data_import[i])[0]))
         if "param: Pareto_solution" in Data_import[i]:      
@@ -322,7 +323,7 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
         print('\nInstance created')
         
 
-        if Solver:
+        if Solver == 0:
            opt = SolverFactory('gurobi') # Solver use during the optimization
            timelimit = 10000
 
@@ -338,7 +339,18 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
            print('Instance solved')
 
            instance.solutions.load_from(results)  # Loading solution into instance
-        else:
+        elif Solver == 1:
+           opt = SolverFactory('glpk') # Solver use during the optimization
+           timelimit = 10000
+           opt.options['tmlim'] = timelimit
+           if MILP_Formulation: opt.options['mipgap'] = 0.01      # Set relative gap tolerance for MIP
+           
+           print('Calling GLPK solver...')
+           results = opt.solve(instance, tee=True, options_string=options_string,
+                            warmstart=warmstart,keepfiles=keepfiles,
+                            load_solutions=load_solutions, logfile=logfile) # Solving a model instance 
+           print('Instance solved')
+        elif Solver == 2:
 #          solver = HiGHS(time_limit=10000, mip_heuristic_effort=0.2, mip_detect_symmetry="on")
 #          results = solver.solve(instance)
 #          print(results)
