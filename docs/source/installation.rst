@@ -33,7 +33,8 @@ For code development and debugging, consider using an Integrated Development Env
 Solvers
 =======
 
-At least one of the solvers supported by Pyomo is required. HiGHS (open-source) or Gurobi (commercial) are recommended for large problems and have been confirmed to work with MicroGridsPy. Refer to the documentation of your solver on how to install it.
+At least one of the solvers supported by Pyomo is required. HiGHS (open-source) or Gurobi (commercial) are recommended for large problems. 
+Gurobi and GLPK have been confirmed to work with MicroGridsPy. Refer to the documentation of your solver on how to install it.
 
 GLPK (GNU Linear Programming Kit)
 ---------------------------------
