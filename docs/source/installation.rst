@@ -35,6 +35,25 @@ Solvers
 
 At least one of the solvers supported by Pyomo is required. HiGHS (open-source) or Gurobi (commercial) are recommended for large problems and have been confirmed to work with MicroGridsPy. Refer to the documentation of your solver on how to install it.
 
+GLPK (GNU Linear Programming Kit)
+---------------------------------
+
+GLPK is an open-source solver for Linear Programming (LP) and Mixed Integer Programming (MIP). It's a suitable option for smaller to medium-sized problems and offers a free alternative to commercial solvers.
+
+If you are using Anaconda, GLPK can be installed easily using the Conda package manager. To install GLPK, open your Anaconda Prompt or terminal and enter the following command:
+
+.. code-block:: python
+
+    conda install -c conda-forge glpk
+
+This command installs GLPK and ensures that it is added to your environment's path, allowing Pyomo to automatically detect and use it.
+
+.. warning::
+
+   While GLPK is a capable solver for many optimization problems, it may have longer operational times compared to commercial solvers like Gurobi, especially for large or complex problems. 
+   It is advisable to consider this factor when choosing a solver for time-sensitive or large-scale applications.
+
+
 Gurobi
 ------
 
@@ -46,19 +65,27 @@ Gurobi is commercial but significantly faster than CBC and GLPK, which is releva
 
 It's recommended to download and install the installer from the Gurobi website, as the conda package has repeatedly shown various issues. After installing, log on to the Gurobi website and obtain a (free academic or paid commercial) license, then activate it on your system via the instructions given online (using the grbgetkey command).
 
+.. warning::
+
+   Gurobi is not open-source and free for non-academic use. Commercial licenses for Gurobi can be costly, and it's important to consider this when planning for larger-scale or commercial projects. 
+   For precise pricing details and licensing options, refer to `Gurobi Pricing <https://www.gurobi.com/pricing/>`_.
+   
 More info at `Gurobi documentation <https://www.gurobi.com/documentation/>`_
+
+
 
 HiGHS
 -----
-
-.. warning::
-   The HiGHS solver integration is currently under active development and will be available soon. This feature is being tested and optimized to ensure seamless performance with MicroGridsPy.
 
 HiGHS is high-performance serial and parallel software for solving large-scale sparse linear programming (LP), mixed-integer programming (MIP) and quadratic programming (QP) models, developed in C++11, with interfaces to C, C#, FORTRAN, Julia and Python.
 
 HiGHS is freely available under the MIT licence and is downloaded from Github. Installing HiGHS from source code requires CMake minimum version 3.15, but no other third-party utilities. HiGHS can be used as a stand-alone executable on Windows, Linux and MacOS. There is a C++11 library which can be used within a C++ project or, via one of the interfaces, to a project written in other languages.
 
 More info at `HiGHS documentation <https://ergo-code.github.io/HiGHS/dev/>`_
+
+.. warning::
+   The HiGHS solver integration is currently under active development and will be available soon. This feature is being tested and optimized to ensure seamless performance with MicroGridsPy.
+
 
 Setting the environment
 =======================

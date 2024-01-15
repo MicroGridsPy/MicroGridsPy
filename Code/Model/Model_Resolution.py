@@ -346,9 +346,7 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
            if MILP_Formulation: opt.options['mipgap'] = 0.01      # Set relative gap tolerance for MIP
            
            print('Calling GLPK solver...')
-           results = opt.solve(instance, tee=True, options_string=options_string,
-                            warmstart=warmstart,keepfiles=keepfiles,
-                            load_solutions=load_solutions, logfile=logfile) # Solving a model instance 
+           results = opt.solve(instance, tee=True, keepfiles=keepfiles, logfile=logfile) # Solving a model instance 
            print('Instance solved')
         elif Solver == 2:
 #          solver = HiGHS(time_limit=10000, mip_heuristic_effort=0.2, mip_detect_symmetry="on")
