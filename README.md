@@ -84,7 +84,7 @@ To install MicroGridsPy, the conda package manager is recommended. Here's the st
 5. **Launch Spyder IDE for Development**:
    - Use Spyder for development and debugging, which is included in the Anaconda distribution. To start Spyder, run:
      ```
-     conda activate mgp
+     conda activate mgpy
      spyder
      ```
 
