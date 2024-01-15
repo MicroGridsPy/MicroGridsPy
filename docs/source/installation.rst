@@ -60,7 +60,7 @@ This command installs GLPK and ensures that it is added to your environment's pa
 Gurobi
 ------
 
-Gurobi is commercial but significantly faster than CBC and GLPK, which is relevant for larger problems. It needs a license to work, which can be obtained for free for academic use by creating an account on gurobi.com. Gurobi can be installed via conda by means of the following command:
+Gurobi is commercial but significantly faster than GLPK, which is relevant for larger problems. It needs a license to work, which can be obtained for free for academic use by creating an account on gurobi.com. Gurobi can be installed via conda by means of the following command:
 
 .. code-block:: python
 
