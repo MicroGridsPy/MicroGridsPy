@@ -1,5 +1,5 @@
 
-MicroGridsPy - Development_Interface version
+MicroGridsPy 2.1
 ======================== 
 
 <img src="https://user-images.githubusercontent.com/73618037/225138390-a5593e6d-6b9f-408b-ab28-60ac3a9871c8.png">
