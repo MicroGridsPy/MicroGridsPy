@@ -30,8 +30,9 @@ For code development and debugging, consider using an Integrated Development Env
    conda activate mgp
    spyder
 
+========
 Solvers
-=======
+========
 
 At least one of the solvers supported by Pyomo is required. HiGHS (open-source) or Gurobi (commercial) are recommended for large problems. 
 Gurobi and GLPK have been confirmed to work with MicroGridsPy. Refer to the documentation of your solver on how to install it.
@@ -69,7 +70,7 @@ It's recommended to download and install the installer from the Gurobi website, 
 .. warning::
 
    Gurobi is not open-source and free for non-academic use. Commercial licenses for Gurobi can be costly, and it's important to consider this when planning for larger-scale or commercial projects. 
-   For precise pricing details and licensing options, refer to `Gurobi Pricing <https://www.gurobi.com/pricing/>`_.
+   For precise pricing details and licensing options, refer to `Gurobi website <https://www.gurobi.com>`_.
    
 More info at `Gurobi documentation <https://www.gurobi.com/documentation/>`_
 
@@ -87,9 +88,9 @@ More info at `HiGHS documentation <https://ergo-code.github.io/HiGHS/dev/>`_
 .. warning::
    The HiGHS solver integration is currently under active development and will be available soon. This feature is being tested and optimized to ensure seamless performance with MicroGridsPy.
 
-
+========================
 Setting the environment
-=======================
+========================
 
 Refer to ..../base.yml in the MicroGridsPy repository for a full and up-to-date listing of required third-party packages.
 
