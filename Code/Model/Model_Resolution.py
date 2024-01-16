@@ -340,7 +340,6 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
            opt = SolverFactory('glpk') # Solver use during the optimization
            timelimit = 10000
            opt.options['tmlim'] = timelimit
-           opt.options['presolve'] = 'on'  # Enable presolver
            if MILP_Formulation: 
                opt.options['mipgap'] = 0.01      # Set relative gap tolerance for MIP
                opt.options['clq_cuts'] = 'on'  # Enable clique cuts
@@ -400,7 +399,6 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
                 opt = SolverFactory('glpk')
                 timelimit = 10000
                 opt.options['tmlim'] = timelimit
-                opt.options['presolve'] = 'on'  # Enable presolver
                 if MILP_Formulation: 
                     opt.options['mipgap'] = 0.01      # Set relative gap tolerance for MIP
                     opt.options['clq_cuts'] = 'on'  # Enable clique cuts
@@ -535,7 +533,6 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
                 opt = SolverFactory('glpk')
                 timelimit = 10000
                 opt.options['tmlim'] = timelimit
-                opt.options['presolve'] = 'on'  # Enable presolver
                 print('Calling GLPK solver...')
             opt.solve(instance, tee=True)
             print('Instance solved') 
