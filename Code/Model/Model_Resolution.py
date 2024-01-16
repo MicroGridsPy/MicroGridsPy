@@ -335,9 +335,7 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
            results = opt.solve(instance, tee=True, options_string=options_string,
                             warmstart=warmstart,keepfiles=keepfiles,
                             load_solutions=load_solutions, logfile=logfile) # Solving a model instance 
-           print('Instance solved')
 
-           instance.solutions.load_from(results)  # Loading solution into instance
         elif Solver == 1:
            opt = SolverFactory('glpk') # Solver use during the optimization
            timelimit = 10000
@@ -348,9 +346,10 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
                opt.options['clq_cuts'] = 'on'  # Enable clique cuts
            
            print('Calling GLPK solver...')
-           results = opt.solve(instance, tee=True, keepfiles=keepfiles, logfile=logfile) # Solving a model instance 
-           print('Instance solved')
-           instance.solutions.load_from(results)  # Loading solution into instance
+           results = opt.solve(instance, tee=True, keepfiles=keepfiles, logfile=logfile) # Solving a model instance
+           
+        print('Instance solved')
+        instance.solutions.load_from(results)  # Loading solution into instance
            
         # elif Solver == 2:
            # USING APPSI INTERFACE
