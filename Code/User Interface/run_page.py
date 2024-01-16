@@ -167,6 +167,7 @@ class RunPage(tk.Frame):
     def run_model_thread(self):
         try:
             self.run_button.configure(state='disabled')
+            self.generate_plot_button.configure(state='disabled')
             import time
             from pyomo.environ import AbstractModel
             from Model_Creation import Model_Creation
@@ -231,9 +232,8 @@ class RunPage(tk.Frame):
 
     def setup_plots_frame(self):
         # Generate Plot button
-        self.generate_plot_button = ttk.Button(self.plots_frame, text="Generate Plots:", command=self.generate_plot)
+        self.generate_plot_button = ttk.Button(self.plots_frame, text="Generate Plots:", command=self.generate_plot,state='disabled')
         self.generate_plot_button.grid(row=0, column=0, padx=5, pady=5)
-        self.generate_plot_button.configure(state='disabled')
         
         # Plots Frame setup with grid layout
         self.show_dispatch_plot_button = ttk.Button(self.plots_frame, text="Show Dispatch Plot", command=self.show_dispatch_plot, state='disabled')

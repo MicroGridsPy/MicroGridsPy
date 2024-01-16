@@ -352,38 +352,25 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
            print('Instance solved')
            instance.solutions.load_from(results)  # Loading solution into instance
            
-        elif Solver == 2:
-           opt = SolverFactory('cbc') # Solver use during the optimization
-           timelimit = 10000  # Define a time limit
-           
-           # Setting CBC options
-           opt.options['sec'] = timelimit
-           opt.options['presolve'] = 'on'  # Enable preprocessing
-           opt.options['heuristics'] = 'on'  # Enable heuristics
-           
-           if MILP_Formulation:
-                opt.options['ratio'] = 0.0001  # Feasibility tolerance
-                opt.options['allowableGap'] = 0.1  # Allowable absolute gap
-                opt.options['allowableFractionGap'] = 0.05  # Allowable fraction gap
-                opt.options['cuts'] = 'on'  # Enable cut generation
-                
-           print('Calling CBC solver...')
-           results = opt.solve(instance, tee=True, keepfiles=keepfiles, logfile=logfile) # Solving a model instance 
-           print('Instance solved')
-           instance.solutions.load_from(results)  # Loading solution into instance
-        elif Solver == 3:
-           from pyomo.contrib.appsi.solvers.highs import HiGHS
-           solver = HiGHS()
-           print('Calling HiGHS solver...')
-           results = solver.solve(instance)
+        # elif Solver == 2:
+           # USING APPSI INTERFACE
+           #############################
+            #from pyomo.contrib.appsi.solvers.highs import HiGHS
+           # solver = HiGHS()
+           # print('Calling HiGHS solver...')
+           # results = solver.solve(instance)
+           # USING GETHIGHS
+           ###################à
            # solver = HiGHS(time_limit=10000, mip_heuristic_effort=0.2, mip_detect_symmetry="on")
            # results = solver.solve(instance)
            # print(results)
+           # SOLVER FACTORY
+           ######################
            # opt = SolverFactory('highs')
            # print('Calling HiGHS solver...')
            # results = opt.solve(instance, tee=True) # Solving a model instance
-           print('Instance solved')
-           instance.solutions.load_from(results)  # Loading solution into instance
+           # print('Instance solved')
+           # instance.solutions.load_from(results)  # Loading solution into instance
            
         return instance
         
@@ -403,12 +390,24 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
             #NPC min and CO2 emission max calculation
             model.ObjectiveFuntion1.deactivate()
             instance = model.create_instance(datapath)
-            opt = SolverFactory('gurobi')
-            if MILP_Formulation:
-                opt.set_options('Method=3 BarHomogeneous=1 Crossover=1 MIPfocus=1 BarConvTol=1e-3 OptimalityTol=1e-3 FeasibilityTol=1e-4 TimeLimit=10000')
-            else:
-                opt.set_options('Method=2 BarHomogeneous=0 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000')
-            print('Calling solver...')
+            if Solver == 0:
+                opt = SolverFactory('gurobi')
+                if MILP_Formulation:
+                    opt.set_options('Method=3 BarHomogeneous=1 Crossover=1 MIPfocus=1 BarConvTol=1e-3 OptimalityTol=1e-3 FeasibilityTol=1e-4 TimeLimit=10000')
+                else:
+                    opt.set_options('Method=2 BarHomogeneous=0 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000')
+                print('Calling GUROBI solver...')
+            elif Solver == 1:
+                opt = SolverFactory('glpk')
+                timelimit = 10000
+                opt.options['tmlim'] = timelimit
+                opt.options['presolve'] = 'on'  # Enable presolver
+                if MILP_Formulation: 
+                    opt.options['mipgap'] = 0.01      # Set relative gap tolerance for MIP
+                    opt.options['clq_cuts'] = 'on'  # Enable clique cuts
+                
+                print('Calling GLPK solver...')
+            
             opt.solve(instance, tee=True)
             print('Instance solved') 
             NPC_min = value(instance.ObjectiveFuntion)
@@ -529,9 +528,16 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
             #NPC min and CO2 emission max calculation
             model.ObjectiveFuntion1.deactivate()
             instance = model.create_instance(datapath)
-            opt = SolverFactory('gurobi')
-            opt.set_options('Method=1 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000') # !! only works with GUROBI solver
-            print('Calling solver...')
+            if Solver == 0:
+                opt = SolverFactory('gurobi')
+                opt.set_options('Method=1 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000')
+                print('Calling GUROBI solver...')
+            elif Solver == 1:
+                opt = SolverFactory('glpk')
+                timelimit = 10000
+                opt.options['tmlim'] = timelimit
+                opt.options['presolve'] = 'on'  # Enable presolver
+                print('Calling GLPK solver...')
             opt.solve(instance, tee=True)
             print('Instance solved') 
             OperationCost_min = value(instance.ObjectiveFuntion)
