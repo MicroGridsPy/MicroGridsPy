@@ -51,10 +51,12 @@ MicroGridsPy 2.1 incorporates several advanced features, enhancing its versatili
 - **NASA POWER Integration**: Utilizes NASA POWER for calculating renewable energy production.
 
 	
-### Required libraries
+### Environments and Solvers
 
-In the current repository under the Environments branch MAC OS and Windows environment made available.
-Works with Gurobi, CPLEX, cbc, glpk.
+In the current repository under the Environments branch MAC OS and Windows environments are available.
+Currently, MicroGridsPy have been confirmed to work with Gurobi, and GPLK.
+
+> :warning: While GLPK is a capable solver for many optimization problems, it may have longer operational times compared to commercial solvers like Gurobi, especially for large or complex problems. The difference can often be substantial, potentially ranging from several times to orders of magnitude faster, depending on the specifics of the problem even if it’s important to note that these are general observations, and actual performance will vary with each unique problem. It is advisable to consider this factor when choosing a solver for time-sensitive or large-scale applications.
 
 ### License
 This is a free software licensed under the “European Union Public Licence" EUPL v1.1. It 
