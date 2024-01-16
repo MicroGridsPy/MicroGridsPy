@@ -342,12 +342,36 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
            opt = SolverFactory('glpk') # Solver use during the optimization
            timelimit = 10000
            opt.options['tmlim'] = timelimit
-           if MILP_Formulation: opt.options['mipgap'] = 0.01      # Set relative gap tolerance for MIP
+           opt.options['presolve'] = 'on'  # Enable presolver
+           if MILP_Formulation: 
+               opt.options['mipgap'] = 0.01      # Set relative gap tolerance for MIP
+               opt.options['clq_cuts'] = 'on'  # Enable clique cuts
            
            print('Calling GLPK solver...')
            results = opt.solve(instance, tee=True, keepfiles=keepfiles, logfile=logfile) # Solving a model instance 
            print('Instance solved')
+           instance.solutions.load_from(results)  # Loading solution into instance
+           
         elif Solver == 2:
+           opt = SolverFactory('cbc') # Solver use during the optimization
+           timelimit = 10000  # Define a time limit
+           
+           # Setting CBC options
+           opt.options['sec'] = timelimit
+           opt.options['presolve'] = 'on'  # Enable preprocessing
+           opt.options['heuristics'] = 'on'  # Enable heuristics
+           
+           if MILP_Formulation:
+                opt.options['ratio'] = 0.0001  # Feasibility tolerance
+                opt.options['allowableGap'] = 0.1  # Allowable absolute gap
+                opt.options['allowableFractionGap'] = 0.05  # Allowable fraction gap
+                opt.options['cuts'] = 'on'  # Enable cut generation
+                
+           print('Calling CBC solver...')
+           results = opt.solve(instance, tee=True, keepfiles=keepfiles, logfile=logfile) # Solving a model instance 
+           print('Instance solved')
+           instance.solutions.load_from(results)  # Loading solution into instance
+        elif Solver == 3:
            from pyomo.contrib.appsi.solvers.highs import HiGHS
            solver = HiGHS()
            print('Calling HiGHS solver...')
@@ -359,7 +383,6 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
            # print('Calling HiGHS solver...')
            # results = opt.solve(instance, tee=True) # Solving a model instance
            print('Instance solved')
-
            instance.solutions.load_from(results)  # Loading solution into instance
            
         return instance

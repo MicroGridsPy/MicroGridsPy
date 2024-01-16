@@ -30,7 +30,7 @@ For code development and debugging, consider using an Integrated Development Env
    conda activate mgp
    spyder
 
-
+========
 Solvers
 ========
 
@@ -89,7 +89,7 @@ More info at `HiGHS documentation <https://ergo-code.github.io/HiGHS/dev/>`_
 .. warning::
    The HiGHS solver integration is currently under active development and will be available soon. This feature is being tested and optimized to ensure seamless performance with MicroGridsPy.
 
-
+========================
 Setting the environment
 ========================
 
@@ -109,7 +109,7 @@ Some of the key packages MicroGridsPy relies on are:
 
 **Optimization**
 
-*  Pyomo (6.6.2): A Python-based open-source optimization modeling language.
+*  Pyomo (6.7): A Python-based open-source optimization modeling language.
 
 **Plotting and Visualization**
 
