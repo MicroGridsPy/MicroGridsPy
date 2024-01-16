@@ -51,10 +51,10 @@ MicroGridsPy 2.1 incorporates several advanced features, enhancing its versatili
 - **NASA POWER Integration**: Utilizes NASA POWER for calculating renewable energy production.
 
 	
-### Required libraries
+### Environments
 
-In the current repository under the Environments branch MAC OS and Windows environment made available.
-Works with Gurobi, CPLEX, cbc, glpk.
+In the current repository under the Environments branch MAC OS and Windows environmentare available.
+Currently, MicroGridsPy have been confirmed to work with Gurobi, and GPLK.
 
 ### License
 This is a free software licensed under the “European Union Public Licence" EUPL v1.1. It 
