@@ -311,6 +311,16 @@ Incorporating a larger set of Pareto points in the optimization framework can pr
 With an increased number of Pareto points, the optimization process can reveal subtler nuances between cost, sustainability, and other factors, supporting a more refined approach to decision-making. 
 It aids in identifying potentially advantageous solutions that could be overlooked with a limited set of options, ultimately leading to a more balanced and strategic development of energy systems.
 
+Gurobi - GLPK Performance Comparison
+--------------------------------------
+
+.. raw:: html
+
+    <div style="display: flex; justify-content: center; align-items: center;">
+        <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Partial%20load%201.png?raw=true" width="350" style="margin-right: 10px;"/>
+        <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Partial%20Load%202.jpg?raw=true" width="350" />
+    </div>
+
 MILP Formulation
 ---------------------------------------------
 This iteration of the model employs a Mixed-Integer Linear Programming (MILP) framework, strategically designed to simulate a decade-long operation of mini-grids with two intervals of capacity expansion. The MILP paradigm introduces binary decision variables to address unit commitment issues, allowing for a precise representation of start-up and shut-down activities of power generation units. 
