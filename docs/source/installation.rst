@@ -55,6 +55,7 @@ This command installs GLPK and ensures that it is added to your environment's pa
    The difference can often be substantial, potentially ranging from several times to orders of magnitude faster, depending on the specifics of the problem even if 
    it's important to note that these are general observations, and actual performance will vary with each unique problem. It is advisable to consider this factor when choosing a solver for time-sensitive or large-scale applications.
 
+Refer to (:doc:`example`) for more details about the specific performances of the two solvers compared for a test model simulation.
 
 Gurobi
 ------
@@ -83,11 +84,11 @@ HiGHS is high-performance serial and parallel software for solving large-scale s
 
 HiGHS is freely available under the MIT licence and is downloaded from Github. Installing HiGHS from source code requires CMake minimum version 3.15, but no other third-party utilities. HiGHS can be used as a stand-alone executable on Windows, Linux and MacOS. There is a C++11 library which can be used within a C++ project or, via one of the interfaces, to a project written in other languages.
 
-More info at `HiGHS documentation <https://ergo-code.github.io/HiGHS/dev/>`_
 
 .. warning::
    The HiGHS solver integration is currently under active development and will be available soon. This feature is being tested and optimized to ensure seamless performance with MicroGridsPy.
 
+More info at `HiGHS documentation <https://ergo-code.github.io/HiGHS/dev/>`_
 
 Environment Overview
 =======================

@@ -311,15 +311,25 @@ Incorporating a larger set of Pareto points in the optimization framework can pr
 With an increased number of Pareto points, the optimization process can reveal subtler nuances between cost, sustainability, and other factors, supporting a more refined approach to decision-making. 
 It aids in identifying potentially advantageous solutions that could be overlooked with a limited set of options, ultimately leading to a more balanced and strategic development of energy systems.
 
-Gurobi - GLPK Performance Comparison
---------------------------------------
+Solvers Comparison: GLPK and Gurobi
+-----------------------------------------
+In a default scenario over a five-year time horizon, the capabilities of two solvers, GLPK and Gurobi, are here compared.
 
 .. raw:: html
 
     <div style="display: flex; justify-content: center; align-items: center;">
-        <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Partial%20load%201.png?raw=true" width="350" style="margin-right: 10px;"/>
-        <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Partial%20Load%202.jpg?raw=true" width="350" />
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/GLPK%20results%20(5%20years).png?raw=true" width="350" style="margin-right: 10px;"/>
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Gurobi%20results%20(5%20years).png?raw=true" width="350" />
     </div>
+
+--------------------------------------------------------------------------------------------------------
+
+The first notable distinction arises in computational efficiency. Using the General Linear Programming Kit (GLPK), the model run was completed in 3748.0 seconds, translating to approximately 62.5 minutes. Contrastingly, the Gurobi optimizer showcased its superior processing capability by completing the run in a mere 48.0 seconds, which is less than a minute. 
+This stark difference in computational time frames underlines Gurobi's advanced algorithmic approaches and computational power.
+
+Despite the significant variance in computation time, the output metrics related to the system's configuration—comprising Solar PV capacity, battery bank size, and Diesel Genset capacity—remain consistent across both solvers, demonstrating the robustness of the model itself.
+The economic implications, denoted by the Net Present Cost (NPC), total actualized Investment Cost, Operation Cost, and Levelized Cost of Electricity (LCOE), are comparable with marginal differences. This indicates that both solvers are capable of arriving at similar economic assessments for the given model parameters.
+
 
 MILP Formulation
 ---------------------------------------------
