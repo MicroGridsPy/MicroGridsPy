@@ -336,6 +336,7 @@ In a default scenario over a five-year time horizon, the capabilities of two sol
     </a>
   </div>
 
+-------------------------------------------------------------------------------------------------
 
 The first notable distinction arises in computational efficiency. Using the General Linear Programming Kit (GLPK), the model run was completed in 3748.0 seconds, translating to approximately 62.5 minutes. Contrastingly, the Gurobi optimizer showcased its superior processing capability by completing the run in a mere 48.0 seconds, which is less than a minute. 
 This stark difference in computational time frames underlines Gurobi's advanced algorithmic approaches and computational power.
