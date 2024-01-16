@@ -12,19 +12,21 @@ MicroGridsPy has been tested on Linux, macOS, and Windows. Running MicroGridsPy 
 Recommended installation method
 ===================================
 
-The easiest way to get a working MicroGridsPy installation is to use the free conda package manager, which can install all of the four things described above in a single step. To get conda, download and install the `Anaconda <https://repo.anaconda.com/archive/>`_ distribution for your operating system (using the version for Python 3). Anaconda is a free and open-source distribution of the Python and R programming languages for data science and machine learning-related applications that aims to simplify package management and deployment. With Anaconda installed, it is possible to create a new environment (e.g. "mgp"). To create a modelling environment that already contains everything needed to run MicrogridsPy, it's suggested to download the environment from `here <https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/tree/Environments>`_. After placing the mgp_win.yml file in "C:\Users\youruser", you can create and activate the new mgp environment by running the following command in the Anaconda Prompt terminal:
+The easiest way to get a working MicroGridsPy installation is to use the free conda package manager, which can install all of the four things described above in a single step. To get conda, download and install the `Anaconda <https://repo.anaconda.com/archive/>`_ distribution for your operating system (using the version for Python 3). 
+Anaconda is a free and open-source distribution of the Python and R programming languages for data science and machine learning-related applications that aims to simplify package management and deployment. With Anaconda installed, it is possible to create a new environment (e.g. "mgpy"). 
+To create a modelling environment that already contains everything needed to run MicrogridsPy, it's suggested to download the environment from `here <https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/tree/Environments>`_. After placing the mgpy_win.yml file in "C:\Users\youruser", you can create and activate the new mgp environment by running the following command in the Anaconda Prompt terminal:
 
 .. code-block:: python
 
-   conda env create -f mgp_win.yml
-   conda activate mgp
+   conda env create -f mgpy_win.yml
+   conda activate mgpy
 
 To ensure a smooth and efficient operation of MicroGridsPy, it is crucial to properly set up the development environment. This involves creating an isolated space that contains all the necessary Python packages and their specific versions as defined in the MicroGridsPy base.yml file. Key packages include Pyomo (minimum version 6.4.3 for the HiGHS solver), Pandas, NumPy, and Matplotlib.
 For code development and debugging, consider using an Integrated Development Environment (IDE) like Spyder, which is included in the created environment.
 
 .. code-block:: python
 
-   conda activate mgp
+   conda activate mgpy
    spyder
 
 
@@ -87,8 +89,8 @@ More info at `HiGHS documentation <https://ergo-code.github.io/HiGHS/dev/>`_
    The HiGHS solver integration is currently under active development and will be available soon. This feature is being tested and optimized to ensure seamless performance with MicroGridsPy.
 
 
-Setting the environment
-========================
+Environment Overview
+=======================
 
 Refer to ..../base.yml in the MicroGridsPy repository for a full and up-to-date listing of required third-party packages.
 
