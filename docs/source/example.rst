@@ -317,12 +317,25 @@ In a default scenario over a five-year time horizon, the capabilities of two sol
 
 .. raw:: html
 
-    <div style="display: flex; justify-content: center; align-items: center;">
-        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/GLPK%20results%20(5%20years).png?raw=true" width="350" style="margin-right: 10px;"/>
-        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Gurobi%20results%20(5%20years).png?raw=true" width="350" />
-    </div>
+  <div id="uniqueCarouselExample" class="carousel slide" data-ride="carousel">
+    <div class="carousel-inner">
+      <div class="carousel-item active">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/GLPK%20results%20(5%20years).png?raw=true" class="d-block w-100" alt="GLPK Solver Results">
+      </div>
+      <div class="carousel-item">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Gurobi%20results%20(5%20years).png?raw=true" class="d-block w-100" alt="Gurobi Solver Results">
+      </div>
+     </div>
+    <a class="carousel-control-prev" href="#uniqueCarouselExample" role="button" data-slide="prev">
+      <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+      <span class="sr-only">Previous</span>
+    </a>
+    <a class="carousel-control-next" href="#uniqueCarouselExample" role="button" data-slide="next">
+      <span class="carousel-control-next-icon" aria-hidden="true"></span>
+      <span class="sr-only">Next</span>
+    </a>
+  </div>
 
---------------------------------------------------------------------------------------------------------
 
 The first notable distinction arises in computational efficiency. Using the General Linear Programming Kit (GLPK), the model run was completed in 3748.0 seconds, translating to approximately 62.5 minutes. Contrastingly, the Gurobi optimizer showcased its superior processing capability by completing the run in a mere 48.0 seconds, which is less than a minute. 
 This stark difference in computational time frames underlines Gurobi's advanced algorithmic approaches and computational power.
