@@ -153,10 +153,13 @@ class StartPage(tk.Frame):
         self.canvas.bind('<Configure>', self.on_canvas_configure)
 
     def on_canvas_configure(self, event):
-        # Resize the canvas_window to match the canvas size
-        self.canvas.itemconfig(self.canvas_window, width=event.width, height=event.height)
-        # Update the scrollable area to encompass the inner_frame after all content is placed
-        self.canvas.after_idle(lambda: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+        # Set the scrollregion to encompass the inner_frame
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+    
+        # Adjust the size of the canvas_window to match the inner_frame
+        frame_width = self.inner_frame.winfo_reqwidth()
+        frame_height = self.inner_frame.winfo_reqheight()
+        self.canvas.itemconfig(self.canvas_window, width=frame_width, height=frame_height)
         
     def on_next_button(self):
         advanced_page = self.controller.frames.get("AdvancedPage")
@@ -209,8 +212,8 @@ class StartPage(tk.Frame):
         self.grid_rowconfigure(1, weight=1)  # Scrollable section should expand
         self.grid_rowconfigure(2, weight=0)  # Bottom section should not expand
         self.grid_columnconfigure(0, weight=1)
-        
 
+        
         # Add Top Section
         university_name = "MicroGridsPy "
         self.top_section = TopSectionFrame(self, university_name)
@@ -343,6 +346,7 @@ class StartPage(tk.Frame):
         self.Model_Components_radio1.grid(row=13, column=1, sticky='w')
         self.Model_Components_radio2 = ttk.Radiobutton(self.inner_frame, text="Generators Only", variable=self.Model_Components_var, value=2)
         self.Model_Components_radio2.grid(row=14, column=1, sticky='w')
+    
         
         # Descriptive Text Below the Images
         descriptive_text = ("")
@@ -385,7 +389,7 @@ class StartPage(tk.Frame):
         self.Lost_Load_Specific_Cost_label.config(state='disabled')
         self.Lost_Load_Specific_Cost_entry.config(state='disabled')
         
-        
+      
         # Advanced Features Frame
         self.advanced_frame = tk.Frame(self.inner_frame, background='#FFFFFF')
         self.advanced_frame.grid(row=21, column=0, padx=10, pady=10, sticky='ew')
@@ -403,6 +407,7 @@ class StartPage(tk.Frame):
 
         # Keep a reference to the image to avoid garbage collection
         self.advanced_icon_label.image = self.advanced_icon_image
+
         
         # Navigation Frame at the bottom
         self.nav_frame = NavigationFrame(self, next_command=lambda: controller.show_frame('RECalculationPage'))

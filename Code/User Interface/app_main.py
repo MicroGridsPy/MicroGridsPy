@@ -3,7 +3,7 @@ import os
 import tkinter as tk
 from tkinter import ttk
 from ttkthemes import ThemedTk
-from initial_page import InitialPage
+# from initial_page import InitialPage
 from start_page import StartPage
 from advanced_page import AdvancedPage
 from recalculation_page import RECalculationPage
@@ -32,21 +32,25 @@ class Application(ThemedTk):
         self.title("MicroGridsPy User Interface")  # Set the application title
         self.geometry("900x700")      # Set the default size of the application
         #self.iconbitmap('C:/Users/onori/Desktop/2.0 + Interface/MicroGridsPy-SESAM/MGPy Logo.png')
+        # Set the background color for the main window
+        self.configure(background=background_color)
 
         # Container frame setup
         container = tk.Frame(self)
         container.pack(side="top", fill="both", expand=True)
         container.grid_rowconfigure(0, weight=1)
         container.grid_columnconfigure(0, weight=1)
+        # Set the background color for the container frame
+        container.configure(background=background_color)
         
         # Initialize frames
         self.frames = {}
-        for F in (InitialPage, StartPage, AdvancedPage, RECalculationPage, ArchetypesPage, TechnologiesPage, BatteryPage, GeneratorPage, GridPage, PlotPage, RunPage):
+        for F in (StartPage, AdvancedPage, RECalculationPage, ArchetypesPage, TechnologiesPage, BatteryPage, GeneratorPage, GridPage, PlotPage, RunPage):
             frame = F(parent=container, controller=self)
             self.frames[F.__name__] = frame
             frame.grid(row=0, column=0, sticky="nsew")
 
-        self.show_frame("InitialPage")
+        self.show_frame("StartPage")
 
     def show_frame(self, page_name):
         frame = self.frames[page_name]

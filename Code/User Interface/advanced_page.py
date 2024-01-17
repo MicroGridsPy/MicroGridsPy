@@ -292,10 +292,13 @@ class AdvancedPage(tk.Frame):
         self.canvas.bind('<Configure>', self.on_canvas_configure)
 
     def on_canvas_configure(self, event):
-        # Resize the canvas_window to match the canvas size
-        self.canvas.itemconfig(self.canvas_window, width=event.width, height=event.height)
-        # Update the scrollable area to encompass the inner_frame after all content is placed
-        self.canvas.after_idle(lambda: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+        # Set the scrollregion to encompass the inner_frame
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+    
+        # Adjust the size of the canvas_window to match the inner_frame
+        frame_width = self.inner_frame.winfo_reqwidth()
+        frame_height = self.inner_frame.winfo_reqheight()
+        self.canvas.itemconfig(self.canvas_window, width=frame_width, height=frame_height)
 
 
                 
