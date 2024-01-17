@@ -28,7 +28,7 @@ param: turbine_type := 'HA';
 param: turbine_model := 'NPS100c-21';
 param: drivetrain_efficiency := 0.9;
 
-param: demand_growth := '0';
+param: demand_growth := '5';
 param: cooling_period := 'AY';
 param: h_tier1 := '252';
 param: h_tier2 := '160';
@@ -71,7 +71,7 @@ param: Multiobjective_Optimization := 0;
 param: Greenfield_Investment := 1;
 param: Plot_Max_Cost := 0;
 param: RE_Supply_Calculation := 0;
-param: Demand_Profile_Generation := 0;
+param: Demand_Profile_Generation := 1;
 param: Grid_Connection := 0;
 param: Grid_Availability_Simulation := 0;
 param: Grid_Connection_Type := 0;
