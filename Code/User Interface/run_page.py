@@ -23,6 +23,8 @@ class NavigationFrame(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
         self.configure(background='#0f2c53', highlightbackground='#0f2c53', highlightthickness=2)
+        self.exit_button = ttk.Button(self, text="Exit", command=parent.destroy)
+        self.exit_button.pack(side='right', padx=10, pady=10)
         self.pack(side='bottom', fill='x')
 
 class RedirectOutput:
