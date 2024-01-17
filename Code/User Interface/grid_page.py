@@ -174,10 +174,24 @@ class GridPage(tk.Frame):
         self.canvas.bind('<Configure>', self.on_canvas_configure)
 
     def on_canvas_configure(self, event):
-        # Resize the canvas_window to encompass inner_frame
-        self.canvas.itemconfig(self.canvas_window, width=event.width, height=event.height)
-        # Update the scrollable area to encompass the inner_frame
-        self.canvas.configure(scrollregion=self.canvas.bbox(self.canvas_window))
+        # The canvas width and height come from the event
+        canvas_width = event.width
+        canvas_height = event.height
+    
+        # Get the required width and height of the inner_frame
+        frame_width = self.inner_frame.winfo_reqwidth()
+        frame_height = self.inner_frame.winfo_reqheight()
+    
+        # If the inner frame is smaller than the canvas, we need to set its width
+        # to the canvas width so it fills it when not scrolling
+        new_width = max(canvas_width, frame_width)
+        new_height = max(canvas_height, frame_height)  # This might be needed if you have horizontal scrolling
+    
+        # Configure the canvas window to be the size we've determined is necessary
+        self.canvas.itemconfig(self.canvas_window, width=new_width, height=new_height)
+    
+        # Set the scrollregion to encompass the size of the inner frame
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
         
     def __init__(self, parent, controller):
         ttk.Frame.__init__(self, parent)

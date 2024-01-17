@@ -14,14 +14,14 @@ Recommended installation method
 
 **Conda Package Manager**
 
-The easiest way to get a working MicroGridsPy installation is to use the free **conda package manager**. To get conda, download and install the `Anaconda <https://repo.anaconda.com/archive/>`_ distribution for your operating system (using the version for Python 3). 
+The easiest way to get a working MicroGridsPy installation is to use the free conda package manager. To get conda, download and install the `Anaconda <https://repo.anaconda.com/archive/>`_ distribution for your operating system (using the version for Python 3). 
 Anaconda is a free and open-source distribution of the Python and R programming languages for data science and machine learning-related applications that aims to simplify package management and deployment. 
 
-**Create the mgpy environment"
+**Create the mgpy environment"**
 
 With Anaconda installed, it is possible to create a new environment named "mgpy". 
 To create a modelling environment that already contains everything needed to run MicrogridsPy, it's required to download the environment yml file from `here <https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/tree/Environments>`_. 
-After placing the ``mgpy_win.yml`` file in "C:/Users/youruser", you can **create and activate the new mgpy environment** by running the following command in the **Anaconda Prompt terminal**:
+After placing the ``mgpy_win.yml`` file in "C:/Users/youruser", you can create and activate the new mgpy environment by running the following command in the Anaconda Prompt terminal:
 
 .. code-block:: python
 
@@ -38,7 +38,7 @@ For code development and debugging, consider using an Integrated Development Env
    conda activate mgpy
    spyder
 
-Run the ``app_main.py`` file located into the **Code/User Interface** folder using the prefered IDE (e.g. Spyder) to open the interface and interact with it.
+Run the ``app_main.py`` file located into the *Code/User Interface* folder using the prefered IDE (e.g. Spyder) to open the interface and interact with it.
 
 Solvers
 ========
