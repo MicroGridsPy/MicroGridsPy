@@ -17,7 +17,7 @@ Recommended installation method
 The easiest way to get a working MicroGridsPy installation is to use the free conda package manager. To get conda, download and install the `Anaconda <https://repo.anaconda.com/archive/>`_ distribution for your operating system (using the version for Python 3). 
 Anaconda is a free and open-source distribution of the Python and R programming languages for data science and machine learning-related applications that aims to simplify package management and deployment. 
 
-**Create the mgpy environment"**
+**Creating the mgpy environment**
 
 With Anaconda installed, it is possible to create a new environment named "mgpy". 
 To create a modelling environment that already contains everything needed to run MicrogridsPy, it's required to download the environment yml file from `here <https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/tree/Environments>`_. 
@@ -45,6 +45,12 @@ Solvers
 
 At least one of the solvers supported by Pyomo is required. HiGHS (open-source) or Gurobi (commercial) are recommended for large problems. 
 Gurobi and GLPK have been confirmed to work with MicroGridsPy. Refer to the documentation of your solver on how to install it.
+
+.. note::
+
+   Gurobi and GLPK solvers are build-in options within MicroGridsPy environment. 
+   GLPK is ready to use and open-source while Gurobi requires the activation of a license online since it's a commercial software (more info below).
+
 
 GLPK (GNU Linear Programming Kit)
 ---------------------------------
