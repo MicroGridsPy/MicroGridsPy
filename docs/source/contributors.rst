@@ -6,7 +6,9 @@ Contributors
 The research activity of SESAM focuses on the use of mathematical models for the study of systems, components and processes in the energy field and 
 industrial ecology.
 
-Authors:
+Contributors:
+
+* Alessandro Onori - Department of Energy, Politecnico di Milano
 
 * Giulia Guidicini - Department of Energy, Politecnico di Milano
 
