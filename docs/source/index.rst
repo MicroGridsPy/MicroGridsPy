@@ -57,7 +57,6 @@ Table of Contents
    model_structure
    formulation
    model_results
-   troubleshooting
 
 .. toctree::
    :maxdepth: 2
