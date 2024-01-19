@@ -217,8 +217,29 @@ The following table provides a detailed overview of the parameters used in the M
 
 ----------------------------------------------------------------------------------------------
 
+.. note::
+
+  Please refer to the (:doc:`example`) for a better understanding of the parameter use within the user interface as well as results.
+
+
 Multi-Scenario Optimization
 ------------------------------
+
+The Multi-Scenario Optimization features in MicroGridsPy introduces an advanced level of analysis, allowing the model to account for varying conditions over a specified time horizon. 
+This feature is particularly crucial in areas where energy demand and renewable energy supply (RES) can vary significantly, such as remote locations with fluctuating load demands or renewable resources.
+
+It operates by enabling the model to simulate multiple distinct scenarios within a single optimization run. Each scenario represents a different set of conditions, such as variations in load demand or RES availability over the years. 
+This approach allows for a comprehensive understanding of how different future conditions could impact the optimal configuration and operation of the mini-grid.
+
+**Data Preparation for Multi-Scenario Analysis**
+
+To utilize the multi-scenario feature, users must prepare input data that encapsulate the different scenarios to be considered:
+
+* Load Curve Data: The standard requirement is a load curve dataframe with a number of columns corresponding to the years in the time horizon. 
+  For multi-scenario analysis, additional sets of columns are required. For instance, with 10 years and 2 scenarios, the dataframe should contain 20 columns - the first 10 columns for the first scenario, followed by another 10 columns for the second scenario.
+
+* RES Time Series Data: Similar to load curves, the RES data (like solar and wind unit of electricity generation) should be structured to reflect the different scenarios. Typically, one column per year is provided for a single scenario, which should be duplicated for each additional scenario.
+
 
 **Parameters**
 
@@ -233,10 +254,14 @@ The following table provides a detailed overview of the parameters used in the M
      - Description
    * - Scenarios
      - [-]
-     - Number of scenarios to consider within the optimisation
+     - Number of scenarios to consider within the optimization
    * - Scenario_Weight
      - [%] (0-1)
      - Occurrence probability of each scenario (between 0 and 1)
+
+The multi-scenario mode enables the model to handle a diverse range of potential future states, enhancing its applicability and robustness in uncertain environments.
+By considering multiple scenarios, the model can provide a more resilient and adaptable solution, crucial for long-term energy planning in areas with fluctuating or unpredictable energy profiles.
+The optimization algorithm considers each scenario's unique characteristics, ensuring that the solutions are not only feasible but also optimized for each scenario's specific conditions.
 
 -------------------------------------------------------------------------
 
