@@ -240,6 +240,11 @@ To utilize the multi-scenario feature, users must prepare input data that encaps
 
 * RES Time Series Data: Similar to load curves, the RES data (like solar and wind unit of electricity generation) should be structured to reflect the different scenarios. Typically, one column per year is provided for a single scenario, which should be duplicated for each additional scenario.
 
+.. warning::
+  
+   When using Multi-Scenario Optimization, do NOT activate the endogenous load curve estimation using built-in archetypes or the RES time series estimation from the NASA Power server. 
+   These features do not support scenario-specific data generation, which is essential for accurate multi-scenario analysis. Utilizing these estimations can result in incorrect analysis or errors.
+   Ensure you manually input scenario-specific load curves and RES time series data using the csv files located in *Code/Inputs* folder for effective multi-scenario optimization.
 
 **Parameters**
 
