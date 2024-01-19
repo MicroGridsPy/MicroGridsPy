@@ -117,9 +117,13 @@ class PlotPage(tk.Frame):
             # Set default color for the second RES source to "Teal"
             if i == 1 and label_text == "RES_Colors":
                 color_combobox.set("Teal")
+                default_color_hex = self.color_options["Teal"]
             else:
                 color_combobox.set(default_color_text)
-
+                default_color_hex = self.color_options[default_color_text]
+                
+            # Update the entries list with the default color
+            entries_list[i] = default_color_hex
             color_combobox.grid(row=row_start, column=combobox_column, padx=5, pady=2)
         
             # Create and grid the legend label
