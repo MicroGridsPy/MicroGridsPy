@@ -1,4 +1,4 @@
-﻿Horizontal axis;Alstom.Eco.80 (example);NPS100c-21;<--Fill in with turbine data according  to the example in col. B
+﻿Horizontal axis;Alstom.Eco.80;NPS100c-21;<--Fill in with turbine data according  to the example in col. B
 Rated Power [kW];1670;100;
 Rotor Diameter [m];80;20,7;
 Hub Height [m];80;37;

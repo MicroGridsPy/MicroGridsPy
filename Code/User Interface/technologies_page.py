@@ -144,55 +144,60 @@ class TechnologiesPage(tk.Frame):
         return None
         
     def update_res_configuration(self):
-     # First, clear all existing entries.
-     self.clear_res_entries()
+        # First, clear all existing entries.
+        self.clear_res_entries()
 
-     # Get the number of generator sources to configure
-     try: res_sources = int(self.RES_Sources_entry.get())
-     except: res_sources = 1
+        # Get the number of generator sources to configure
+        try:
+            res_sources = int(self.RES_Sources_entry.get())
+        except:
+            res_sources = 1
 
-     # Reset the gen_entries list
-     self.res_entries = []
+        # Reset the gen_entries list
+        self.res_entries = []
 
-     text_parameters = ['RES_Names']
+        text_parameters = ['RES_Names']
 
-     # Start adding new entries from the fourth row
-     row_start = 5
+        # Start adding new entries from the fourth row
+        row_start = 5
 
-     for param, default in self.res_params_defaults.items():
-        for i in range(res_sources):
-            # Calculate the row for the current parameter
-            row = row_start + list(self.res_params_defaults.keys()).index(param)
-            vcmd = self.get_validation_command(param, default)
-            
-            initial_label_state = self.initial_states[param]['label']
-            initial_entry_state = self.initial_states[param]['entry']
+        for param, default in self.res_params_defaults.items():
+            for i in range(res_sources):
+                row = row_start + list(self.res_params_defaults.keys()).index(param)
+                vcmd = self.get_validation_command(param, default)
 
-            # Check if it's a text parameter and set the appropriate variable type
-            if param in text_parameters:
-                temp_var = tk.StringVar(value=default)
-            else:
-                temp_var = tk.DoubleVar(value=default)
+                # Set different values for the second set of entries
+                if i == 0:  # First set of entries
+                    value = default
+                else:  # Second set of entries
+                    value = self.res_params_defaults_second.get(param, default)
 
-            # Create the label only for the first column
-            if i == 0:
-                label = ttk.Label(self.inner_frame, text=param)
-                label.grid(row=row, column=0, sticky='w')
-                label.config(state=initial_label_state)
-            else:
-                label = None
+                # Determine variable type based on parameter
+                if param in text_parameters:
+                    temp_var = tk.StringVar(value=value)
+                else:
+                    temp_var = tk.DoubleVar(value=value)
 
-            # Create the entry
-            entry = ttk.Entry(self.inner_frame, textvariable=temp_var, validate='key', validatecommand=vcmd)
-            entry.grid(row=row, column=1 + i, sticky='w')
-            entry.config(state=initial_entry_state)
-            
-            # Add tooltip for the entry
-            tooltip_text = self.res_params_tooltips.get(param, "Info not available")
-            create_tooltip(entry, tooltip_text)
+                # Create the label only for the first column
+                if i == 0:
+                    label = ttk.Label(self.inner_frame, text=param)
+                    label.grid(row=row, column=0, sticky='w')
+                    label.config(state=self.initial_states[param]['label'])
+                else:
+                    label = None
 
-            # Append the new entry to gen_entries
-            self.res_entries.append((temp_var, label, entry))
+                # Create the entry
+                entry = ttk.Entry(self.inner_frame, textvariable=temp_var, validate='key', validatecommand=vcmd)
+                entry.grid(row=row, column=1 + i, sticky='w')
+                entry.config(state=self.initial_states[param]['entry'])
+
+                # Add tooltip for the entry
+                tooltip_text = self.res_params_tooltips.get(param, "Info not available")
+                create_tooltip(entry, tooltip_text)
+
+                # Append the new entry to gen_entries
+                self.res_entries.append((temp_var, label, entry))
+
             
     def toggle_brownfield_parameters(self):
         for (var, label, entry) in self.res_entries:
@@ -363,6 +368,18 @@ class TechnologiesPage(tk.Frame):
             "RES_capacity": 0,
             "RES_years": 0
         }
+        # Additional default values for the second set of entries
+        self.res_params_defaults_second = {
+            "RES_Names": "Wind Turbine",
+            "RES_Nominal_Capacity": 2000,
+            "RES_Inverter_Efficiency": 0.95,
+            "RES_Specific_Investment_Cost": 1.2,
+            "RES_Specific_OM_Cost": 0.02,
+            "RES_Lifetime": 20,
+            "RES_unit_CO2_emission": 0,
+            "RES_capacity": 0,
+            "RES_years": 0
+            }
         
         self.res_params_tooltips = {
             "RES_Names":"Renewable technology name",
@@ -398,7 +415,7 @@ class TechnologiesPage(tk.Frame):
 
         # RES types entry
         ttk.Label(self.inner_frame, text="RES_Sources").grid(row=3, column=0, pady=(0,15), sticky='w')
-        self.RES_Sources_var = tk.IntVar(value=1)  # Default value set to 1
+        self.RES_Sources_var = tk.IntVar(value=2)  
         vcmd = (self.register(self.validate_integer), '%P')  # Validation command
         self.RES_Sources_entry = ttk.Entry(self.inner_frame, textvariable=self.RES_Sources_var, validate='key', validatecommand=vcmd)
         self.RES_Sources_entry.grid(row=3, column=1, pady=(0,15), sticky='w')
@@ -444,7 +461,8 @@ class TechnologiesPage(tk.Frame):
             # Append to gen_entries
             self.res_entries.append((var, label, entry))
             
-        # Create the warning label and grid it
+            
+        self.update_res_configuration()
         self.setup_warning()
 
 

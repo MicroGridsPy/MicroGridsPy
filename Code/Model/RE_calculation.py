@@ -171,8 +171,8 @@ def wind_parameters(Data_import):
     data1 = pd.read_csv(data_file_path, skiprows = skiprow,  skipfooter = skipf, delimiter=';', decimal=',') 
     df = pd.DataFrame(data1, columns= [turb_model])
     power_curve = (df[turb_model][4:34]).values.tolist()
-    rot_diam = df[turb_model][1]
-    rot_height = df[turb_model][2]
+    rot_diam = float(df[turb_model][1])
+    rot_height = float(df[turb_model][2])
     if type_turb == 'Horizontal Axis':
         surface_area = math.pi * rot_diam**2 /4
     else:
@@ -762,15 +762,31 @@ def wind_lst(U_rotor, wind_direction, ro_air):
 ### Extrapolate power curve of the turbine from Power_curves excel file and calculate wind power hourly production     #QUI MANCA IL CALCOLO PER TURBINE AD ASSE ORIZZONTALE
 
 def P_turb(power_curve, WS_rotor_lst, ro_air_lst, surface_area, drivetrain_efficiency):
-    
+    # Ensure power_curve is a numeric array
+    # If power_curve is a list of strings, convert it to a list of floats.
+    fp = np.array([float(pc) for pc in power_curve])
+
+    # Convert range to numpy array for xp
+    xp = np.array(range(0, 30))
+
     En_wind = []
     En_WT = []
     Cp = []
     for ii in range(len(WS_rotor_lst)):
-        En_wind.append(0.5 * ro_air_lst[ii] * surface_area * WS_rotor_lst[ii]**3)                         #compute hourly ideal wind energy 
-        En_WT.append(np.interp(WS_rotor_lst[ii], range(0,30), power_curve)*1000)                          #compute hourly energy production
-        Cp.append(En_WT[ii]/(En_wind[ii]))                                                               #compute hourly turbine power coefficient  
-    return En_WT, Cp  
+        # Ensure WS_rotor_lst[ii] is numeric and convert it if necessary
+        WS_rotor_value = float(WS_rotor_lst[ii])
+
+        # Compute hourly ideal wind energy
+        En_wind.append(0.5 * ro_air_lst[ii] * surface_area * WS_rotor_value**3)
+
+        # Compute hourly energy production using interpolation
+        interpolated_value = np.interp(WS_rotor_value, xp, fp) * 1000
+        En_WT.append(interpolated_value)
+
+        # Compute hourly turbine power coefficient
+        Cp.append(En_WT[ii]/(En_wind[ii])) if En_wind[ii] != 0 else Cp.append(0)
+
+    return En_WT, Cp 
 
 #%% Main 
 
