@@ -186,6 +186,10 @@ class TechnologiesPage(tk.Frame):
             entry = ttk.Entry(self.inner_frame, textvariable=temp_var, validate='key', validatecommand=vcmd)
             entry.grid(row=row, column=1 + i, sticky='w')
             entry.config(state=initial_entry_state)
+            
+            # Add tooltip for the entry
+            tooltip_text = self.res_params_tooltips.get(param, "Info not available")
+            create_tooltip(entry, tooltip_text)
 
             # Append the new entry to gen_entries
             self.res_entries.append((temp_var, label, entry))
