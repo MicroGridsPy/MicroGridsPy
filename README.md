@@ -70,7 +70,7 @@ To install MicroGridsPy, the conda package manager is recommended. Here's the st
    - Download and install the Anaconda distribution for Python 3 from [Anaconda Archive](https://repo.anaconda.com/archive/). Anaconda simplifies package management in Python and R, especially for data science and machine learning applications.
 
 2. **Download the MicroGridsPy Environment File**:
-   - The environment file for MicroGridsPy can be found on the [MicroGridsPy SESAM GitHub repository](https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/tree/MicroGridsPy-2.1/Code/Environments). Download the file to set up your modeling environment.
+   - The environment file for MicroGridsPy can be found on the [MicroGridsPy/Environments SESAM GitHub repository](https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/tree/Environments). Download the file to set up your modeling environment.
 
 3. **Create and Activate the MicroGridsPy Environment**:
    - Place the downloaded `mgpy_win.yml` file in an accessible directory (e.g., `C:\\Users\\youruser`).
