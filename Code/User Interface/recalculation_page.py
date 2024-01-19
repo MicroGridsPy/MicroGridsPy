@@ -263,17 +263,17 @@ class RECalculationPage(tk.Frame):
         turbine_types = ['Horizontal Axis', 'Vertical Axis']
         
         tooltips = {
-            "time_zone": "Enter the time zone",
-            "nom_power": "Enter the nominal power",
-            "tilt": "Enter the tilt angle",
-            "azim": "Enter the azimuth angle",
-            "ro_ground": "Enter the ground reflectance",
-            "k_T": "Enter the temperature coefficient",
-            "NMOT": "Enter the nominal operating cell temperature",
-            "T_NMOT": "Enter the temperature at NMOT",
-            "G_NMOT": "Enter the irradiance at NMOT",
-            "turbine_type": "Enter the turbine type",
-            "turbine_model": "Enter the turbine model"
+            "time_zone": "Time zone of the location relative to GMT (e.g., +5 or -3)",
+            "nom_power": "Nominal power of the solar panel in W",
+            "tilt": "Tilt angle of the solar panel relative to the ground (in degrees)",
+            "azim": "Azimuth angle of the solar panel, indicating its directional orientation (in degrees)",
+            "ro_ground": "Ground reflectance factor; a value between 0 and 1 representing the proportion of light reflected by the ground",
+            "k_T": "Temperature coefficient of the solar panel, showing the panel's efficiency change with temperature",
+            "NMOT": "Nominal Operating Cell Temperature: the cell temperature under specific test conditions (in degrees Celsius)",
+            "T_NMOT": "Ambient temperature at which Nominal Operating Cell Temperature (NMOT) is measured (in degrees Celsius)",
+            "G_NMOT": "Solar irradiance at which NMOT is defined (in W/m^2)",
+            "turbine_type": "Type of wind turbine",
+            "turbine_model": "Specific model of the wind turbine"
             }
         
         self.location_intro_label = ttk.Label(self.inner_frame, text="Location coordinates:", font=self.italic_font, wraplength=850, justify="left")

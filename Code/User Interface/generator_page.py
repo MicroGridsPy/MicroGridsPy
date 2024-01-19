@@ -568,7 +568,7 @@ class GeneratorPage(tk.Frame):
             
         self.italic_font = tkFont.Font(family="Helvetica", size=10, slant="italic")
         self.fuel_intro_label = ttk.Label(self.inner_frame, text="Fuel parameters:", font=self.italic_font, wraplength=850, justify="left")
-        self.fuel_intro_label.grid(row=9, column=0, columnspan=3, pady=10, sticky='w')
+        self.fuel_intro_label.grid(row=22, column=0, columnspan=3, pady=10, sticky='w')
 
             
         self.Fuel_Specific_Cost_Import_var = tk.IntVar(value=0)
