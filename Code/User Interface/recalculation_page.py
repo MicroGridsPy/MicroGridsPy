@@ -95,10 +95,21 @@ class RECalculationPage(tk.Frame):
         image_label.grid(row=6, column=1, rowspan=14, padx=(30,0), sticky='nsew')
     
     def get_input_data(self):
-        input_data = {'RE_Supply_Calculation': self.RE_Supply_Calculation_var.get()}
+        # Initialize the dictionary to store input data
+        input_data = {
+            'RE_Supply_Calculation': self.RE_Supply_Calculation_var.get(),
+            'lat': self.lat_var.get(),
+            'lon': self.lon_var.get(),
+            'turbine_type': self.turbine_type_var.get(),
+            'turbine_model': self.turbine_model_var.get(),
+            'drivetrain_efficiency': self.drivetrain_efficiency_var.get()
+        }
+
+        # Add data from solar PV parameters
         for var, label, entry in self.re_calc_params_entries:
             param = label.cget("text").rstrip(':')
             input_data[param] = var.get()  # Retrieve the value from the entry widget
+        
         return input_data
     
     def toggle_re_calc_parameters(self, *args):
@@ -107,6 +118,10 @@ class RECalculationPage(tk.Frame):
         self.lat_entry.config(state=state)
         self.lon_label.config(state=state)
         self.lon_entry.config(state=state)
+        self.turbine_type_combobox.config(state=state)
+        self.turbine_model_combobox.config(state=state)
+        self.drivetrain_efficiency_label.config(state=state)
+        self.drivetrain_efficiency_entry.config(state=state)
         for var, label, entry in self.re_calc_params_entries:
             label.config(state=state)
             entry.config(state=state)
@@ -198,7 +213,7 @@ class RECalculationPage(tk.Frame):
         self.grid_columnconfigure(0, weight=1)
 
         # Add Top Section
-        university_name = "MicroGridsPy"
+        university_name = "MicroGridsPy "
         self.top_section = TopSectionFrame(self, university_name)
         self.top_section.grid(row=0, column=0, sticky='ew', columnspan=self.grid_size()[0])
 
@@ -233,20 +248,19 @@ class RECalculationPage(tk.Frame):
         text_parameters = ['lat', 'lon','time_zone','turbine_type','turbine_model']
         
         # Define and grid the parameters as labels and entries
-        self.re_calc_params = {
-            "time_zone": "+2",
-            "nom_power" : 1000, 							
-            "tilt" : 10,								
-            "azim" : 180,							
-            "ro_ground" : 0.2,						
-            "k_T" : -0.37,								
-            "NMOT" : 45,										
-            "T_NMOT" : 20,								
-            "G_NMOT" : 800,								
-            "turbine_type" : 'HA',							
-            "turbine_model" : 'NPS100c-21',				      	         
-            "drivetrain_efficiency" : 0.9
+        solar_pv_params = {
+            "nom_power": 1000,
+            "tilt": 10,
+            "azim": 180,
+            "ro_ground": 0.2,
+            "k_T": -0.37,
+            "NMOT": 45,
+            "T_NMOT": 20,
+            "G_NMOT": 800,
         }
+
+        # Turbine Types and their corresponding models
+        turbine_types = ['Horizontal Axis', 'Vertical Axis']
         
         tooltips = {
             "time_zone": "Enter the time zone",
@@ -259,29 +273,34 @@ class RECalculationPage(tk.Frame):
             "T_NMOT": "Enter the temperature at NMOT",
             "G_NMOT": "Enter the irradiance at NMOT",
             "turbine_type": "Enter the turbine type",
-            "turbine_model": "Enter the turbine model",
-            "drivetrain_efficiency": "Enter the drivetrain efficiency"
+            "turbine_model": "Enter the turbine model"
             }
+        
+        self.location_intro_label = ttk.Label(self.inner_frame, text="Location coordinates:", font=self.italic_font, wraplength=850, justify="left")
+        self.location_intro_label.grid(row=6, column=0, columnspan=3, pady=10, sticky='w')
 
         # Define StringVar for latitude and longitude
         self.lat_var = tk.StringVar(value="-11 33 56.4")
         self.lon_var = tk.StringVar(value="30 21 3.4")
         # Latitude and Longitude Entry Fields
         self.lat_label = ttk.Label(self.inner_frame, text="lat", state='disabled')
-        self.lat_label.grid(row=6, column=0, sticky='w')
+        self.lat_label.grid(row=7, column=0, sticky='w')
         self.lat_entry = ttk.Entry(self.inner_frame, textvariable=self.lat_var,state='disabled')
-        self.lat_entry.grid(row=6, column=0, padx=20,sticky='e')
+        self.lat_entry.grid(row=7, column=0, padx=20,sticky='e')
         create_tooltip(self.lat_entry, "Enter the location latitude in degrees, minutes, and seconds (DMS)")
 
         self.lon_label = ttk.Label(self.inner_frame, text="lon",state='disabled')
-        self.lon_label.grid(row=7, column=0, sticky='w')
+        self.lon_label.grid(row=8, column=0, sticky='w')
         self.lon_entry = ttk.Entry(self.inner_frame, textvariable=self.lon_var,state='disabled')
-        self.lon_entry.grid(row=7, column=0,padx=20, sticky='e')
+        self.lon_entry.grid(row=8, column=0,padx=20, sticky='e')
         create_tooltip(self.lon_entry, "Enter the location longitude in degrees, minutes, and seconds (DMS)")
         
         self.re_calc_params_entries = []
         
-        for i, (param, value) in enumerate(self.re_calc_params.items(), start=8):  
+        self.solar_intro_label = ttk.Label(self.inner_frame, text="Solar PV panel:", font=self.italic_font, wraplength=850, justify="left")
+        self.solar_intro_label.grid(row=9, column=0, columnspan=3, pady=10, sticky='w')
+        
+        for i, (param, value) in enumerate(solar_pv_params.items(), start=10):  
             label_text = param
             label = ttk.Label(self.inner_frame, text=label_text)
             label.grid(row=i, column=0, sticky='w')
@@ -298,10 +317,49 @@ class RECalculationPage(tk.Frame):
             create_tooltip(entry, tooltip_text)
 
             self.re_calc_params_entries.append((var, label, entry))
+            
+        self.wind_intro_label = ttk.Label(self.inner_frame, text="Wind turbine:", font=self.italic_font, wraplength=850, justify="left")
+        self.wind_intro_label.grid(row=18, column=0, columnspan=3, pady=10, sticky='w')
+            
+        # Turbine Type Dropdown
+        self.turbine_type_var = tk.StringVar()
+        self.turbine_type_label = ttk.Label(self.inner_frame, text="turbine_type", state='disabled')
+        self.turbine_type_label.grid(row=19, column=0, sticky='w')
+        self.turbine_type_combobox = ttk.Combobox(self.inner_frame, textvariable=self.turbine_type_var, state='disabled', values=turbine_types)
+        self.turbine_type_combobox.grid(row=19, column=0, padx=20, sticky='e')
+        self.turbine_type_combobox.set(turbine_types[0])  # Set default value
+        self.turbine_type_combobox.bind('<<ComboboxSelected>>', self.update_turbine_model_options)
 
-
+        # Turbine Model Dropdown
+        self.turbine_model_var = tk.StringVar()
+        self.turbine_model_label = ttk.Label(self.inner_frame, text="turbine_model", state='disabled')
+        self.turbine_model_label.grid(row=20, column=0, sticky='w')
+        self.turbine_model_combobox = ttk.Combobox(self.inner_frame, textvariable=self.turbine_model_var, state='disabled')
+        self.turbine_model_combobox.grid(row=20, column=0, padx=20, sticky='e')
+        self.update_turbine_model_options()
+        
+        # Define StringVar for latitude and longitude
+        self.drivetrain_efficiency_var = tk.DoubleVar(value=0.9)
+        # Latitude and Longitude Entry Fields
+        self.drivetrain_efficiency_label = ttk.Label(self.inner_frame, text="drivetrain_efficiency", state='disabled')
+        self.drivetrain_efficiency_label.grid(row=21, column=0, sticky='w')
+        self.drivetrain_efficiency_entry = ttk.Entry(self.inner_frame, textvariable=self.drivetrain_efficiency_var,state='disabled')
+        self.drivetrain_efficiency_entry.grid(row=21, column=0, padx=20,sticky='e')
+        create_tooltip(self.drivetrain_efficiency_entry, "Enter the drivetrain efficiency")
         # Create the warning label and grid it
         self.setup_warning()
+
+    def update_turbine_model_options(self, event=None):
+        turbine_models = {
+            'Horizontal Axis': ['Alstom.Eco.80', 'NPS100c-21'],
+            'Vertical Axis': ['Hi-VAWT.DS1500', 'Hi-VAWT.DS700']
+        }
+        selected_type = self.turbine_type_var.get()
+        models = turbine_models.get(selected_type, [])
+        self.turbine_model_combobox['values'] = models
+        if models:
+            self.turbine_model_combobox.set(models[0])  # Set default to first model
+
 
         
         

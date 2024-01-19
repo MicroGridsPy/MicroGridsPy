@@ -5,6 +5,7 @@ Linear Programming framework for microgrids least-cost sizing,
 able to account for time-variable load demand evolution and capacity expansion.
 
 Authors: 
+    Alessandro Onori   - Department of Energy, Politecnico di Milano
     Giulia Guidicini   - Department of Energy, Politecnico di Milano 
     Lorenzo Rinaldi    - Department of Energy, Politecnico di Milano
     Nicolò Stevanato   - Department of Energy, Politecnico di Milano / Fondazione Eni Enrico Mattei

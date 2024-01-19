@@ -153,15 +153,16 @@ def solarPV_parameters(Data_import):
 def wind_parameters(Data_import):
     for value in Data_import:
         if "param: turbine_type" in value:
-            type_turb = value[value.index('=')+1:value.index(';')].replace(' ','').replace("'","")
+            type_turb = value[value.index('=')+1:value.index(';')].strip().replace("'","")
         if "param: turbine_model" in value:
-            turb_model = value[value.index('=')+1:value.index(';')].replace(' ','').replace("'","")  
+            turb_model = value[value.index('=')+1:value.index(';')].strip().replace("'","")
         if "param: drivetrain_efficiency" in value:
-            drivetrain_efficiency = float(value[value.index('=')+1:value.index(';')].replace(' ','').replace("'",""))
-    if type_turb == 'HA':
+            drivetrain_efficiency = float(value[value.index('=')+1:value.index(';')].strip().replace("'",""))
+    
+    if type_turb == 'Horizontal Axis':
         skipf = 71-35
         skiprow = 0
-    elif type_turb == 'VA':
+    elif type_turb == 'Vertical Axis':
         skipf = 0
         skiprow = 36
     current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -172,7 +173,7 @@ def wind_parameters(Data_import):
     power_curve = (df[turb_model][4:34]).values.tolist()
     rot_diam = df[turb_model][1]
     rot_height = df[turb_model][2]
-    if type_turb == 'HA':
+    if type_turb == 'Horizontal Axis':
         surface_area = math.pi * rot_diam**2 /4
     else:
         surface_area = rot_height*math.pi*rot_diam

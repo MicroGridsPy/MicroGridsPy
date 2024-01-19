@@ -182,7 +182,7 @@ class StartPage(tk.Frame):
         self.controller.show_frame("AdvancedPage")
         
     def confirm_and_advance(self):
-        if tk.messagebox.askyesno("Confirm Action", "Are you sure you want to proceed? You won't be able to come back and change these configuration options later."):
+        if messagebox.askyesno("Confirm Action", "Are you sure you want to proceed? You won't be able to come back and change these configuration options later."):
             self.controller.show_frame('RECalculationPage')
         else: pass
 
