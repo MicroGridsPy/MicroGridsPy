@@ -63,3 +63,29 @@ Table of Contents
    :caption: API Reference
 
    api
+
+------------------------------------------------------------------
+
+MicroGridsPy in academic literature
+--------------------------------------
+
+* Sergio Balderrama, Francesco Lombardi, Fabio Riva, Walter Canedo, Emanuela Colombo, Sylvain Quoilin, *"A two-stage linear programming optimization 
+  framework for isolated hybrid microgrids in a rural context: The case study of the “El Espino” community"*, Energy **2019**, 188, 116073
+
+* Nicolò Stevanato, Francesco Lombardi, Emanuela Colombo, Sergio Balderrama, Sylvain Quoilin, *"Two-Stage Stochastic Sizing of a Rural Micro-Grid Based on 
+  Stochastic Load Generation"*, **2019** IEEE Milan PowerTech, pp. 1-6
+
+* Nicolò Stevanato, Francesco Lombardi, Giulia Guidicini, Lorenzo Rinaldi, Sergio L. Balderrama, Matija Pavičević, Sylvain Quoilin, Emanuela Colombo, 
+  *"Long- term sizing of rural microgrids: Accounting for load evolution through multi-step investment plan and stochastic optimization"*, Energy for 
+  Sustainable Development **2020**, 58, pp. 16-29
+
+* Nicolò Stevanato, Gianluca Pellecchia, Ivan Sangiorgio, Diana Shendrikova, Castro Antonio Soares, Riccardo Mereu, Emanuela Colombo, *"Planning third 
+  generation minigrids: Multi-objective optimization and brownfield investment approaches in modelling village-scale on-grid and off-grid energy systems"*, 
+  Renewable and Sustainable Energy Transition **2023**, 3, 100053
+
+* Giacomo Crevani, Castro Soares, Emanuela Colombo, *"Modelling Financing Schemes for Energy System Planning: A Mini-Grid Case Study"*, ECOS **2023**, pp. 
+  1958-1969 
+
+* N. Stevanato, I. Sangiorgio, R. Mereu and E. Colombo, "*Archetypes of Rural Users in Sub-Saharan Africa for Load Demand Estimation*", 
+  2023 IEEE PES/IAS PowerAfrica, Marrakech, Morocco, **2023**, pp. 1-5, doi: 10.1109/PowerAfrica57932.2023.10363287.
+
