@@ -31,7 +31,7 @@ class Application(ThemedTk):
         style.configure('TFrame', background=background_color)
         self.title("MicroGridsPy User Interface")  # Set the application title
         self.geometry("900x700")      # Set the default size of the application
-        #self.iconbitmap('C:/Users/onori/Desktop/2.0 + Interface/MicroGridsPy-SESAM/MGPy Logo.png')
+        self.iconbitmap('Images/python_logo.ico')
         # Set the background color for the main window
         self.configure(background=background_color)
 
