@@ -220,7 +220,7 @@ class RECalculationPage(tk.Frame):
         self.title_label = ttk.Label(self.inner_frame, text="RES Time Series Calculation", font=self.title_font)
         self.title_label.grid(row=2, column=0, columnspan=1, pady=10, sticky='w')
         
-        self.intro_label = ttk.Label(self.inner_frame, text="Estimate the unit of electricity production from renewable sources (solar PV and Wind) using NASA POWER data (it requires internet connection):", font=self.italic_font, wraplength=850, justify="left")
+        self.intro_label = ttk.Label(self.inner_frame, text="Estimate electricity output of renewable generation units (solar PV and Wind) using NASA POWER data (it requires internet connection):", font=self.italic_font, wraplength=850, justify="left")
         self.intro_label.grid(row=3, column=0, columnspan=3, pady=10, sticky='w')
         
         # RE_Supply_Calculation Checkbutton

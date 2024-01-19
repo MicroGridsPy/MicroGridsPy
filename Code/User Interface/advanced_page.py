@@ -100,7 +100,6 @@ class AdvancedPage(tk.Frame):
             self.pareto_points_label.config(state='normal')
             self.pareto_points_entry.config(state='normal')
             self.pareto_solution_label.config(state='normal')
-            self.pareto_solution_entry.config(state='normal')
 
         else:
             self.Plot_Max_Cost_var.set(0)  # Reset to No if Multi-Objective Optimization is not selected
@@ -110,7 +109,6 @@ class AdvancedPage(tk.Frame):
             self.pareto_points_label.config(state='disabled')
             self.pareto_points_entry.config(state='disabled')
             self.pareto_solution_label.config(state='disabled')
-            self.pareto_solution_entry.config(state='disabled')
             
     def toggle_MultiScenario(self, *args):
         if self.Multiscenario_Optimization_var.get() == 1:
@@ -310,6 +308,15 @@ class AdvancedPage(tk.Frame):
     
         # Set the scrollregion to encompass the size of the inner frame
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+    def update_pareto_solution_options(self, *args):
+        """ Update the options in the Pareto solution combobox based on the Pareto points. """
+        points = self.pareto_points_var.get()
+        options = list(range(1, points + 1))
+        self.pareto_solution_combobox['values'] = options
+        # Automatically select the first option if current value is out of range
+        if self.pareto_solution_var.get() > points:
+            self.pareto_solution_var.set(1)
 
 
                 
@@ -567,17 +574,21 @@ class AdvancedPage(tk.Frame):
         self.pareto_points_entry.grid(row=20, column=1, sticky='w')
         create_tooltip(self.pareto_points_entry, "Pareto curve points to be analysed during optimization")
         
-        # Number of Pareto solution
+        self.pareto_points_var.trace('w', self.update_pareto_solution_options)
+
+        # Pareto solution
         self.pareto_solution_label = ttk.Label(self.inner_frame, text="Pareto solution:", anchor='w', state='disabled')
         self.pareto_solution_label.grid(row=21, column=0, sticky='w')
         self.pareto_solution_var = tk.IntVar(value=1)
-        vcmd = (self.register(self.validate_pareto_solution), '%P')
-        self.pareto_solution_entry = ttk.Entry(self.inner_frame, textvariable=self.pareto_solution_var, state='disabled',validate='key', validatecommand=vcmd)
-        self.pareto_solution_entry.grid(row=21, column=1, sticky='w')
-        create_tooltip(self.pareto_solution_entry, "Multi-Objective optimization solution to be displayed (1 for minimal CO2 emission solution, Pareto points for minimal costs one")
-
+        self.pareto_solution_combobox = ttk.Combobox(self.inner_frame, textvariable=self.pareto_solution_var, state='readonly')
+        self.pareto_solution_combobox.grid(row=21, column=1, sticky='w')
+        create_tooltip(self.pareto_solution_combobox, "Multi-Objective optimization solution to be displayed")
+        
         self.toggle_MultiObjective()
         
+        # Initially update the Pareto solution options
+        self.update_pareto_solution_options()
+
         # Multiobjective Optimization
         self.Multiscenario_Optimization_var = tk.IntVar(value=0)
         ttk.Label(self.inner_frame, text="Multi-Scenario Optimization:", anchor='w').grid(row=18, column=3, sticky='w')
