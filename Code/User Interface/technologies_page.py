@@ -195,6 +195,7 @@ class TechnologiesPage(tk.Frame):
             if label.cget('text') in self.brownfield_parameters:
                label.config(state='normal')  
                entry.config(state='normal')
+               self.initial_states[label.cget('text')] = {'label': 'normal', 'entry': 'normal'}
         
     def setup_warning(self):
         # Load the warning icon image

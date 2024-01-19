@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import font as tkFont
 from tkinter import ttk
 from PIL import Image, ImageTk
+from tkinter import messagebox
 
 class TopSectionFrame(tk.Frame):
     def __init__(self, parent, university_name,  *args, **kwargs):
@@ -179,6 +180,11 @@ class StartPage(tk.Frame):
         advanced_page.backup_var.set(value=self.Years_var.get())
         grid_page.backup_var.set(value=self.Years_var.get())
         self.controller.show_frame("AdvancedPage")
+        
+    def confirm_and_advance(self):
+        if tk.messagebox.askyesno("Confirm Action", "Are you sure you want to proceed? You won't be able to come back and change these configuration options later."):
+            self.controller.show_frame('RECalculationPage')
+        else: pass
 
 
                 
@@ -421,7 +427,7 @@ class StartPage(tk.Frame):
 
         
         # Navigation Frame at the bottom
-        self.nav_frame = NavigationFrame(self, next_command=lambda: controller.show_frame('RECalculationPage'))
+        self.nav_frame = NavigationFrame(self, next_command=self.confirm_and_advance)
         self.nav_frame.grid(row=30, column=0, columnspan=4, sticky='ew')
 
         

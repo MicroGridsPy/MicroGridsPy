@@ -100,6 +100,7 @@ class AdvancedPage(tk.Frame):
             self.pareto_points_label.config(state='normal')
             self.pareto_points_entry.config(state='normal')
             self.pareto_solution_label.config(state='normal')
+            self.pareto_solution_combobox.config(state='normal')
 
         else:
             self.Plot_Max_Cost_var.set(0)  # Reset to No if Multi-Objective Optimization is not selected
@@ -109,6 +110,7 @@ class AdvancedPage(tk.Frame):
             self.pareto_points_label.config(state='disabled')
             self.pareto_points_entry.config(state='disabled')
             self.pareto_solution_label.config(state='disabled')
+            self.pareto_solution_combobox.config(state='disabled')
             
     def toggle_MultiScenario(self, *args):
         if self.Multiscenario_Optimization_var.get() == 1:
@@ -192,32 +194,34 @@ class AdvancedPage(tk.Frame):
             self.Investment_Cost_Limit_label.config(state='disabled')
                 
     def on_next_button(self):
-        # First, update the GeneratorPage parameters
-        milp_formulation = self.MILP_Formulation_var.get()
-        partial_load = self.Generator_Partial_Load_var.get()
-        brownfield = self.Greenfield_Investment_var.get()
-        fuel_cost = self.Fuel_Specific_Cost_Calculation_var.get()
-        res_page = self.controller.frames.get("TechnologiesPage")
-        generator_page = self.controller.frames.get("GeneratorPage")
-        battery_page = self.controller.frames.get("BatteryPage")
-        if milp_formulation == 1 and partial_load == 1:
-            battery_page.toggle_milp_parameters()
-            generator_page.toggle_milp_partial_parameters()
-        elif milp_formulation == 1 and partial_load == 0:
-            battery_page.toggle_milp_parameters()
-            generator_page.toggle_milp_parameters()
-        if brownfield == 0:
-            res_page.toggle_brownfield_parameters()
-            battery_page.toggle_brownfield_parameters()
-            generator_page.toggle_brownfield_parameters()
-        if fuel_cost == 1:
-            generator_page.toggle_fuel_cost_parameters()
+        if tk.messagebox.askyesno("Confirm Action", "Are you sure you want to proceed? You won't be able to come back and change these configuration options later."):
+            # First, update the GeneratorPage parameters
+            milp_formulation = self.MILP_Formulation_var.get()
+            partial_load = self.Generator_Partial_Load_var.get()
+            brownfield = self.Greenfield_Investment_var.get()
+            fuel_cost = self.Fuel_Specific_Cost_Calculation_var.get()
+            res_page = self.controller.frames.get("TechnologiesPage")
+            generator_page = self.controller.frames.get("GeneratorPage")
+            battery_page = self.controller.frames.get("BatteryPage")
+            if milp_formulation == 1 and partial_load == 1:
+                battery_page.toggle_milp_parameters()
+                generator_page.toggle_milp_partial_parameters()
+            elif milp_formulation == 1 and partial_load == 0:
+                battery_page.toggle_milp_parameters()
+                generator_page.toggle_milp_parameters()
+            if brownfield == 0:
+                res_page.toggle_brownfield_parameters()
+                battery_page.toggle_brownfield_parameters()
+                generator_page.toggle_brownfield_parameters()
+            if fuel_cost == 1:
+                generator_page.toggle_fuel_cost_parameters()
             
-        if self.Step_Duration_var.get() > self.backup_var.get():
+            if self.Step_Duration_var.get() > self.backup_var.get():
                 tk.messagebox.showerror("Error", "Step Duration can not exceed the Total Project Duration")
                 return False
-        # Then, navigate to the RECalculationPage
-        self.controller.show_frame("RECalculationPage")
+            # Then, navigate to the RECalculationPage
+            self.controller.show_frame("RECalculationPage")
+        else: pass
         
     def update_scenario_weights(self, event=None):
         # Clear existing weight entries
@@ -580,7 +584,7 @@ class AdvancedPage(tk.Frame):
         self.pareto_solution_label = ttk.Label(self.inner_frame, text="Pareto solution:", anchor='w', state='disabled')
         self.pareto_solution_label.grid(row=21, column=0, sticky='w')
         self.pareto_solution_var = tk.IntVar(value=1)
-        self.pareto_solution_combobox = ttk.Combobox(self.inner_frame, textvariable=self.pareto_solution_var, state='readonly')
+        self.pareto_solution_combobox = ttk.Combobox(self.inner_frame, textvariable=self.pareto_solution_var, state='disabled')
         self.pareto_solution_combobox.grid(row=21, column=1, sticky='w')
         create_tooltip(self.pareto_solution_combobox, "Multi-Objective optimization solution to be displayed")
         
