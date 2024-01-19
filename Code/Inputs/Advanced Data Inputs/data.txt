@@ -1,2 +1,0 @@
-Periods: 8760
-Years: 5
