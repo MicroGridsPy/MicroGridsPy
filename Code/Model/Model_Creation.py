@@ -200,6 +200,14 @@ def Model_Creation(model):
                                                      within=NonNegativeReals)
     model.FUEL_unit_CO2_emission             = Param(model.generator_types,
                                                      within=NonNegativeReals)
+    # MILP Formulation 
+    model.Generator_Nominal_Capacity_milp     = Param(model.generator_types,
+                                                      within=NonNegativeReals)                             # During the MILP optimization 𝐶 is defined as a parameter!
+    # Partial Load Effect
+    model.Generator_Min_output                = Param(model.generator_types,
+                                                      within=NonNegativeReals)                             # Minimum percentage of energy output for the generator in part load
+    model.Generator_pgen                      = Param(model.generator_types,
+                                                      within=NonNegativeReals)                             # Percentage of the total operation cost of the generator system at full load
     # Variable Fuel Cost
     #----------------------------------------------------------------------------------------------
     model.Fuel_Specific_Cost                 = Param(model.generator_types,
@@ -225,14 +233,7 @@ def Model_Creation(model):
                                                       initialize=Initialize_Generator_Marginal_Cost_milp)
     model.Generator_capacity                  = Param(model.generator_types,
                                                       within=NonNegativeReals)                             # Existing capacity of generator
-    # MILP Formulation 
-    model.Generator_Nominal_Capacity_milp     = Param(model.generator_types,
-                                                      within=NonNegativeReals)                             # During the MILP optimization 𝐶 is defined as a parameter!
-    # Partial Load Effect
-    model.Generator_Min_output                = Param(model.generator_types,
-                                                      within=NonNegativeReals)                             # Minimum percentage of energy output for the generator in part load
-    model.Generator_pgen                      = Param(model.generator_types,
-                                                      within=NonNegativeReals)                             # Percentage of the total operation cost of the generator system at full load
+
     model.Generator_Start_Cost_1              = Param(model.generator_types,
                                                       initialize=Initialize_Generator_Start_Cost_1)          # # Origin of the cost curve of the part load generator
     model.Generator_Marginal_Cost_milp_1      = Param(model.generator_types,
