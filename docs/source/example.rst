@@ -345,8 +345,8 @@ Despite the significant variance in computation time, the output metrics related
 The economic implications, denoted by the Net Present Cost (NPC), total actualized Investment Cost, Operation Cost, and Levelized Cost of Electricity (LCOE), are comparable with marginal differences. This indicates that both solvers are capable of arriving at similar economic assessments for the given model parameters.
 
 
-MILP Formulation
----------------------------------------------
-This iteration of the model employs a Mixed-Integer Linear Programming (MILP) framework, strategically designed to simulate a decade-long operation of mini-grids with two intervals of capacity expansion. The MILP paradigm introduces binary decision variables to address unit commitment issues, allowing for a precise representation of start-up and shut-down activities of power generation units. 
-This inclusion significantly elevates the computational complexity due to the combinatorial nature of decision variables, which exponentially increases the solution space. 
-Consequently, the simulation quantifies the trade-offs between generation costs and reliability over the course of 10 years.
+.. MILP Formulation
+.. ---------------------------------------------
+.. This iteration of the model employs a Mixed-Integer Linear Programming (MILP) framework, strategically designed to simulate a decade-long operation of mini-grids with two intervals of capacity expansion. The MILP paradigm introduces binary decision variables to address unit commitment issues, allowing for a precise representation of start-up and shut-down activities of power generation units. 
+.. This inclusion significantly elevates the computational complexity due to the combinatorial nature of decision variables, which exponentially increases the solution space. 
+.. Consequently, the simulation quantifies the trade-offs between generation costs and reliability over the course of 10 years.
