@@ -25,7 +25,7 @@ Default Scenario
 In this basic example run of MicroGridsPy, we demonstrate the foundational capabilities of the tool for microgrids simulation and optimization. The basic configuration for this run is as follows:
 
 - **Time Horizon**: 20 years
-- **Renewable Energy Sources (RES)**: Only Photovoltaic (PV) systems available.
+- **Renewable Energy Sources (RES)**: Photovoltaic (PV) and Wind Turbine systems available.
 - **Formulation**: Linear Programming (LP)
 - **Optimization Goal**: Net Present Cost (NPC)
 - **Backup Systems**: Both battery storage and diesel generators included.
@@ -88,7 +88,7 @@ The images gallery below visualizes the interface windows, simulation outcomes, 
 
 **Results Interpretation**
 
-In the default scenario, the energy composition is substantially influenced by renewable sources, resulting in a renewable penetration rate of 77.38%. This approach is bolstered by a 34.87% utilization of battery storage, which plays a critical role in energy continuity. 
+In the default scenario, the energy composition is substantially influenced by renewable sources but with the evident absence of Wind Turibine which has been proven to be not convenient in this specific scenario, resulting in a renewable penetration rate of 77.38%. This approach is bolstered by a 34.87% utilization of battery storage, which plays a critical role in energy continuity. 
 Despite the emphasis on renewables, diesel generators contribute a notable 23.13% to the energy provision. This contribution is particularly significant given that it addresses supply shortfalls when renewable generation and battery storage do not fully meet the demand.
 Reguarding costs, Net Present Cost (NPC) is equal to about 132 kUSD while LCOE (representing an ideal and simplified tariff for the users) is 0.2562 USD/kWh. 
 
@@ -101,7 +101,7 @@ Capacity Expansion and Increasing Fuel Cost
 ---------------------------------------------
 This new simulation is designed to reflect the dynamic nature of energy needs in rural communities and the economic pressures that come with fuel-based generation. 
 By introducing capacity expansion every five years and modeling a 5% annual increase in fuel cost, the aim is to capture the potential shifts in technology usage and financial metrics, thereby providing a more realistic depiction of a mini-grid's performance over time.
-
+For the sake of semplicity, Wind Turbine has been removed from the available renewable technologies.
 .. raw:: html
 
   <div id="uniqueCarouselExample" class="carousel slide" data-ride="carousel">
