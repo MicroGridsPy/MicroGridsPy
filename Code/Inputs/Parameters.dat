@@ -16,16 +16,16 @@ param: lat := '-11 33 56.4';
 param: lon := '30 21 3.4';
 param: time_zone := +2;
 
-param: nom_power := 300;
-param: tilt := 10;
-param: azim := 180;
+param: nom_power := 1000.0;
+param: tilt := 10.0;
+param: azim := 180.0;
 param: ro_ground := 0.2;
 param: k_T := -0.37;
-param: NMOT := 45 ;	
-param: T_NMOT := 20;
-param: G_NMOT := 800;
-param: turbine_type := 'HA';
-param: turbine_model := 'NPS100c-21';
+param: NMOT := 45.0;
+param: T_NMOT := 20.0;
+param: G_NMOT := 800.0;
+param: turbine_type := 'Horizontal Axis';
+param: turbine_model := 'Alstom.Eco.80';
 param: drivetrain_efficiency := 0.9;
 
 param: demand_growth := '5';
@@ -70,7 +70,7 @@ param: Generator_Partial_Load := 0;
 param: Multiobjective_Optimization := 0;
 param: Greenfield_Investment := 1;
 param: Plot_Max_Cost := 0;
-param: RE_Supply_Calculation := 0;
+param: RE_Supply_Calculation := 1;
 param: Demand_Profile_Generation := 1;
 param: Grid_Connection := 0;
 param: Grid_Availability_Simulation := 0;
@@ -89,33 +89,42 @@ param: tax := 0.02;
 param: equity_share := 0.1;
 param: debt_share := 0.9;
 
-param: RES_Sources := 1;
+param: RES_Sources := 2;
 param: RES_Names :=
 1	'Solar PV'
+2	'Wind Turbine'
 ;
 param: RES_Nominal_Capacity :=
 1	1000.0
+2	1670000.0
 ;
 param: RES_Inverter_Efficiency :=
 1	0.98
+2	0.95
 ;
 param: RES_Specific_Investment_Cost :=
 1	0.95
+2	1.9
 ;
 param: RES_Specific_OM_Cost :=
 1	0.018
+2	0.05
 ;
 param: RES_Lifetime :=
 1	25.0
+2	20.0
 ;
 param: RES_capacity :=
 1	0.0
+2	0.0
 ;
 param: RES_years :=
 1	0.0
+2	0.0
 ;
 param: RES_unit_CO2_emission :=
 1	0.0
+2	0.0
 ;
 
 param: Battery_Specific_Investment_Cost := 0.15;
@@ -199,6 +208,7 @@ param: National_Grid_Specific_CO2_emissions := 0.1495;
 
 param: RES_Colors :=
 1	'FF8800'
+2	'008080'
 ;
 param: Battery_Color := '4CC9F0';
 param: Generator_Colors :=

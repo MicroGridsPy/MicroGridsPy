@@ -123,12 +123,13 @@ class RECalculationPage(tk.Frame):
         self.turbine_model_label.config(state=state)
         self.turbine_model_combobox.config(state=state)
         self.wind_nom_power_label.config(state=state)
-        self.wind_nom_power_entry.config(state=state)
         self.drivetrain_efficiency_label.config(state=state)
         self.drivetrain_efficiency_entry.config(state=state)
         for var, label, entry in self.re_calc_params_entries:
-            label.config(state=state)
-            entry.config(state=state)
+            if label.cget('text') == "Rated Power [W]:": pass
+            else:  
+                label.config(state=state)
+                entry.config(state=state)
             
     def setup_scrollable_area(self):
         # Create the main container frame
@@ -206,11 +207,14 @@ class RECalculationPage(tk.Frame):
         warning_frame.grid_columnconfigure(1, weight=1)
         
     def on_next_button(self):
+        self.re_calc_params_entries.append((self.wind_nom_power_var,self.wind_nom_power_label,self.wind_nom_power_entry))
         res_page = self.controller.frames.get("TechnologiesPage")
         if self.RE_Supply_Calculation_var.get(): 
             for (var, label, entry) in self.re_calc_params_entries:
-                if label.cget('text') == "nom_power":res_page.solar_backup_var.set(value=var.get())
-                if label.cget('text') == "Rated Power [kW]:":res_page.wind_backup_var.set(value=var.get())
+                if label.cget('text') == "nom_power": res_page.solar_backup_var.set(value=var.get())
+                if label.cget('text') == "Rated Power [W]:": res_page.wind_backup_var.set(value=var.get())
+        else: res_page.res_backup_var.set(value=0)
+        res_page.update_res_configuration()
         self.controller.show_frame("ArchetypesPage")
                 
     def __init__(self, parent, controller):
@@ -336,9 +340,10 @@ class RECalculationPage(tk.Frame):
         self.wind_nom_power_var = tk.DoubleVar(value=1670)  # Default value, will change based on turbine model selected
         self.wind_nom_power_label = ttk.Label(self.inner_frame, text="Rated Power [W]:", state='disabled')
         self.wind_nom_power_label.grid(row=21, column=0, sticky='w')
-        self.wind_nom_power_entry = ttk.Entry(self.inner_frame, textvariable=self.wind_nom_power_var, state='readonly') 
+        self.wind_nom_power_entry = ttk.Entry(self.inner_frame, textvariable=self.wind_nom_power_var, state='disabled') 
         self.wind_nom_power_entry.grid(row=21, column=0, padx=20, sticky='e')
         create_tooltip(self.wind_nom_power_entry, "Rated power of the selected wind turbine model [W]")
+        
             
         # Turbine Type Dropdown
         self.turbine_type_var = tk.StringVar()

@@ -795,7 +795,7 @@ def RE_supply():
             
     start = time.time()
     
-    print("Renewable energy time series calculation started, please remember to close Generation.xlsx... \n")
+    print("Renewable energy time series calculation started, please remember to close RES_Time_Series.csv ... \n")
     
 ### Reads .dat file, saves input data and creates the lists of daily and hourly URLs
     current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -879,7 +879,7 @@ def RE_supply():
     dataf.reset_index(drop=True, inplace=True)
     print("Completed\n ") 
     
-    print('Plotting and exporting time series to Generation.xlsx... \n')
+    print('Plotting and exporting time series data to RES_Time_Series.csv ... \n')
     current_directory = os.path.dirname(os.path.abspath(__file__))
     inputs_directory = os.path.join(current_directory, '..', 'Inputs')
     filename = os.path.join(inputs_directory, 'RES_Time_Series.csv')

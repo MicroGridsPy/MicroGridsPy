@@ -144,62 +144,53 @@ class TechnologiesPage(tk.Frame):
         return None
         
     def update_res_configuration(self):
-        # First, clear all existing entries.
+        # Clear all existing entries before updating
         self.clear_res_entries()
 
-        # Get the number of generator sources to configure
+        # Retrieve the number of RES sources from the entry widget or default to 1
         try:
             res_sources = int(self.RES_Sources_entry.get())
         except ValueError:
-            res_sources = 1  # Fallback to 1 if entry is invalid
+            res_sources = 1
 
-        # Reset the gen_entries list
+        # Ensure the backup variables are updated
+        self.res_params_defaults['RES_Nominal_Capacity'] = self.solar_backup_var.get()
+        self.res_params_defaults_second['RES_Nominal_Capacity'] = self.wind_backup_var.get()
+
+
+        # Initialize the res_entries list
         self.res_entries = []
 
-        # Start adding new entries from the fourth row
+        # Starting row for the new entries in the grid
         row_start = 5
 
-        # Iterate over each parameter to create labels and entries
-        for param, default in self.res_params_defaults.items():
+        # Loop over each parameter to create labels and entries
+        for param_index, (param, default) in enumerate(self.res_params_defaults.items()):
             for i in range(res_sources):
-                row = row_start + list(self.res_params_defaults.keys()).index(param)
-                vcmd = self.get_validation_command(param, default)
+                row = row_start + param_index
 
-                # Set different values for the second set of entries
+                # Use different values for the second set of entries (wind turbines)
                 value = default if i == 0 else self.res_params_defaults_second.get(param, default)
 
-                # Determine variable type based on parameter
-                if param in ['RES_Names']:
-                    temp_var = tk.StringVar(value=value)
-                else:
-                    temp_var = tk.DoubleVar(value=value)
+                # Create a variable to hold the entry's value
+                var = tk.DoubleVar(value=value) if param != 'RES_Names' else tk.StringVar(value=value)
 
-                # Create the label only for the first column
-                if i == 0:
-                    label = ttk.Label(self.inner_frame, text=param)
+                # Create the label for the first column only
+                label = ttk.Label(self.inner_frame, text=param) if i == 0 else None
+                if label:
                     label.grid(row=row, column=0, sticky='w')
-                else:
-                    label = None
 
-                # Create the entry
-                entry = ttk.Entry(self.inner_frame, textvariable=temp_var, validate='key', validatecommand=vcmd)
+                # Create the entry widget
+                entry = ttk.Entry(self.inner_frame, textvariable=var, state='disabled' if (param == 'RES_Nominal_Capacity' and self.res_backup_var.get() == 1) else 'normal')
                 entry.grid(row=row, column=1 + i, sticky='w')
 
-                # If dealing with nominal capacity, set the backup variables and disable the entry
-                if param == "RES_Nominal_Capacity":
-                    temp_var.set(self.solar_backup_var.get() if i == 0 else self.wind_backup_var.get())
-                    entry.config(state='disabled')
-                    if label:
-                        label.config(state='disabled')
+                # Add the variable, label, and entry to the res_entries list
+                self.res_entries.append((var, label, entry))
 
-                # Add tooltip for the entry
+                # Add tooltip to the entry
                 tooltip_text = self.res_params_tooltips.get(param, "Info not available")
                 create_tooltip(entry, tooltip_text)
-
-                # Append the new entry to gen_entries
-                self.res_entries.append((temp_var, label, entry))
-
-
+        
             
     def toggle_brownfield_parameters(self):
         for (var, label, entry) in self.res_entries:
@@ -226,7 +217,7 @@ class TechnologiesPage(tk.Frame):
         icon_label.grid(row=0, column=0, padx=(10, 0), pady=10, sticky="w")
 
         # Create the warning label with text
-        self.warning_label = ttk.Label(warning_frame, text="IMPORTANT: When 'Endogenous RES Calculation' is active, 'RES_Nominal_Capacity' entries are disabled, as they must correspond to the 'nom_power' parameters used for simulating electricity production. For 'Exogenous RES Data', ensure that 'RES_Nominal_Capacity' accurately reflects the capacity per unit of production used in your data.", wraplength=700, justify="left")
+        self.warning_label = ttk.Label(warning_frame, text="IMPORTANT: When Endogenous RES Calculation is activated, 'RES_Nominal_Capacity' entries are disabled as they must correspond to the nominal capacity parameters used for simulating electricity production. In case of Exogenous RES Time Series Data, ensure that 'RES_Nominal_Capacity' accurately reflects the capacity per unit of production used in your data.", wraplength=700, justify="left")
         self.warning_label.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
         # Ensure the text spans the rest of the grid
         warning_frame.grid_columnconfigure(1, weight=1)
@@ -295,7 +286,7 @@ class TechnologiesPage(tk.Frame):
      for var, label, entry in self.res_entries:
         if label:
             param = label.cget('text')
-            # Reset the current list for this parameter if we're on the first generator type
+            # Reset the current list for this parameter if we're on the first res type
             if len(param_values[param]) >= num_res_types:
                 param_values[param] = [var.get()]
             else:
@@ -346,7 +337,7 @@ class TechnologiesPage(tk.Frame):
         self.grid_columnconfigure(0, weight=1)
 
         # Add Top Section
-        university_name = "MicroGridsPy"
+        university_name = "MicroGridsPy "
         self.top_section = TopSectionFrame(self, university_name)
         self.top_section.grid(row=0, column=0, sticky='ew')
 
@@ -374,7 +365,7 @@ class TechnologiesPage(tk.Frame):
         # Additional default values for the second set of entries
         self.res_params_defaults_second = {
             "RES_Names": "Wind Turbine",
-            "RES_Nominal_Capacity": 1000,
+            "RES_Nominal_Capacity": 1670000,
             "RES_Inverter_Efficiency": 0.95,
             "RES_Specific_Investment_Cost": 1.9,
             "RES_Specific_OM_Cost": 0.05,
@@ -397,7 +388,8 @@ class TechnologiesPage(tk.Frame):
         }
         
         self.solar_backup_var = tk.DoubleVar(value=1000)
-        self.wind_backup_var = tk.DoubleVar(value=1670)
+        self.wind_backup_var = tk.DoubleVar(value=1670000)
+        self.res_backup_var = tk.IntVar(value=1)
         
         text_parameters = ['RES_Names']
         self.brownfield_parameters = ['RES_capacity','RES_years']
@@ -467,9 +459,11 @@ class TechnologiesPage(tk.Frame):
             # Append to gen_entries
             self.res_entries.append((var, label, entry))
             
-
         self.update_res_configuration()
         self.setup_warning()
+     
+
+
 
 
         
