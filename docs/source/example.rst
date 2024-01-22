@@ -38,40 +38,40 @@ The images gallery below visualizes the interface windows, simulation outcomes, 
    <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel">
      <div class="carousel-inner">
        <div class="carousel-item active">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/Default/1.1.png?raw=true" class="d-block w-100" alt="Dispatch Strategy">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/Default/1.1.png?raw=true" class="d-block w-100" alt="Dispatch Strategy">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/Default/1.2.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/Default/1.2.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/Default/1.3.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/Default/1.3.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/Default/1.4.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/Default/1.4.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/Default/1.5.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/Default/1.5.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/Default/1.6.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/Default/1.6.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/Default/1.7.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/Default/1.7.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/Default/1.8.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/Default/1.8.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/Default/1.9.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/Default/1.9.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/Default/1.10.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/Default/1.10.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/Default/1.11.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/Default/1.11.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/Default/1.12.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/Default/1.12.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
      </div>
         <a class="carousel-control-prev" href="#carouselExampleIndicators" role="button" data-slide="prev" aria-label="Previous">
@@ -107,43 +107,43 @@ For the sake of semplicity, Wind Turbine has been removed from the available ren
   <div id="uniqueCarouselExample" class="carousel slide" data-ride="carousel">
     <div class="carousel-inner">
       <div class="carousel-item active">
-        <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/1/2.1.png?raw=true" class="d-block w-100" alt="Dispatch Strategy">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/1/1.1.png?raw=true" class="d-block w-100" alt="Dispatch Strategy">
       </div>
       <div class="carousel-item">
-        <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/1/2.2.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/1/2.2.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
       </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/1/2.3.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/1/2.3.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/1/2.4.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/1/2.4.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/1/2.5.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/1/2.5.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/1/2.6.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/1/2.6.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/1/2.7.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/1/2.7.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/1/2.8.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/1/2.8.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/1/2.9.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/1/2.9.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/1/2.10.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/1/2.10.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/1/2.11.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/1/2.11.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/1/2.12.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/1/2.12.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/1/2.13.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/1/2.13.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
      </div>
     <a class="carousel-control-prev" href="#uniqueCarouselExample" role="button" data-slide="prev">
@@ -175,46 +175,46 @@ This new simulation is designed to test the on-grid model, setting the grid conn
   <div id="uniqueCarouselExample" class="carousel slide" data-ride="carousel">
     <div class="carousel-inner">
       <div class="carousel-item active">
-        <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/2/2.1.png?raw=true" class="d-block w-100" alt="Dispatch Strategy">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.1.png?raw=true" class="d-block w-100" alt="Dispatch Strategy">
       </div>
       <div class="carousel-item">
-        <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/2/2.2.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.2.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
       </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/2/2.3.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.3.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/2/2.4.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.4.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/2/2.5.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.5.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/2/2.6.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.6.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/2/2.7.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.7.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/2/2.8.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.8.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/2/2.9.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.9.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/2/2.10.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.10.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/2/2.11.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.11.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/2/2.12.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.12.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/2/2.13.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.13.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/2/2.14.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.14.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
      </div>
     <a class="carousel-control-prev" href="#uniqueCarouselExample" role="button" data-slide="prev">
@@ -245,46 +245,46 @@ This simulation is designed to test the Multi-Objective Optimization mode, setti
   <div id="uniqueCarouselExample" class="carousel slide" data-ride="carousel">
     <div class="carousel-inner">
       <div class="carousel-item active">
-        <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/3/2.1.png?raw=true" class="d-block w-100" alt="Dispatch Strategy">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.1.png?raw=true" class="d-block w-100" alt="Dispatch Strategy">
       </div>
       <div class="carousel-item">
-        <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/3/2.2.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.2.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
       </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/3/2.3.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.3.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/3/2.4.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.4.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/3/2.5.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.5.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/3/2.6.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.6.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/3/2.7.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.7.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/3/2.8.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.8.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/3/2.9.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.9.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/3/2.10.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.10.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/3/2.11.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.11.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/3/2.12.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.12.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/3/2.13.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.13.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Examples/3/2.14.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.14.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
      </div>
     <a class="carousel-control-prev" href="#uniqueCarouselExample" role="button" data-slide="prev">
