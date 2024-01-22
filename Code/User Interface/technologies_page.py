@@ -150,30 +150,26 @@ class TechnologiesPage(tk.Frame):
         # Get the number of generator sources to configure
         try:
             res_sources = int(self.RES_Sources_entry.get())
-        except:
-            res_sources = 1
+        except ValueError:
+            res_sources = 1  # Fallback to 1 if entry is invalid
 
         # Reset the gen_entries list
         self.res_entries = []
 
-        text_parameters = ['RES_Names']
-
         # Start adding new entries from the fourth row
         row_start = 5
 
+        # Iterate over each parameter to create labels and entries
         for param, default in self.res_params_defaults.items():
             for i in range(res_sources):
                 row = row_start + list(self.res_params_defaults.keys()).index(param)
                 vcmd = self.get_validation_command(param, default)
 
                 # Set different values for the second set of entries
-                if i == 0:  # First set of entries
-                    value = default
-                else:  # Second set of entries
-                    value = self.res_params_defaults_second.get(param, default)
+                value = default if i == 0 else self.res_params_defaults_second.get(param, default)
 
                 # Determine variable type based on parameter
-                if param in text_parameters:
+                if param in ['RES_Names']:
                     temp_var = tk.StringVar(value=value)
                 else:
                     temp_var = tk.DoubleVar(value=value)
@@ -182,14 +178,19 @@ class TechnologiesPage(tk.Frame):
                 if i == 0:
                     label = ttk.Label(self.inner_frame, text=param)
                     label.grid(row=row, column=0, sticky='w')
-                    label.config(state=self.initial_states[param]['label'])
                 else:
                     label = None
 
                 # Create the entry
                 entry = ttk.Entry(self.inner_frame, textvariable=temp_var, validate='key', validatecommand=vcmd)
                 entry.grid(row=row, column=1 + i, sticky='w')
-                entry.config(state=self.initial_states[param]['entry'])
+
+                # If dealing with nominal capacity, set the backup variables and disable the entry
+                if param == "RES_Nominal_Capacity":
+                    temp_var.set(self.solar_backup_var.get() if i == 0 else self.wind_backup_var.get())
+                    entry.config(state='disabled')
+                    if label:
+                        label.config(state='disabled')
 
                 # Add tooltip for the entry
                 tooltip_text = self.res_params_tooltips.get(param, "Info not available")
@@ -197,6 +198,7 @@ class TechnologiesPage(tk.Frame):
 
                 # Append the new entry to gen_entries
                 self.res_entries.append((temp_var, label, entry))
+
 
             
     def toggle_brownfield_parameters(self):
@@ -224,7 +226,7 @@ class TechnologiesPage(tk.Frame):
         icon_label.grid(row=0, column=0, padx=(10, 0), pady=10, sticky="w")
 
         # Create the warning label with text
-        self.warning_label = ttk.Label(warning_frame, text="WARNING: 'RES_Nominal_Capacity' should be coherent with the RES unit of electricity production! For instance, if time series data are simulated using NASA POWER, RES_Nominal_Capacity should be equal to 'nom_power' parameter.", wraplength=700, justify="left")
+        self.warning_label = ttk.Label(warning_frame, text="IMPORTANT: When 'Endogenous RES Calculation' is active, 'RES_Nominal_Capacity' entries are disabled, as they must correspond to the 'nom_power' parameters used for simulating electricity production. For 'Exogenous RES Data', ensure that 'RES_Nominal_Capacity' accurately reflects the capacity per unit of production used in your data.", wraplength=700, justify="left")
         self.warning_label.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
         # Ensure the text spans the rest of the grid
         warning_frame.grid_columnconfigure(1, weight=1)
@@ -331,6 +333,7 @@ class TechnologiesPage(tk.Frame):
      self.get_input_data()
      self.controller.refresh_plot_page()  # Update the plot page with the new data
      self.controller.show_next_page()  # Go to the next page
+
                 
     def __init__(self, parent, controller):
         ttk.Frame.__init__(self, parent)
@@ -371,10 +374,10 @@ class TechnologiesPage(tk.Frame):
         # Additional default values for the second set of entries
         self.res_params_defaults_second = {
             "RES_Names": "Wind Turbine",
-            "RES_Nominal_Capacity": 2000,
+            "RES_Nominal_Capacity": 1000,
             "RES_Inverter_Efficiency": 0.95,
-            "RES_Specific_Investment_Cost": 1.2,
-            "RES_Specific_OM_Cost": 0.02,
+            "RES_Specific_Investment_Cost": 1.9,
+            "RES_Specific_OM_Cost": 0.05,
             "RES_Lifetime": 20,
             "RES_unit_CO2_emission": 0,
             "RES_capacity": 0,
@@ -383,15 +386,18 @@ class TechnologiesPage(tk.Frame):
         
         self.res_params_tooltips = {
             "RES_Names":"Renewable technology name",
-            "RES_Nominal_Capacity":"Capacity linked to the electricity production time series (read below for further info)",
+            "RES_Nominal_Capacity":"Capacity in W per unit of electricity production (read below for further info)",
             "RES_Inverter_Efficiency": "Average efficiency the inverter [%]",
             "RES_Specific_Investment_Cost": "Specific investment cost for each renewable technology [USD/W]",
             "RES_Specific_OM_Cost": "O&M cost for each renewable technology as a fraction of specific investment cost [%]",
             "RES_Lifetime": "Renewables Lifetime [years]",
             "RES_unit_CO2_emission": "Specific CO2 emissions associated to each renewable technology [kgCO2/kW]",
-            "RES_capacity": "Existing capacity [-]",
+            "RES_capacity": "Existing capacity [-] in brownfield scenario",
             "RES_years": "How many years ago the component was installed [years]"
         }
+        
+        self.solar_backup_var = tk.DoubleVar(value=1000)
+        self.wind_backup_var = tk.DoubleVar(value=1670)
         
         text_parameters = ['RES_Names']
         self.brownfield_parameters = ['RES_capacity','RES_years']
@@ -461,7 +467,7 @@ class TechnologiesPage(tk.Frame):
             # Append to gen_entries
             self.res_entries.append((var, label, entry))
             
-            
+
         self.update_res_configuration()
         self.setup_warning()
 

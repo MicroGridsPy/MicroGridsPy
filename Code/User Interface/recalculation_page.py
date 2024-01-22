@@ -95,7 +95,7 @@ class RECalculationPage(tk.Frame):
         image_label.grid(row=6, column=1, rowspan=14, padx=(30,0), sticky='nsew')
     
     def get_input_data(self):
-        # Initialize the dictionary to store input data
+        # Initialize the dictionary to store WIND input data
         input_data = {
             'RE_Supply_Calculation': self.RE_Supply_Calculation_var.get(),
             'lat': self.lat_var.get(),
@@ -118,8 +118,12 @@ class RECalculationPage(tk.Frame):
         self.lat_entry.config(state=state)
         self.lon_label.config(state=state)
         self.lon_entry.config(state=state)
+        self.turbine_type_label.config(state=state)
         self.turbine_type_combobox.config(state=state)
+        self.turbine_model_label.config(state=state)
         self.turbine_model_combobox.config(state=state)
+        self.wind_nom_power_label.config(state=state)
+        self.wind_nom_power_entry.config(state=state)
         self.drivetrain_efficiency_label.config(state=state)
         self.drivetrain_efficiency_entry.config(state=state)
         for var, label, entry in self.re_calc_params_entries:
@@ -200,6 +204,14 @@ class RECalculationPage(tk.Frame):
 
         # Ensure the text spans the rest of the grid
         warning_frame.grid_columnconfigure(1, weight=1)
+        
+    def on_next_button(self):
+        res_page = self.controller.frames.get("TechnologiesPage")
+        if self.RE_Supply_Calculation_var.get(): 
+            for (var, label, entry) in self.re_calc_params_entries:
+                if label.cget('text') == "nom_power":res_page.solar_backup_var.set(value=var.get())
+                if label.cget('text') == "Rated Power [kW]:":res_page.wind_backup_var.set(value=var.get())
+        self.controller.show_frame("ArchetypesPage")
                 
     def __init__(self, parent, controller):
         ttk.Frame.__init__(self, parent)
@@ -223,7 +235,7 @@ class RECalculationPage(tk.Frame):
         self.load_and_display_image()
         
         # Add NavigationFrame at the very bottom
-        self.nav_frame = NavigationFrame(self, next_command=lambda: controller.show_frame("ArchetypesPage"))
+        self.nav_frame = NavigationFrame(self, next_command=self.on_next_button)
         self.nav_frame.grid(row=2, column=0, sticky='ew', columnspan=self.grid_size()[0])
 
         # Define custom font
@@ -297,7 +309,7 @@ class RECalculationPage(tk.Frame):
         
         self.re_calc_params_entries = []
         
-        self.solar_intro_label = ttk.Label(self.inner_frame, text="Solar PV panel:", font=self.italic_font, wraplength=850, justify="left")
+        self.solar_intro_label = ttk.Label(self.inner_frame, text="Solar PV panel parameters:", font=self.italic_font, wraplength=850, justify="left")
         self.solar_intro_label.grid(row=9, column=0, columnspan=3, pady=10, sticky='w')
         
         for i, (param, value) in enumerate(solar_pv_params.items(), start=10):  
@@ -318,12 +330,19 @@ class RECalculationPage(tk.Frame):
 
             self.re_calc_params_entries.append((var, label, entry))
             
-        self.wind_intro_label = ttk.Label(self.inner_frame, text="Wind turbine:", font=self.italic_font, wraplength=850, justify="left")
+        self.wind_intro_label = ttk.Label(self.inner_frame, text="Wind turbine parameters:", font=self.italic_font, wraplength=850, justify="left")
         self.wind_intro_label.grid(row=18, column=0, columnspan=3, pady=10, sticky='w')
+        
+        self.wind_nom_power_var = tk.DoubleVar(value=1670)  # Default value, will change based on turbine model selected
+        self.wind_nom_power_label = ttk.Label(self.inner_frame, text="Rated Power [W]:", state='disabled')
+        self.wind_nom_power_label.grid(row=21, column=0, sticky='w')
+        self.wind_nom_power_entry = ttk.Entry(self.inner_frame, textvariable=self.wind_nom_power_var, state='readonly') 
+        self.wind_nom_power_entry.grid(row=21, column=0, padx=20, sticky='e')
+        create_tooltip(self.wind_nom_power_entry, "Rated power of the selected wind turbine model [W]")
             
         # Turbine Type Dropdown
         self.turbine_type_var = tk.StringVar()
-        self.turbine_type_label = ttk.Label(self.inner_frame, text="turbine_type", state='disabled')
+        self.turbine_type_label = ttk.Label(self.inner_frame, text="Turbine type:", state='disabled')
         self.turbine_type_label.grid(row=19, column=0, sticky='w')
         self.turbine_type_combobox = ttk.Combobox(self.inner_frame, textvariable=self.turbine_type_var, state='disabled', values=turbine_types)
         self.turbine_type_combobox.grid(row=19, column=0, padx=20, sticky='e')
@@ -332,19 +351,22 @@ class RECalculationPage(tk.Frame):
 
         # Turbine Model Dropdown
         self.turbine_model_var = tk.StringVar()
-        self.turbine_model_label = ttk.Label(self.inner_frame, text="turbine_model", state='disabled')
+        self.turbine_model_label = ttk.Label(self.inner_frame, text="Turbine model:", state='disabled')
         self.turbine_model_label.grid(row=20, column=0, sticky='w')
         self.turbine_model_combobox = ttk.Combobox(self.inner_frame, textvariable=self.turbine_model_var, state='disabled')
         self.turbine_model_combobox.grid(row=20, column=0, padx=20, sticky='e')
+        self.turbine_model_combobox.bind('<<ComboboxSelected>>', self.update_wind_nom_power)
         self.update_turbine_model_options()
+        
+
         
         # Define StringVar for latitude and longitude
         self.drivetrain_efficiency_var = tk.DoubleVar(value=0.9)
         # Latitude and Longitude Entry Fields
-        self.drivetrain_efficiency_label = ttk.Label(self.inner_frame, text="drivetrain_efficiency", state='disabled')
-        self.drivetrain_efficiency_label.grid(row=21, column=0, sticky='w')
+        self.drivetrain_efficiency_label = ttk.Label(self.inner_frame, text="Drivetrain efficiency:", state='disabled')
+        self.drivetrain_efficiency_label.grid(row=22, column=0, sticky='w')
         self.drivetrain_efficiency_entry = ttk.Entry(self.inner_frame, textvariable=self.drivetrain_efficiency_var,state='disabled')
-        self.drivetrain_efficiency_entry.grid(row=21, column=0, padx=20,sticky='e')
+        self.drivetrain_efficiency_entry.grid(row=22, column=0, padx=20,sticky='e')
         create_tooltip(self.drivetrain_efficiency_entry, "Enter the drivetrain efficiency")
         # Create the warning label and grid it
         self.setup_warning()
@@ -359,6 +381,19 @@ class RECalculationPage(tk.Frame):
         self.turbine_model_combobox['values'] = models
         if models:
             self.turbine_model_combobox.set(models[0])  # Set default to first model
+        self.update_wind_nom_power()
+            
+    def update_wind_nom_power(self, event=None):
+        # A dictionary mapping the turbine model to its nominal power
+        turbine_nom_power = {
+                'Alstom.Eco.80': 1670000,
+                'NPS100c-21': 100000,
+                'Hi-VAWT.DS1500': 300,
+                'Hi-VAWT.DS700': 700
+            }
+        selected_model = self.turbine_model_var.get()
+        nom_power = turbine_nom_power.get(selected_model, 0.0)  # Default to 0 if model not found
+        self.wind_nom_power_var.set(nom_power)
 
 
         
