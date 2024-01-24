@@ -20,10 +20,10 @@ class TopSectionFrame(tk.Frame):
         self.pack(side='top', fill='x')
 
 class NavigationFrame(tk.Frame):
-    def __init__(self, parent, *args, **kwargs):
+    def __init__(self, parent, exit_command, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
         self.configure(background='#0f2c53', highlightbackground='#0f2c53', highlightthickness=2)
-        self.exit_button = ttk.Button(self, text="New Run", command=lambda: controller.show_frame("StartPage"))
+        self.exit_button = ttk.Button(self, text="New Run", command=exit_command)
         self.exit_button.pack(side='right', padx=10, pady=10)
         self.pack(side='bottom', fill='x')
 
@@ -318,7 +318,7 @@ class RunPage(tk.Frame):
         self.setup_plots_frame()
 
         # Navigation Frame
-        self.nav_frame = NavigationFrame(self)
+        self.nav_frame = NavigationFrame(self, lambda: controller.show_frame("StartPage"))
         self.nav_frame.pack(side='bottom', fill='x')
         
 
