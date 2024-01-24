@@ -102,6 +102,7 @@ Capacity Expansion and Increasing Fuel Cost
 This new simulation is designed to reflect the dynamic nature of energy needs in rural communities and the economic pressures that come with fuel-based generation. 
 By introducing capacity expansion every five years and modeling a 5% annual increase in fuel cost, the aim is to capture the potential shifts in technology usage and financial metrics, thereby providing a more realistic depiction of a mini-grid's performance over time.
 For the sake of semplicity, Wind Turbine has been removed from the available renewable technologies.
+
 .. raw:: html
 
   <div id="uniqueCarouselExample" class="carousel slide" data-ride="carousel">
@@ -345,19 +346,19 @@ Despite the significant variance in computation time, the output metrics related
 The economic implications, denoted by the Net Present Cost (NPC), total actualized Investment Cost, Operation Cost, and Levelized Cost of Electricity (LCOE), are comparable with marginal differences. This indicates that both solvers are capable of arriving at similar economic assessments for the given model parameters.
 
 
-MILP Formulation with Partial Load Effect and Variable Fuel Cost
----------------------------------------------
-This iteration of the model employs a Mixed-Integer Linear Programming (MILP) framework, strategically designed to simulate a decade-long operation of mini-grids with two intervals of capacity expansion. The MILP paradigm introduces binary decision variables to address unit commitment issues, allowing for a precise representation of start-up and shut-down activities of power generation units. 
-This inclusion significantly elevates the computational complexity due to the combinatorial nature of decision variables, which exponentially increases the solution space. 
-Consequently, the simulation quantifies the trade-offs between generation costs and reliability over the course of 10 years.
+.. MILP Formulation with Partial Load Effect and Variable Fuel Cost
+.. ---------------------------------------------
+.. This iteration of the model employs a Mixed-Integer Linear Programming (MILP) framework, strategically designed to simulate a decade-long operation of mini-grids with two intervals of capacity expansion. The MILP paradigm introduces binary decision variables to address unit commitment issues, allowing for a precise representation of start-up and shut-down activities of power generation units. 
+.. This inclusion significantly elevates the computational complexity due to the combinatorial nature of decision variables, which exponentially increases the solution space. 
+.. Consequently, the simulation quantifies the trade-offs between generation costs and reliability over the course of 10 years.
 
-In this iteration, the model integrates a Mixed-Integer Linear Programming (MILP) framework, adeptly designed to simulate the operation of mini-grids over a ten-year horizon with variable fuel costs, increasing annually by 10%. 
-This model includes binary decision variables for unit commitment, accurately depicting start-up and shut-down of power generation units, thereby considerably expanding the computational complexity due to the combinatorial explosion of the decision space.
+.. In this iteration, the model integrates a Mixed-Integer Linear Programming (MILP) framework, adeptly designed to simulate the operation of mini-grids over a ten-year horizon with variable fuel costs, increasing annually by 10%. 
+.. This model includes binary decision variables for unit commitment, accurately depicting start-up and shut-down of power generation units, thereby considerably expanding the computational complexity due to the combinatorial explosion of the decision space.
 
-**Results Interpretation**
+.. **Results Interpretation**
 
-The resultant energy mix from the simulation reveals a grid that is predominantly powered by renewable energy, with an annual renewable penetration rate averaging 83.17%. The solar photovoltaic (PV) components, though individually small in unit size, aggregate to a substantial capacity of 44.0, signifying a strategic inclination towards photovoltaic integration. The battery storage, cumulating to a capacity of 172.0, provides critical support for diurnal energy balancing, effectively mitigating the variability inherent in renewable generation. In contrast, the diesel generator’s role is minimized to a single 25 kW unit, reflecting the model’s preference for renewable over fossil-based generation.
+.. The resultant energy mix from the simulation reveals a grid that is predominantly powered by renewable energy, with an annual renewable penetration rate averaging 83.17%. The solar photovoltaic (PV) components, though individually small in unit size, aggregate to a substantial capacity of 44.0, signifying a strategic inclination towards photovoltaic integration. The battery storage, cumulating to a capacity of 172.0, provides critical support for diurnal energy balancing, effectively mitigating the variability inherent in renewable generation. In contrast, the diesel generator’s role is minimized to a single 25 kW unit, reflecting the model’s preference for renewable over fossil-based generation.
 
-The incorporation of the partial load effect in the MILP formulation offers a refined depiction of generator performance, capturing the operational nuances of suboptimal loading conditions. This factor increases the fidelity of the simulation by accounting for the variable efficiency and fuel consumption rates that characterize real-world generator usage. Concurrently, the model integrates a variable fuel cost mechanism that simulates an annual 10% escalation in diesel price, serving as an economic deterrent to the reliance on fossil-fuel-based generation. This progressive cost increment steers operational strategy towards a greater reliance on renewable assets and energy storage solutions, a shift that is both economically and environmentally strategic.
+.. The incorporation of the partial load effect in the MILP formulation offers a refined depiction of generator performance, capturing the operational nuances of suboptimal loading conditions. This factor increases the fidelity of the simulation by accounting for the variable efficiency and fuel consumption rates that characterize real-world generator usage. Concurrently, the model integrates a variable fuel cost mechanism that simulates an annual 10% escalation in diesel price, serving as an economic deterrent to the reliance on fossil-fuel-based generation. This progressive cost increment steers operational strategy towards a greater reliance on renewable assets and energy storage solutions, a shift that is both economically and environmentally strategic.
 
-The fiscal parameters of the system are encapsulated by a Net Present Cost (NPC) of 107.09 kUSD and a Levelized Cost of Energy (LCOE) of 0.2892 USD/kWh. These metrics not only quantify the economic viability of the mini-grid system but also underscore the cost-effectiveness of a renewable-driven energy paradigm when projected over a significant temporal span.
+.. The fiscal parameters of the system are encapsulated by a Net Present Cost (NPC) of 107.09 kUSD and a Levelized Cost of Energy (LCOE) of 0.2892 USD/kWh. These metrics not only quantify the economic viability of the mini-grid system but also underscore the cost-effectiveness of a renewable-driven energy paradigm when projected over a significant temporal span.
