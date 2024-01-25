@@ -179,10 +179,20 @@ class TechnologiesPage(tk.Frame):
                 label = ttk.Label(self.inner_frame, text=param) if i == 0 else None
                 if label:
                     label.grid(row=row, column=0, sticky='w')
+                    
+                # Retrieve initial state for the label and entry
+                initial_label_state = self.initial_states.get(param, {}).get('label', 'normal')
+                initial_entry_state = self.initial_states.get(param, {}).get('entry', 'normal')
 
                 # Create the entry widget
-                entry = ttk.Entry(self.inner_frame, textvariable=var, state='disabled' if (param == 'RES_Nominal_Capacity' and self.res_backup_var.get() == 1) else 'normal')
+                if param == 'RES_Nominal_Capacity' and self.res_backup_var.get() == 1:
+                    entry = ttk.Entry(self.inner_frame, textvariable=var, state='disabled')
+                else: 
+                    entry = ttk.Entry(self.inner_frame, textvariable=var, state=initial_entry_state)
                 entry.grid(row=row, column=1 + i, sticky='w')
+                
+                # Set the state of the label according to its initial state
+                if label:label.config(state=initial_label_state)
 
                 # Add the variable, label, and entry to the res_entries list
                 self.res_entries.append((var, label, entry))
@@ -194,7 +204,7 @@ class TechnologiesPage(tk.Frame):
             
     def toggle_brownfield_parameters(self):
         for (var, label, entry) in self.res_entries:
-            if label.cget('text') in self.brownfield_parameters:
+            if label and label.cget('text') in self.brownfield_parameters:
                label.config(state='normal')  
                entry.config(state='normal')
                self.initial_states[label.cget('text')] = {'label': 'normal', 'entry': 'normal'}
