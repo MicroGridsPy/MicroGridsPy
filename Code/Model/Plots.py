@@ -457,7 +457,7 @@ def CashFlowPlot(instance,Results,PlotResolution,PlotFormat):
     # Save the investment costs figure
     current_directory = os.path.dirname(os.path.abspath(__file__))
     results_directory = os.path.join(current_directory, '..', 'Results/Plots')
-    investment_plot_path = os.path.join(results_directory, 'Investment Costs Plot' + PlotFormat)
+    investment_plot_path = os.path.join(results_directory, 'Investment Costs Plot.' + PlotFormat)
     fig1.savefig(investment_plot_path, dpi=PlotResolution, bbox_inches='tight')
 
 
