@@ -604,115 +604,137 @@ def CashFlowPlot(instance,Results,PlotResolution,PlotFormat):
 
 #%%
 def SizePlot(instance, Results, PlotResolution, PlotFormat):
+
     print('       plotting components size...')
     fontticks = 18
     fontaxis = 20
     fontlegend = 20
 
-    #%% Importing parameters
-    S = int(instance.Scenarios.extract_values()[None])
-    ST = int(instance.Steps_Number.extract_values()[None])
-    R = int(instance.RES_Sources.extract_values()[None])
-    G = int(instance.Generator_Types.extract_values()[None])
+    idx = pd.IndexSlice
 
-    RES_Names = instance.RES_Names.extract_values()
+    #%% Importing parameters
+    S  = int(instance.Scenarios.extract_values()[None])
+    ST = int(instance.Steps_Number.extract_values()[None])
+    R  = int(instance.RES_Sources.extract_values()[None])
+    G  = int(instance.Generator_Types.extract_values()[None])
+
+    RES_Names       = instance.RES_Names.extract_values()
     Generator_Names = instance.Generator_Names.extract_values()
 
-    #%% Plotting
-    RES_Colors = instance.RES_Colors.extract_values()
-    BESS_Color = instance.Battery_Color()
+    # Plotting
+    RES_Colors  = instance.RES_Colors.extract_values()
+    BESS_Color  = instance.Battery_Color()
     Generator_Colors = instance.Generator_Colors.extract_values()
 
-    # Determine the maximum kW and kWh values for setting plot limits
-    max_kW = max_kWh = 0  # Initialize to zero
-
-    # Check if 'Size' is present in Results and get the appropriate DataFrame
-    if 'Size' in Results:
-        size_df = Results['Size']
-        # Check if 'kW' and 'kWh' are present in the columns
-        if 'kW' in size_df.columns and 'kWh' in size_df.columns:
-            max_kW = size_df.loc[:, ('kW', 'Total')].max()
-            max_kWh = size_df.loc[:, ('kWh', 'Total')].max()
-        else:
-            # Handle the case where either 'kW' or 'kWh' is missing
-            if 'kW' not in size_df.columns:
-                print("Warning: 'kW' data not found in Results['Size']. Skipping kW plot.")
-            if 'kWh' not in size_df.columns:
-                print("Warning: 'kWh' data not found in Results['Size']. Skipping kWh plot.")
-
-    # Single step scenario plotting
     if ST == 1:
-        fig, ax1 = plt.subplots(figsize=(20, 15))
-        if instance.Model_Components.value == 0:
-            x_positions = np.arange(R + G + 1)
-        elif instance.Model_Components.value == 1:
-            x_positions = np.arange(R + 1)
-        elif instance.Model_Components.value == 2:
-            x_positions = np.arange(R + G)
+        fig, ax1 = plt.subplots(nrows=1, ncols=1, figsize=(20, 15))
+        x_positions = np.arange(R + G)
         x_ticks = []
+        ax2 = None  # Initialize ax2 as None
 
-        # Plotting for Renewable Energy Sources
         for r in range(1, R + 1):
             ax1.bar(x_positions[r - 1],
-                    size_df.loc[RES_Names[r], ('kW', 'Total')],
-                    color=RES_Colors[r],
+                    Results['Size'].loc[idx[RES_Names[r], :], 'Total'].values[0],
+                    color='#' + RES_Colors[r],
                     edgecolor='black',
                     label=RES_Names[r],
                     zorder=3)
-            x_ticks.append(RES_Names[r])
+            x_ticks += [RES_Names[r]]
 
-        # Plotting for Generators
-        if G > 0:
-            for g in range(1, G + 1):
-                ax1.bar(x_positions[R + g - 1],
-                        size_df.loc[Generator_Names[g], ('kW', 'Total')],
-                        color=Generator_Colors[g],
-                        edgecolor='black',
-                        label=Generator_Names[g],
-                        zorder=3)
-                x_ticks.append(Generator_Names[g])
+        for g in range(1, G + 1):
+            ax1.bar(x_positions[R + g - 1],
+                    Results['Size'].loc[idx[Generator_Names[g], :], 'Total'].values[0],
+                    color='#' + Generator_Colors[g],
+                    edgecolor='black',
+                    label=Generator_Names[g],
+                    zorder=3)
+            x_ticks += [Generator_Names[g]]
 
-        # Set x and y labels, limits, and ticks for the primary y-axis
-        ax1.set_xlabel('Components', fontsize=fontaxis)
-        ax1.set_ylabel('Installed capacity [kW]', fontsize=fontaxis)
-        ax1.set_ylim(0, max_kW * 1.1)  # Set y-limits for kW
-        ax1.set_xticks(x_positions)
-        ax1.set_xticklabels(x_ticks, fontsize=fontticks)
-
-        # Add legend, adjust layout, and save the plot
-        fig.legend(loc='upper left', bbox_to_anchor=(1, 1), ncol=1, fontsize=fontlegend)
-        fig.tight_layout()
-
-        current_directory = os.path.dirname(os.path.abspath(__file__))
-        results_directory = os.path.join(current_directory, '..', 'Results/Plots')
-        plot_path = os.path.join(results_directory, 'SizePlot_kW.' + PlotFormat)
-        fig.savefig(plot_path, dpi=PlotResolution, bbox_inches='tight')
-
-        # Check if 'kWh' is present in Results before creating the kWh plot
-        if 'kWh' in size_df.columns and (instance.Model_Components.value == 0 or instance.Model_Components.value == 1):
-            fig2, ax2 = plt.subplots(figsize=(20, 15))
+        if 'Battery bank' in Results['Size'].index.get_level_values(0):
+            ax2 = ax1.twinx()  # Create ax2 only if battery is present
             ax2.bar(x_positions[-1],
-                    size_df.loc['Battery bank', ('kWh', 'Total')],
-                    color=BESS_Color,
+                    Results['Size'].loc[idx['Battery bank', :], 'Total'].values[0],
+                    color='#' + BESS_Color,
                     edgecolor='black',
                     label='Battery bank',
                     zorder=3)
-            ax2.set_ylabel('Installed capacity [kWh]', fontsize=fontaxis)
-            ax2.set_ylim(0, max_kWh * 1.1)  # Set y-limits for kWh if applicable
-            x_ticks.append('Battery bank')
+            x_ticks += ['Battery bank']
 
-            # Set x and y labels, limits, and ticks for the secondary y-axis
-            ax2.set_xlabel('Components', fontsize=fontaxis)
+        ax1.set_xlabel('Components', fontsize=fontaxis)
+        ax1.set_ylabel('Installed capacity [kW]', fontsize=fontaxis)
+        ax1.set_xticks(x_positions)
+        ax1.set_xticklabels(x_ticks, fontsize=fontticks)
+        ax1.margins(x=0.009)
+        ax1.set_yticklabels(ax1.get_yticks(), fontsize=fontticks)
+        ax1.grid(True, zorder=2)
+
+        if ax2 is not None:
             ax2.set_ylabel('Installed capacity [kWh]', fontsize=fontaxis)
-            ax2.set_ylim(0, max_kWh * 1.1)  # Set y-limits for kWh
             ax2.set_xticks(x_positions)
             ax2.set_xticklabels(x_ticks, fontsize=fontticks)
+            ax2.margins(x=0.009)
+            ax2.set_yticklabels(ax2.get_yticks(), fontsize=fontticks)
 
-            # Add legend, adjust layout, and save the kWh plot
-            fig2.legend(loc='upper left', bbox_to_anchor=(1, 1), ncol=1, fontsize=fontlegend)
-            fig2.tight_layout()
+    if ST != 1:
+        fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, figsize=(20, 15), sharex=True)
 
-            # Save the kWh plot
-            plot_path_kWh = os.path.join(results_directory, 'SizePlot_kWh.' + PlotFormat)
-            fig2.savefig(plot_path_kWh, dpi=PlotResolution, bbox_inches='tight')
+        base = [0 for i in range(1, ST + 1)]
+        x_positions = np.arange(ST)
+        steps = ['Step ' + str(st) for st in range(1, ST + 1)]
+        base = [0 for i in range(ST)]
+
+        for r in range(1, R + 1):
+            ax1.bar(x_positions,
+                    Results['Size'].loc[idx[RES_Names[r], :], ['Step ' + str(s) for s in range(1, ST + 1)]].values[0],
+                    color='#' + RES_Colors[r],
+                    edgecolor='black',
+                    label=RES_Names[r],
+                    zorder=3,
+                    bottom=base)
+            base = [a + b for (a, b) in zip(base, Results['Size'].loc[idx[RES_Names[r], :],
+                                                                ['Step ' + str(s) for s in range(1, ST + 1)]].values[0])]
+
+        for g in range(1, G + 1):
+            ax1.bar(x_positions,
+                    Results['Size'].loc[idx[Generator_Names[g], :], ['Step ' + str(s) for s in range(1, ST + 1)]].values[0],
+                    color='#' + Generator_Colors[g],
+                    edgecolor='black',
+                    label=Generator_Names[g],
+                    zorder=3,
+                    bottom=base)
+            base = [a + b for (a, b) in zip(base, Results['Size'].loc[idx[Generator_Names[g], :],
+                                                                ['Step ' + str(s) for s in range(1, ST + 1)]].values[0])]
+
+        if 'Battery bank' in Results['Size'].index.get_level_values(0):
+            ax2.bar(x_positions,
+                    Results['Size'].loc[idx['Battery bank', :], ['Step ' + str(s) for s in range(1, ST + 1)]].values[0],
+                    color='#' + BESS_Color,
+                    edgecolor='black',
+                    label='Battery bank',
+                    zorder=3)
+
+        ax1.set_ylabel('Installed capacity [kW]', fontsize=fontaxis)
+        ax1.set_xticks(x_positions)
+        ax1.set_xticklabels([])  # Remove x-axis labels for the kW plot
+        ax1.margins(x=0.009)
+        ax1.set_yticklabels(ax1.get_yticks(), fontsize=fontticks)
+        ax1.grid(True, axis='y', zorder=2)
+
+        if 'Battery bank' in Results['Size'].index.get_level_values(0):
+            ax2.set_ylabel('Installed capacity [kWh]', fontsize=fontaxis)
+            ax2.set_xticks(x_positions)
+            ax2.set_xticklabels(steps, fontsize=fontticks)
+            ax2.margins(x=0.009)
+            ax2.set_yticklabels(ax2.get_yticks(), fontsize=fontticks)
+            ax2.grid(True, axis='y', zorder=2)
+
+    fig.legend(bbox_to_anchor=(1.19, 0.98), ncol=1, fontsize=fontlegend, frameon=True)
+    fig.tight_layout()
+
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    results_directory = os.path.join(current_directory, '..', 'Results/Plots')
+    plot_path = os.path.join(results_directory, 'SizePlot.' + PlotFormat)
+    fig.savefig(plot_path, dpi=PlotResolution, bbox_inches='tight')
+
+
 
