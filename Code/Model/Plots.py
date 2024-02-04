@@ -609,8 +609,6 @@ def SizePlot(instance, Results, PlotResolution, PlotFormat):
     fontaxis = 20
     fontlegend = 20
 
-    idx = pd.IndexSlice
-
     #%% Importing parameters
     S = int(instance.Scenarios.extract_values()[None])
     ST = int(instance.Steps_Number.extract_values()[None])
@@ -628,11 +626,19 @@ def SizePlot(instance, Results, PlotResolution, PlotFormat):
     # Determine the maximum kW and kWh values for setting plot limits
     max_kW = max_kWh = 0  # Initialize to zero
 
-    if 'kW' in Results['Size'].columns.get_level_values(1):
-        max_kW = Results['Size'].loc[idx[:, 'kW'], 'Total'].max()
-
-    if 'kWh' in Results['Size'].columns.get_level_values(1):
-        max_kWh = Results['Size'].loc[idx[:, 'kWh'], 'Total'].max()
+    # Check if 'Size' is present in Results and get the appropriate DataFrame
+    if 'Size' in Results:
+        size_df = Results['Size']
+        # Check if 'kW' and 'kWh' are present in the columns
+        if 'kW' in size_df.columns and 'kWh' in size_df.columns:
+            max_kW = size_df.loc[:, ('kW', 'Total')].max()
+            max_kWh = size_df.loc[:, ('kWh', 'Total')].max()
+        else:
+            # Handle the case where either 'kW' or 'kWh' is missing
+            if 'kW' not in size_df.columns:
+                print("Warning: 'kW' data not found in Results['Size']. Skipping kW plot.")
+            if 'kWh' not in size_df.columns:
+                print("Warning: 'kWh' data not found in Results['Size']. Skipping kWh plot.")
 
     # Single step scenario plotting
     if ST == 1:
@@ -648,7 +654,7 @@ def SizePlot(instance, Results, PlotResolution, PlotFormat):
         # Plotting for Renewable Energy Sources
         for r in range(1, R + 1):
             ax1.bar(x_positions[r - 1],
-                    Results['Size'].loc[idx[RES_Names[r], :], 'Total'].values[0],
+                    size_df.loc[RES_Names[r], ('kW', 'Total')],
                     color=RES_Colors[r],
                     edgecolor='black',
                     label=RES_Names[r],
@@ -659,7 +665,7 @@ def SizePlot(instance, Results, PlotResolution, PlotFormat):
         if G > 0:
             for g in range(1, G + 1):
                 ax1.bar(x_positions[R + g - 1],
-                        Results['Size'].loc[idx[Generator_Names[g], :], 'Total'].values[0],
+                        size_df.loc[Generator_Names[g], ('kW', 'Total')],
                         color=Generator_Colors[g],
                         edgecolor='black',
                         label=Generator_Names[g],
@@ -679,14 +685,14 @@ def SizePlot(instance, Results, PlotResolution, PlotFormat):
 
         current_directory = os.path.dirname(os.path.abspath(__file__))
         results_directory = os.path.join(current_directory, '..', 'Results/Plots')
-        plot_path = os.path.join(results_directory, 'Size Plot [kW].' + PlotFormat)
+        plot_path = os.path.join(results_directory, 'SizePlot_kW.' + PlotFormat)
         fig.savefig(plot_path, dpi=PlotResolution, bbox_inches='tight')
 
         # Check if 'kWh' is present in Results before creating the kWh plot
-        if 'kWh' in Results['Size'].columns.get_level_values(1) and (instance.Model_Components.value == 0 or instance.Model_Components.value == 1):
+        if 'kWh' in size_df.columns and (instance.Model_Components.value == 0 or instance.Model_Components.value == 1):
             fig2, ax2 = plt.subplots(figsize=(20, 15))
             ax2.bar(x_positions[-1],
-                    Results['Size'].loc[idx['Battery bank', :], 'Total'].values[0],
+                    size_df.loc['Battery bank', ('kWh', 'Total')],
                     color=BESS_Color,
                     edgecolor='black',
                     label='Battery bank',
@@ -707,6 +713,6 @@ def SizePlot(instance, Results, PlotResolution, PlotFormat):
             fig2.tight_layout()
 
             # Save the kWh plot
-            plot_path_kWh = os.path.join(results_directory, 'Size Plot [kWh].' + PlotFormat)
+            plot_path_kWh = os.path.join(results_directory, 'SizePlot_kWh.' + PlotFormat)
             fig2.savefig(plot_path_kWh, dpi=PlotResolution, bbox_inches='tight')
 
