@@ -78,7 +78,8 @@ class RunPage(tk.Frame):
                 self.update_output("Plots ready to show\n")
                 self.show_dispatch_plot_button['state'] = 'normal'
                 self.size_plot_button['state'] = 'normal'
-                self.cash_plot_button['state'] = 'normal'
+                self.inv_plot_button['state'] = 'normal'
+                self.om_plot_button['state'] = 'normal'
                 if self.instance.Multiobjective_Optimization.value: self.show_pareto_curve_button.configure(state='normal')
         
     def show_size_plot(self):
@@ -101,11 +102,31 @@ class RunPage(tk.Frame):
         plot_label.image = plot_photo  # Keep a reference!
         plot_label.pack()
         
-    def show_cash_plot(self):
+    def show_investment_plot(self):
         # Load the saved plot image
         current_directory = os.path.dirname(os.path.abspath(__file__))
         results_directory = os.path.join(current_directory, '..', 'Results/Plots')
-        plot_path = os.path.join(results_directory, 'CashFlowPlot.png')
+        plot_path = os.path.join(results_directory, 'Investment Costs.png')
+        plot_image = Image.open(plot_path)
+        plot_photo = ImageTk.PhotoImage(plot_image)
+        
+        resized_image = plot_image.resize((700, 700))
+        plot_photo = ImageTk.PhotoImage(resized_image)
+
+        # Create a new window or use an existing frame
+        plot_window = tk.Toplevel(self)
+        plot_window.title("Cash Flow Plot")
+
+        # Display the image in a label widget
+        plot_label = tk.Label(plot_window, image=plot_photo)
+        plot_label.image = plot_photo  # Keep a reference!
+        plot_label.pack()
+        
+    def show_om_plot(self):
+        # Load the saved plot image
+        current_directory = os.path.dirname(os.path.abspath(__file__))
+        results_directory = os.path.join(current_directory, '..', 'Results/Plots')
+        plot_path = os.path.join(results_directory, 'O&M Costs.png')
         plot_image = Image.open(plot_path)
         plot_photo = ImageTk.PhotoImage(plot_image)
         
@@ -242,12 +263,15 @@ class RunPage(tk.Frame):
         self.size_plot_button = ttk.Button(self.plots_frame, text="Show Size Plot", command=self.show_size_plot, state='disabled')
         self.size_plot_button.grid(row=0, column=2, padx=5, pady=5)
 
-        self.cash_plot_button = ttk.Button(self.plots_frame, text="Cash Flow Plot", command=self.show_cash_plot, state='disabled')
-        self.cash_plot_button.grid(row=0, column=3, padx=5, pady=5)
+        self.inv_plot_button = ttk.Button(self.plots_frame, text="Investment Costs Plot", command=self.show_investment_plot, state='disabled')
+        self.inv_plot_button.grid(row=0, column=3, padx=5, pady=5)
+        
+        self.om_plot_button = ttk.Button(self.plots_frame, text="O&M Costs Plot", command=self.show_om_plot, state='disabled')
+        self.om_plot_button.grid(row=0, column=4, padx=5, pady=5)
 
         # Placeholder for Pareto Curve Button (if needed)
         self.show_pareto_curve_button = ttk.Button(self.plots_frame, text="Show Pareto Curve", command=self.show_pareto_plot, state='disabled')
-        self.show_pareto_curve_button.grid(row=0, column=4, padx=5, pady=5)
+        self.show_pareto_curve_button.grid(row=0, column=5, padx=5, pady=5)
         
     def setup_output_frame(self):
         self.output_text = tk.Text(self.output_frame, height=15)
