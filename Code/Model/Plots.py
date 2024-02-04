@@ -608,18 +608,18 @@ def SizePlot(instance, Results, PlotResolution, PlotFormat):
     fontticks = 18
     fontaxis = 20
     fontlegend = 20
-    
+
     idx = pd.IndexSlice
-    
+
     #%% Importing parameters
     S = int(instance.Scenarios.extract_values()[None])
     ST = int(instance.Steps_Number.extract_values()[None])
     R = int(instance.RES_Sources.extract_values()[None])
     G = int(instance.Generator_Types.extract_values()[None])
-    
+
     RES_Names = instance.RES_Names.extract_values()
     Generator_Names = instance.Generator_Names.extract_values()
-    
+
     #%% Plotting
     RES_Colors = instance.RES_Colors.extract_values()
     BESS_Color = instance.Battery_Color()
@@ -630,7 +630,7 @@ def SizePlot(instance, Results, PlotResolution, PlotFormat):
 
     if 'kW' in Results['Size'].columns.get_level_values(1):
         max_kW = Results['Size'].loc[idx[:, 'kW'], 'Total'].max()
-    
+
     if 'kWh' in Results['Size'].columns.get_level_values(1):
         max_kWh = Results['Size'].loc[idx[:, 'kWh'], 'Total'].max()
 
@@ -666,9 +666,25 @@ def SizePlot(instance, Results, PlotResolution, PlotFormat):
                         zorder=3)
                 x_ticks.append(Generator_Names[g])
 
-        # Plotting for Battery bank if the 'kWh' key exists
+        # Set x and y labels, limits, and ticks for the primary y-axis
+        ax1.set_xlabel('Components', fontsize=fontaxis)
+        ax1.set_ylabel('Installed capacity [kW]', fontsize=fontaxis)
+        ax1.set_ylim(0, max_kW * 1.1)  # Set y-limits for kW
+        ax1.set_xticks(x_positions)
+        ax1.set_xticklabels(x_ticks, fontsize=fontticks)
+
+        # Add legend, adjust layout, and save the plot
+        fig.legend(loc='upper left', bbox_to_anchor=(1, 1), ncol=1, fontsize=fontlegend)
+        fig.tight_layout()
+
+        current_directory = os.path.dirname(os.path.abspath(__file__))
+        results_directory = os.path.join(current_directory, '..', 'Results/Plots')
+        plot_path = os.path.join(results_directory, 'Size Plot [kW].' + PlotFormat)
+        fig.savefig(plot_path, dpi=PlotResolution, bbox_inches='tight')
+
+        # Check if 'kWh' is present in Results before creating the kWh plot
         if 'kWh' in Results['Size'].columns.get_level_values(1) and (instance.Model_Components.value == 0 or instance.Model_Components.value == 1):
-            ax2 = ax1.twinx()  # Create a second y-axis for kWh
+            fig2, ax2 = plt.subplots(figsize=(20, 15))
             ax2.bar(x_positions[-1],
                     Results['Size'].loc[idx['Battery bank', :], 'Total'].values[0],
                     color=BESS_Color,
@@ -679,20 +695,18 @@ def SizePlot(instance, Results, PlotResolution, PlotFormat):
             ax2.set_ylim(0, max_kWh * 1.1)  # Set y-limits for kWh if applicable
             x_ticks.append('Battery bank')
 
-        # Set x and y labels, limits, and ticks for the primary y-axis
-        ax1.set_xlabel('Components', fontsize=fontaxis)
-        ax1.set_ylabel('Installed capacity [kW]', fontsize=fontaxis)
-        ax1.set_ylim(0, max_kW * 1.1)  # Set y-limits for kW
-        ax1.set_xticks(x_positions)
-        ax1.set_xticklabels(x_ticks, fontsize=fontticks)
-        
-        # Add legend, adjust layout, and save the plot
-        fig.legend(loc='upper left', bbox_to_anchor=(1, 1), ncol=1, fontsize=fontlegend)
-        fig.tight_layout()
-    
-    current_directory = os.path.dirname(os.path.abspath(__file__))
-    results_directory = os.path.join(current_directory, '..', 'Results/Plots')
-    plot_path = os.path.join(results_directory, 'SizePlot.')
-    fig.savefig(plot_path + PlotFormat, dpi=PlotResolution, bbox_inches='tight')
+            # Set x and y labels, limits, and ticks for the secondary y-axis
+            ax2.set_xlabel('Components', fontsize=fontaxis)
+            ax2.set_ylabel('Installed capacity [kWh]', fontsize=fontaxis)
+            ax2.set_ylim(0, max_kWh * 1.1)  # Set y-limits for kWh
+            ax2.set_xticks(x_positions)
+            ax2.set_xticklabels(x_ticks, fontsize=fontticks)
 
+            # Add legend, adjust layout, and save the kWh plot
+            fig2.legend(loc='upper left', bbox_to_anchor=(1, 1), ncol=1, fontsize=fontlegend)
+            fig2.tight_layout()
+
+            # Save the kWh plot
+            plot_path_kWh = os.path.join(results_directory, 'Size Plot [kWh].' + PlotFormat)
+            fig2.savefig(plot_path_kWh, dpi=PlotResolution, bbox_inches='tight')
 
