@@ -106,7 +106,7 @@ class RunPage(tk.Frame):
         # Load the saved plot image
         current_directory = os.path.dirname(os.path.abspath(__file__))
         results_directory = os.path.join(current_directory, '..', 'Results/Plots')
-        plot_path = os.path.join(results_directory, 'Investment Costs.png')
+        plot_path = os.path.join(results_directory, 'Investment Costs Plot.png')
         plot_image = Image.open(plot_path)
         plot_photo = ImageTk.PhotoImage(plot_image)
         
@@ -126,7 +126,7 @@ class RunPage(tk.Frame):
         # Load the saved plot image
         current_directory = os.path.dirname(os.path.abspath(__file__))
         results_directory = os.path.join(current_directory, '..', 'Results/Plots')
-        plot_path = os.path.join(results_directory, 'O&M Costs.png')
+        plot_path = os.path.join(results_directory, 'O&M Costs Plot.png')
         plot_image = Image.open(plot_path)
         plot_photo = ImageTk.PhotoImage(plot_image)
         
