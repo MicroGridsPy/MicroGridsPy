@@ -577,6 +577,21 @@ def CashFlowPlot(instance,Results,PlotResolution,PlotFormat):
             edgecolor= 'black',
             hatch='//',                     
             zorder = 3) 
+    
+    "Technology color legend traces"
+    if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:
+        ax2.bar(0, 0, color='#' + BESS_Color, edgecolor='black', label='Battery bank', zorder=3)
+
+    if instance.Grid_Connection.value == 1:
+        ax2.bar(0, 0, color='#' + Grid_Color, edgecolor='black', label='National Grid', zorder=3)
+
+    for r in range(1, R + 1):
+        ax2.bar(0, 0, color='#' + RES_Colors[r], edgecolor='black', label=RES_Names[r], zorder=3)
+
+    if instance.Model_Components.value == 0 or instance.Model_Components.value == 2:
+        for g in range(1, G + 1):
+            ax2.bar(0, 0, color='#' + Generator_Colors[g], edgecolor='black', label=Generator_Names[g], zorder=3)
+
 
     # Set the labels, ticks, and grid for the second subplot (ax2)
     ax2.set_xlabel('Years', fontsize='large')  # Set the font size as needed
@@ -603,131 +618,134 @@ def CashFlowPlot(instance,Results,PlotResolution,PlotFormat):
 
 
 #%%
+
 def SizePlot(instance, Results, PlotResolution, PlotFormat):
 
     print('       plotting components size...')
     fontticks = 18
     fontaxis = 20
     fontlegend = 20
-
-    idx = pd.IndexSlice
-
-    #%% Importing parameters
-    S  = int(instance.Scenarios.extract_values()[None])
+    
+    # Importing parameters
     ST = int(instance.Steps_Number.extract_values()[None])
-    R  = int(instance.RES_Sources.extract_values()[None])
-    G  = int(instance.Generator_Types.extract_values()[None])
+    R = int(instance.RES_Sources.extract_values()[None])
+    G = int(instance.Generator_Types.extract_values()[None])
+    component = instance.Model_Components.value
 
-    RES_Names       = instance.RES_Names.extract_values()
+    RES_Names = instance.RES_Names.extract_values()
     Generator_Names = instance.Generator_Names.extract_values()
-
-    # Plotting
-    RES_Colors  = instance.RES_Colors.extract_values()
-    BESS_Color  = instance.Battery_Color()
+    RES_Colors = instance.RES_Colors.extract_values()
     Generator_Colors = instance.Generator_Colors.extract_values()
+    BESS_Color = instance.Battery_Color()
 
+    # Single step or multiple steps
     if ST == 1:
-        fig, ax1 = plt.subplots(nrows=1, ncols=1, figsize=(20, 15))
-        x_positions = np.arange(R + G)
-        x_ticks = []
-        ax2 = None  # Initialize ax2 as None
+        fig, ax1 = plt.subplots(figsize=(20, 15))
+        ax2 = ax1.twinx() if component in [0, 1] else None
 
+        x_positions = np.arange(R + G + 1) if component == 0 else np.arange(R + G) if component == 2 else np.arange(R + 1)
+        x_ticks = []
+
+        # Plotting for RES
         for r in range(1, R + 1):
             ax1.bar(x_positions[r - 1],
-                    Results['Size'].loc[idx[RES_Names[r], :], 'Total'].values[0],
+                    Results['Size'].loc[pd.IndexSlice[RES_Names[r], :], 'Total'].values[0],
                     color='#' + RES_Colors[r],
                     edgecolor='black',
                     label=RES_Names[r],
                     zorder=3)
-            x_ticks += [RES_Names[r]]
+            x_ticks.append(RES_Names[r])
 
-        for g in range(1, G + 1):
-            ax1.bar(x_positions[R + g - 1],
-                    Results['Size'].loc[idx[Generator_Names[g], :], 'Total'].values[0],
-                    color='#' + Generator_Colors[g],
-                    edgecolor='black',
-                    label=Generator_Names[g],
-                    zorder=3)
-            x_ticks += [Generator_Names[g]]
+        # Plotting for Generators
+        if G > 0 and component != 1:
+            for g in range(1, G + 1):
+                ax1.bar(x_positions[R + g - 1],
+                        Results['Size'].loc[pd.IndexSlice[Generator_Names[g], :], 'Total'].values[0],
+                        color='#' + Generator_Colors[g],
+                        edgecolor='black',
+                        label=Generator_Names[g],
+                        zorder=3)
+                x_ticks.append(Generator_Names[g])
 
-        if 'Battery bank' in Results['Size'].index.get_level_values(0):
-            ax2 = ax1.twinx()  # Create ax2 only if battery is present
+        # Plotting for Battery
+        if component in [0, 1]:
             ax2.bar(x_positions[-1],
-                    Results['Size'].loc[idx['Battery bank', :], 'Total'].values[0],
+                    Results['Size'].loc[pd.IndexSlice['Battery bank', :], 'Total'].values[0],
                     color='#' + BESS_Color,
                     edgecolor='black',
                     label='Battery bank',
                     zorder=3)
-            x_ticks += ['Battery bank']
+            x_ticks.append('Battery bank')
 
+        # Set labels and ticks
         ax1.set_xlabel('Components', fontsize=fontaxis)
         ax1.set_ylabel('Installed capacity [kW]', fontsize=fontaxis)
         ax1.set_xticks(x_positions)
         ax1.set_xticklabels(x_ticks, fontsize=fontticks)
         ax1.margins(x=0.009)
-        ax1.set_yticklabels(ax1.get_yticks(), fontsize=fontticks)
-        ax1.grid(True, zorder=2)
+        ax1.set_title('Mini-Grid Sizing [kW]', fontsize=fontaxis)
 
-        if ax2 is not None:
+        if ax2:
             ax2.set_ylabel('Installed capacity [kWh]', fontsize=fontaxis)
             ax2.set_xticks(x_positions)
             ax2.set_xticklabels(x_ticks, fontsize=fontticks)
             ax2.margins(x=0.009)
-            ax2.set_yticklabels(ax2.get_yticks(), fontsize=fontticks)
+            ax2.set_title('Mini-Grid Sizing [kWh]', fontsize=fontaxis)
 
-    if ST != 1:
-        fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, figsize=(20, 15), sharex=True)
-
-        base = [0 for i in range(1, ST + 1)]
+    else:
+        # Multiple steps logic
+        fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, figsize=(20, 15))
         x_positions = np.arange(ST)
         steps = ['Step ' + str(st) for st in range(1, ST + 1)]
-        base = [0 for i in range(ST)]
+        base = [0 for _ in range(ST)]
 
+        # Plotting for RES and Generators
         for r in range(1, R + 1):
-            ax1.bar(x_positions,
-                    Results['Size'].loc[idx[RES_Names[r], :], ['Step ' + str(s) for s in range(1, ST + 1)]].values[0],
+            ax1.bar(x_positions, 
+                    Results['Size'].loc[pd.IndexSlice[RES_Names[r], :], steps].values[0], 
                     color='#' + RES_Colors[r],
                     edgecolor='black',
                     label=RES_Names[r],
-                    zorder=3,
+                    zorder=3, 
                     bottom=base)
-            base = [a + b for (a, b) in zip(base, Results['Size'].loc[idx[RES_Names[r], :],
-                                                                ['Step ' + str(s) for s in range(1, ST + 1)]].values[0])]
+            base = [a+b for a, b in zip(base, Results['Size'].loc[pd.IndexSlice[RES_Names[r], :], steps].values[0])]
 
-        for g in range(1, G + 1):
-            ax1.bar(x_positions,
-                    Results['Size'].loc[idx[Generator_Names[g], :], ['Step ' + str(s) for s in range(1, ST + 1)]].values[0],
-                    color='#' + Generator_Colors[g],
-                    edgecolor='black',
-                    label=Generator_Names[g],
-                    zorder=3,
-                    bottom=base)
-            base = [a + b for (a, b) in zip(base, Results['Size'].loc[idx[Generator_Names[g], :],
-                                                                ['Step ' + str(s) for s in range(1, ST + 1)]].values[0])]
+        if component != 1:
+            for g in range(1, G + 1):
+                ax1.bar(x_positions, 
+                        Results['Size'].loc[pd.IndexSlice[Generator_Names[g], :], steps].values[0], 
+                        color='#' + Generator_Colors[g],
+                        edgecolor='black',
+                        label=Generator_Names[g],
+                        zorder=3, 
+                        bottom=base)
+                base = [a+b for a, b in zip(base, Results['Size'].loc[pd.IndexSlice[Generator_Names[g], :], steps].values[0])]
 
-        if 'Battery bank' in Results['Size'].index.get_level_values(0):
-            ax2.bar(x_positions,
-                    Results['Size'].loc[idx['Battery bank', :], ['Step ' + str(s) for s in range(1, ST + 1)]].values[0],
+        # Plotting for Battery
+        if component in [0, 1]:
+            ax2.bar(x_positions, 
+                    Results['Size'].loc[pd.IndexSlice['Battery bank', :], steps].values[0], 
                     color='#' + BESS_Color,
                     edgecolor='black',
                     label='Battery bank',
-                    zorder=3)
+                    zorder=3) 
 
+        # Set labels and ticks
+        ax1.set_xlabel('Investment steps', fontsize=fontaxis)
         ax1.set_ylabel('Installed capacity [kW]', fontsize=fontaxis)
         ax1.set_xticks(x_positions)
-        ax1.set_xticklabels([])  # Remove x-axis labels for the kW plot
+        ax1.set_xticklabels(steps, fontsize=fontticks)
         ax1.margins(x=0.009)
-        ax1.set_yticklabels(ax1.get_yticks(), fontsize=fontticks)
-        ax1.grid(True, axis='y', zorder=2)
+        ax1.set_title('Mini-Grid Sizing [kW]', fontsize=fontaxis)
 
-        if 'Battery bank' in Results['Size'].index.get_level_values(0):
-            ax2.set_ylabel('Installed capacity [kWh]', fontsize=fontaxis)
-            ax2.set_xticks(x_positions)
-            ax2.set_xticklabels(steps, fontsize=fontticks)
-            ax2.margins(x=0.009)
-            ax2.set_yticklabels(ax2.get_yticks(), fontsize=fontticks)
-            ax2.grid(True, axis='y', zorder=2)
+        ax2.set_xlabel('Investment steps', fontsize=fontaxis)
+        ax2.set_ylabel('Installed capacity [kWh]', fontsize=fontaxis)
+        ax2.set_xticks(x_positions)
+        ax2.set_xticklabels(steps, fontsize=fontticks)
+        ax2.margins(x=0.009)
+        ax2.set_title('Mini-Grid Sizing [kWh]', fontsize=fontaxis)
 
+    # Set legend and save
     fig.legend(bbox_to_anchor=(1.19, 0.98), ncol=1, fontsize=fontlegend, frameon=True)
     fig.tight_layout()
 
@@ -735,6 +753,7 @@ def SizePlot(instance, Results, PlotResolution, PlotFormat):
     results_directory = os.path.join(current_directory, '..', 'Results/Plots')
     plot_path = os.path.join(results_directory, 'SizePlot.' + PlotFormat)
     fig.savefig(plot_path, dpi=PlotResolution, bbox_inches='tight')
+
 
 
 
