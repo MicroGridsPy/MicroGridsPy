@@ -113,7 +113,11 @@ class RECalculationPage(tk.Frame):
         return input_data
     
     def toggle_re_calc_parameters(self, *args):
-        state = 'normal' if self.RE_Supply_Calculation_var.get() == 1 else 'disabled'
+        if self.RE_Supply_Calculation_var.get() == 1:
+            state = 'normal'
+        else:
+            state = 'disabled'
+        # Code to enable or disable specific widgets based on the selected option
         self.lat_label.config(state=state)
         self.lat_entry.config(state=state)
         self.lon_label.config(state=state)
@@ -200,7 +204,7 @@ class RECalculationPage(tk.Frame):
         icon_label.grid(row=0, column=0, padx=(10, 0), pady=10, sticky="w")
 
         # Create the warning label with text
-        self.warning_label = ttk.Label(warning_frame, text="WARNING: If RES Supply Calculation is deactivated, you must provide the RES Time Series Data as CSV file located in 'Inputs' folder (refer to the online documentation for more details https://microgridspy-documentation.readthedocs.io/en/latest/). In addition, please consider that the NASA POWER server may not work during the weekend.",  wraplength=700, justify="left")
+        self.warning_label = ttk.Label(warning_frame, text="WARNING: If Import Exogenously, you must provide the RES Time Series Data as CSV file located in 'Inputs' folder (refer to the online documentation for more details https://microgridspy-documentation.readthedocs.io/en/latest/). In addition, please consider that the NASA POWER server may not work during the weekend.",  wraplength=700, justify="left")
         self.warning_label.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
 
         # Ensure the text spans the rest of the grid
@@ -254,13 +258,18 @@ class RECalculationPage(tk.Frame):
         self.intro_label = ttk.Label(self.inner_frame, text="Estimate electricity output of renewable generation units (solar PV and Wind) using NASA POWER data (it requires internet connection):", font=self.italic_font, wraplength=850, justify="left")
         self.intro_label.grid(row=3, column=0, columnspan=3, pady=10, sticky='w')
         
-        # RE_Supply_Calculation Checkbutton
+        # Radio button options for RES supply calculation, with Exogenous RES Import preactivated
         self.RE_Supply_Calculation_var = tk.IntVar(value=0)
-        ttk.Label(self.inner_frame, text="RES Supply Calculation:", anchor='w').grid(row=5, column=0, sticky='w')
-        self.RE_Supply_Calculation_checkbutton = ttk.Checkbutton(self.inner_frame, text="Activate", variable=self.RE_Supply_Calculation_var, onvalue=1, offvalue=0,command=self.toggle_re_calc_parameters)
-        self.RE_Supply_Calculation_checkbutton.grid(row=5, column=0, padx=20, sticky='e')
-        create_tooltip(self.RE_Supply_Calculation_checkbutton, "Select to simulate solar PV and wind production time series using NASA POWER data")
-        
+        ttk.Label(self.inner_frame, text="RES Supply Option:", anchor='w').grid(row=5, column=0, sticky='w')
+
+        self.res_calculation_radio = ttk.Radiobutton(self.inner_frame, text="Generate Endogenously", variable=self.RE_Supply_Calculation_var, value=1, command=self.toggle_re_calc_parameters)
+        self.res_calculation_radio.grid(row=5, column=0, sticky='e')
+        create_tooltip(self.res_calculation_radio, "Select to simulate RES time series data using NASA POWER data")
+
+        self.exogenous_res_radio = ttk.Radiobutton(self.inner_frame, text="Import Exogenously", variable=self.RE_Supply_Calculation_var, value=0, command=self.toggle_re_calc_parameters)
+        self.exogenous_res_radio.grid(row=6, column=0, padx=18.5, sticky='e')
+        create_tooltip(self.exogenous_res_radio, "Select to provide RES time series data from an external source")
+
         text_parameters = ['lat', 'lon','time_zone','turbine_type','turbine_model']
         
         # Define and grid the parameters as labels and entries
@@ -293,30 +302,30 @@ class RECalculationPage(tk.Frame):
             }
         
         self.location_intro_label = ttk.Label(self.inner_frame, text="Location coordinates:", font=self.italic_font, wraplength=850, justify="left")
-        self.location_intro_label.grid(row=6, column=0, columnspan=3, pady=10, sticky='w')
+        self.location_intro_label.grid(row=7, column=0, columnspan=3, pady=10, sticky='w')
 
         # Define StringVar for latitude and longitude
         self.lat_var = tk.StringVar(value="-11 33 56.4")
         self.lon_var = tk.StringVar(value="30 21 3.4")
         # Latitude and Longitude Entry Fields
         self.lat_label = ttk.Label(self.inner_frame, text="lat", state='disabled')
-        self.lat_label.grid(row=7, column=0, sticky='w')
+        self.lat_label.grid(row=8, column=0, sticky='w')
         self.lat_entry = ttk.Entry(self.inner_frame, textvariable=self.lat_var,state='disabled')
-        self.lat_entry.grid(row=7, column=0, padx=20,sticky='e')
+        self.lat_entry.grid(row=8, column=0, padx=20,sticky='e')
         create_tooltip(self.lat_entry, "Enter the location latitude in degrees, minutes, and seconds (DMS)")
 
         self.lon_label = ttk.Label(self.inner_frame, text="lon",state='disabled')
-        self.lon_label.grid(row=8, column=0, sticky='w')
+        self.lon_label.grid(row=9, column=0, sticky='w')
         self.lon_entry = ttk.Entry(self.inner_frame, textvariable=self.lon_var,state='disabled')
-        self.lon_entry.grid(row=8, column=0,padx=20, sticky='e')
+        self.lon_entry.grid(row=9, column=0,padx=20, sticky='e')
         create_tooltip(self.lon_entry, "Enter the location longitude in degrees, minutes, and seconds (DMS)")
         
         self.re_calc_params_entries = []
         
         self.solar_intro_label = ttk.Label(self.inner_frame, text="Solar PV panel parameters:", font=self.italic_font, wraplength=850, justify="left")
-        self.solar_intro_label.grid(row=9, column=0, columnspan=3, pady=10, sticky='w')
+        self.solar_intro_label.grid(row=10, column=0, columnspan=3, pady=10, sticky='w')
         
-        for i, (param, value) in enumerate(solar_pv_params.items(), start=10):  
+        for i, (param, value) in enumerate(solar_pv_params.items(), start=11):  
             label_text = param
             label = ttk.Label(self.inner_frame, text=label_text)
             label.grid(row=i, column=0, sticky='w')

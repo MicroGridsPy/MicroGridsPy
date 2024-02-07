@@ -95,14 +95,18 @@ class ArchetypesPage(tk.Frame):
         image_label.grid(row=4, column=1, rowspan=14, padx=(30,0), sticky='nsew')
     
     def get_input_data(self):
-        input_data = {'Demand_Profile_Generation': self.Demand_Profile_Generation_var.get()}
+        input_data = {'Demand_Profile_Generation': self.demand_option_var.get()}
         for var, label, entry in self.demand_calc_params_entries:
             param = label.cget("text")
             input_data[param] = var.get()  # Retrieve the value from the entry widget
         return input_data
     
     def toggle_demand_calc_parameters(self, *args):
-        state = 'normal' if self.Demand_Profile_Generation_var.get() == 1 else 'disabled'
+        if self.demand_option_var.get() == 1:
+            state = 'normal'
+        else:
+            state = 'disabled'
+        
         for var, label, entry in self.demand_calc_params_entries:
             label.config(state=state)
             entry.config(state=state)
@@ -176,7 +180,7 @@ class ArchetypesPage(tk.Frame):
         icon_label.grid(row=0, column=0, padx=(10, 0), pady=10, sticky="w")
 
         # Create the warning label with text
-        self.warning_label = ttk.Label(warning_frame, text="WARNING: If Demand_Profile_Generation is deactivated, you must provide the Demand Time Series Data as CSV file located in 'Inputs' folder (refer to the online documentation for more details https://microgridspy-documentation.readthedocs.io/en/latest/)",  wraplength=700, justify="left")
+        self.warning_label = ttk.Label(warning_frame, text="WARNING: If Import Exogenously, you must provide the Demand Time Series Data as CSV file located in 'Inputs' folder (refer to the online documentation for more details https://microgridspy-documentation.readthedocs.io/en/latest/)",  wraplength=700, justify="left")
         self.warning_label.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
 
         # Ensure the text spans the rest of the grid
@@ -193,7 +197,7 @@ class ArchetypesPage(tk.Frame):
         self.grid_columnconfigure(0, weight=1)
 
         # Add Top Section
-        university_name = "MicroGridsPy"
+        university_name = "MicroGridsPy "
         self.top_section = TopSectionFrame(self, university_name)
         self.top_section.grid(row=0, column=0, sticky='ew', columnspan=self.grid_size()[0])
 
@@ -218,13 +222,21 @@ class ArchetypesPage(tk.Frame):
         self.intro_label = ttk.Label(self.inner_frame, text="Generate the load curve demand using build-in Sub-Sahara Africa village archetypes:", font=self.italic_font, wraplength=850, justify="left")
         self.intro_label.grid(row=2, column=0, columnspan=2, pady=10, sticky='w')
         
-        # RE_Supply_Calculation Checkbutton
-        self.Demand_Profile_Generation_var = tk.IntVar(value=0)
-        ttk.Label(self.inner_frame, text="Demand Profile Generation:", anchor='w').grid(row=3, column=0, sticky='w')
-        self.Demand_Profile_Generation_checkbutton = ttk.Checkbutton(self.inner_frame, text="Activate", variable=self.Demand_Profile_Generation_var, onvalue=1, offvalue=0,command=self.toggle_demand_calc_parameters)
-        self.Demand_Profile_Generation_checkbutton.grid(row=3, column=0, sticky='e')
-        create_tooltip(self.Demand_Profile_Generation_checkbutton, "Select to simulate a load demand profile with built-in demand archetypes")
+        # Radio button options for demand profile
+        self.demand_option_var = tk.IntVar(value=0)
+        ttk.Label(self.inner_frame, text="Demand Profile Option:", anchor='w').grid(row=3, column=0, sticky='w')
+
+        self.demand_profile_radio = ttk.Radiobutton(self.inner_frame, text="Generate Endogenously", variable=self.demand_option_var, value=1, command=self.toggle_demand_calc_parameters)
+        self.demand_profile_radio.grid(row=3, column=0, sticky='e')
+        create_tooltip(self.demand_profile_radio, "Select to simulate a load demand profile with built-in demand archetypes")
+
+        self.exogenous_demand_radio = ttk.Radiobutton(self.inner_frame, text="Import Exogenously", variable=self.demand_option_var, value=0, command=self.toggle_demand_calc_parameters)
+        self.exogenous_demand_radio.grid(row=4, column=0, padx=18.5, sticky='e')
+        create_tooltip(self.exogenous_demand_radio, "Select to provide demand time series data using the csv file")
         
+        self.intro_label = ttk.Label(self.inner_frame, text="Endogenous Load Demand parameters:", font=self.italic_font, wraplength=850, justify="left")
+        self.intro_label.grid(row=5, column=0, columnspan=2, pady=10, sticky='w')
+
         # Define and grid the parameters as labels and entries
         self.demand_calc_params = {
             "demand_growth": "5", 
@@ -259,7 +271,7 @@ class ArchetypesPage(tk.Frame):
             }
 
         self.demand_calc_params_entries = []
-        for i, (param, value) in enumerate(self.demand_calc_params.items(), start=4):  # Adjust the starting row
+        for i, (param, value) in enumerate(self.demand_calc_params.items(), start=6):  # Adjust the starting row
             label_text = param
             label = ttk.Label(self.inner_frame, text=label_text)
             label.grid(row=i, column=0, sticky='w')
