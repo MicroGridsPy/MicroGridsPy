@@ -83,7 +83,7 @@ class ArchetypesPage(tk.Frame):
         # Load the image (adjust the path to your image file)
         original_image = Image.open("Images/Archetypes.png")
         # Resize the image (change the width and height as needed)
-        resized_image = original_image.resize((475, 300), Image.Resampling.LANCZOS)  # Example: (200, 200)
+        resized_image = original_image.resize((475, 250), Image.Resampling.LANCZOS)  # Example: (200, 200)
         # Convert the image to PhotoImage
         tk_image = ImageTk.PhotoImage(resized_image)
         # Create a label to display the image
