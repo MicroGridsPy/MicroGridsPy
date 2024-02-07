@@ -130,10 +130,12 @@ def Model_Creation(model):
 
     
     "Parameters of RES Technologies" 
-    model.RES_Names                    = Param(model.renewable_sources)               # RES names
+    model.RES_Names                    = Param(model.renewable_sources,
+                                               within=Any)                          # RES names
     model.RES_Nominal_Capacity         = Param(model.renewable_sources,
                                                within=NonNegativeReals)               # Nominal capacity of the RES in W/unit
-    model.RES_Inverter_Efficiency      = Param(model.renewable_sources)               # Efficiency of the inverter in %
+    model.RES_Inverter_Efficiency      = Param(model.renewable_sources,
+                                               within=NonNegativeReals)               # Efficiency of the inverter in %
     model.RES_Specific_Investment_Cost = Param(model.renewable_sources,
                                                within=NonNegativeReals)               # Cost of RES in USD/W
     model.RES_Specific_OM_Cost         = Param(model.renewable_sources,
