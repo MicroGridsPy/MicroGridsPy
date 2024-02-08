@@ -178,7 +178,7 @@ Energy_Demand_Series = pd.Series()
 # Adjust the loop to iterate over the actual column names of the DataFrame
 for col in Demand.columns[1:]:  # Skip the first column if it's an index, otherwise adjust as needed
     dum = Demand[col].reset_index(drop=True)
-    Energy_Demand_Series = pd.concat([Energy_Demand_Series, dum])
+    Energy_Demand_Series = pd.concat([s for s in [Energy_Demand_Series, dum] if not s.empty])
 
 
 Energy_Demand = pd.DataFrame(Energy_Demand_Series) 
@@ -195,7 +195,7 @@ for s in scenario:
         column_name = f'{(s-1)*len(year) + y}'
         if column_name in Demand.columns:
             dum_2 = Demand[column_name].dropna().reset_index(drop=True)
-            Energy_Demand_Series_2 = pd.concat([Energy_Demand_Series_2, dum_2])
+            Energy_Demand_Series_2 = pd.concat([s for s in [Energy_Demand_Series_2, dum_2] if not s.empty])
         else:
             print(f"Warning: Column '{column_name}' does not exist in the Demand DataFrame")
     Energy_Demand_2[s] = Energy_Demand_Series_2
@@ -322,7 +322,7 @@ for i in range(1, n_years * n_scenarios + 1):
     if Grid_Connection and Grid_Availability_Simulation: dum = availability[str(i)]
     elif Grid_Connection and Grid_Availability_Simulation == 0: dum = availability[str(i)]
     else: dum = availability[i]
-    grid_availability_Series = pd.concat([grid_availability_Series, dum])
+    grid_availability_Series = pd.concat([s for s in [grid_availability_Series, dum] if not s.empty])
 
 grid_availability = pd.DataFrame(grid_availability_Series)
 
@@ -339,7 +339,7 @@ for s in scenario:
     for y in year:
         if Grid_Connection: dum_2 = availability[str((s - 1) * n_years + y)]
         else: dum_2 = availability[(s - 1) * n_years + y]
-        grid_availability_Series_2 = pd.concat([grid_availability_Series_2, dum_2])
+        grid_availability_Series_2 = pd.concat([s for s in [grid_availability_Series_2, dum_2] if not s.empty])
     grid_availability_2[s] = grid_availability_Series_2
 
 # Create a RangeIndex

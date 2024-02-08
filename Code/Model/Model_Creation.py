@@ -184,7 +184,8 @@ def Model_Creation(model):
 
     
     "Parameters of the genset"
-    model.Generator_Names                    = Param(model.generator_types)                # Generators names
+    model.Generator_Names                    = Param(model.generator_types,
+                                                     within=Any)                           # Generators names
     model.Generator_Efficiency               = Param(model.generator_types,
                                                    within=NonNegativeReals)                # Generator efficiency to trasform heat into electricity %
     model.Generator_Specific_Investment_Cost = Param(model.generator_types,
@@ -214,31 +215,39 @@ def Model_Creation(model):
     #----------------------------------------------------------------------------------------------
     model.Fuel_Specific_Cost                 = Param(model.generator_types,
                                                      model.years,
+                                                     within=Any,
                                                      initialize=Initialize_Fuel_Specific_Cost)
     model.Fuel_Specific_Start_Cost           = Param(model.generator_types,
                                                      within=NonNegativeReals)
     model.Fuel_Specific_Cost_Rate            = Param(model.generator_types,
-                                                     within=NonNegativeReals)
+                                                     within=Reals)
     model.Generator_Marginal_Cost            = Param(model.generator_types,
                                                      model.years,
+                                                     within=Any,
                                                      initialize=Initialize_Generator_Marginal_Cost)
     model.Generator_Start_Cost                = Param(model.generator_types,
                                                       model.years,
+                                                      within=Any,
                                                       initialize=Initialize_Generator_Start_Cost)
     #------------------------------------------------------------------------------------------------
     model.Fuel_Specific_Cost_1               = Param(model.generator_types,
+                                                     within=Any,
                                                      initialize=Initialize_Fuel_Specific_Cost_1)
     model.Generator_Marginal_Cost_1          = Param(model.generator_types,
+                                                     within=Any,
                                                      initialize=Initialize_Generator_Marginal_Cost_1)
     model.Generator_Marginal_Cost_milp        = Param(model.generator_types,
                                                       model.years,
+                                                      within=Any,
                                                       initialize=Initialize_Generator_Marginal_Cost_milp)
     model.Generator_capacity                  = Param(model.generator_types,
                                                       within=NonNegativeReals)                             # Existing capacity of generator
 
     model.Generator_Start_Cost_1              = Param(model.generator_types,
+                                                      within=Any,
                                                       initialize=Initialize_Generator_Start_Cost_1)          # # Origin of the cost curve of the part load generator
     model.Generator_Marginal_Cost_milp_1      = Param(model.generator_types,
+                                                      within=Any,
                                                       initialize=Initialize_Generator_Marginal_Cost_milp_1)  # Slope of the cost curve of the part load generator
 
 # --- National Grid ---

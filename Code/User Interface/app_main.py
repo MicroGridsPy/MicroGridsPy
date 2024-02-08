@@ -102,7 +102,7 @@ class Application(ThemedTk):
         return self.frames["AdvancedPage"].Grid_Availability_Simulation_var.get()
     
     def get_archetypes_value(self):
-        return self.frames["ArchetypesPage"].Demand_Profile_Generation_var.get()
+        return self.frames["ArchetypesPage"].demand_option_var.get()
     
     def get_res_calculation_value(self):
         return self.frames["RECalculationPage"].RE_Supply_Calculation_var.get()
