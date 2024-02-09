@@ -324,7 +324,6 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
 
         if Solver == 0:
            opt = SolverFactory('gurobi') # Solver use during the optimization
-           timelimit = 10000
 
            if MILP_Formulation:
               opt.set_options('Method=3 BarHomogeneous=1 Crossover=1 MIPfocus=1 BarConvTol=1e-3 OptimalityTol=1e-3 FeasibilityTol=1e-4 TimeLimit=10000')
