@@ -114,11 +114,16 @@ class PlotPage(tk.Frame):
 
             # Create and grid the color combobox
             color_combobox = ttk.Combobox(self.inner_frame, values=list(self.color_options.keys()), width=15)
-            color_combobox.set(default_color_text)
+            if label_text == "RES_Colors" and i == 1:
+                color_combobox.set("Teal")
+            else:
+                color_combobox.set(default_color_text)
             color_combobox.grid(row=row_start, column=combobox_column, padx=5, pady=2)
 
             # Create and grid the legend label
             default_color_hex = self.color_options[default_color_text]
+            if label_text == "RES_Colors" and i == 1:
+                default_color_hex = self.color_options["Teal"]
             legend_label = ttk.Label(self.inner_frame, background=default_color_hex, width=2)
             legend_label.grid(row=row_start, column=label_column, padx=2, pady=2)
 
