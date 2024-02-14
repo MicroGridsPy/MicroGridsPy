@@ -39,7 +39,7 @@ MicroGridsPy implements the **Two-stage optimization mixed integer linear progra
 The optimization is implemented in Python using Pyomo Library. 
 
 
-.. image:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Objective%20Function.png?raw=true
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Objective_Function.png?raw=true
    :width: 500
    :align: center
 

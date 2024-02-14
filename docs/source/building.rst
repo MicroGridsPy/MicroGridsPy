@@ -65,10 +65,10 @@ To ensure reliability, the mini-grid can include an arbitrary number of backup s
 These backup systems are vital for continuous power supply and can be extensively modeled, similar to renewable technologies.
 
 
-.. figure:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Minigrid%20components.jpg?raw=true
+.. figure:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Minigrid%20components.png?raw=true
    :width: 500
    :align: center
-
+----------------------------------------------------------------------------------
 
 The interconnection of these components ensures that the electrical load is met with a combination of renewable energy sources, storage capacity, and backup systems, optimizing the use of sustainable energy and enhancing the reliability of the power supply. 
 The configuration also allows for the management of energy flow to maximize efficiency and maintain balance between supply and demand.
