@@ -16,13 +16,20 @@ Model configuration
    :width: 700
    :align: center
 
+----------------------------------------------------------------------
+
+
 .. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/model_configuration_2.png?raw=true
    :width: 700
    :align: center
 
+----------------------------------------------------------------------
+
 .. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/model_configuration_3.png?raw=true
    :width: 700
    :align: center
+
+----------------------------------------------------------------------
 
 Advanced features
 ====================
