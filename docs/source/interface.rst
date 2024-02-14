@@ -35,7 +35,41 @@ Advanced features
 ====================
 
 
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/advanced_features.png?raw=true
+   :width: 700
+   :align: center
+
+----------------------------------------------------------------------
 
 
+Resource Assessment
+====================
 
 
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/res.png?raw=true
+   :width: 700
+   :align: center
+
+----------------------------------------------------------------------
+
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/res_2.png?raw=true
+   :width: 700
+   :align: center
+
+----------------------------------------------------------------------
+
+Load Demand Assessment
+=========================
+
+
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/load.png?raw=true
+   :width: 700
+   :align: center
+
+----------------------------------------------------------------------
+
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/load_2.png?raw=true
+   :width: 700
+   :align: center
+
+----------------------------------------------------------------------
