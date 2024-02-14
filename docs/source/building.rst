@@ -33,6 +33,48 @@ Here below is a general introduction to the different steps in building and runn
 
 ------------------------------------------------------------------------------------------------
 
+Energy System
+================
+
+The considered system comprises an electrical load supplied by renewable sources, an inverter, a battery bank and backup generators. 
+
+**Renewable Generation Technologies**
+
+The system can incorporate an arbitrary number of renewable energy sources (RES), with the most common being:
+
+- *Solar Power*: Typically implemented using photovoltaic (PV) modules to convert sunlight into electricity.
+- *Wind Power*: Utilizing wind turbines to harness kinetic energy from wind currents.
+
+MicroGridsPy allows for extensive modeling of these RES types, requiring users to input specific data for each technology's parameters.
+
+**Storage System**
+
+The system employs a storage system to manage the energy balance:
+
+- *Battery Bank*: Often utilizing lead-acid or lithium-ion batteries, this storage system retains excess energy for use during periods of high demand or insufficient renewable generation.
+
+In MicroGridsPy , the user can define and model a single battery bank system, inputting specific parameters to match the mini-grid's requirements.
+
+**Backup Systems**
+
+To ensure reliability, the mini-grid can include an arbitrary number of backup systems (and related fuels), with the most common being:
+
+- *Diesel Generator*: Provides a conventional power generation solution during low production from renewable sources.
+- *Biomass Micro-Turbine*: Acts as a sustainable backup power source, converting biomass into electricity.
+
+These backup systems are vital for continuous power supply and can be extensively modeled, similar to renewable technologies.
+
+
+.. figure:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Minigrid%20components.jpg?raw=true
+   :width: 500
+   :align: center
+
+
+The interconnection of these components ensures that the electrical load is met with a combination of renewable energy sources, storage capacity, and backup systems, optimizing the use of sustainable energy and enhancing the reliability of the power supply. 
+The configuration also allows for the management of energy flow to maximize efficiency and maintain balance between supply and demand.
+
+----------------------------------------------------------------------------------------------------
+
 Data Input Interface and Parameters
 ======================================
 

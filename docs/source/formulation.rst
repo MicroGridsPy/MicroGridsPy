@@ -2,12 +2,44 @@
 Mathematical Formulation
 #######################################
 
+Problem Statement
+====================
 
-**Two-stage optimization mixed integer linear programming sizing model**
+The optimization problem in MicroGridsPy is structured to determine the most cost-effective combination of installed capacities for renewable energy sources (RES), batteries, and generators. 
+The goal is to minimize the Net Present Cost (NPC) over the lifetime of the project while satisfying the system's constraints.
 
-The considered system comprises an electrical load supplied by renewable sources, an inverter, a battery bank and backup generators (Fig. 1). The main optimization variables are divided into first-stage variables (rated capacities of each energy source) and second-stage variables (energy flows from the different components). The optimization is implemented in Python using Pyomo Library. 
+The problem requires:
 
-.. image:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Minigrid%20components.jpg?raw=true
+- Finding the optimal configuration of RES, Batteries, and Generators.
+- Achieving the lowest NPC.
+- Meeting the operational constraints of the system.
+
+Steps in Optimization
+---------------------
+
+1. **Define the inputs**
+   - Determine techno-economic parameters.
+   - Collect and input time series data.
+
+2. **Set constraints**
+   - Specify configuration settings.
+   - Establish optimization settings.
+   - Formulate modeling equations.
+
+3. **Optimize the objective function**
+   - Minimize the Net Present Cost (NPC).
+   - Consider emissions as a part of the objective, if applicable.
+
+4. **Analyze the results**
+   - Assess the sizing and dispatch of the system components.
+   - Evaluate the overall costs involved.
+
+
+MicroGridsPy implements the **Two-stage optimization mixed integer linear programming approach**: the main optimization variables are divided into first-stage variables (rated capacities of each energy source) and second-stage variables (energy flows from the different components). 
+The optimization is implemented in Python using Pyomo Library. 
+
+
+.. image:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Objective%20Function.png?raw=true
    :width: 500
    :align: center
 
