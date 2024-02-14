@@ -73,3 +73,51 @@ Load Demand Assessment
    :align: center
 
 ----------------------------------------------------------------------
+
+Renewables Characterization
+==============================
+
+
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/res_param.png?raw=true
+   :width: 700
+   :align: center
+
+----------------------------------------------------------------------
+
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/res_param_2.png?raw=true
+   :width: 700
+   :align: center
+
+----------------------------------------------------------------------
+
+Storage System Characterization
+==================================
+
+
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/battery.png?raw=true
+   :width: 700
+   :align: center
+
+----------------------------------------------------------------------
+
+Backup System Characterization
+==================================
+
+
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/gen.png?raw=true
+   :width: 700
+   :align: center
+
+----------------------------------------------------------------------
+
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/gen_2.png?raw=true
+   :width: 700
+   :align: center
+
+----------------------------------------------------------------------
+
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/gen_3.png?raw=true
+   :width: 700
+   :align: center
+
+----------------------------------------------------------------------
