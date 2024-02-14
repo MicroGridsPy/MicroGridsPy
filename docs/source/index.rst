@@ -44,6 +44,7 @@ Table of Contents
    intro
    installation
    building
+   interface
    running
    advanced
    example
