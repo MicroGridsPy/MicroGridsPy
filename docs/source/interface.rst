@@ -12,15 +12,15 @@ Additionally, it provides efficient run functionalities, allowing users to track
 Model configuration
 =====================
 
-.. image:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Interface/model_configuration.png?raw=true
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/model_configuration.png?raw=true
    :width: 700
    :align: center
 
-.. image:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Interface/model_configuration_2.png?raw=true
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/model_configuration_2.png?raw=true
    :width: 700
    :align: center
 
-.. image:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Interface/model_configuration_3.png?raw=true
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/model_configuration_3.png?raw=true
    :width: 700
    :align: center
 
