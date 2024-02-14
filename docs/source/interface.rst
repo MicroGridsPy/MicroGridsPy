@@ -121,3 +121,40 @@ Backup System Characterization
    :align: center
 
 ----------------------------------------------------------------------
+
+Running the Model
+==================================
+
+
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/run.png?raw=true
+   :width: 700
+   :align: center
+
+----------------------------------------------------------------------
+
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/run_2.png?raw=true
+   :width: 700
+   :align: center
+
+----------------------------------------------------------------------
+
+Obtaining the Results
+==================================
+
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/run_3.png?raw=true
+   :width: 700
+   :align: center
+
+----------------------------------------------------------------------
+
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/run_4.png?raw=true
+   :width: 700
+   :align: center
+
+----------------------------------------------------------------------
+
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/run_5.png?raw=true
+   :width: 700
+   :align: center
+
+---------------------------------------------------------------------
