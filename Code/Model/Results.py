@@ -104,7 +104,7 @@ def TimeSeries(instance):
        Generator_Energy_Production = instance.Generator_Energy_Production.get_values()
     Curtailment                 = instance.Energy_Curtailment.get_values()
     Lost_Load                   = instance.Lost_Load.get_values()
-    Electric_Demand             = instance.Energy_Demand.extract_values()    
+    Electric_Demand             = instance.Energy_Demand.extract_values() 
     Electricity_From_Grid       = instance.Energy_From_Grid.get_values() 
     Electricity_To_Grid         = instance.Energy_To_Grid.get_values()   
     
@@ -1335,16 +1335,17 @@ def YearlyCosts(instance):
                 grid_s = pd.concat([grid_s, grid_yc], axis=0)
             Grid_Yearly_Cost = pd.concat([Grid_Yearly_Cost, grid_s], axis=1)
        
-        Energy_To_Grid = instance.Energy_To_Grid.get_values()    
-        El_Sold_Price = instance.Grid_Sold_El_Price
-        Grid_Yearly_Rev = pd.DataFrame()    
-        for s in range(1, S+1):
-            grid_s = pd.DataFrame()
-            for (y, st) in ys_tuples_list:
-                grid_yc = pd.DataFrame(['Year ' + str(y), sum(Energy_To_Grid[(s, y, t)] for t in range(1, P+1)) * El_Sold_Price / 1e6]).T.set_index([0])
-                grid_yc.columns = pd.MultiIndex.from_arrays([['Grid revenue'], ['Grid'], [s], ['kUSD']], names=['', 'Component', 'Scenario', 'Unit'])
-                grid_s = pd.concat([grid_s, grid_yc], axis=0)
-            Grid_Yearly_Rev = pd.concat([Grid_Yearly_Rev, grid_s], axis=0)
+        if instance.Grid_Connection_Type.value == 0:
+            Energy_To_Grid = instance.Energy_To_Grid.get_values()    
+            El_Sold_Price = instance.Grid_Sold_El_Price
+            Grid_Yearly_Rev = pd.DataFrame()    
+            for s in range(1, S+1):
+                grid_s = pd.DataFrame()
+                for (y, st) in ys_tuples_list:
+                    grid_yc = pd.DataFrame(['Year ' + str(y), sum(Energy_To_Grid[(s, y, t)] for t in range(1, P+1)) * El_Sold_Price / 1e6]).T.set_index([0])
+                    grid_yc.columns = pd.MultiIndex.from_arrays([['Grid revenue'], ['Grid'], [s], ['kUSD']], names=['', 'Component', 'Scenario', 'Unit'])
+                    grid_s = pd.concat([grid_s, grid_yc], axis=0)
+                Grid_Yearly_Rev = pd.concat([Grid_Yearly_Rev, grid_s], axis=0)
 
     #%% Concatenating
     if instance.Model_Components.value == 0:
@@ -1439,7 +1440,8 @@ def YearlyEnergyParams(instance, TimeSeries):
                 battery_out += TimeSeries[s][y].loc[:,idx['Scenario '+str(s),'Battery Discharge',:,:]].sum().sum()*instance.Scenario_Weight.extract_values()[s]
             if instance.Grid_Connection.value == 1:
                 grid_in += TimeSeries[s][y].loc[:,idx['Scenario '+str(s),'Electricity from grid',:,:]].sum().sum()*instance.Scenario_Weight.extract_values()[s]   
-                grid_out += TimeSeries[s][y].loc[:,idx['Scenario '+str(s),'Electricity to grid',:,:]].sum().sum()*instance.Scenario_Weight.extract_values()[s]
+                if instance.Grid_Connection_Type.value == 0:
+                    grid_out += TimeSeries[s][y].loc[:,idx['Scenario '+str(s),'Electricity to grid',:,:]].sum().sum()*instance.Scenario_Weight.extract_values()[s]
                 
         if instance.Model_Components.value == 0 or instance.Model_Components.value == 2:
             gen_load  = pd.concat([gen_load, pd.DataFrame(['Year '+str(y), generators/demand]).T.set_index([0])], axis=0)

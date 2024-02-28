@@ -19,6 +19,7 @@ Based on the original model by:
 
 
 import pandas as pd, numpy as np
+import matplotlib.pyplot as plt
 import re
 import os
 from RE_calculation import RE_supply
@@ -27,6 +28,8 @@ from Grid_Availability import grid_availability as grid_avail
 
 
 #%% This section extracts the values of Scenarios, Periods, Years from data.dat and creates ranges for them
+
+
 current_directory = os.path.dirname(os.path.abspath(__file__))
 inputs_directory = os.path.join(current_directory, '..', 'Inputs')
 data_file_path = os.path.join(inputs_directory, 'Parameters.dat')
@@ -34,6 +37,9 @@ demand_file_path = os.path.join(inputs_directory, 'Demand.csv')
 res_file_path = os.path.join(inputs_directory, 'RES_Time_Series.csv')
 fuel_file_path = os.path.join(inputs_directory, 'Fuel Specific Cost.csv')
 grid_file_path = os.path.join(inputs_directory, 'Grid Availability.csv')
+results_directory = os.path.join(current_directory, '..', 'Results')
+plot_path = os.path.join(results_directory, '..', 'Plots')
+
 Data_import = open(data_file_path).readlines()
 
 Fuel_Specific_Start_Cost = []
@@ -115,8 +121,169 @@ year = [i for i in range(1,n_years+1)]
 period = [i for i in range(1,n_periods+1)]
 generator = [i for i in range(1,n_generators+1)]
 
-#%% This section is useful to define the number of investment steps as well as to assign each year to its corresponding step
+#%% This section imports, generates and plots the different types of demands
+
+def plot_average_daily_demand(demand_data, output_path):
+    n_years = demand_data.shape[1]
+    hours_per_day = 24
+
+    plt.figure(figsize=(12, 6))
+
+    # Calculate and plot average daily demand for each year
+    for year in range(n_years):
+        # Reshape yearly data into days and hours (assuming 365 days per year)
+        yearly_data = demand_data.iloc[:, year].values.reshape(-1, hours_per_day)
+        # Calculate average demand for each hour
+        average_daily_demand = np.mean(yearly_data, axis=0) / 1000
+        plt.plot(average_daily_demand, label=f'Year {year + 1}')
+
+    plt.title('Average Daily Electric Demand for Each Year')
+    plt.xlabel('Hour of Day')
+    plt.ylabel('Power [kW]')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(output_path)
+    plt.close() 
+
+if Demand_Profile_Generation:
+    Demand = demand_generation()
+    print("Electric demand data generated endogenously using archtypes")
+    plot_path = os.path.join(results_directory, 'Electric Demand.png')
+    plot_average_daily_demand(Demand, plot_path)
+    print("Electric demand plot saved in Results/Plots")
+else:
+    Demand = pd.read_csv(demand_file_path, delimiter=';', decimal=',', header=0)
+    Demand = Demand.drop(Demand.columns[0], axis=1)
+    Demand = Demand.iloc[:, :n_years]
+    print("Electric demand data loaded exogenously from excel file")
+    plot_path = os.path.join(results_directory, 'Electric Demand.png')
+    plot_average_daily_demand(Demand, plot_path)
+    print("Electric demand plot saved in Results/Plots")
+
+# Drop columns where all values are NaN, as they don't contain any useful data
+Demand = Demand.dropna(how='all', axis=1)
+Electric_Energy_Demand_Series = pd.Series(dtype=float)
+# Adjust the loop to iterate over the actual column names of the DataFrame
+for col in Demand.columns[0:]:
+    dum = Demand[col].reset_index(drop=True)
+    Electric_Energy_Demand_Series = pd.concat([Electric_Energy_Demand_Series, dum])
+frame = [scenario, year, period]
+index = pd.MultiIndex.from_product(frame, names=['scenario', 'year', 'period'])
+Electric_Energy_Demand = pd.DataFrame(Electric_Energy_Demand_Series)
+Electric_Energy_Demand.index = index
+
+Electric_Energy_Demand_2 = pd.DataFrame()
+# Iterate over scenarios and years, assuming scenario and year are defined and match the CSV structure
+for s in scenario:
+    Electric_Energy_Demand_Series_2 = pd.Series()
+    for y in year:
+        # Construct the column name as it appears in the CSV headers
+        if Demand_Profile_Generation: column_name = int(f'{(s-1)*len(year) + y}')
+        else: column_name = f'{(s-1)*len(year) + y}'
+        if column_name in Demand.columns:
+            dum_2 = Demand[column_name].dropna().reset_index(drop=True)
+            Electric_Energy_Demand_Series_2 = pd.concat([s for s in [Electric_Energy_Demand_Series_2, dum_2] if not s.empty])
+        else:
+            print(f"Warning: Column '{column_name}' does not exist in the Demand DataFrame")
+    Electric_Energy_Demand_2[s] = Electric_Energy_Demand_Series_2
+
+# Create a RangeIndex for Energy_Demand_2
+index_2 = pd.RangeIndex(1, n_years * n_periods + 1)
+Electric_Energy_Demand_2.index = index_2
+
+"Electric Demand"
+def Initialize_Demand(model, s, y, t):
+    """
+    Initializes electric demand based on the scenario, year, and period.
+
+    Parameters:
+    model (object): The model for which to initialize electric demand.
+    s (int): Scenario number.
+    y (int): Year.
+    t (int): Time period.
+
+    Returns:
+    float: The electric demand.
+    """
+    return float(Electric_Energy_Demand[0][(s, y, t)])
+
+#%% This section imports or generates the renewables and temperature time series data 
+
+def plot_renewable_energy_availability(renewable_energy_data, output_path):
+    hours_per_day = 24
+
+    fig, ax1 = plt.subplots(figsize=(12, 6))
+
+    # Assuming first column is solar (resource 1), second is wind (resource 2)
+    resource_colors = ['yellow', 'lightblue']
+
+    # Plotting first resource
+    col = renewable_energy_data.columns[1]  # Resource 1
+    yearly_data = renewable_energy_data[col].values.reshape(-1, hours_per_day)
+    average_daily_availability = np.mean(yearly_data, axis=0)
+    line1 = ax1.fill_between(range(hours_per_day), average_daily_availability, color=resource_colors[0], alpha=0.5, label=f'Resource 1')
+    ax1.set_xlabel('Hour of Year')
+    ax1.set_ylabel('RES 1 - Electricity production per unit [W]')
+    ax1.grid(True)
+
+    # Creating a second y-axis for the second resource
+    ax2 = ax1.twinx()
+    col = renewable_energy_data.columns[2]  # Resource 2
+    yearly_data = renewable_energy_data[col].values.reshape(-1, hours_per_day)
+    average_daily_availability = np.mean(yearly_data, axis=0)
+    line2 = ax2.fill_between(range(hours_per_day), average_daily_availability, color=resource_colors[1], alpha=0.5, label=f'Resource 2')
+    ax2.set_ylabel('RES 2 - Electricity production per unit [W]')
+
+    plt.title('Renewable Energy Resource Availability')
+
+    # Combining legends from both axes
+    lines = [line1, line2]
+    labels = [line.get_label() for line in lines]
+    plt.legend(lines, labels, loc='upper right')
+
+    plt.savefig(output_path)
+    plt.close()
+
+if RE_Supply_Calculation == 0: 
+    Renewable_Energy = pd.read_csv(res_file_path, delimiter=';', decimal=',', header=0)
+    print("Renewables Time Series data loaded exogenously from excel file")
+    plot_path = os.path.join(results_directory, 'Renewables Availability.png')
+else:
+    Renewable_Energy,T_amb = RE_supply()
+    Renewable_Energy = Renewable_Energy.set_index(pd.Index(range(1, n_periods+1)), inplace=False)
+    print("Renewables Time Series data generated endogenously using NASA POWER")
+
+plot_renewable_energy_availability(Renewable_Energy, plot_path)
+print("Renewables Availability plot saved in Results/Plots")
+
+def Initialize_RES_Energy(model, s, r, t):
+    """
+    Initializes renewable energy supply based on the specified scenario, resource, and time period.
+
+    Parameters:
+    model (object): The model for which the renewable energy supply is initialized.
+    scenario (int): The scenario number.
+    resource (int): The resource index.
+    time_period (int): The time period index.
+
+    Returns:
+    float: The amount of renewable energy supplied.
+    """
+    column = (s - 1) * model.RES_Sources + r
+    return float(Renewable_Energy.iloc[t - 1, column]) 
+
+#%% This section defines the number of investment steps as well as assigns each year to its corresponding step
+
 def Initialize_Upgrades_Number(model):
+    """
+    Calculates the number of upgrades for the given model.
+
+    Parameters:
+    model (object): The model for which to calculate upgrades.
+
+    Returns:
+    int: Number of upgrades.
+    """
     if n_years % step_duration == 0:
         n_upgrades = n_years/step_duration
         return n_upgrades
@@ -129,6 +296,15 @@ def Initialize_Upgrades_Number(model):
         return int(n_upgrades)
 
 def Initialize_YearUpgrade_Tuples(model):
+    """
+    Initializes year-upgrade tuples for the model.
+
+    Parameters:
+    model (object): The model for which to initialize year-upgrade tuples.
+
+    Returns:
+    list: List of year-upgrade tuples.
+    """
     upgrade_years_list = [1 for i in range(len(model.steps))]
     s_dur = model.Step_Duration   
     for i in range(1, len(model.steps)): 
@@ -147,78 +323,60 @@ def Initialize_YearUpgrade_Tuples(model):
     print('\nTime horizon (year,investment-step): ' + str(yu_tuples_list))
     return yu_tuples_list
 
+
+#%% This section initializes economic parameters related to the project
+
 def Initialize_Discount_Rate(model):
+    """
+    Calculates and initializes the discount rate for the model.
+
+    Parameters:
+    model (object): The model for which to calculate the discount rate.
+
+    Returns:
+    float: The calculated discount rate.
+    """
     if WACC_Calculation:
         if equity_share == 0:
-            WACC = cost_of_debt*(1-tax)
+            discount_rate = cost_of_debt*(1-tax)
         else:
            # Definition of Leverage (L): risk perceived by investors, or viceversa as the attractiveness of the investment to external debtors.
            L = debt_share/equity_share 
-           WACC = cost_of_debt*(1-tax)*L/(1+L) + cost_of_equity*1/(1+L)
+           discount_rate = cost_of_debt*(1-tax)*L/(1+L) + cost_of_equity*1/(1+L)
+           print("Weighted Average Cost of Capital calculation completed")
     else:
-        WACC = Discount_Rate_default
-    return WACC
+        discount_rate = Discount_Rate_default
+    return discount_rate
 
-#%% This section imports the multi-year Demand and Renewable-Energy output and creates a Multi-indexed DataFrame for it
+################################################################## ELECTRICITY PRODUCTION ##########################################################################
 
-if RE_Supply_Calculation:
-    Renewable_Energy = RE_supply().set_index(pd.Index(range(1, n_periods+1)), inplace=False)
-else:
-    Renewable_Energy = pd.read_csv(res_file_path, delimiter=';', decimal=',', header=0)
-
-if Demand_Profile_Generation:
-    Demand = demand_generation()
-
-Demand = pd.read_csv(demand_file_path, delimiter=';', decimal=',', header=0)
-    
-# Drop columns where all values are NaN, as they don't contain any useful data
-Demand = Demand.dropna(how='all', axis=1)
-    
-Energy_Demand_Series = pd.Series()
-# Adjust the loop to iterate over the actual column names of the DataFrame
-for col in Demand.columns[1:]:  # Skip the first column if it's an index, otherwise adjust as needed
-    dum = Demand[col].reset_index(drop=True)
-    Energy_Demand_Series = pd.concat([s for s in [Energy_Demand_Series, dum] if not s.empty])
-
-
-Energy_Demand = pd.DataFrame(Energy_Demand_Series) 
-frame = [scenario,year,period]
-index = pd.MultiIndex.from_product(frame, names=['scenario','year','period'])
-Energy_Demand.index = index
-
-Energy_Demand_2 = pd.DataFrame()
-# Iterate over scenarios and years, assuming scenario and year are defined and match the CSV structure
-for s in scenario:
-    Energy_Demand_Series_2 = pd.Series()
-    for y in year:
-        # Construct the column name as it appears in the CSV headers
-        column_name = f'{(s-1)*len(year) + y}'
-        if column_name in Demand.columns:
-            dum_2 = Demand[column_name].dropna().reset_index(drop=True)
-            Energy_Demand_Series_2 = pd.concat([s for s in [Energy_Demand_Series_2, dum_2] if not s.empty])
-        else:
-            print(f"Warning: Column '{column_name}' does not exist in the Demand DataFrame")
-    Energy_Demand_2[s] = Energy_Demand_Series_2
-
-# Create a RangeIndex for Energy_Demand_2
-index_2 = pd.RangeIndex(1, n_years * n_periods + 1)
-Energy_Demand_2.index = index_2
-
-
-def Initialize_Demand(model, s, y, t):
-    return float(Energy_Demand[0][(s,y,t)])
-
-def Initialize_RES_Energy(model, s, r, t):
-    column = (s - 1) * model.RES_Sources + r
-    return float(Renewable_Energy.iloc[t - 1, column])   
-
+#%% This section initializes parameters related to the battery bank
 
 def Initialize_Battery_Unit_Repl_Cost(model):
+    """
+    Initializes the unit replacement cost of the battery based on the model parameters.
+
+    Parameters:
+    model (object): The model containing parameters related to battery cost and performance.
+
+    Returns:
+    float: The calculated unit replacement cost of the battery.
+    """
     Unitary_Battery_Cost = model.Battery_Specific_Investment_Cost - model.Battery_Specific_Electronic_Investment_Cost
     return Unitary_Battery_Cost/(model.Battery_Cycles*2*(model.Battery_Depth_of_Discharge))
       
 
 def Initialize_Battery_Minimum_Capacity(model,ut): 
+    """
+    Calculates the minimum capacity required for the battery bank based on the model's demand profile and battery independence criteria.
+
+    Parameters:
+    model (object): The model containing parameters and configurations for battery and demand.
+    ut (int): The current upgrade step in the model.
+
+    Returns:
+    float: The minimum required battery capacity to ensure the desired level of battery independence.
+    """
     if model.Battery_Independence == 0: 
         return 0
     else:
@@ -228,7 +386,7 @@ def Initialize_Battery_Minimum_Capacity(model,ut):
         index = 1
         for i in range(1, Len+1):
             for j in range(1,Periods+1):      
-                Energy_Demand_2.loc[index, 'Grouper'] = Grouper
+                Electric_Energy_Demand_2.loc[index, 'Grouper'] = Grouper
                 index += 1      
             Grouper += 1
     
@@ -237,26 +395,40 @@ def Initialize_Battery_Minimum_Capacity(model,ut):
         for u in range(1, len(model.steps)):
             upgrade_years_list[u] =upgrade_years_list[u-1] + model.Step_Duration
         if model.Steps_Number ==1:
-            Energy_Demand_Upgrade = Energy_Demand_2    
+            Electric_Energy_Demand_Upgrade = Electric_Energy_Demand_2    
         else:
             if ut==1:
                 start = 0
-                Energy_Demand_Upgrade = Energy_Demand_2.loc[start : model.Periods*(upgrade_years_list[ut]-1), :]       
+                Electric_Energy_Demand_Upgrade = Electric_Energy_Demand_2.loc[start : model.Periods*(upgrade_years_list[ut]-1), :]       
             elif ut == len(model.steps):
                 start = model.Periods*(upgrade_years_list[ut-1] -1)+1
-                Energy_Demand_Upgrade = Energy_Demand_2.loc[start :, :]       
+                Electric_Energy_Demand_Upgrade = Electric_Energy_Demand_2.loc[start :, :]       
             else:
                 start = model.Periods*(upgrade_years_list[ut-1] -1)+1
-                Energy_Demand_Upgrade = Energy_Demand_2.loc[start : model.Periods*(upgrade_years_list[ut]-1), :]
+                Electric_Energy_Demand_Upgrade = Electric_Energy_Demand_2.loc[start : model.Periods*(upgrade_years_list[ut]-1), :]
         
-        Period_Energy = Energy_Demand_Upgrade.groupby(['Grouper']).sum()        
+        Period_Energy = Electric_Energy_Demand_Upgrade.groupby(['Grouper']).sum()        
         Period_Average_Energy = Period_Energy.mean()
         Available_Energy = sum(Period_Average_Energy[s]*model.Scenario_Weight[s] for s in model.scenarios) 
         
-        return  Available_Energy/(model.Battery_Depth_of_Discharge)
+        return Available_Energy/(model.Battery_Depth_of_Discharge)
 
+
+#%% This section initializes parameters related to generators and fuels
 
 def Initialize_Fuel_Specific_Cost(model, g, y):
+    """
+    Initializes the specific cost of fuel for a generator type and a specific year. The function supports
+    importing data from a file or calculating the cost based on a rate of increase.
+
+    Parameters:
+    model (object): The model for which the fuel cost is being initialized.
+    g (int): The generator type index.
+    y (int): The year index.
+
+    Returns:
+    float: The specific fuel cost for the given generator type and year.
+    """
     if Fuel_Specific_Cost_Calculation == 1 and Fuel_Specific_Cost_Import == 1:
         fuel_cost_data = pd.read_csv(fuel_file_path, delimiter=';', decimal=',',index_col=0)
 
@@ -279,87 +451,197 @@ def Initialize_Fuel_Specific_Cost(model, g, y):
         return fuel_cost_dict[(g, y)]
         
 def Initialize_Fuel_Specific_Cost_1(model, g):
+    """
+    Initializes the starting specific cost of fuel for a generator type. This function is used when
+    the fuel cost is fixed and not subject to annual variation.
+
+    Parameters:
+    model (object): The model for which the fuel cost is being initialized.
+    g (int): The generator type index.
+
+    Returns:
+    float: The starting specific fuel cost for the given generator type.
+    """
     return model.Fuel_Specific_Start_Cost[g] 
 
-
-
-#%% 
 def Initialize_Generator_Marginal_Cost(model,g,y):
-    if Fuel_Specific_Cost_Calculation == 1: return model.Fuel_Specific_Cost[g,y]/(model.Fuel_LHV[g]*model.Generator_Efficiency[g])
+    """
+    Initializes the marginal cost of operation for a generator type considering fuel cost, heating value of the fuel,
+    and generator efficiency. This function is applicable when the fuel cost varies annually.
+
+    Parameters:
+    model (object): The model for which the marginal cost is being initialized.
+    g (int): The generator type index.
+    y (int): The year index.
+
+    Returns:
+    float: The marginal cost of operation for the specified generator type and year.
+    """
+    if Fuel_Specific_Cost_Calculation == 1: 
+        return model.Fuel_Specific_Cost[g,y]/(model.Fuel_LHV[g]*model.Generator_Efficiency[g])
+    else: None
 
 def Initialize_Generator_Marginal_Cost_1(model,g):
-    if Fuel_Specific_Cost_Calculation == 0: return model.Fuel_Specific_Cost_1[g]/(model.Fuel_LHV[g]*model.Generator_Efficiency[g])
+    """
+    Calculates the marginal cost of operation for a generator type with a fixed fuel cost,
+    taking into account the heating value of the fuel and generator efficiency.
 
-"Partial Load Effect"
+    Parameters:
+    model (object): The model for which the marginal cost is being initialized.
+    g (int): The generator type index.
+
+    Returns:
+    float: The marginal cost of operation for the specified generator type.
+    """
+    if Fuel_Specific_Cost_Calculation == 0: 
+        return model.Fuel_Specific_Cost_1[g]/(model.Fuel_LHV[g]*model.Generator_Efficiency[g])
+    else: None
+    
 def Initialize_Generator_Start_Cost(model,g,y):
-    if Fuel_Specific_Cost_Calculation == 1 and MILP_Formulation == 1: return model.Generator_Marginal_Cost[g,y]*model.Generator_Nominal_Capacity_milp[g]*model.Generator_pgen[g]
+    """
+    Initializes the start-up cost of a generator for a given year. This cost is based on the generator's marginal cost,
+    nominal capacity, and a part-load operation parameter. Applicable in dynamic fuel cost scenarios and MILP formulation.
+
+    Parameters:
+    model (object): The model for which the start-up cost is being initialized.
+    g (int): The generator type index.
+    y (int): The year index.
+
+    Returns:
+    float: The start-up cost for the specified generator type and year.
+    """
+    if Fuel_Specific_Cost_Calculation == 1 and MILP_Formulation == 1: 
+        return model.Generator_Marginal_Cost[g,y]*model.Generator_Nominal_Capacity_milp[g]*model.Generator_pgen[g]
+    else: None
 
 def Initialize_Generator_Start_Cost_1(model,g):
-    if Fuel_Specific_Cost_Calculation == 0 and MILP_Formulation == 1 and Generator_Partial_Load == 1: return model.Generator_Marginal_Cost_1[g]*model.Generator_Nominal_Capacity_milp[g]*model.Generator_pgen[g]
+    """
+    Initializes the start-up cost of a generator in a scenario with fixed fuel cost and considering MILP formulation.
+    This cost is derived from the generator's marginal cost, nominal capacity, and part-load operation parameter.
+
+    Parameters:
+    model (object): The model for which the start-up cost is being initialized.
+    g (int): The generator type index.
+
+    Returns:
+    float: The start-up cost for the specified generator type.
+    """
+    if Fuel_Specific_Cost_Calculation == 0 and MILP_Formulation == 1 and Generator_Partial_Load == 1: 
+        return model.Generator_Marginal_Cost_1[g]*model.Generator_Nominal_Capacity_milp[g]*model.Generator_pgen[g]
+    else: None
 
 def Initialize_Generator_Marginal_Cost_milp(model,g,y):
-    if Fuel_Specific_Cost_Calculation == 1 and MILP_Formulation == 1: return ((model.Generator_Marginal_Cost[g,y]*model.Generator_Nominal_Capacity_milp[g])-model.Generator_Start_Cost[g,y])/model.Generator_Nominal_Capacity_milp[g] 
+    """
+    Calculates the marginal cost for a generator under MILP formulation for dynamic fuel cost scenarios. 
+    This cost accounts for the generator's operational characteristics, including nominal capacity and start-up costs.
+
+    Parameters:
+    model (object): The model for which the marginal cost is being initialized.
+    g (int): The generator type index.
+    y (int): The year index.
+
+    Returns:
+    float: The marginal cost for the specified generator type and year under MILP formulation.
+    """
+    if Fuel_Specific_Cost_Calculation == 1 and MILP_Formulation == 1: 
+        return ((model.Generator_Marginal_Cost[g,y]*model.Generator_Nominal_Capacity_milp[g])-model.Generator_Start_Cost[g,y])/model.Generator_Nominal_Capacity_milp[g] 
+    else: None
 
 def Initialize_Generator_Marginal_Cost_milp_1(model,g):
-    if Fuel_Specific_Cost_Calculation == 0 and MILP_Formulation == 1 and Generator_Partial_Load == 1: return ((model.Generator_Marginal_Cost_1[g]*model.Generator_Nominal_Capacity_milp[g])-model.Generator_Start_Cost_1[g])/model.Generator_Nominal_Capacity_milp[g] 
+    """
+    Determines the marginal cost for a generator in scenarios with fixed fuel costs and MILP formulation. 
+    This cost calculation considers the generator's nominal capacity and start-up cost.
+
+    Parameters:
+    model (object): The model for which the marginal cost is being initialized.
+    g (int): The generator type index.
+
+    Returns:
+    float: The marginal cost for the specified generator type under MILP formulation with fixed fuel costs.
+    """
+    if Fuel_Specific_Cost_Calculation == 0 and MILP_Formulation == 1 and Generator_Partial_Load == 1: 
+        return ((model.Generator_Marginal_Cost_1[g]*model.Generator_Nominal_Capacity_milp[g])-model.Generator_Start_Cost_1[g])/model.Generator_Nominal_Capacity_milp[g] 
+    else: None
+    
+#%% This section initializes parameters related to grid connection
 
 "Grid Connection"
-if Grid_Availability_Simulation:
-    grid_avail(average_n_outages, average_outage_duration, n_years, year_grid_connection,n_scenarios, n_periods)
+if Grid_Connection == 1:
+    if Grid_Availability_Simulation: 
+        grid_avail(average_n_outages, average_outage_duration, n_years, year_grid_connection,n_scenarios, n_periods)
+        availability = pd.read_csv(grid_file_path, delimiter=';', header=0)
+    else: availability = pd.read_csv(grid_file_path, delimiter=';', header=0)
 
-if Grid_Connection:
-    availability = pd.read_csv(grid_file_path, delimiter=';', header=0)
-    # availability_excel = pd.read_excel('Inputs/Generation.xlsx', sheet_name = "Grid Availability")
-else:
-    # Create an empty DataFrame for non-grid connection case, same as before
-    availability = pd.concat([pd.DataFrame(np.zeros(n_years * n_scenarios)).T for _ in range(n_periods)])
-    availability.index = pd.Index(range(n_periods))
-    availability.columns = range(1, (n_years* n_scenarios) + 1)
+    # Create grid_availability Series
+    grid_availability_Series = pd.Series()
+    for i in range(1, n_years * n_scenarios + 1):
+        dum = availability[str(i)]
+        grid_availability_Series = pd.concat([s for s in [grid_availability_Series, dum] if not s.empty])
 
-# Create grid_availability Series
-grid_availability_Series = pd.Series()
-for i in range(1, n_years * n_scenarios + 1):
-    if Grid_Connection and Grid_Availability_Simulation: dum = availability[str(i)]
-    elif Grid_Connection and Grid_Availability_Simulation == 0: dum = availability[str(i)]
-    else: dum = availability[i]
-    grid_availability_Series = pd.concat([s for s in [grid_availability_Series, dum] if not s.empty])
+    grid_availability = pd.DataFrame(grid_availability_Series)
 
-grid_availability = pd.DataFrame(grid_availability_Series)
-
-# Create a MultiIndex
-frame = [scenario, year, period]
-index = pd.MultiIndex.from_product(frame, names=['scenario', 'year', 'period'])
-grid_availability.index = index
+    # Create a MultiIndex
+    frame = [scenario, year, period]
+    index = pd.MultiIndex.from_product(frame, names=['scenario', 'year', 'period'])
+    grid_availability.index = index
 
 
-# Create grid_availability_2 DataFrame
-grid_availability_2 = pd.DataFrame()
-for s in scenario:
-    grid_availability_Series_2 = pd.Series()
-    for y in year:
-        if Grid_Connection: dum_2 = availability[str((s - 1) * n_years + y)]
-        else: dum_2 = availability[(s - 1) * n_years + y]
-        grid_availability_Series_2 = pd.concat([s for s in [grid_availability_Series_2, dum_2] if not s.empty])
-    grid_availability_2[s] = grid_availability_Series_2
+    # Create grid_availability_2 DataFrame
+    grid_availability_2 = pd.DataFrame()
+    for s in scenario:
+        grid_availability_Series_2 = pd.Series()
+        for y in year:
+            if Grid_Connection: dum_2 = availability[str((s - 1) * n_years + y)]
+            else: dum_2 = availability[(s - 1) * n_years + y]
+            grid_availability_Series_2 = pd.concat([s for s in [grid_availability_Series_2, dum_2] if not s.empty])
+        grid_availability_2[s] = grid_availability_Series_2
 
-# Create a RangeIndex
-index_2 = pd.RangeIndex(1, n_years * n_periods + 1)
-grid_availability_2.index = index_2
+    # Create a RangeIndex
+    index_2 = pd.RangeIndex(1, n_years * n_periods + 1)
+    grid_availability_2.index = index_2
 
 def Initialize_Grid_Availability(model, s, y, t): 
-    return float(grid_availability[0][(s,y,t)])
+    """
+    Initializes the grid availability based on the specified scenario, year, and time period.
 
+    Parameters:
+    model (object): The model for which the grid availability is being initialized.
+    s (int): The scenario number.
+    y (int): The year.
+    t (int): The time period.
+
+    Returns:
+    float: The grid availability for the specified scenario, year, and time period.
+    """
+    if Grid_Connection: return float(grid_availability[0][(s,y,t)])
+    else: 0
 
 def Initialize_National_Grid_Inv_Cost(model):
-    Grid_Connection_Specific_Cost = model.Grid_Connection_Cost  
-    Grid_Distance = model.Grid_Distance  
-    return Grid_Distance[None]*Grid_Connection_Specific_Cost[None]* model.Grid_Connection[None]/((1+model.Discount_Rate)**(model.Year_Grid_Connection-1))
+    """
+    Calculates the initial investment cost of connecting to the national grid,
+    considering the distance to the grid, specific connection cost, and discount rate.
+
+    Parameters:
+    model (object): The model for which the grid investment cost is being initialized.
+
+    Returns:
+    float: The total investment cost for connecting to the national grid.
+    """
+    if Grid_Connection: return model.Grid_Distance*model.Grid_Connection_Cost* model.Grid_Connection/((1+model.Discount_Rate)**(model.Year_Grid_Connection-1))
+    else: 0
     
 def Initialize_National_Grid_OM_Cost(model):
-    Grid_Connection_Specific_Cost = model.Grid_Connection_Cost
-    Grid_Distance = model.Grid_Distance
-    Grid_Maintenance_Cost = model.Grid_Maintenance_Cost
-    Grid_OM_Cost = (Grid_Connection_Specific_Cost * model.Grid_Connection * Grid_Distance) * Grid_Maintenance_Cost
+    """
+    Calculates the operation and maintenance cost for the national grid connection,
+    accounting for the specific connection cost, grid maintenance cost, and discount rate over the project lifetime.
+
+    Parameters:
+    model (object): The model for which the grid O&M cost is being initialized.
+
+    Returns:
+    float: The total operation and maintenance cost for the national grid connection.
+    """
+    Grid_OM_Cost = (model.Grid_Connection_Cost * model.Grid_Connection * model.Grid_Distance) * model.Grid_Maintenance_Cost
     Grid_Fixed_Cost = pd.DataFrame()
     g_fc = 0
 
@@ -375,4 +657,5 @@ def Initialize_National_Grid_OM_Cost(model):
     Grid_Fixed_Cost = pd.concat([Grid_Fixed_Cost, grid_fc], axis=1).fillna(0)
     Grid_Fixed_Cost = Grid_Fixed_Cost.groupby(level=[0], axis=1, sort=False).sum()
 
-    return Grid_Fixed_Cost.iloc[0]['Total']
+    if Grid_Connection: return Grid_Fixed_Cost.iloc[0]['Total']
+    else: 0

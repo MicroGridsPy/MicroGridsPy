@@ -93,17 +93,17 @@ class PlotPage(tk.Frame):
         self.single_color_entries.clear()
 
         row_start = 7
-        row_start = self.create_multiple_color_inputs("RES_Colors", "Orange", row_start, res_sources, self.res_color_entries)
-        row_start = self.create_multiple_color_inputs("Generator_Colors", "Blue", row_start, gen_types, self.gen_color_entries)
+        row_start = self.create_multiple_color_inputs_res("RES_Colors", "Orange", row_start, res_sources)
+        row_start = self.create_multiple_color_inputs_gen("Generator_Colors", "Blue", row_start, gen_types)
         self.create_single_color_inputs(row_start)
 
-    def create_multiple_color_inputs(self, label_text, default_color_text, row_start, num_sources, entries_list):
+    def create_multiple_color_inputs_res(self, label_text, default_color_text, row_start, num_sources):
         # Remove existing widgets if the number of sources has changed
-        if len(entries_list) != num_sources:
+        if len(self.res_color_entries) != num_sources:
             for widget in self.inner_frame.grid_slaves():
                 if int(widget.grid_info()["row"]) == row_start:
                     widget.destroy()
-            entries_list.clear()
+            self.res_color_entries.clear()
 
         ttk.Label(self.inner_frame, text=label_text).grid(row=row_start, column=0, pady=5, sticky='w')
 
@@ -126,15 +126,61 @@ class PlotPage(tk.Frame):
                 default_color_hex = self.color_options["Teal"]
             legend_label = ttk.Label(self.inner_frame, background=default_color_hex, width=2)
             legend_label.grid(row=row_start, column=label_column, padx=2, pady=2)
+            self.res_color_entries.append(default_color_hex)
 
             # Function to update the color entry when selection changes
-            def update_color_entry(event, index=i, combobox=color_combobox, legend=legend_label, current_list=entries_list):
+            def update_color_entry(event, index=i, combobox=color_combobox, legend=legend_label):
                 selected_color_name = combobox.get()
                 hex_color = self.color_options.get(selected_color_name, "")
-                if index < len(entries_list):
-                    entries_list[index] = hex_color  # Update the entry at the specific index
+                if index < len(self.res_color_entries):
+                    self.res_color_entries[index] = hex_color  # Update the entry at the specific index
                 else:
-                    entries_list.append(hex_color)  # Append new color if index exceeds the list
+                    self.res_color_entries.append(hex_color)  # Append new color if index exceeds the list
+                self.update_legend_color(combobox, legend)
+
+            color_combobox.bind("<<ComboboxSelected>>", update_color_entry)
+
+        return row_start + 1
+    
+    def create_multiple_color_inputs_gen(self, label_text, default_color_text, row_start, num_sources):
+        # Remove existing widgets if the number of sources has changed
+        if len(self.gen_color_entries) != num_sources:
+            for widget in self.inner_frame.grid_slaves():
+                if int(widget.grid_info()["row"]) == row_start:
+                    widget.destroy()
+            self.gen_color_entries.clear()
+
+        ttk.Label(self.inner_frame, text=label_text).grid(row=row_start, column=0, pady=5, sticky='w')
+
+        for i in range(num_sources):
+            # Configure the column position for combobox and color label
+            combobox_column = 2 * i + 1  # Offset by 2*i for each combobox
+            label_column = combobox_column + 1  # Place label right next to the combobox
+
+            # Create and grid the color combobox
+            color_combobox = ttk.Combobox(self.inner_frame, values=list(self.color_options.keys()), width=15)
+            if label_text == "RES_Colors" and i == 1:
+                color_combobox.set("Teal")
+            else:
+                color_combobox.set(default_color_text)
+            color_combobox.grid(row=row_start, column=combobox_column, padx=5, pady=2)
+
+            # Create and grid the legend label
+            default_color_hex = self.color_options[default_color_text]
+            if label_text == "RES_Colors" and i == 1:
+                default_color_hex = self.color_options["Teal"]
+            legend_label = ttk.Label(self.inner_frame, background=default_color_hex, width=2)
+            legend_label.grid(row=row_start, column=label_column, padx=2, pady=2)
+            self.gen_color_entries.append(default_color_hex)
+
+            # Function to update the color entry when selection changes
+            def update_color_entry(event, index=i, combobox=color_combobox, legend=legend_label):
+                selected_color_name = combobox.get()
+                hex_color = self.color_options.get(selected_color_name, "")
+                if index < len(self.gen_color_entries):
+                    self.gen_color_entries[index] = hex_color  # Update the entry at the specific index
+                else:
+                    self.gen_color_entries.append(hex_color)  # Append new color if index exceeds the list
                 self.update_legend_color(combobox, legend)
 
             color_combobox.bind("<<ComboboxSelected>>", update_color_entry)
@@ -299,7 +345,6 @@ class PlotPage(tk.Frame):
      plot_data['Generator_Colors'] = [color.lstrip('#') for color in self.gen_color_entries]
      for param, entry in self.single_color_entries.items():
         plot_data[param] = entry.lstrip('#')
-
      return plot_data
 
 

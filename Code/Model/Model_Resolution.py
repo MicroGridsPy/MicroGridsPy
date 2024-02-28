@@ -44,6 +44,10 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
             Model_Components = int((re.findall('\d+',Data_import[i])[0]))
         if "param: Solver" in Data_import[i]:      
             Solver = int((re.findall('\d+',Data_import[i])[0]))
+        if "param: Grid_Connection " in Data_import[i]:      
+            Grid_Connection = int((re.findall('\d+',Data_import[i])[0]))
+        if "param: Grid_Connection_Type " in Data_import[i]:      
+            Grid_Connection_Type = int((re.findall('\d+',Data_import[i])[0]))
         if "param: Pareto_points" in Data_import[i]:      
             n = int((re.findall('\d+',Data_import[i])[0]))
         if "param: Pareto_solution" in Data_import[i]:      
@@ -82,37 +86,41 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
 
     "Variable costs"
     model.TotalVariableCostAct         = Constraint(rule=C.Total_Variable_Cost_Act)
+    model.ScenarioVariableCostAct      = Constraint(model.scenarios,
+                                                 rule=C.Scenario_Variable_Cost_Act)  
+    model.ScenarioVariableCostNonAct   = Constraint(model.scenarios,
+                                                    rule=C.Scenario_Variable_Cost_NonAct)
+    # Fuel
     if Model_Components == 0 or Model_Components == 2:
         model.FuelCostTotalAct             = Constraint(model.scenarios, 
                                                 model.generator_types,
                                                 rule=C.Total_Fuel_Cost_Act)
-    model.TotalElectricityCostAct      = Constraint(model.scenarios,
-                                                    rule=C.Total_Electricity_Cost_Act)   
-    model.TotalRevenuesAct             = Constraint(model.scenarios,
-                                                    rule=C.Total_Revenues_Act)
-    model.TotalRevenuesNonAct          = Constraint(model.scenarios,
-                                                    rule=C.Total_Revenues_NonAct)    
-    if Model_Components == 0 or Model_Components == 1:
-        
-        model.BatteryReplacementCostAct    = Constraint(model.scenarios,
-                                                     rule=C.Battery_Replacement_Cost_Act) 
-    model.ScenarioLostLoadCostAct      = Constraint(model.scenarios, 
-                                                 rule=C.Scenario_Lost_Load_Cost_Act)
-    model.ScenarioVariableCostAct      = Constraint(model.scenarios,
-                                                 rule=C.Scenario_Variable_Cost_Act)   
-    if Model_Components == 0 or Model_Components == 2:
         model.FuelCostTotalNonAct          = Constraint(model.scenarios, 
                                                         model.generator_types,
                                                         rule=C.Total_Fuel_Cost_NonAct)
-    model.TotalElectricityCostNonAct   = Constraint(model.scenarios,
-                                                    rule=C.Total_Electricity_Cost_NonAct)     
+    # Grid Connection
+    if Grid_Connection == 1:
+        model.TotalElectricityCostAct      = Constraint(model.scenarios,
+                                                    rule=C.Total_Electricity_Cost_Act)   
+        model.TotalRevenuesAct             = Constraint(model.scenarios,
+                                                    rule=C.Total_Revenues_Act)
+        if Grid_Connection_Type == 0:
+            model.TotalRevenuesNonAct          = Constraint(model.scenarios,
+                                                    rule=C.Total_Revenues_NonAct) 
+            model.TotalElectricityCostNonAct   = Constraint(model.scenarios,
+                                                    rule=C.Total_Electricity_Cost_NonAct) 
+    # Battery Replacement
     if Model_Components == 0 or Model_Components == 1:
+        
+        model.BatteryReplacementCostAct    = Constraint(model.scenarios,
+                                                     rule=C.Battery_Replacement_Cost_Act)
         model.BatteryReplacementCostNonAct = Constraint(model.scenarios,
-                                                        rule=C.Battery_Replacement_Cost_NonAct) 
+                                                        rule=C.Battery_Replacement_Cost_NonAct)
+    # Lost Load
+    model.ScenarioLostLoadCostAct      = Constraint(model.scenarios, 
+                                                 rule=C.Scenario_Lost_Load_Cost_Act)
     model.ScenarioLostLoadCostNonAct   = Constraint(model.scenarios, 
-                                                    rule=C.Scenario_Lost_Load_Cost_NonAct)
-    model.ScenarioVariableCostNonAct   = Constraint(model.scenarios,
-                                                    rule=C.Scenario_Variable_Cost_NonAct)     
+                                                    rule=C.Scenario_Lost_Load_Cost_NonAct)     
 
     "Salvage value"
     model.SalvageValue = Constraint(rule=C.Salvage_Value)
@@ -190,14 +198,6 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
                                                         model.years_steps,
                                                         model.periods, 
                                                         rule=C. Battery_Single_Flow_Charge)
-            model.SingleFlowEnergyToGrid      = Constraint(model.scenarios,
-                                                     model.years_steps,
-                                                     model.periods,
-                                                     rule=C.Single_Flow_Energy_To_Grid)
-            model.SingleFlowEnergyFromGrid  = Constraint(model.scenarios,
-                                                     model.years_steps,
-                                                     model.periods,
-                                                    rule=C.Single_Flow_Energy_From_Grid)
             
         if Battery_Independence > 0:
             model.BatteryMinCapacity   = Constraint(model.steps, 
@@ -205,7 +205,6 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
 
     "Diesel generator constraints"
     if Model_Components == 0 or Model_Components == 2:
-        
         
         if MILP_Formulation == 1 and Generator_Partial_Load == 1:
            model.MinimumGeneratorEnergyPartial     = Constraint(model.scenarios, 
@@ -269,18 +268,28 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
            model.GeneratorMinStepCapacity = Constraint(model.years_steps, 
                                                        model.generator_types, 
                                                        rule=C.Generator_Min_Step_Capacity)         
-    "Grid constraints"  
-    
-    model.MaximumPowerFromGrid     = Constraint(model.scenarios,
+    "Grid constraints" 
+    if Grid_Connection == 1:
+        model.MaximumPowerFromGrid     = Constraint(model.scenarios,
                                                 model.years,
                                                 model.periods,
                                                 rule=C.Maximum_Power_From_Grid)
-    model.MaximumPowerToGrid       = Constraint(model.scenarios,
+        if Grid_Connection_Type == 0:
+            model.MaximumPowerToGrid       = Constraint(model.scenarios,
                                                 model.years,
                                                 model.periods,
                                                 rule=C.Maximum_Power_To_Grid) 
+        if MILP_Formulation:
+            if Grid_Connection_Type == 0:
+                model.SingleFlowEnergyToGrid      = Constraint(model.scenarios,
+                                                     model.years_steps,
+                                                     model.periods,
+                                                     rule=C.Single_Flow_Energy_To_Grid)
+            model.SingleFlowEnergyFromGrid  = Constraint(model.scenarios,
+                                                     model.years_steps,
+                                                     model.periods,
+                                                    rule=C.Single_Flow_Energy_From_Grid)
 
-    
     "Lost load constraints"
     model.MaximumLostLoad = Constraint(model.scenarios, model.years, 
                                     rule=C.Maximum_Lost_Load) # Maximum permissible lost load
@@ -299,13 +308,15 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
     if Model_Components == 0 or Model_Components == 1:
         model.BESSemission   = Constraint(rule=C.BESS_emission)
     
-    model.GRIDemission = Constraint(model.scenarios, 
+    if Grid_Connection == 1:
+        model.GRIDemission = Constraint(model.scenarios, 
                                     model.years,
                                     model.periods,
                                     rule=C.GRID_emission)
-    model.ScenarioGRIDemission = Constraint(model.scenarios,
+        model.ScenarioGRIDemission = Constraint(model.scenarios,
                                             rule=C.Scenario_GRID_emission) 
-    
+
+##############################################################################################################################################################
      
     if Multiobjective_Optimization == 0:
         if Optimization_Goal == 1:
@@ -314,8 +325,6 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
         elif Optimization_Goal == 0:
             model.ObjectiveFuntion = Objective(rule=C.Total_Variable_Cost_Obj, 
                                                sense = minimize)
-            
-##############################################################################################################################################################
 
         instance = model.create_instance(datapath) # load parameters
     

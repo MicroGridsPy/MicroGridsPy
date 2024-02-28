@@ -194,7 +194,8 @@ def Model_Creation(model):
                                                      within=NonNegativeReals)              # Cost of the diesel generator
     model.Generator_Lifetime                 = Param(model.generator_types,
                                                      within=NonNegativeIntegers)    
-    model.Fuel_Names                         = Param(model.generator_types)                # Fuel names
+    model.Fuel_Names                         = Param(model.generator_types,
+                                                     within=Any)                # Fuel names
     model.Fuel_LHV                           = Param(model.generator_types,
                                                      within=NonNegativeReals)              # Low heating value of the fuel in kg/l
     model.GEN_years                          = Param(model.generator_types,
