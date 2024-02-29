@@ -154,7 +154,7 @@ if Demand_Profile_Generation:
 else:
     Demand = pd.read_csv(demand_file_path, delimiter=';', decimal=',', header=0)
     Demand = Demand.drop(Demand.columns[0], axis=1)
-    Demand = Demand.iloc[:, :n_years]
+    if n_scenarios == 1: Demand = Demand.iloc[:, :n_years]
     print("Electric demand data loaded exogenously from excel file")
     plot_path = os.path.join(results_directory, 'Electric Demand.png')
     plot_average_daily_demand(Demand, plot_path)
