@@ -137,6 +137,12 @@ Please ensure the CSV file is formatted correctly, as any discrepancies in the d
 Load Demand Assessment
 =========================
 
+The Load Demand Assessment interface allows users to forecast the electricity demand based on socioeconomic factors and service needs within the community. It caters to both endogenous estimation using built-in profiles and the inclusion of exogenous demand time series data.
+If *Demand Time Series Calculation* is activated, the model will estimate the electricity demand using predefined profiles (archetypes) that represent different user categories, such as households and public services. They are valid just for Sub-Sahara Africa. 
+The demand drivers, like anticipated annual demand growth and seasonal cooling periods, can be adjusted. Choose from 'No Cooling' (NC), 'All Year' (AY), 'Oct-Mar' (OM), or 'Apr-Sept' (AS) to reflect the expected seasonal variations in energy usage.
+Users need to specify the number of households across various wealth tiers to reflect the socioeconomic diversity of the village, which affects the ownership and use of energy-intensive appliances and
+enter the number of educational and healthcare facilities in the village, with tiers representing the range from rural dispensaries to sub-county hospitals, as well as the typical load for a rural primary school.
+
 
 .. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/load.png?raw=true
    :width: 700
@@ -144,11 +150,17 @@ Load Demand Assessment
 
 ----------------------------------------------------------------------
 
+For incorporating externally calculated or historical demand data, deactivate the *Demand Profile Generation* and supply the demand time series as a CSV file located in the `Code/Inputs/Demand.csv`.
+The CSV file must contain hourly electricity demand in watts for each year of the time horizon, structured with numbered columns corresponding to each year.
+Users must ensure the rows represent consecutive hours through the year, providing a detailed time series of demand.
+
 .. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/load_2.png?raw=true
    :width: 700
    :align: center
 
 ----------------------------------------------------------------------
+
+Both endogenous and exogenous approaches to load demand estimation are critical for accurately modeling and planning the mini-grid's capacity and operational strategy. Correct configuration and data input are essential to reflect the unique characteristics and requirements of the location being served.
 
 Renewables Characterization
 ==============================
