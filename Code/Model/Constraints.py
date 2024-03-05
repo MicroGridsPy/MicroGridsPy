@@ -63,6 +63,10 @@ class Constraints_Greenfield():
                 return model.Scenario_CO2_emission[s] ==  (model.RES_emission + model.BESS_emission)
             if model.Model_Components == 2:
                 return model.Scenario_CO2_emission[s] ==  (model.RES_emission + model.GEN_emission + model.Scenario_FUEL_emission[s])
+            
+    def CO2_emission_fixed(model, min_CO2_emissions):
+        return sum(model.Scenario_CO2_emission[s] * model.Scenario_Weight[s] for s in model.scenarios) == min_CO2_emissions
+
         
     "Investment cost"
     def Investment_Cost(model):  
