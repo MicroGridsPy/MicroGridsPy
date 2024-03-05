@@ -22,6 +22,13 @@ The **Results_Summary** spreadsheet provides a comprehensive breakdown of the si
 
 - **Yearly Energy Parameters SC**: This subsection provides the same parameters as above, but for each scenario.
 
+
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/run_4.png?raw=true
+   :width: 700
+   :align: center
+
+----------------------------------------------------------------------
+
 The **Time_Series** spreadsheet contains hourly data of the system's energy balance, including technology energy production, battery energy flows, demand, lost load, and curtailment. Additionally, it tracks the state of charge of the batteries and the fuel consumed by the generators. Each year of the time horizon is reported on a different sheet.
 
 The **Plots** offer graphical representations of the simulation results:
@@ -31,3 +38,9 @@ The **Plots** offer graphical representations of the simulation results:
 - **Size Plot**: This plot visually conveys information about the sizing of components within the system. It helps users assess the capacity and scale of various elements, facilitating an evaluation of component sizes for the given energy scenario.
 
 - **Cost Plot**: This plot displays information on the costs associated with energy production, storage, and other operational expenses. Cost plots are crucial for economic evaluations and decision-making within the energy system.
+
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/run_5.png?raw=true
+   :width: 700
+   :align: center
+
+---------------------------------------------------------------------

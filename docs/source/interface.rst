@@ -230,12 +230,22 @@ Lastly, for projects requiring an in-depth analysis of fuel cost over time, the 
 Running the Model
 ==================================
 
+Pressing the **Run** but, the MicroGridsPy execution phase will start. Users can observe the solver's log and system operations as the model runs. This process is fundamental for validating the simulation's integrity and for immediate troubleshooting.
+A dedicated output panel displays the solver's live log, offering real-time feedback on the model's computations, including solver operations and key result indicators. 
+Any errors or issues during the model run are also reported in this panel, allowing users to identify and address potential problems swiftly.
+
 
 .. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/run.png?raw=true
    :width: 700
    :align: center
 
 ----------------------------------------------------------------------
+
+Once the model run is complete, the interface presents key sizing results and a comprehensive summary of system costs:
+
+- Users are provided with details such as installed capacities, lifecycle costs including net present cost (NPC), investment costs, operational costs, and the levelized cost of electricity (LCOE).
+- Annual statistics for renewable penetration, generator share, battery usage, and curtailment are also displayed, giving users a snapshot of the system's yearly performance.
+
 
 .. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/run_2.png?raw=true
    :width: 700
@@ -246,20 +256,14 @@ Running the Model
 Obtaining the Results
 ==================================
 
+The GUI provides functionality for plotting model outputs, enabling users to visualize the system's performance over a selected timeframe.
+
+- By entering the start date and the number of days to plot, users can generate graphs for energy dispatch, system sizing, and financial analysis.
+- Graphs like the dispatch plot, size plot, cash flow plot, and Pareto curve offer a visual interpretation of the model's operational dynamics and economic viability.
+
+
 .. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/run_3.png?raw=true
    :width: 700
    :align: center
 
 ----------------------------------------------------------------------
-
-.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/run_4.png?raw=true
-   :width: 700
-   :align: center
-
-----------------------------------------------------------------------
-
-.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/run_5.png?raw=true
-   :width: 700
-   :align: center
-
----------------------------------------------------------------------
