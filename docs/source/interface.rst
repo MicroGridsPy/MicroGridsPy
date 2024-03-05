@@ -63,17 +63,11 @@ By clicking the *Advanced Features* button, the section offers a suite of enhanc
 
 Advanced Modeling Options:
 
-- **Capacity Expansion**: This feature allows planning for additional capacity requirements as the project grows over time.
-
-If capacity Expansion is activated, users can also specify:
-
-- **Step Duration [Years]**: Users can determine the time increments for the model to evaluate capacity expansion.
-- **Minimum Last Step Duration [Years]**: This sets the mandatory duration for the last expansion step, ensuring stability in the project's growth phase.
-- **LP vs MILP Formulation**: Linear Programming (LP) approaches provide a simplified, continuous representation of operations, ideal for scenarios where decisions do not need to be binary. Mixed-Integer Linear Programming (MILP), however, incorporates integer variables, allowing for a unit commitment approach that can handle on/off decisions and more complex relationships, crucial for discrete decision-making processes like those found in many energy systems.
-
-Delving into the MILP formulation of the model, additional and more advanced modeling equations could be integrated. Currently, if MILP is activated:
-
-- **Generator Partial Load**: Allows for the inclusion of generator partial load characteristics in the model, optimizing the operation of generators according to their load profiles.
+- **Capacity Expansion**: This feature allows planning for additional capacity requirements as the project grows over time. If capacity Expansion is activated, users can also specify:
+   - **Step Duration [Years]**: Users can determine the time increments for the model to evaluate capacity expansion.
+   - **Minimum Last Step Duration [Years]**: This sets the mandatory duration for the last expansion step, ensuring stability in the project's growth phase.
+- **LP vs MILP Formulation**: Linear Programming (LP) approaches provide a simplified, continuous representation of operations, ideal for scenarios where decisions do not need to be binary. Mixed-Integer Linear Programming (MILP), however, incorporates integer variables, allowing for a unit commitment approach that can handle on/off decisions and more complex relationships, crucial for discrete decision-making processes like those found in many energy systems. Delving into the MILP formulation of the model, additional and more advanced modeling equations could be integrated. Currently, if MILP is activated:
+   - **Generator Partial Load**: Allows for the inclusion of generator partial load characteristics in the model, optimizing the operation of generators according to their load profiles.
 
 Considering the investment strategy:
 
@@ -165,6 +159,13 @@ Both endogenous and exogenous approaches to load demand estimation are critical 
 Renewables Characterization
 ==============================
 
+The GUI's Renewables Characterization interface provides a streamlined process for specifying the attributes of different renewable energy sources. 
+Users can define a variety of parameters such as types, capacities, efficiencies, and costs which are essential for accurate simulation of renewable technologies.
+The interface is designed to be flexible, accommodating a range of renewable energy technologies and their respective attributes.
+The number and types of renewable sources are set under the *RES_Sources* field, which then enables the configuration of parameters for each selected technology.
+The interface page includes a **Update Parameters Configuration** button, which applies the new settings to the renewable energy sources.
+After setting the number of renewable sources and adjusting the necessary parameters, pressing this button will update the system with the latest configurations.
+In-depth control over the configuration allows for the activation of additional parameters based on the selected advanced features, providing the flexibility to adapt the model to specific project needs such as brownfield or greenfield investments.
 
 .. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/res_param.png?raw=true
    :width: 700
@@ -181,6 +182,10 @@ Renewables Characterization
 Storage System Characterization
 ==================================
 
+The Storage System Characterization interface facilitates the definition of battery bank parameters, playing a crucial role in the energy storage aspect of a minigrid design. Within this section:
+Users can input key parameters related to battery systems such as investment costs, operational costs, efficiencies, lifecycle, and CO2 emissions.
+The flexibility of the interface allows for the activation or deactivation of certain parameters based on the advanced features selected, like MILP modeling and brownfield investment considerations.
+
 
 .. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/battery.png?raw=true
    :width: 700
@@ -191,6 +196,10 @@ Storage System Characterization
 Backup System Characterization
 ==================================
 
+The Backup System Characterization interface enables the user to define and adjust a wide array of generator characteristics and associated fuel costs.
+Parameters for backup generators can be entered, such as names, efficiencies, investment costs, operational costs, lifespans, and emissions. Users can also configure specific parameters like minimum output and nominal capacity adjustments for MILP formulations.
+The *Update Parameters Configuration* button is available to save the new settings to the generator parameters once the user sets the number of generators and fills out the required fields.
+
 
 .. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/gen.png?raw=true
    :width: 700
@@ -198,11 +207,19 @@ Backup System Characterization
 
 ----------------------------------------------------------------------
 
+For the fuel-related parameters, the GUI provides tools for:
+- Setting the **fuel types**, lower heating value (LHV), specific CO2 emissions, and cost-related information.
+- If the **Fuel Specific Cost Calculation** feature is activated, the user must input fuel cost values into a CSV file located in the 'Inputs' folder. This feature takes into account the fluctuating costs of fuel over the project's lifespan.
+
+
 .. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/gen_2.png?raw=true
    :width: 700
    :align: center
 
 ----------------------------------------------------------------------
+
+Lastly, for projects requiring an in-depth analysis of fuel cost over time, the GUI allows the importation of exogenous fuel cost data via a CSV file, which should contain yearly prices for each type of fuel considered over the project's time horizon.
+
 
 .. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/gen_3.png?raw=true
    :width: 700
