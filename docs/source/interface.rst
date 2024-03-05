@@ -14,7 +14,7 @@ Model configuration
 
 This first section of the GUI is designed to configure the key aspects of your project's timeline and financial settings. Users can specify the total duration of the project in years and set the discount rate as a decimal to impact the actuarial considerations of the costs, 
 which will influence the selection and sizing of the mini-grid technologies. 
-In the *Optimization Setup*,' users can tailor essential parameters to fit project's analytical model. This includes setting the time resolution in periods per year and choosing your optimization goal between net present cost and operation cost, with the former focusing on both investment and operation costs 
+In the *Optimization Setup*, users can tailor essential parameters to fit project's analytical model. This includes setting the **Time Resolution** in periods per year and choosing the **Optimization goal** between net present cost and operation cost, with the former focusing on both investment and operation costs 
 and the latter on operational expenses with an option to limit capital expenditure. The *Time Resolution* field can be adjusted to impact the accuracy of the results. It requires careful consideration, especially when integrating external time series data, to ensure matching resolution. 
 
 
@@ -24,7 +24,7 @@ and the latter on operational expenses with an option to limit capital expenditu
 
 ----------------------------------------------------------------------
 
-Users can set constraints on the types of technologies used for backup and storage within the model. This option enables the selection among batteries and generators, batteries only, or generators only. 
+Users can set constraints on the **types of technologies** used for backup and storage within the model. This option enables the selection among batteries and generators, batteries only, or generators only. 
 This choice determines the flexibility and resilience of the power supply in the face of variable renewable energy outputs and consumption patterns.
 The interface allows users to set important optimization constraints that affect the performance of the mini-grid:
 
@@ -86,12 +86,15 @@ Grid Connection:
 - **Grid Connection Type**: Offers a choice between purchase-only or the ability to both purchase and sell electricity, reflecting the microgrid’s interaction with the main grid.
 
 For financial modeling:
+
 - **WACC Calculation**: Activating this computes the Weighted Average Cost of Capital, integrating the cost implications of both debt and equity financing into the project's financial planning.
 
 Expanding on cost calculations:
+
 - **Fuel Specific Cost Calculation**: This feature enables users to estimate the variable costs of fuel over time, considering both the initial cost and the rate of change.
 
 When configuring the optimization process:
+
 - **Multi-Objective Optimization**: This advanced feature goes beyond single-objective cost minimization by also considering emissions. It provides a mechanism for building a Pareto Curve, which represents various trade-offs between cost and emissions. Users can select the number of Pareto points to analyze, allowing them to explore the spectrum of solutions from minimizing emissions to minimizing costs. The interface also enables users to choose and display a specific solution on this curve, facilitating informed decision-making based on environmental impact and economic factors.
 - **Multi-Scenario Optimization**: This allows for the evaluation of different operational scenarios within a single run, providing valuable insights into potential performance under varying conditions.
 
@@ -105,12 +108,25 @@ When configuring the optimization process:
 Resource Assessment
 ====================
 
+The Resource Assessment interface is designed to meticulously calculate the potential of renewable energy sources at the project's location. 
+The GUI also includes an automated function to endogenously calculate the RES time series. By activating the *RES Time Series Calculation*, the model will estimate the electricity output of renewable generation units using NASA POWER data, which necessitates an internet connection.
+
+- Input the **latitude and longitude** in DMS format to accurately define the geographical positioning of your project, which is fundamental for resource assessment.
+- Specify **solar PV parameters**, which include the nominal power of the solar panels, tilt angle, azimuth, and efficiency-related coefficients, to precisely model the solar generation potential.
+- Specify **wind turbine parameters** for wind energy estimation, select the turbine type and model from the provided list. Details like the turbine's rated power and drivetrain efficiency are essential to accurately calculate wind energy generation potential.
+  
 
 .. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/res.png?raw=true
    :width: 700
    :align: center
 
 ----------------------------------------------------------------------
+
+If this automatic calculation is deactivated, users are responsible for supplying the RES Time Series Data as a CSV file. The CSV file, named `RES_Time_Series.csv`, should be placed within the `Code/Model/Inputs` directory.
+Data within the CSV file should represent the hourly electricity output for each renewable source unit over an entire year. Each column in the CSV file corresponds to a different renewable source, and the columns should be numbered sequentially to match the total number of renewable units considered.
+Rows represent consecutive hours throughout the year, starting from the first hour of January 1st to the last hour of December 31st.
+The values are expected to be in watts (W), reflecting the output power produced by each unit for every hour.
+Please ensure the CSV file is formatted correctly, as any discrepancies in the data structure can lead to inaccuracies in the model's output or potential errors in the simulation.
 
 .. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/res_2.png?raw=true
    :width: 700
