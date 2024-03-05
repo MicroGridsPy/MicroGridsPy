@@ -1,8 +1,8 @@
 Analysing the Results
 =====================
 
-Results
--------
+Results Spreadsheets
+-----------------------
 
 The **Results_Summary** spreadsheet provides a comprehensive breakdown of the simulation results:
 
@@ -36,6 +36,9 @@ The **Time_Series** spreadsheet contains hourly data of the system's energy bala
    :align: center
 
 ---------------------------------------------------------------------
+
+Plots
+----------
 
 The **Plots** offer graphical representations of the simulation results:
 
