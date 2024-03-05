@@ -31,6 +31,12 @@ The **Results_Summary** spreadsheet provides a comprehensive breakdown of the si
 
 The **Time_Series** spreadsheet contains hourly data of the system's energy balance, including technology energy production, battery energy flows, demand, lost load, and curtailment. Additionally, it tracks the state of charge of the batteries and the fuel consumed by the generators. Each year of the time horizon is reported on a different sheet.
 
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/run_5.png?raw=true
+   :width: 700
+   :align: center
+
+---------------------------------------------------------------------
+
 The **Plots** offer graphical representations of the simulation results:
 
 - **DispatchPlot**: This plot provides insights into the dispatch strategy of the energy resources within the system. It illustrates how different energy sources are utilized over time to meet the energy demand, aiding in understanding operational dynamics.
@@ -39,7 +45,7 @@ The **Plots** offer graphical representations of the simulation results:
 
 - **Cost Plot**: This plot displays information on the costs associated with energy production, storage, and other operational expenses. Cost plots are crucial for economic evaluations and decision-making within the energy system.
 
-.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface/run_5.png?raw=true
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/plots.png?raw=true
    :width: 700
    :align: center
 
