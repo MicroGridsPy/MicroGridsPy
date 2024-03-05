@@ -45,7 +45,7 @@ The **Plots** offer graphical representations of the simulation results:
 
 - **Cost Plot**: This plot displays information on the costs associated with energy production, storage, and other operational expenses. Cost plots are crucial for economic evaluations and decision-making within the energy system.
 
-.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/plots.png?raw=true
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Plots.png?raw=true
    :width: 700
    :align: center
 
