@@ -16,7 +16,7 @@ The multi-year formulation is a crucial prerequisite for implementing a capacity
    **Multi-Year Formulation and Capacity Expansion in the model**: This approach drops the old consideration about the yearly demand for project lifetime which was the same and equal to a typical year of consumption for the study area. For this new concept, all the model constraints are estimated at each time step (t) of every year (yt) along the mini-grid lifetime. Thus, all equations involving time-dependent variables must be thus verified at all time steps (yt,t) of the optimization horizon.
    The variables associated with component capacity are determined by decision steps (ut) within the time horizon. The user defines the number of decision steps, essentially dividing the time horizon. This user-defined parameter governs how finely the model considers the progression of time, allowing for a strategic and step-by-step approach to capacity expansion based on the evolving electricity demand.
 
-.. figure:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/CapacityExpansion.png?raw=true
+.. figure:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/CapacityExpansion.png?raw=true
      :width: 700
      :align: center
 
@@ -46,7 +46,7 @@ The following table provides a detailed overview of the parameters used in the C
 The study reveals that a multi-year formulation optimizes system design by reducing both installed capacity and capital costs. 
 A capacity-expansion strategy further lowers the Net Present Cost (NPC) and initial investment by deferring some installations, ultimately increasing final installed capacity. Moreover, incorporating a stochastic approach in the capacity-expansion strategy effectively reduces operation and maintenance (O&M) costs over the system's lifetime.
 
-.. figure:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/ResultsCapacityExpansion.png?raw=true
+.. figure:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/ResultsCapacityExpansion.png?raw=true
      :width: 700
      :align: center
 
@@ -220,7 +220,7 @@ The multi-objective optimization framework focuses on two main objectives: minim
 
 The Pareto optimal front is a fundamental concept in multi-objective optimization. It represents a boundary in the objective space, consisting of solutions where no objective can be improved without degrading at least one other objective. In the context of off-grid energy systems, the Pareto front offers a visual representation of the trade-offs between minimizing costs (NPC) and environmental impacts (CO2 emissions).
 
-.. figure:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/ParetoCurve.png?raw=true
+.. figure:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/ParetoCurve.png?raw=true
      :width: 700
      :align: center
 
