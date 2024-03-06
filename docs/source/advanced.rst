@@ -17,7 +17,7 @@ The multi-year formulation is a crucial prerequisite for implementing a capacity
    The variables associated with component capacity are determined by decision steps (ut) within the time horizon. The user defines the number of decision steps, essentially dividing the time horizon. This user-defined parameter governs how finely the model considers the progression of time, allowing for a strategic and step-by-step approach to capacity expansion based on the evolving electricity demand.
 
 .. figure:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/CapacityExpansion.png?raw=true
-     :width: 700
+     :width: 500
      :align: center
 
      Multi-Year Capacity-Expansion Formulation scheme
@@ -47,7 +47,7 @@ The study reveals that a multi-year formulation optimizes system design by reduc
 A capacity-expansion strategy further lowers the Net Present Cost (NPC) and initial investment by deferring some installations, ultimately increasing final installed capacity. Moreover, incorporating a stochastic approach in the capacity-expansion strategy effectively reduces operation and maintenance (O&M) costs over the system's lifetime.
 
 .. figure:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/ResultsCapacityExpansion.png?raw=true
-     :width: 700
+     :width: 500
      :align: center
 
      Multi-Year Capacity-Expansion Formulation scheme
