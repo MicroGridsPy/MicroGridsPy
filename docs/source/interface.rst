@@ -64,9 +64,12 @@ By clicking the *Advanced Features* button, the section offers a suite of enhanc
 Advanced Modeling Options:
 
 *  **Capacity Expansion**: This feature allows planning for additional capacity requirements as the project grows over time. If capacity Expansion is activated, users can also specify:
+  
    *  **Step Duration [Years]**: Users can determine the time increments for the model to evaluate capacity expansion.
    *  **Minimum Last Step Duration [Years]**: This sets the mandatory duration for the last expansion step, ensuring stability in the project's growth phase.
+
 *  **LP vs MILP Formulation**: Linear Programming (LP) approaches provide a simplified, continuous representation of operations, ideal for scenarios where decisions do not need to be binary. Mixed-Integer Linear Programming (MILP), however, incorporates integer variables, allowing for a unit commitment approach that can handle on/off decisions and more complex relationships, crucial for discrete decision-making processes like those found in many energy systems. Delving into the MILP formulation of the model, additional and more advanced modeling equations could be integrated. Currently, if MILP is activated:
+  
    *  **Generator Partial Load**: Allows for the inclusion of generator partial load characteristics in the model, optimizing the operation of generators according to their load profiles.
 
 Considering the investment strategy:
