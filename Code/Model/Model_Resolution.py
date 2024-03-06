@@ -9,10 +9,12 @@ able to account for time-variable load demand evolution and capacity expansion.
 
 from pyomo.environ import *
 from pyomo.opt import SolverFactory
+import matplotlib
 from matplotlib import pyplot as plt
 import re
-import sys
 import os
+
+matplotlib.use('Agg')  # Switch to 'Agg' backend to prevent GUI operations
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 inputs_directory = os.path.join(current_directory, '..', 'Inputs')
@@ -402,34 +404,50 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
                     opt.set_options('Method=3 BarHomogeneous=1 Crossover=1 MIPfocus=1 BarConvTol=1e-3 OptimalityTol=1e-3 FeasibilityTol=1e-4 TimeLimit=10000')
                 else:
                     opt.set_options('Method=2 BarHomogeneous=0 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000')
-                print('Calling GUROBI solver...')
+                print('Optimizing only for minimum NPC...')
             elif Solver == 1:
                 opt = SolverFactory('glpk')
                 timelimit = 10000
                 opt.options['tmlim'] = timelimit
                 if MILP_Formulation: 
                     opt.options['mipgap'] = 0.01      # Set relative gap tolerance for MIP
-                    opt.options['clq_cuts'] = 'on'  # Enable clique cuts
+                    opt.options['clq_cuts'] = 'on'    # Enable clique cuts
                 
-                print('Calling GLPK solver...')
+                print('Optimizing only for minimum NPC...')
             
             opt.solve(instance, tee=True)
             print('Instance solved') 
             NPC_min = value(instance.ObjectiveFuntion)
             CO2emission_max = value(instance.ObjectiveFuntion1)
-            print('NPC_min [kUSD] =' +str(NPC_min/1e3),'CO2emission_max [ton] =' +str(CO2emission_max/1e3))
+            print('NPC_min [kUSD] = ' +str(NPC_min/1e3),'CO2emission_max [ton] = ' +str(CO2emission_max/1e3))
            
         
             #NPC max and CO2 emission min calculation
             model.ObjectiveFuntion.deactivate()
             model.ObjectiveFuntion1.activate()
             instance = model.create_instance(datapath)
-            print('Calling solver...')
-            opt.solve(instance, tee=True)
+            print('Optimizing only for minimum CO2 emissions...')
+            results = opt.solve(instance, tee=True)  # Solve the model instance
+            instance.solutions.load_from(results)    # Load the solution into the instance
             print('Instance solved') 
+
+            NPC = value(instance.ObjectiveFuntion)
+            CO2emission_min = value(instance.f2)
+            print('NPC [kUSD] = ' +str(NPC/1e3),'CO2emission_min [ton] = ' +str(CO2emission_min/1e3))
+           
+
+            # Second Optimization: Minimize cost while constraining emissions to the minimum value found
+            model.ObjectiveFuntion.activate()     # Reactivate cost minimization objective
+            model.ObjectiveFuntion1.deactivate()  # Ensure emissions objective is deactivated
+            instance = model.create_instance(datapath)
+            instance.CO2 = Param(initialize=CO2emission_min, mutable=True)
+            instance.CO2_fixed = Constraint(expr = instance.f2 == instance.CO2)
+
+            print('Optimizing for cost with minimum CO2 emissions constraint...')
+            results = opt.solve(instance, tee=True)     # Solve the model instance again with the new constraint
+            instance.solutions.load_from(results)       # Load the new solution into the instance
             NPC_max = value(instance.ObjectiveFuntion)
-            CO2emission_min = value(instance.ObjectiveFuntion1)
-            print('NPC_max [kUSD] =' +str(NPC_max/1e3),'CO2emission_min [ton] =' +str(CO2emission_min/1e3))
+            print('NPC_max [kUSD] = ' +str(NPC_max/1e3),'with CO2emission_fixed [ton] = ' +str(CO2emission_min/1e3))
 
             #normal eps method
             model.ObjectiveFuntion.activate()
@@ -469,47 +487,41 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
             NPC=f1_l[0]*1000-NPC_min  
             print('Cost CO2 avoided [USD/ton] =' +str(round(NPC/CO2,3))) 
             
-            ####################### PARETO CURVE ###########################################################
-            print('plotting Pareto curve...')
-            fontticks = 18
-            fontaxis = 20
-            fontlegend = 20
-            PlotFormat = 'png'                   # Desired extension of the saved file (Valid formats: png, svg, pdf)
-            PlotResolution = 400                 # Plot resolution in dpi (useful only for .png files, .svg and .pdf output a vector plot)
+            ##################################################################################
+            def save_pareto_curve(f1_l, f2_l, plot_title, plot_xlabel, plot_ylabel, plot_path):
+                fig, ax = plt.subplots(figsize=(15, 10))
+                ax.plot(f1_l, f2_l, 'o-', c='r', label='Pareto optimal front')
+                ax.set_title(plot_title, fontsize=22)
+                ax.set_xlabel(plot_xlabel, fontsize=20)
+                ax.set_ylabel(plot_ylabel, fontsize=20)
+                ax.grid(True)
+                ax.legend(loc='best', fontsize=20)
+                plt.tight_layout()
 
-            #%% Plotting
-            fig, ax = plt.subplots(figsize=(15, 10))
-            ax.plot(f1_l, f2_l, 'o-', c='r', label='Pareto optimal front')
+                # Save plot to file
+                plt.savefig(plot_path, dpi=400, bbox_inches='tight')
+                plt.close()
+            
+                
+            print('Plotting Pareto curve...')
 
-            ax.set_xlabel('NPC(kUSD)', fontsize=fontaxis)
-            ax.set_ylabel('CO2 emission(ton)', fontsize=fontaxis)
-            ax.legend(loc='best', fontsize=fontlegend)
-            ax.grid(True)
-            ax.tick_params(axis='both', which='major', labelsize=fontticks)
-
-            plt.tight_layout()
-    
-            #%% Saving Plot
             current_directory = os.path.dirname(os.path.abspath(__file__))
             results_directory = os.path.join(current_directory, '..', 'Results/Plots')
-            plot_path = os.path.join(results_directory, 'ParetoCurve.')
-            fig.savefig(plot_path + PlotFormat, dpi=PlotResolution, bbox_inches='tight')
-            plt.close(fig)  # Close the figure to free memory
+            plot_path = os.path.join(results_directory, 'ParetoCurve.png')
+            save_pareto_curve(f1_l, f2_l, "Pareto Curve - NPC", "CO2 Emissions [ton]", "Net Present Costs [kUSD]",plot_path)
 
             print('Pareto curve plot saved.')
             #################################################################################################
             
-            step = int((CO2emission_max - CO2emission_min)/(n-1))
-            steps = list(range(int(CO2emission_min),int(CO2emission_max),step)) 
+            # Calculate the step size
+            step = int((CO2emission_max - CO2emission_min) / (n - 1))
 
-            if len(steps)<=n:
-                steps.append(CO2emission_max)
-            
-            if Plot_Max_Cost:
-                steps.insert(0,0)                
+            # Generate steps from CO2emission_min up to (but not including) CO2emission_max, with an interval of 'step'
+            steps = list(range(int(CO2emission_min), int(CO2emission_max), step))
+
+            # Insert 0 at the beginning of the list to represent the baseline or control scenario
+            steps.insert(0, 0)             
                 
-            # i = int(input("please indicate which solution you prefer (starting from 1 to n in CO2 emission): ")) #asks the user how many profiles (i.e. code runs) he wants
-
             instance.e = steps[p] 
             print('Calling solver...')
             results = opt.solve(instance, tee=True) # Solving a model instance
@@ -535,18 +547,24 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
             instance = model.create_instance(datapath)
             if Solver == 0:
                 opt = SolverFactory('gurobi')
-                opt.set_options('Method=1 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000')
-                print('Calling GUROBI solver...')
+                if MILP_Formulation:
+                    opt.set_options('Method=3 BarHomogeneous=1 Crossover=1 MIPfocus=1 BarConvTol=1e-3 OptimalityTol=1e-3 FeasibilityTol=1e-4 TimeLimit=10000')
+                else:
+                    opt.set_options('Method=2 BarHomogeneous=0 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000')
+                print('Optimizing only for minimum Operation Costs...')
             elif Solver == 1:
                 opt = SolverFactory('glpk')
                 timelimit = 10000
                 opt.options['tmlim'] = timelimit
-                print('Calling GLPK solver...')
-            opt.solve(instance, tee=True)
-            print('Instance solved') 
+                if MILP_Formulation: 
+                    opt.options['mipgap'] = 0.01      # Set relative gap tolerance for MIP
+                    opt.options['clq_cuts'] = 'on'    # Enable clique cuts
+                
+                print('Optimizing only for minimum Operation Costs...')
+
             OperationCost_min = value(instance.ObjectiveFuntion)
             CO2emission_max = value(instance.ObjectiveFuntion1)
-            print('OperationCost_min [kUSD] =' +str(OperationCost_min/1e3),'CO2emission_max [ton] =' +str(CO2emission_max/1e3))
+            print('OperationCost_min [kUSD] = ' +str(OperationCost_min/1e3),'CO2emission_max [ton] = ' +str(CO2emission_max/1e3))
            
         
             #NPC max and CO2 emission min calculation
@@ -554,12 +572,27 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
             model.ObjectiveFuntion1.activate()
             instance = model.create_instance(datapath)
             print('Calling solver...')
+            print('Optimizing only for minimum CO2 emissions...')
             opt.solve(instance, tee=True)
             print('Instance solved') 
-            OperationCost_max = value(instance.ObjectiveFuntion)
+            OperationCost = value(instance.ObjectiveFuntion)
             CO2emission_min = value(instance.ObjectiveFuntion1)
-            print('OperationCost_max [kUSD] =' +str(OperationCost_max/1e3),'CO2emission_min [ton] =' +str(CO2emission_min/1e3))
+            print('OperationCost [kUSD] = ' +str(OperationCost/1e3),'CO2emission_min [ton] = ' +str(CO2emission_min/1e3))
             r=CO2emission_max-CO2emission_min
+
+            # Second Optimization: Minimize cost while constraining emissions to the minimum value found
+            model.ObjectiveFuntion.activate()     # Reactivate cost minimization objective
+            model.ObjectiveFuntion1.deactivate()  # Ensure emissions objective is deactivated
+            instance = model.create_instance(datapath)
+            instance.CO2 = Param(initialize=CO2emission_min, mutable=True)
+            instance.CO2_fixed = Constraint(expr = instance.f2 == instance.CO2)
+
+            print('Optimizing for cost with minimum CO2 emissions constraint...')
+            results = opt.solve(instance, tee=True)     # Solve the model instance again with the new constraint
+            instance.solutions.load_from(results)       # Load the new solution into the instance
+            OperationCost_max = value(instance.ObjectiveFuntion)
+            print('OperationCost_max [kUSD] = ' +str(OperationCost_max/1e3),'with CO2emission_fixed [ton] = ' +str(CO2emission_min/1e3))
+
             
             #normal eps method
             model.ObjectiveFuntion.activate()
@@ -591,17 +624,23 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
 
             if len(f1_l)<n:
                 f1_l.append(OperationCost_min/1e3)
-                f2_l.append(CO2emission_max/1e3)        
+                f2_l.append(CO2emission_max/1e3) 
 
             print ('\nOperation Cost [kUSD] =' +str(f1_l))
-            print ('\nCO2 emission [ton] =' +str(f2_l))
-            plt.plot(f1_l, f2_l, 'o-', c='r', label='Pareto optimal front')
-            plt.legend(loc='best')
-            plt.xlabel('Operation Cost(kUSD)')
-            plt.ylabel('CO2 emission(ton)')
-            plt.grid(True)
-            plt.tight_layout()
-            plt.show()
+            print ('\nCO2 emission [ton] =' +str(f2_l))  
+
+            #################################################################################################
+            
+            print('Plotting Pareto curve...')
+
+            current_directory = os.path.dirname(os.path.abspath(__file__))
+            results_directory = os.path.join(current_directory, '..', 'Results/Plots')
+            plot_path = os.path.join(results_directory, 'ParetoCurve.png')
+            save_pareto_curve(f1_l, f2_l, "Pareto Curve - Operation Costs", "CO2 Emissions [ton]", "Operation Costs [kUSD]", plot_path)
+
+            print('Pareto curve plot saved.')
+
+            #################################################################################################
             
             steps = list(range(int(CO2emission_min),int(CO2emission_max),step))
             

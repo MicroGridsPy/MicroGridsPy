@@ -265,6 +265,7 @@ def Model_Creation(model):
     model.Grid_Availability                    = Param(model.scenarios,
                                                        model.years,
                                                        model.periods,
+                                                       within=Any,
                                                        initialize = Initialize_Grid_Availability)
     model.Grid_Average_Number_Outages          = Param(within=NonNegativeReals) 
     model.Grid_Average_Outage_Duration         = Param(within=NonNegativeReals)                

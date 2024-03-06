@@ -1097,6 +1097,15 @@ def EnergySystemSize(instance):
                                 round(Generator_Size.astype(float),2)], axis=0).fillna('-')
         
         
+    if instance.Multiobjective_Optimization == 1:
+        if instance.Pareto_solution == 1: 
+            print("\nMULTI-OBJECTIVE OPTMIZATION: Solution for MINIMUM CO2 EMISSIONS and MAXIMUM COSTS")
+        elif instance.Pareto_solution == instance.Pareto_points:
+            print("\nMULTI-OBJECTIVE OPTMIZATION: Solution for MINIMUM COSTS and MAXIMUM CO2 EMISSIONS")
+        else:
+            print("\nMULTI-OBJECTIVE OPTMIZATION: Intermediate Solution along Pareto Curve Optimal Front")
+    else: print("\nSINGLE-OBJECTIVE OPTMIZATION: Solution for MINIMUM COSTS")
+
     print("\n------------------------------------------------------------------------------------")
     print(SystemSize)
     print("\n------------------------------------------------------------------------------------")

@@ -65,15 +65,15 @@ class RunPage(tk.Frame):
         
             from Plots import DispatchPlot, SizePlot, CashFlowPlot
             try:
-             PlotScenario = 1                     # Plot scenario
-             PlotDate = self.start_date_entry.get() if self.start_date_entry.get() else '01/01/2023 00:00:00'
-             PlotTime = int(self.plot_time_entry.get()) if self.start_date_entry.get() else 3
-             PlotFormat = 'png'                   # Desired extension of the saved file (Valid formats: png, svg, pdf)
-             PlotResolution = 400                 # Plot resolution in dpi (useful only for .png files, .svg and .pdf output a vector plot)
+                PlotScenario = 1                     # Plot scenario
+                PlotDate = self.start_date_entry.get() if self.start_date_entry.get() else '01/01/2023 00:00:00'
+                PlotTime = int(self.plot_time_entry.get()) if self.start_date_entry.get() else 3
+                PlotFormat = 'png'                   # Desired extension of the saved file (Valid formats: png, svg, pdf)
+                PlotResolution = 400                 # Plot resolution in dpi (useful only for .png files, .svg and .pdf output a vector plot)
 
-             DispatchPlot(self.instance, self.Time_Series,PlotScenario, PlotDate,PlotTime, PlotResolution, PlotFormat)  
-             SizePlot(self.instance,self.Results, PlotResolution, PlotFormat)
-             CashFlowPlot(self.instance, self.Results, PlotResolution, PlotFormat)
+                DispatchPlot(self.instance, self.Time_Series,PlotScenario, PlotDate,PlotTime, PlotResolution, PlotFormat)  
+                SizePlot(self.instance,self.Results, PlotResolution, PlotFormat)
+                CashFlowPlot(self.instance, self.Results, PlotResolution, PlotFormat)
             finally: 
                 self.update_output("Plots ready to show\n")
                 self.show_dispatch_plot_button['state'] = 'normal'

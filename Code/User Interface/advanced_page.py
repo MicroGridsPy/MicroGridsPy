@@ -576,7 +576,7 @@ class AdvancedPage(tk.Frame):
         vcmd = (self.register(self.validate_integer), '%P')
         self.pareto_points_entry = ttk.Entry(self.inner_frame, textvariable=self.pareto_points_var, state='disabled',validate='key', validatecommand=vcmd)
         self.pareto_points_entry.grid(row=20, column=1, sticky='w')
-        create_tooltip(self.pareto_points_entry, "Pareto curve points to be analysed during optimization")
+        create_tooltip(self.pareto_points_entry, "Pareto curve points to be analysed during optimization (1 = minimum emissions)")
         
         self.pareto_points_var.trace('w', self.update_pareto_solution_options)
 

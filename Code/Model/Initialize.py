@@ -142,13 +142,14 @@ def plot_average_daily_demand(demand_data, output_path):
     plt.ylabel('Power [kW]')
     plt.legend()
     plt.grid(True)
-    plt.savefig(output_path)
-    plt.close() 
+    plt.savefig(output_path) 
 
 if Demand_Profile_Generation:
     Demand = demand_generation()
     print("Electric demand data generated endogenously using archtypes")
     plot_path = os.path.join(results_directory, 'Electric Demand.png')
+    # Ensuring Matplotlib is in non-interactive mode
+    plt.ioff()
     plot_average_daily_demand(Demand, plot_path)
     print("Electric demand plot saved in Results/Plots")
 else:
@@ -157,7 +158,7 @@ else:
     if n_scenarios == 1: Demand = Demand.iloc[:, :n_years]
     print("Electric demand data loaded exogenously from excel file")
     plot_path = os.path.join(results_directory, 'Electric Demand.png')
-    plot_average_daily_demand(Demand, plot_path)
+    # plot_average_daily_demand(Demand, plot_path)
     print("Electric demand plot saved in Results/Plots")
 
 # Drop columns where all values are NaN, as they don't contain any useful data
@@ -242,7 +243,6 @@ def plot_renewable_energy_availability(renewable_energy_data, output_path):
     plt.legend(lines, labels, loc='upper right')
 
     plt.savefig(output_path)
-    plt.close()
 
 if RE_Supply_Calculation == 0: 
     Renewable_Energy = pd.read_csv(res_file_path, delimiter=';', decimal=',', header=0)
@@ -253,7 +253,7 @@ else:
     Renewable_Energy = Renewable_Energy.set_index(pd.Index(range(1, n_periods+1)), inplace=False)
     print("Renewables Time Series data generated endogenously using NASA POWER")
 
-plot_renewable_energy_availability(Renewable_Energy, plot_path)
+# plot_renewable_energy_availability(Renewable_Energy, plot_path)
 print("Renewables Availability plot saved in Results/Plots")
 
 def Initialize_RES_Energy(model, s, r, t):
