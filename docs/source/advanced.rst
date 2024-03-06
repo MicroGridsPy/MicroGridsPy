@@ -16,6 +16,12 @@ The multi-year formulation is a crucial prerequisite for implementing a capacity
    **Multi-Year Formulation and Capacity Expansion in the model**: This approach drops the old consideration about the yearly demand for project lifetime which was the same and equal to a typical year of consumption for the study area. For this new concept, all the model constraints are estimated at each time step (t) of every year (yt) along the mini-grid lifetime. Thus, all equations involving time-dependent variables must be thus verified at all time steps (yt,t) of the optimization horizon.
    The variables associated with component capacity are determined by decision steps (ut) within the time horizon. The user defines the number of decision steps, essentially dividing the time horizon. This user-defined parameter governs how finely the model considers the progression of time, allowing for a strategic and step-by-step approach to capacity expansion based on the evolving electricity demand.
 
+.. figure:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/CapacityExpansion.png?raw=true
+     :width: 700
+     :align: center
+
+     Multi-Year Capacity-Expansion Formulation scheme
+
 **Parameters**
 
 The following table provides a detailed overview of the parameters used in the Capacity Expansion formulation.
@@ -36,6 +42,15 @@ The following table provides a detailed overview of the parameters used in the C
      - Minimum duration of the last investment decision step, in case of non-homogeneous divisions of the project lifetime
 
 -----------------------------------------------------------------------------------------
+
+The study reveals that a multi-year formulation optimizes system design by reducing both installed capacity and capital costs. 
+A capacity-expansion strategy further lowers the Net Present Cost (NPC) and initial investment by deferring some installations, ultimately increasing final installed capacity. Moreover, incorporating a stochastic approach in the capacity-expansion strategy effectively reduces operation and maintenance (O&M) costs over the system's lifetime.
+
+.. figure:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/ResultsCapacityExpansion.png?raw=true
+     :width: 700
+     :align: center
+
+     Multi-Year Capacity-Expansion Formulation scheme
 
 Weighted Average Cost of Capital
 ---------------------------------
@@ -190,6 +205,26 @@ Multi-objective optimization could be a solution to address economic, social and
 (companies, public institutions, NGOs) with different priorities are involved. This is crucial in this type of projects given the multiplicity of impacts on the community involved and the interconnection between them. 
 The result of multi-objective optimization would be a Pareto frontier providing the decision maker with a more comprehensive view of the possible alternatives and allowing him to take more informed decisions. 
 Exceptions to this are represented by Dufo-Lopez [4] that included a multi objective optimization on NPC, HDI and Job Creation and Petrelli [5] that optimizes on NPC, LCA emissions, Land Use and Job Creation.
+
+**Implementation in MicroGridsPy**
+
+The multi-objective optimization framework focuses on two main objectives: minimizing the Net Present Cost (NPC) and CO2 emissions of an energy system. This is achieved through a series of optimization steps:
+
+* Single-Objective Minimization: Initially, the code deactivates one of the objectives to optimize the other independently. This step is crucial for establishing baseline values for each objective.
+* Calculating Extremes: By toggling the active objective, the code calculates the minimum and maximum feasible values for NPC and CO2 emissions, respectively. These calculations are necessary to understand the trade-offs between costs and emissions.
+* Pareto Optimal Front Generation: Next, the code reactivates the cost minimization objective while constraining CO2 emissions to their minimum calculated value. This process is repeated for a series of emission thresholds, generating a set of NPC and CO2 emission pairs that form the Pareto optimal front.
+  The Pareto optimal front represents the set of non-dominated solutions, where no objective can be improved without worsening the other. This concept is crucial for decision-making in multi-objective optimization, as it provides a comprehensive view of the trade-offs involved.
+* The code concludes with a function to plot the Pareto optimal front, visually depicting the trade-offs between minimizing NPC and CO2 emissions. This plot is an invaluable tool for decision-makers, allowing them to choose a solution that best aligns with their priorities and constraints.
+
+**Pareto Optimal Front**
+
+The Pareto optimal front is a fundamental concept in multi-objective optimization. It represents a boundary in the objective space, consisting of solutions where no objective can be improved without degrading at least one other objective. In the context of off-grid energy systems, the Pareto front offers a visual representation of the trade-offs between minimizing costs (NPC) and environmental impacts (CO2 emissions).
+
+.. figure:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/ParetoCurve.png?raw=true
+     :width: 700
+     :align: center
+
+     A graphical example of the Pareto optimal front, showcasing the trade-off between Net Present Costs and CO2 emissions.
 
 **Parameters**
 
