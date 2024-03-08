@@ -308,6 +308,24 @@ The optimization algorithm considers each scenario's unique characteristics, ens
 
 RES Time Series Estimation
 -----------------------------
+MicroGridsPy integrates NASA's Prediction Of Worldwide Energy Resource (POWER) project to provide an extensive database of solar and meteorological data for modeling and simulating renewable energy systems. 
+This functionality enables the endogenous generation of time series data for solar photovoltaic (PV) and wind turbine power generation, crucial for the planning and analysis of microgrid performance.
+NASA's POWER project offers a user-friendly interface to provide access to a range of climatology and forecast data suitable for renewable energy, sustainable buildings, agricultural needs, and more. 
+The data is retrieved from NASA's satellite measurements and reanalysis, assimilating observations from multiple sources to provide high accuracy and temporal resolution.
+
+**Functioning of NASA POWER within MicroGridsPy**
+
+* Data Accessibility: By leveraging the NASA POWER API, MicroGridsPy can programmatically access global solar and wind data. This includes parameters such as solar insolation, temperature, wind speeds, and more.
+* Time Series Generation: MicroGridsPy uses this data to compute time series estimations for energy production, which can be used for feasibility studies, design decisions, and operational optimization of microgrid components.
+* Parameters and Equations: The estimation involves key parameters such as geographic coordinates, solar PV specifications (nominal power, tilt, azimuth), and wind turbine details (type, model, rated power). These inputs feed into algorithms that account for the efficiency and performance characteristics of the chosen technologies.
+* Reliability and Considerations: While NASA POWER is a robust source of data, users must ensure an active internet connection for live data retrieval. Moreover, users should be aware of potential downtimes or limitations in data availability, such as during the weekend.
+
+.. image:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/NASA_POWER.png?raw=true
+     :width: 700
+     :align: center
+
+-----------------------------------------------------------------------------------------------
+
 Renewable Energy Sources (RES) time series estimation in MicroGridsPy is an essential process for modeling and simulation of solar PV and wind turbine generation. This section outlines the key parameters and equations used for accurately estimating the energy production from these renewable sources.
 
 **Solar PV generation**
