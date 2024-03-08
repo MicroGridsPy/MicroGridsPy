@@ -320,7 +320,7 @@ The data is retrieved from NASA's satellite measurements and reanalysis, assimil
 * Parameters and Equations: The estimation involves key parameters such as geographic coordinates, solar PV specifications (nominal power, tilt, azimuth), and wind turbine details (type, model, rated power). These inputs feed into algorithms that account for the efficiency and performance characteristics of the chosen technologies.
 * Reliability and Considerations: While NASA POWER is a robust source of data, users must ensure an active internet connection for live data retrieval. Moreover, users should be aware of potential downtimes or limitations in data availability, such as during the weekend.
 
-.. image:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/NASA_POWER.png?raw=true
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/NASA_POWER.png?raw=true
      :width: 700
      :align: center
 
