@@ -249,7 +249,7 @@ if RE_Supply_Calculation == 0:
     print("Renewables Time Series data loaded exogenously from excel file")
     plot_path = os.path.join(results_directory, 'Renewables Availability.png')
 else:
-    Renewable_Energy,T_amb = RE_supply()
+    Renewable_Energy = RE_supply()
     Renewable_Energy = Renewable_Energy.set_index(pd.Index(range(1, n_periods+1)), inplace=False)
     print("Renewables Time Series data generated endogenously using NASA POWER")
 
