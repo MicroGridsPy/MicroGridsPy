@@ -146,7 +146,7 @@ def plot_average_daily_demand(demand_data, output_path):
 
 if Demand_Profile_Generation:
     Demand = demand_generation()
-    print("Electric demand data generated endogenously using archtypes")
+    print("Electric demand data generated endogenously using archetypes")
     plot_path = os.path.join(results_directory, 'Electric Demand.png')
     # Ensuring Matplotlib is in non-interactive mode
     plt.ioff()

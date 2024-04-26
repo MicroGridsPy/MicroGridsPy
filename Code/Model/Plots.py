@@ -683,14 +683,12 @@ def SizePlot(instance, Results, PlotResolution, PlotFormat):
         ax1.set_xticks(x_positions)
         ax1.set_xticklabels(x_ticks, fontsize=fontticks)
         ax1.margins(x=0.009)
-        ax1.set_title('Mini-Grid Sizing [kW]', fontsize=fontaxis)
 
         if ax2:
             ax2.set_ylabel('Installed capacity [kWh]', fontsize=fontaxis)
             ax2.set_xticks(x_positions)
             ax2.set_xticklabels(x_ticks, fontsize=fontticks)
             ax2.margins(x=0.009)
-            ax2.set_title('Mini-Grid Sizing [kWh]', fontsize=fontaxis)
 
     else:
         # Multiple steps logic
@@ -736,15 +734,16 @@ def SizePlot(instance, Results, PlotResolution, PlotFormat):
         ax1.set_xticks(x_positions)
         ax1.set_xticklabels(steps, fontsize=fontticks)
         ax1.margins(x=0.009)
-        ax1.set_title('Mini-Grid Sizing [kW]', fontsize=fontaxis)
+        
 
         ax2.set_xlabel('Investment steps', fontsize=fontaxis)
         ax2.set_ylabel('Installed capacity [kWh]', fontsize=fontaxis)
         ax2.set_xticks(x_positions)
         ax2.set_xticklabels(steps, fontsize=fontticks)
         ax2.margins(x=0.009)
-        ax2.set_title('Mini-Grid Sizing [kWh]', fontsize=fontaxis)
-
+        
+        
+    fig.suptitle('Mini-Grid Sizing [kW]', fontsize=fontaxis)
     # Set legend and save
     fig.legend(bbox_to_anchor=(1.19, 0.98), ncol=1, fontsize=fontlegend, frameon=True)
     fig.tight_layout()
