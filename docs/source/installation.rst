@@ -2,12 +2,18 @@
 Download and Installation
 #######################################
 
-MicroGridsPy has been tested on Linux, macOS, and Windows. Running MicroGridsPy requires:
+Running MicroGridsPy requires:
 
 * The Python programming language, version 3.9.18 
 * A number of Python add-on modules (see below for further info).
 * A solver: MicroGridsPy has been tested mainly with Gurobi but it is also available the open source GLPK and, in a development stage, any solvers compatible with Pyomo may also work.
 * The MicroGridsPy software folder freely accessible from the environment.
+
+.. warning::
+   
+      The installation steps following refer to Windows. The environment for macOS (version 2.1) of MicroGridsPy is currently under development and not available. 
+      We advise macOS or Linux users to rely on MicroGridsPy version 2.0 until the new environment is fully developed and released.
+
 
 Recommended Installation Method
 ===================================
@@ -30,48 +36,45 @@ With Anaconda installed, setting up a specific environment for MicroGridsPy ensu
 
 **Steps to set up the mgpy environment:**
 
-1. Download the environment YML file from the `MicroGridsPy SESAM GitHub repository <https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/tree/Environments>`_. Save the ``mgpy_win.yml`` file in a directory on your machine, for example, ``C:/Users/youruser``.
+1. Download the environment YML file from the `MicroGridsPy SESAM GitHub - Environments <https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/tree/Environments>`_. Save the ``mgpy_win.yml`` file in a directory on your machine, for example, ``C:/Users/youruser`` or another location of your choice.
 
-2. Open the Anaconda Prompt, navigate to where you saved the ``mgpy_win.yml`` file, and run the following commands to create and activate the mgpy environment:
+2. Open the Anaconda Prompt. If you saved the ``mgpy_win.yml`` file in the default directory, such as ``C:/Users/youruser``, you are already in the correct directory. If you saved it in a different location, navigate to that directory using the `cd` command. For example: *cd path/to/your/directory*.
+
+3. Run the following commands to create the mgpy environment from the YML file:
 
    .. code-block:: bash
 
       conda env create -f mgpy_win.yml
-      conda activate mgpy
+
+The mgpy environment is now set up and ready to use. 
 
 Operating MicroGridsPy
 ----------------------
 
-Proper setup of your development environment is crucial for the smooth operation of MicroGridsPy. This involves creating an isolated environment that includes all the necessary packages and their specific versions.
-
-**Essential components include:**
-
-- **Pyomo:** Ensure you have at least version 6.4.3, which includes the HiGHS solver.
-- **Other Packages:** Pandas, NumPy, and Matplotlib are essential for data handling and visualization.
-
-**For development and debugging:**
-
-- Use an Integrated Development Environment (IDE) such as Spyder, which comes with the Anaconda distribution and is well-suited for Python development.
-
-   Activate the mgpy environment and launch Spyder with the following commands:
+1. The first step is to activate the mgpy environment with the following command:
 
    .. code-block:: bash
 
       conda activate mgpy
+
+2. Then, to use Spyder (already installed within the mgpy environment), run the following command:
+
+   .. code-block:: bash
+
       spyder
 
-- To start working with MicroGridsPy, navigate to the *Code/User Interface* folder, open the ``app_main.py`` file in Spyder (or your preferred IDE), and execute the file to launch the MicroGridsPy user interface.
+To start working with MicroGridsPy, navigate to the *Code/User Interface* folder, open the ``app_main.py`` file in Spyder (or your preferred IDE), and execute the file to launch the MicroGridsPy user interface.
 
 .. figure:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Mgpy%20installation.png?raw=true
    :width: 800
    :align: center
 
-   Installation steps for MicroGridsPy using Anaconda.
+   Installation steps for MicroGridsPy using Anaconda and Spyder as IDE.
 
-.. warning::
-   
-      The installation steps provided are for Windows. The environment for macOS (version 2.1) of MicroGridsPy is currently under development and not available. 
-      We advise macOS or Linux users to rely on MicroGridsPy version 2.0 until the new environment is fully developed and released.
+.. note::
+
+      If you prefer to use another IDE, such as **Visual Studio Code**, ensure it is installed on your system. You can start Visual Studio Code by opening the application normally and ensuring the correct Python interpreter from the mgpy environment is selected. 
+      Make sure to configure Visual Studio Code to use the Python interpreter from the activated `mgpy` environment by selecting it from the interpreter options in the bottom bar or via the command palette.
 
 
 Solvers
