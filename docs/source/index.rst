@@ -9,7 +9,7 @@ It was firstly developed in 2016 by University of Liege and the code is freely a
 The model enables the optimization of micro-grid size and its dispatch strategy, typically at *1-hour temporal resolution*, returning also as output the fixed and variable costs associated with each technology and the **Levelized Cost of Energy (LCOE)** of the system. 
 It is based on Linear Programming, and it enables the choice of the installed capacities of batteries, generators, and renewable energy sources that results in the lowest Net Present Cost (NPC) or lowest Operation and Maintenance expenses (O&M) during the project's lifespan while achieving the system limitations. 
 
-.. figure:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Mgpy_Scheme_2.png?raw=true
+.. figure:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Mgpy_Scheme_2.png?raw=true
    :width: 700
    :align: center
 
