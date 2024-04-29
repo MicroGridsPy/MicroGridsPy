@@ -41,7 +41,7 @@ For code development and debugging, consider using an Integrated Development Env
 Run the ``app_main.py`` file located into the *Code/User Interface* folder using the prefered IDE (e.g. Spyder) to open the interface and interact with it.
 
 .. figure:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Mgpy%20installation.png?raw=true
-     :width: 400
+     :width: 800
      :align: center
 
      Installation steps for MicroGridsPy using Anaconda.
