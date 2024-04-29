@@ -1052,7 +1052,7 @@ The reliability of a national grid's electricity supply refers to the consistent
   
 
 
-.. image:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/GRID%20availability.png?raw=true
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/GRID%20availability.png?raw=true
      :width: 500
      :align: center
 
@@ -1152,8 +1152,8 @@ The battery performance isn’t constant over time due to capacity and power fad
 .. raw:: html
 
     <div style="display: flex; justify-content: center; align-items: center;">
-        <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/SOH_temperature.png?raw=true" width="350" style="margin-right: 10px;"/>
-        <img src="https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/SOH_DOD.png?raw=true" width="350" />
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/SOH_temperature.png?raw=true" width="350" style="margin-right: 10px;"/>
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/SOH_DOD.png?raw=true" width="350" />
     </div>
 
 
@@ -1161,7 +1161,7 @@ Understanding and estimating the battery behaviour and related parameters during
 
 A degradation model was developed and introduced into the model to account for the battery bank capacity fade. This methodology can be applied for batteries of the following chemistries: Lithium LFP and NMC, and Lead Acid. 
 
-.. image:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/SOH_battery_chemistry.png?raw=true
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/SOH_battery_chemistry.png?raw=true
      :width: 400
      :align: center
 
