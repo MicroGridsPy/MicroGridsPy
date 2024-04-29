@@ -9,42 +9,70 @@ MicroGridsPy has been tested on Linux, macOS, and Windows. Running MicroGridsPy 
 * A solver: MicroGridsPy has been tested mainly with Gurobi but it is also available the open source GLPK and, in a development stage, any solvers compatible with Pyomo may also work.
 * The MicroGridsPy software folder freely accessible from the environment.
 
-Recommended installation method
+Recommended Installation Method
 ===================================
 
-**Conda Package Manager**
+Conda Package Manager
+---------------------
 
-The easiest way to get a working MicroGridsPy installation is to use the free conda package manager. To get conda, download and install the `Anaconda <https://repo.anaconda.com/archive/>`_ distribution for your operating system (using the version for Python 3). 
-Anaconda is a free and open-source distribution of the Python and R programming languages for data science and machine learning-related applications that aims to simplify package management and deployment. 
+The recommended way to install MicroGridsPy is through the Conda package manager. Conda is an open-source package management system and environment management system that simplifies package management and deployment for Python and R languages, especially in data science and machine learning applications.
 
-**Creating the mgpy environment**
+**To install Conda:**
 
-With Anaconda installed, it is possible to create a new environment named "mgpy". 
-To create a modelling environment that already contains everything needed to run MicrogridsPy, it's required to download the environment yml file from `here <https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/tree/Environments>`_. 
-After placing the ``mgpy_win.yml`` file in "C:/Users/youruser", you can create and activate the new mgpy environment by running the following command in the Anaconda Prompt terminal:
+1. Download and install the `Anaconda distribution <https://repo.anaconda.com/archive/>`_ that includes support for Python 3, ensuring compatibility with MicroGridsPy.
 
-.. code-block:: python
+2. Follow the installation instructions provided for your specific operating system.
 
-   conda env create -f mgpy_win.yml
-   conda activate mgpy
+Creating the mgpy environment
+-----------------------------
 
-**Operating MicroGridsPy**
+With Anaconda installed, setting up a specific environment for MicroGridsPy ensures that all dependencies are handled appropriately.
 
-To ensure a smooth and efficient operation of MicroGridsPy, it is crucial to properly set up the development environment. This involves creating an isolated space that contains all the necessary Python packages and their specific versions as defined in the MicroGridsPy base.yml file. Key packages include Pyomo (minimum version 6.4.3 for the HiGHS solver), Pandas, NumPy, and Matplotlib.
-For code development and debugging, consider using an Integrated Development Environment (IDE) like Spyder, which is included in the created environment.
+**Steps to set up the mgpy environment:**
 
-.. code-block:: python
+1. Download the environment YML file from the `MicroGridsPy SESAM GitHub repository <https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/tree/Environments>`_. Save the ``mgpy_win.yml`` file in a directory on your machine, for example, ``C:/Users/youruser``.
 
-   conda activate mgpy
-   spyder
+2. Open the Anaconda Prompt, navigate to where you saved the ``mgpy_win.yml`` file, and run the following commands to create and activate the mgpy environment:
 
-Run the ``app_main.py`` file located into the *Code/User Interface* folder using the prefered IDE (e.g. Spyder) to open the interface and interact with it.
+   .. code-block:: bash
+
+      conda env create -f mgpy_win.yml
+      conda activate mgpy
+
+Operating MicroGridsPy
+----------------------
+
+Proper setup of your development environment is crucial for the smooth operation of MicroGridsPy. This involves creating an isolated environment that includes all the necessary packages and their specific versions.
+
+**Essential components include:**
+
+- **Pyomo:** Ensure you have at least version 6.4.3, which includes the HiGHS solver.
+- **Other Packages:** Pandas, NumPy, and Matplotlib are essential for data handling and visualization.
+
+**For development and debugging:**
+
+- Use an Integrated Development Environment (IDE) such as Spyder, which comes with the Anaconda distribution and is well-suited for Python development.
+
+   Activate the mgpy environment and launch Spyder with the following commands:
+
+   .. code-block:: bash
+
+      conda activate mgpy
+      spyder
+
+- To start working with MicroGridsPy, navigate to the *Code/User Interface* folder, open the ``app_main.py`` file in Spyder (or your preferred IDE), and execute the file to launch the MicroGridsPy user interface.
 
 .. figure:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Mgpy%20installation.png?raw=true
-     :width: 800
-     :align: center
+   :width: 800
+   :align: center
 
-     Installation steps for MicroGridsPy using Anaconda.
+   Installation steps for MicroGridsPy using Anaconda.
+
+.. warning::
+   
+      The installation steps provided are for Windows. The environment for macOS (version 2.1) of MicroGridsPy is currently under development and not available. 
+      We advise macOS or Linux users to rely on MicroGridsPy version 2.0 until the new environment is fully developed and released.
+
 
 Solvers
 ========
