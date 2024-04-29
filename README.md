@@ -23,7 +23,7 @@ For more details, check out the online [Documentation](https://microgridspy-docu
 - Two-stage stochastic optimization
 - User Interface
   
-![User Interface](https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Interface.png?raw=true)
+![User Interface](https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface.png?raw=true)
 
 
 ## Advanced Features
@@ -53,46 +53,62 @@ MicroGridsPy 2.1 incorporates several advanced features, enhancing its versatili
 	
 ### Environments and Solvers
 
-In the current repository under the Environments branch MAC OS and Windows environments are available.
-Currently, MicroGridsPy have been confirmed to work with Gurobi, and GPLK.
+In the current repository under the Environments branch, environments for both macOS and Windows are available. Currently, MicroGridsPy has been confirmed to work with Gurobi and GLPK.
 
-> :warning: While GLPK is a capable solver for many optimization problems, it may have longer operational times compared to commercial solvers like Gurobi, especially for large or complex problems. The difference can often be substantial, potentially ranging from several times to orders of magnitude faster, depending on the specifics of the problem even if it’s important to note that these are general observations, and actual performance will vary with each unique problem. It is advisable to consider this factor when choosing a solver for time-sensitive or large-scale applications.
-
-### License
-This is a free software licensed under the “European Union Public Licence" EUPL v1.1. It 
-can be redistributed and/or modified under the terms of this license.
+> :warning: **Warning**: While GLPK is a capable solver for many optimization problems, it tends to operate slower compared to commercial solvers like Gurobi, especially for large or complex problems. The performance difference can be significant, potentially ranging from several times to orders of magnitude faster, depending on the specifics of the problem. These observations are general, and actual performance will vary with each unique problem. It is advisable to consider this factor when choosing a solver for time-sensitive or large-scale applications.
 
 ### Getting Started with MicroGridsPy
 
-To install MicroGridsPy, the conda package manager is recommended. Here's the step-by-step guide:
+To install MicroGridsPy, the conda package manager is recommended. Follow this step-by-step guide:
 
 1. **Install Anaconda**:
-   - Download and install the Anaconda distribution for Python 3 from [Anaconda Archive](https://repo.anaconda.com/archive/). Anaconda simplifies package management in Python and R, especially for data science and machine learning applications.
+   - Download and install the Anaconda distribution for Python 3 from the [Anaconda Archive](https://repo.anaconda.com/archive/). Anaconda simplifies package management and deployment, especially for data science and machine learning applications.
 
 2. **Download the MicroGridsPy Environment File**:
-   - The environment file for MicroGridsPy can be found on the [MicroGridsPy/Environments SESAM GitHub repository](https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/tree/Environments). Download the file to set up your modeling environment.
+   - The environment file for MicroGridsPy is available on the [MicroGridsPy/Environments SESAM GitHub repository](https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/tree/Environments). Download the file to prepare your modeling environment.
 
 3. **Create and Activate the MicroGridsPy Environment**:
-   - Place the downloaded `mgpy_win.yml` file in an accessible directory (e.g., `C:\\Users\\youruser`).
-   - Open Anaconda Prompt, navigate to the directory, and execute the following commands:
+   - Save the downloaded `mgpy_win.yml` file in an accessible directory (e.g., `C:\\Users\\youruser`).
+   - Open the Anaconda Prompt, navigate to the directory, and execute the following commands:
      ```
      conda env create -f mgpy_win.yml
      conda activate mgpy
      ```
 
 4. **Development Environment Setup**:
-   - Ensure your development environment contains necessary Python packages such as Pyomo (minimum version 6.4.3), Pandas, NumPy, and Matplotlib.
+   - Make sure your development environment includes necessary Python packages such as Pyomo (minimum version 6.4.3), Pandas, NumPy, and Matplotlib.
 
 5. **Launch Spyder IDE for Development**:
-   - Use Spyder for development and debugging, which is included in the Anaconda distribution. To start Spyder, run:
+   - Use the Spyder IDE for development and debugging, available in the Anaconda distribution. Start Spyder with the following commands:
      ```
      conda activate mgpy
      spyder
      ```
 
 6. **Run the GUI Application**:
-   - MicroGridsPy provides a GUI for easy data input. Launch the GUI by running `app_main.py` located in the **Code/User Interface** folder using Spyder or your preferred IDE.
+   - MicroGridsPy includes a GUI for easier data input. Launch the GUI by running `app_main.py` from the **Code/User Interface** folder using Spyder or your preferred IDE.
 
-Follow these steps for a successful installation of MicroGridsPy.
+These steps will guide you through a successful installation of MicroGridsPy.
+
+### Contributors
+
+**MicroGridsPy** has been developed by the SESAM group in the Department of Energy Engineering at Politecnico di Milano. The research activity of SESAM focuses on using mathematical models for the study of systems, components, and processes in the energy field and industrial ecology.
+
+Contributors:
+
+- **Alessandro Onori** - Department of Energy, Politecnico di Milano
+- **Giulia Guidicini** - Department of Energy, Politecnico di Milano
+- **Lorenzo Rinaldi** - Department of Energy, Politecnico di Milano
+- **Nicolò Stevanato** - Department of Energy, Politecnico di Milano / Fondazione Eni Enrico Mattei
+- **Francesco Lombardi** - Department of Energy, Politecnico di Milano
+- **[Emanuela Colombo](https://www4.ceda.polimi.it/manifesti/manifesti/controller/ricerche/RicercaPerDocentiPublic.do?EVN_DIDATTICA=evento&k_doc=44891&lang=EN&aa=2014&tab_ricerca=1)**: Scientific coordination
+
+Based on the original model by:
+
+- **Sergio Balderrama** - Department of Mechanical and Aerospace Engineering, University of Liège, San Simon University, Centro Universitario de Investigacion en Energia
+- **Sylvain Quoilin** - Department of Mechanical Engineering Technology, KU Leuven
 
 
+### License
+This is a free software licensed under the “European Union Public Licence" EUPL v1.1. It 
+can be redistributed and/or modified under the terms of this license.
