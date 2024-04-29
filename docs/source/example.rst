@@ -37,7 +37,7 @@ The images gallery below visualizes the interface windows, simulation outcomes, 
 
    <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel">
      <div class="carousel-inner">
-       <div class="carousel-item">
+       <div class="carousel-item active">
          <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/Default/1.2.png?raw=true" class="d-block w-100" alt="Project set-up ">
        </div>
        <div class="carousel-item">
@@ -104,7 +104,7 @@ For the sake of semplicity, Wind Turbine has been removed from the available ren
 
    <div id="uniqueCarouselExample" class="carousel slide" data-ride="carousel">
      <div class="carousel-inner">
-       <div class="carousel-item">
+       <div class="carousel-item active">
          <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/1/2.2.png?raw=true" class="d-block w-100" alt="Project set-up">
        </div>
        <div class="carousel-item">
@@ -170,60 +170,58 @@ This new simulation is designed to test the on-grid model, setting the grid conn
 
 .. raw:: html
 
-  <div id="uniqueCarouselExample" class="carousel slide" data-ride="carousel">
-    <div class="carousel-inner">
-      <div class="carousel-item active">
-        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.1.png?raw=true" class="d-block w-100" alt="Dispatch Strategy">
-      </div>
-      <div class="carousel-item">
-        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.2.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
-      </div>
-       <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.3.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+   <div id="uniqueCarouselExample" class="carousel slide" data-ride="carousel">
+     <div class="carousel-inner">
+       <div class="carousel-item active">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.2.png?raw=true" class="d-block w-100" alt="Project set-up">
+       </div>
+       <div class="carousel-item active">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.3.png?raw=true" class="d-block w-100" alt="Advanced Features">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.4.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.4.png?raw=true" class="d-block w-100" alt="Renewables Time Series data calculation">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.5.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.5.png?raw=true" class="d-block w-100" alt="Load Demand time series data calculation">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.6.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.6.png?raw=true" class="d-block w-100" alt="Renewables Parameters">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.7.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.7.png?raw=true" class="d-block w-100" alt="Battery bank parameters">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.8.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.8.png?raw=true" class="d-block w-100" alt="Generator parameters">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.9.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.9.png?raw=true" class="d-block w-100" alt="Main Grid parameters">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.10.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.10.png?raw=true" class="d-block w-100" alt="Plots parameters">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.11.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.11.png?raw=true" class="d-block w-100" alt="Running page">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.12.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.12.png?raw=true" class="d-block w-100" alt="Dispatch Plot">
        </div>
        <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.13.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.13.png?raw=true" class="d-block w-100" alt="Size Plot">
        </div>
        <div class="carousel-item">
          <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/2/2.14.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
        </div>
      </div>
-    <a class="carousel-control-prev" href="#uniqueCarouselExample" role="button" data-slide="prev">
-      <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-      <span class="sr-only">Previous</span>
-    </a>
-    <a class="carousel-control-next" href="#uniqueCarouselExample" role="button" data-slide="next">
-      <span class="carousel-control-next-icon" aria-hidden="true"></span>
-      <span class="sr-only">Next</span>
-    </a>
-  </div>
+     <a class="carousel-control-prev" href="#uniqueCarouselExample" role="button" data-slide="prev">
+       <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+       <span class="sr-only">Previous</span>
+     </a>
+     <a class="carousel-control-next" href="#uniqueCarouselExample" role="button" data-slide="next">
+       <span class="carousel-control-next-icon" aria-hidden="true"></span>
+       <span class="sr-only">Next</span>
+     </a>
+   </div>
+
 
 -----------------------------------------------
 
@@ -243,48 +241,45 @@ This simulation is designed to test the Multi-Objective Optimization mode, setti
   <div id="uniqueCarouselExample" class="carousel slide" data-ride="carousel">
     <div class="carousel-inner">
       <div class="carousel-item active">
-        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.1.png?raw=true" class="d-block w-100" alt="Dispatch Strategy">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.1.png?raw=true" class="d-block w-100" alt="Project set-up">
       </div>
       <div class="carousel-item">
-        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.2.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.2.png?raw=true" class="d-block w-100" alt="Advanced Features">
       </div>
-       <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.3.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
-       </div>
-       <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.4.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
-       </div>
-       <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.5.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
-       </div>
-       <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.6.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
-       </div>
-       <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.7.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
-       </div>
-       <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.8.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
-       </div>
-       <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.9.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
-       </div>
-       <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.10.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
-       </div>
-       <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.11.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
-       </div>
-       <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.12.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
-       </div>
-       <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.13.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
-       </div>
-       <div class="carousel-item">
-         <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.14.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
-       </div>
-     </div>
+      <div class="carousel-item">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.3.png?raw=true" class="d-block w-100" alt="Renewables Time Series data calculation">
+      </div>
+      <div class="carousel-item">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.4.png?raw=true" class="d-block w-100" alt="Load Demand time series data calculation">
+      </div>
+      <div class="carousel-item">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.5.png?raw=true" class="d-block w-100" alt="Renewables Parameters">
+      </div>
+      <div class="carousel-item">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.6.png?raw=true" class="d-block w-100" alt="Battery bank parameters">
+      </div>
+      <div class="carousel-item">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.7.png?raw=true" class's d-block w-100" alt="Generator parameters">
+      </div>
+      <div class="carousel-item">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.8.png?raw=true" class="d-block w-100" alt="Plots parameters">
+      </div>
+      <div class="carousel-item">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.9.png?raw=true" class="d-block w-100" alt="Running page">
+      </div>
+      <div class="carousel-item">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.10.png?raw=true" class="d-block w-100" alt="Dispatch Plot">
+      </div>
+      <div class="carousel-item">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.11.png?raw=true" class="d-block w-100" alt="Size Plot">
+      </div>
+      <div class="carousel-item">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.12.png?raw=true" class="d-block w-100" alt="Cash Flow Analysis">
+      </div>
+      <div class="carousel-item">
+        <img src="https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Examples/3/2.13.png?raw=true" class="d-block w-100" alt="Pareto Front plot">
+      </div>
+    </div>
     <a class="carousel-control-prev" href="#uniqueCarouselExample" role="button" data-slide="prev">
       <span class="carousel-control-prev-icon" aria-hidden="true"></span>
       <span class="sr-only">Previous</span>
@@ -342,7 +337,7 @@ This stark difference in computational time frames underlines Gurobi's advanced 
 Despite the significant variance in computation time, the output metrics related to the system's configuration—comprising Solar PV capacity, battery bank size, and Diesel Genset capacity—remain consistent across both solvers, demonstrating the robustness of the model itself.
 The economic implications, denoted by the Net Present Cost (NPC), total actualized Investment Cost, Operation Cost, and Levelized Cost of Electricity (LCOE), are comparable with marginal differences. This indicates that both solvers are capable of arriving at similar economic assessments for the given model parameters.
 
-
+.. TODO
 .. MILP Formulation with Partial Load Effect and Variable Fuel Cost
 .. ---------------------------------------------
 .. This iteration of the model employs a Mixed-Integer Linear Programming (MILP) framework, strategically designed to simulate a decade-long operation of mini-grids with two intervals of capacity expansion. The MILP paradigm introduces binary decision variables to address unit commitment issues, allowing for a precise representation of start-up and shut-down activities of power generation units. 
