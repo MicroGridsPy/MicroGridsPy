@@ -81,7 +81,7 @@ Data Input Interface and Parameters
 The graphical user interface (GUI) application provides a user-friendly way to define and input data for MicroGridsPy. 
 Run the ``app_main.py`` file located into the **Code/User Interface** folder using the prefered IDE (e.g. Spyder) to open the interface and interact with it.
 
-.. image:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Interface.png?raw=true
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Interface.png?raw=true
    :width: 500
    :align: center
 
@@ -374,7 +374,7 @@ MicroGridsPy uses the load curve demand to optimize resource allocation, distrib
    - Using software tools such as `RAMP <https://rampdemand.readthedocs.io/en/stable/intro.html>`_, a bottom-up stochastic model for generating high-resolution multi-energy profiles.
    - Using the advanced features integrated into MicroGridsPy, which allows the use of built-in archetypes for rural villages in Sub-Saharan Africa at different latitudes.
 
-.. image:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/RAMP.png?raw=true
+.. image:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/RAMP.png?raw=true
    :width: 150px
    :align: center
 
@@ -392,7 +392,7 @@ The input file, located in the "Time Series" folder within the "Inputs" folder, 
     that must coincide with the value set for 'Periods' in the model configuration.csv file! If not properly set and matched, it may arise a 'Key Error'.
 
 
-.. figure:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/Demand.png?raw=true
+.. figure:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Demand.png?raw=true
      :width: 700
      :align: center
 
@@ -430,7 +430,7 @@ MicroGridsPy uses this data to size and operate mini-grid components like renewa
 The input file within the "Inputs" folder, must have as many numbered columns (excluding the rows labels) as the total years of the project and as many rows (excluding the columns headers) as the periods in which one year is divided (e.g. 1-hour time resolution leads to 8760 rows). 
 
 
-.. figure:: https://github.com/AleOnori98/MicroGridsPy_Doc/blob/main/docs/source/Images/RES.png?raw=true
+.. figure:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/RES.png?raw=true
      :width: 200
      :height: 500
      :align: center
