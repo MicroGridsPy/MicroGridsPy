@@ -8,7 +8,7 @@ MicroGridsPy 2.1
 
 The MicroGridsPy model main objective is to provide an open-source alternative to the problem of sizing and dispatch of energy in micro-grids in isolated places. It’s written in python(pyomo) and use excel and text files as input and output data handling and visualisation.
 
-For more details, check out the online [Documentation](https://microgridspy-documentation.readthedocs.io/en/latest/) !
+Here the link to the online documentation: [MicroGridsPy Documentation](https://microgridspy-documentation.readthedocs.io/en/latest/).
 
 > :warning: **Warning**: For a MACOS compatible version, please refer to version 2.0. The project is under active development. 
 
@@ -94,14 +94,14 @@ These steps will guide you through a successful installation of MicroGridsPy.
 
 **MicroGridsPy** has been developed by the SESAM group in the Department of Energy Engineering at Politecnico di Milano. The research activity of SESAM focuses on using mathematical models for the study of systems, components, and processes in the energy field and industrial ecology.
 
-Contributors:
+Main Contributors:
 
 - **Alessandro Onori** - Department of Energy, Politecnico di Milano
 - **Giulia Guidicini** - Department of Energy, Politecnico di Milano
 - **Lorenzo Rinaldi** - Department of Energy, Politecnico di Milano
 - **Nicolò Stevanato** - Department of Energy, Politecnico di Milano / Fondazione Eni Enrico Mattei
 - **Francesco Lombardi** - Department of Energy, Politecnico di Milano
-- **[Emanuela Colombo](https://www4.ceda.polimi.it/manifesti/manifesti/controller/ricerche/RicercaPerDocentiPublic.do?EVN_DIDATTICA=evento&k_doc=44891&lang=EN&aa=2014&tab_ricerca=1)**: Scientific coordination
+- **[Emanuela Colombo](https://www4.ceda.polimi.it/manifesti/manifesti/controller/ricerche/RicercaPerDocentiPublic.do?EVN_DIDATTICA=evento&k_doc=44891&lang=EN&aa=2014&tab_ricerca=1)** : Scientific coordination
 
 Based on the original model by:
 
