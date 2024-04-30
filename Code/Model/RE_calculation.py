@@ -862,24 +862,11 @@ def RE_supply():
     (WS_rotor,alpha) = shear_exp(param_typical_hourly,int(param_hourly_str[0][2:4]), int(param_hourly_str[1][2:3]), rot_height) 
     ro_air = air_density(rot_height,param_typical_hourly)
     U_rotor_lst, wind_direction_lst, ro_air_lst = wind_lst(WS_rotor, param_typical_hourly, ro_air)
-    (energy_WT, Cp) = P_turb(power_curve, U_rotor_lst, ro_air_lst, surface_area,drivetrain_efficiency)            #hourly energy production of 1 wind turbine [kWh]
-    
-    print("Completed\n ")            
-                
-# Report results on excel sheet 'RES_supply' and export windrose and plots
-
-    print('Aggregating data according to Periods... \n')
+    (energy_WT, Cp) = P_turb(power_curve, U_rotor_lst, ro_air_lst, surface_area,drivetrain_efficiency)            #hourly energy production of 1 wind turbine [kWh]            
     dataf = export(energy_PV, U_rotor_lst, energy_WT, wind_direction_lst, Cp)
-    agg_factor = len(dataf) // periods # Assuming 8760 hours in a year for hourly data
-    # Create an interval index for grouping
-    interval_index = np.arange(len(dataf)) // agg_factor
-    # Perform the aggregation
-    dataf = dataf.groupby(interval_index).mean()
-    # Reset index if needed
-    dataf.reset_index(drop=True, inplace=True)
-    print("Completed\n ") 
     
-    print('Plotting and exporting time series data to RES_Time_Series.csv ... \n')
+    print("Completed\n ")
+    
     current_directory = os.path.dirname(os.path.abspath(__file__))
     inputs_directory = os.path.join(current_directory, '..', 'Inputs')
     filename = os.path.join(inputs_directory, 'RES_Time_Series.csv')

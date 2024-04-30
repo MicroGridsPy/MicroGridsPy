@@ -147,22 +147,21 @@ def plot_average_daily_demand(demand_data, output_path):
 if Demand_Profile_Generation:
     Demand = demand_generation()
     print("Electric demand data generated endogenously using archetypes")
-    plot_path = os.path.join(results_directory, 'Electric Demand.png')
-    # Ensuring Matplotlib is in non-interactive mode
-    plt.ioff()
-    plot_average_daily_demand(Demand, plot_path)
-    print("Electric demand plot saved in Results/Plots")
 else:
     Demand = pd.read_csv(demand_file_path, delimiter=';', decimal=',', header=0)
     Demand = Demand.drop(Demand.columns[0], axis=1)
     if n_scenarios == 1: Demand = Demand.iloc[:, :n_years]
     print("Electric demand data loaded exogenously from excel file")
-    plot_path = os.path.join(results_directory, 'Electric Demand.png')
-    # plot_average_daily_demand(Demand, plot_path)
-    print("Electric demand plot saved in Results/Plots")
 
+plot_path = os.path.join(results_directory, 'Electric Demand.png')
+
+# Ensuring Matplotlib is in non-interactive mode
+plt.ioff()
+plot_average_daily_demand(Demand, plot_path)
+print("Electric demand plot saved in Results/Plots")
 # Drop columns where all values are NaN, as they don't contain any useful data
 Demand = Demand.dropna(how='all', axis=1)
+
 Electric_Energy_Demand_Series = pd.Series(dtype=float)
 # Adjust the loop to iterate over the actual column names of the DataFrame
 for col in Demand.columns[0:]:
