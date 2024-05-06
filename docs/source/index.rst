@@ -3,6 +3,11 @@
 Introduction
 =======================================
 
+.. note::
+
+    **Continuous Development:** MicroGridsPy is under continuous development, with new versions being released regularly. We strive to enhance the model by fixing bugs, making small edits, and implementing new features. Therefore, it is advisable to ensure that you have the latest version of the folder downloaded from the repository.
+
+
 **MicroGridsPy** is a *bottom-up, open-source optimization model*, running on `Pyomo <https://pyomo.readthedocs.io/en/stable/>`_, a Python library used to model optimisation problems, whose primary goal is 
 to offer an open-source approach to the issue of **energy scaling and dispatch in micro grids** in remote locations. 
 It was firstly developed in 2016 by University of Liege and the code is freely available on `GitHub <https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/>`_ [40]. 
