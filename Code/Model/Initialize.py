@@ -146,36 +146,49 @@ def plot_average_daily_demand(demand_data, output_path):
 
 if Demand_Profile_Generation:
     Demand = demand_generation()
+    Demand.columns = Demand.columns.map(str)
     print("Electric demand data generated endogenously using archetypes")
 else:
-    # Read the CSV file with automatic delimiter detection
-    try:
-        # Attempt to read CSV with default delimiter (comma)
-        Demand = pd.read_csv(demand_file_path, header=0)
-    except pd.errors.ParserError:
-        # If parsing with comma delimiter fails, try semicolon delimiter
+    delimiters = [(';', ','), (';', '.'), (',', '.')]
+    for delimiter, decimal in delimiters:
         try:
-            Demand = pd.read_csv(demand_file_path, delimiter=';', header=0)
+            # Set index_col to 0 if the first column is the index
+            Demand = pd.read_csv(demand_file_path, delimiter=delimiter, decimal=decimal, header=0, index_col=0)
+            print(f"Demand data loaded exogenously using delimiter '{delimiter}' and decimal '{decimal}'")
+            break
         except pd.errors.ParserError:
-            # If parsing with semicolon delimiter fails, try space delimiter
-            try:
-                Demand = pd.read_csv(demand_file_path, delimiter=' ', header=0)
-            except pd.errors.ParserError:
-                print("Error during import of Demand.csv: unable to automatically detect delimiter. Please try again using ',' ';' or ' '.")
-                raise
+            continue
+    else:
+        print("Error during import of Demand.csv: unable to automatically detect delimiter and decimal. Please try again using delimiter ';' or ',' and decimal ',' or '.'.")
+        raise
 
 # Ensuring Matplotlib is in non-interactive mode
 plt.ioff()
 plot_average_daily_demand(Demand, plot_path)
 print("Electric demand plot saved in Results/Plots")
-# Drop columns where all values are NaN, as they don't contain any useful data
-Demand = Demand.dropna(how='all', axis=1)
+
+# Validate DataFrame dimensions against expected years and periods
+expected_columns = len(year)  # Expected number of data columns, excluding the index
+expected_rows = len(period)
+
+# Validate columns
+if Demand.shape[1] < expected_columns:
+    raise ValueError(f"Number of columns in the file ({Demand.shape[1]}) is less than the expected number of years ({expected_columns}): unable to proceed. Please check the Demand.csv file.")
+elif Demand.shape[1] > expected_columns:
+    print(f"Warning: Number of columns in the file ({Demand.shape[1]}) exceeds the expected number of years ({expected_columns}). Considering only the first {expected_columns} columns.")
+    Demand = Demand.iloc[:, :expected_columns]
+
+# Validate rows
+if Demand.shape[0] < expected_rows:
+    raise ValueError(f"Number of rows in the file ({Demand.shape[0]}) is less than the expected number of periods ({expected_rows}): unable to proceed.Please check the Demand.csv file.")
 
 Electric_Energy_Demand_Series = pd.Series(dtype=float)
-# Adjust the loop to iterate over the actual column names of the DataFrame
-for col in Demand.columns[0:]:
+# Iterate over actual column names in the DataFrame
+
+for col in Demand.columns:
     dum = Demand[col].reset_index(drop=True)
     Electric_Energy_Demand_Series = pd.concat([Electric_Energy_Demand_Series, dum])
+
 frame = [scenario, year, period]
 index = pd.MultiIndex.from_product(frame, names=['scenario', 'year', 'period'])
 Electric_Energy_Demand = pd.DataFrame(Electric_Energy_Demand_Series)
@@ -187,17 +200,16 @@ for s in scenario:
     Electric_Energy_Demand_Series_2 = pd.Series()
     for y in year:
         # Construct the column name as it appears in the CSV headers
-        if Demand_Profile_Generation: column_name = int(f'{(s-1)*len(year) + y}')
-        else: column_name = f'{(s-1)*len(year) + y}'
+        column_name = f'{(s-1)*len(year) + y}'
         if column_name in Demand.columns:
             dum_2 = Demand[column_name].dropna().reset_index(drop=True)
-            Electric_Energy_Demand_Series_2 = pd.concat([s for s in [Electric_Energy_Demand_Series_2, dum_2] if not s.empty])
+            Electric_Energy_Demand_Series_2 = pd.concat([Electric_Energy_Demand_Series_2, dum_2], ignore_index=True)
         else:
             print(f"Warning: Column '{column_name}' does not exist in the Demand DataFrame")
     Electric_Energy_Demand_2[s] = Electric_Energy_Demand_Series_2
 
-# Create a RangeIndex for Energy_Demand_2
-index_2 = pd.RangeIndex(1, n_years * n_periods + 1)
+# Create a RangeIndex for Electric_Energy_Demand_2
+index_2 = pd.RangeIndex(1, len(year) * len(period) + 1)
 Electric_Energy_Demand_2.index = index_2
 
 "Electric Demand"
@@ -230,7 +242,7 @@ def plot_renewable_energy_availability(renewable_energy_data, output_path):
     col = renewable_energy_data.columns[1]  # Resource 1
     yearly_data = renewable_energy_data[col].values.reshape(-1, hours_per_day)
     average_daily_availability = np.mean(yearly_data, axis=0)
-    line1 = ax1.fill_between(range(hours_per_day), average_daily_availability, color=resource_colors[0], alpha=0.5, label=f'Resource 1')
+    line1 = ax1.fill_between(range(hours_per_day), average_daily_availability, color=resource_colors[0], alpha=0.5, label='Resource 1')
     ax1.set_xlabel('Hour of Year')
     ax1.set_ylabel('RES 1 - Electricity production per unit [W]')
     ax1.grid(True)
@@ -240,7 +252,7 @@ def plot_renewable_energy_availability(renewable_energy_data, output_path):
     col = renewable_energy_data.columns[2]  # Resource 2
     yearly_data = renewable_energy_data[col].values.reshape(-1, hours_per_day)
     average_daily_availability = np.mean(yearly_data, axis=0)
-    line2 = ax2.fill_between(range(hours_per_day), average_daily_availability, color=resource_colors[1], alpha=0.5, label=f'Resource 2')
+    line2 = ax2.fill_between(range(hours_per_day), average_daily_availability, color=resource_colors[1], alpha=0.5, label='Resource 2')
     ax2.set_ylabel('RES 2 - Electricity production per unit [W]')
 
     plt.title('Renewable Energy Resource Availability')
