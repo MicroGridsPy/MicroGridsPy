@@ -148,12 +148,21 @@ if Demand_Profile_Generation:
     Demand = demand_generation()
     print("Electric demand data generated endogenously using archetypes")
 else:
-    Demand = pd.read_csv(demand_file_path, delimiter=';', decimal=',', header=0)
-    Demand = Demand.drop(Demand.columns[0], axis=1)
-    if n_scenarios == 1: Demand = Demand.iloc[:, :n_years]
-    print("Electric demand data loaded exogenously from excel file")
-
-plot_path = os.path.join(results_directory, 'Electric Demand.png')
+    # Read the CSV file with automatic delimiter detection
+    try:
+        # Attempt to read CSV with default delimiter (comma)
+        Demand = pd.read_csv(demand_file_path, header=0)
+    except pd.errors.ParserError:
+        # If parsing with comma delimiter fails, try semicolon delimiter
+        try:
+            Demand = pd.read_csv(demand_file_path, delimiter=';', header=0)
+        except pd.errors.ParserError:
+            # If parsing with semicolon delimiter fails, try space delimiter
+            try:
+                Demand = pd.read_csv(demand_file_path, delimiter=' ', header=0)
+            except pd.errors.ParserError:
+                print("Error during import of Demand.csv: unable to automatically detect delimiter. Please try again using ',' ';' or ' '.")
+                raise
 
 # Ensuring Matplotlib is in non-interactive mode
 plt.ioff()
