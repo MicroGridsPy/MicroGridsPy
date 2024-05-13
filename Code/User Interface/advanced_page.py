@@ -484,9 +484,9 @@ class AdvancedPage(tk.Frame):
         self.Grid_Connection_Type_var = tk.IntVar(value=0)
         self.Grid_Connection_Type_label = ttk.Label(self.inner_frame, text="Grid Connection Type:", anchor='w', state='disabled')
         self.Grid_Connection_Type_label.grid(row=14, column=0, sticky='w')
-        self.Grid_Connection_Type_radio1 = ttk.Radiobutton(self.inner_frame, text="Purchase Only", variable=self.Grid_Connection_Type_var, value=0, state='disabled')
+        self.Grid_Connection_Type_radio1 = ttk.Radiobutton(self.inner_frame, text="Purchase Only", variable=self.Grid_Connection_Type_var, value=1, state='disabled')
         self.Grid_Connection_Type_radio1.grid(row=14, column=1, sticky='w')
-        self.Grid_Connection_Type_radio2 = ttk.Radiobutton(self.inner_frame, text="Purchase/Sell", variable=self.Grid_Connection_Type_var, value=1, state='disabled')
+        self.Grid_Connection_Type_radio2 = ttk.Radiobutton(self.inner_frame, text="Purchase/Sell", variable=self.Grid_Connection_Type_var, value=0, state='disabled')
         self.Grid_Connection_Type_radio2.grid(row=14, column=2, sticky='w')
         self.toggle_grid_options()
         

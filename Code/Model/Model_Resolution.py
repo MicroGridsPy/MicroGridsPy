@@ -337,9 +337,9 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
            opt = SolverFactory('gurobi') # Solver use during the optimization
 
            if MILP_Formulation:
-              opt.set_options('Method=3 BarHomogeneous=1 Crossover=1 MIPfocus=1 BarConvTol=1e-3 OptimalityTol=1e-3 FeasibilityTol=1e-4 TimeLimit=10000')
+              opt.set_options('Method=3 BarHomogeneous=1 Crossover=1 MIPfocus=1 BarConvTol=1e-3 OptimalityTol=1e-3 FeasibilityTol=1e-4')
            else:
-              opt.set_options('Method=2 BarHomogeneous=0 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4 IterationLimit=1000')
+              opt.set_options('Method=2 BarHomogeneous=0 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4')
 
            print('Calling GUROBI solver...')
            results = opt.solve(instance, tee=True, options_string=options_string,

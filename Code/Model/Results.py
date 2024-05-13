@@ -1244,6 +1244,29 @@ def YearlyCosts(instance):
                 grid_yc = pd.DataFrame(['Year '+str(y), Grid_Distance[None]*Grid_Connection_Specific_Cost[None]*Grid_OM_Specific_Cost[None]*Grid_Connection[None]/1e3]).T.set_index([0]) 
             grid_yc.columns = pd.MultiIndex.from_arrays([['Fixed costs'],['Grid'],['-'],['kUSD']], names=['','Component','Scenario','Unit'])
             Grid_Yearly_Fixed_Cost = pd.concat([Grid_Yearly_Fixed_Cost,grid_yc], axis=0)
+        "Grid costs and revenues"  
+        Energy_From_Grid = instance.Energy_From_Grid.get_values()    
+        El_Purchased_Price = instance.Grid_Purchased_El_Price
+        Grid_Yearly_Cost = pd.DataFrame()    
+        for s in range(1, S+1):
+            grid_s = pd.DataFrame()
+            for (y, st) in ys_tuples_list:
+                grid_yc = pd.DataFrame(['Year ' + str(y), sum(Energy_From_Grid[(s, y, t)] for t in range(1, P+1)) * El_Purchased_Price / 1e6]).T.set_index([0])
+                grid_yc.columns = pd.MultiIndex.from_arrays([['Grid cost'], ['Grid'], [s], ['kUSD']], names=['', 'Component', 'Scenario', 'Unit'])
+                grid_s = pd.concat([grid_s, grid_yc], axis=0)
+            Grid_Yearly_Cost = pd.concat([Grid_Yearly_Cost, grid_s], axis=1)
+       
+        if instance.Grid_Connection_Type.value == 0:
+            Energy_To_Grid = instance.Energy_To_Grid.get_values()    
+            El_Sold_Price = instance.Grid_Sold_El_Price
+            Grid_Yearly_Rev = pd.DataFrame()    
+            for s in range(1, S+1):
+                grid_s = pd.DataFrame()
+                for (y, st) in ys_tuples_list:
+                    grid_yc = pd.DataFrame(['Year ' + str(y), sum(Energy_To_Grid[(s, y, t)] for t in range(1, P+1)) * El_Sold_Price / 1e6]).T.set_index([0])
+                    grid_yc.columns = pd.MultiIndex.from_arrays([['Grid revenue'], ['Grid'], [s], ['kUSD']], names=['', 'Component', 'Scenario', 'Unit'])
+                    grid_s = pd.concat([grid_s, grid_yc], axis=0)
+                Grid_Yearly_Rev = pd.concat([Grid_Yearly_Rev, grid_s], axis=0)
    
 
     #%% Variable costs
@@ -1331,30 +1354,7 @@ def YearlyCosts(instance):
             Fuel_Cost_Yearly_Cost = pd.concat([Fuel_Cost_Yearly_Cost,fuel_s], axis=1).fillna(0)
          Fuel_Cost_Yearly_Cost = Fuel_Cost_Yearly_Cost.groupby(level=[0],axis=0,sort=False).sum()
     
-    "Grid costs and revenues"  
-    if instance.Grid_Connection.value == 1:
-        Energy_From_Grid = instance.Energy_From_Grid.get_values()    
-        El_Purchased_Price = instance.Grid_Purchased_El_Price
-        Grid_Yearly_Cost = pd.DataFrame()    
-        for s in range(1, S+1):
-            grid_s = pd.DataFrame()
-            for (y, st) in ys_tuples_list:
-                grid_yc = pd.DataFrame(['Year ' + str(y), sum(Energy_From_Grid[(s, y, t)] for t in range(1, P+1)) * El_Purchased_Price / 1e6]).T.set_index([0])
-                grid_yc.columns = pd.MultiIndex.from_arrays([['Grid cost'], ['Grid'], [s], ['kUSD']], names=['', 'Component', 'Scenario', 'Unit'])
-                grid_s = pd.concat([grid_s, grid_yc], axis=0)
-            Grid_Yearly_Cost = pd.concat([Grid_Yearly_Cost, grid_s], axis=1)
-       
-        if instance.Grid_Connection_Type.value == 0:
-            Energy_To_Grid = instance.Energy_To_Grid.get_values()    
-            El_Sold_Price = instance.Grid_Sold_El_Price
-            Grid_Yearly_Rev = pd.DataFrame()    
-            for s in range(1, S+1):
-                grid_s = pd.DataFrame()
-                for (y, st) in ys_tuples_list:
-                    grid_yc = pd.DataFrame(['Year ' + str(y), sum(Energy_To_Grid[(s, y, t)] for t in range(1, P+1)) * El_Sold_Price / 1e6]).T.set_index([0])
-                    grid_yc.columns = pd.MultiIndex.from_arrays([['Grid revenue'], ['Grid'], [s], ['kUSD']], names=['', 'Component', 'Scenario', 'Unit'])
-                    grid_s = pd.concat([grid_s, grid_yc], axis=0)
-                Grid_Yearly_Rev = pd.concat([Grid_Yearly_Rev, grid_s], axis=0)
+
 
     #%% Concatenating
     if instance.Model_Components.value == 0:

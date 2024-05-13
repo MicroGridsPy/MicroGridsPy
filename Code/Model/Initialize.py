@@ -232,41 +232,59 @@ def Initialize_Demand(model, s, y, t):
 
 def plot_renewable_energy_availability(renewable_energy_data, output_path):
     hours_per_day = 24
+    if renewable_energy_data.shape[0] % hours_per_day != 0:
+        raise ValueError("Data cannot be reshaped into full days. Ensure each day has exactly 24 hours of data.")
 
     fig, ax1 = plt.subplots(figsize=(12, 6))
 
-    # Assuming first column is solar (resource 1), second is wind (resource 2)
-    resource_colors = ['yellow', 'lightblue']
+    # Assuming first column is always present as resource 1
+    resource_colors = ['yellow', 'lightblue']  # Colors for each resource type
+    labels = ['Solar', 'Wind']  # Labels for each resource type
 
-    # Plotting first resource
-    col = renewable_energy_data.columns[1]  # Resource 1
-    yearly_data = renewable_energy_data[col].values.reshape(-1, hours_per_day)
-    average_daily_availability = np.mean(yearly_data, axis=0)
-    line1 = ax1.fill_between(range(hours_per_day), average_daily_availability, color=resource_colors[0], alpha=0.5, label='Resource 1')
-    ax1.set_xlabel('Hour of Year')
-    ax1.set_ylabel('RES 1 - Electricity production per unit [W]')
-    ax1.grid(True)
+    lines = []
+    ax = ax1  # Initial axis for the first resource
+    # Check and plot available resources
+    for index, color, label in zip(range(len(renewable_energy_data.columns)), resource_colors, labels):
+        if index < len(renewable_energy_data.columns):
+            col = renewable_energy_data.columns[index]
+            yearly_data = renewable_energy_data[col].values.reshape(-1, hours_per_day)
+            average_daily_availability = np.mean(yearly_data, axis=0)
+            line = ax.fill_between(range(hours_per_day), average_daily_availability, color=color, alpha=0.5, label=label)
 
-    # Creating a second y-axis for the second resource
-    ax2 = ax1.twinx()
-    col = renewable_energy_data.columns[2]  # Resource 2
-    yearly_data = renewable_energy_data[col].values.reshape(-1, hours_per_day)
-    average_daily_availability = np.mean(yearly_data, axis=0)
-    line2 = ax2.fill_between(range(hours_per_day), average_daily_availability, color=resource_colors[1], alpha=0.5, label='Resource 2')
-    ax2.set_ylabel('RES 2 - Electricity production per unit [W]')
+            # Labeling axes based on resource index
+            if index == 0:
+                ax.set_xlabel('Hour of Day')
+                ax.set_ylabel(f'{label} Electricity Production [W]')
+                ax.grid(True)
+            else:
+                # Create a secondary axis only if there's more than one resource
+                ax = ax1.twinx()
+                ax.set_ylabel(f'{label} Electricity Production [W]')
+
+            lines.append(line)
 
     plt.title('Renewable Energy Resource Availability')
 
-    # Combining legends from both axes
-    lines = [line1, line2]
-    labels = [line.get_label() for line in lines]
-    plt.legend(lines, labels, loc='upper right')
+    # Combining legends from both axes if there are multiple lines
+    if len(lines) > 1:
+        labels = [line.get_label() for line in lines]
+        plt.legend(lines, labels, loc='upper right')
 
     plt.savefig(output_path)
 
 if RE_Supply_Calculation == 0: 
-    Renewable_Energy = pd.read_csv(res_file_path, delimiter=';', decimal=',', header=0)
-    print("Renewables Time Series data loaded exogenously from excel file")
+    delimiters = [(';', ','), (';', '.'), (',', '.')]
+    for delimiter, decimal in delimiters:
+        try:
+            # Set index_col to 0 if the first column is the index
+            Renewable_Energy = pd.read_csv(res_file_path, delimiter=delimiter, decimal=decimal, header=0)
+            print(f"Renewables Time Series data loaded exogenously using delimiter '{delimiter}' and decimal '{decimal}'")
+            break
+        except pd.errors.ParserError:
+            continue
+    else:
+        print("Error during import of RES_Time_Series.csv: unable to automatically detect delimiter and decimal. Please try again using delimiter ';' or ',' and decimal ',' or '.'.")
+        raise
     plot_path = os.path.join(results_directory, 'Renewables Availability.png')
 else:
     Renewable_Energy = RE_supply()
