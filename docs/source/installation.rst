@@ -80,7 +80,9 @@ Update conda to the current version. Type the following:
 
 Conda compares versions and then displays what is available to install. If a newer version of conda is available, type ``y`` to update.
 
-We recommend that you always keep conda updated to the latest version.
+.. note::
+
+      We recommend that you always keep conda updated to the latest version.
 
 Getting started with Anaconda Navigator
 ------------------------------------------
