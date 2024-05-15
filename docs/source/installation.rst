@@ -15,7 +15,7 @@ Running MicroGridsPy requires:
       We advise macOS or Linux users to rely on MicroGridsPy version 2.0 until the new environment is fully developed and released.
 
 
-1 | Install Anaconda (or Miniconda)
+1 - Install Anaconda (or Miniconda)
 ======================================
 
 Anaconda's package manager, known as conda, is a powerful tool for managing packages, dependencies, and environments in the Anaconda ecosystem. It is designed to handle various types of packages, including Python and R, and works across multiple platforms (Windows, macOS, and Linux). Here are key features and functions of conda:
@@ -107,8 +107,8 @@ Through the Anaconda Navigator, users can easily manage their Python environment
 who prefer a visual interface over command-line operations. The Navigator allows for easy access to different tools and simplifies the process of setting up and maintaining Python environments for various projects. This is especially beneficial for beginners or those who prefer a more intuitive, point-and-click experience in managing their Python development setup.
 By default, all application tiles available to launch or install within Navigator are displayed on the Home page. Filter the application tiles with the applications dropdown menu.
 
-Install MicroGridsPy Environment
-==================================
+2 - Install MicroGridsPy Environment
+======================================
 
 In conda, an *environment* is an isolated space that allows users to maintain different versions of Python and various packages without interference. Each environment can have its own specific set of packages and Python versions, independent of others. This is particularly useful in managing dependencies and avoiding conflicts when working on multiple projects with differing requirements. By using environments, developers and data scientists can ensure consistency and reproducibility of their work across various setups and collaborations.
 
@@ -161,7 +161,7 @@ Create the Environment from Anaconda Navigator
 To use this environment, you can open tools like Jupyter Notebook, Spyder, or a terminal from within the Navigator while the environment is active.
 
 
-Install a Solver
+3 - Install a Solver
 =====================
 
 **Gurobi:** 
@@ -262,8 +262,8 @@ Installing GLPK using Anaconda Navigator
 
 By following these steps, you can easily install and configure both Gurobi and GLPK solvers within your Anaconda environments, ensuring you have the appropriate tools for your optimization tasks.
 
-Download and Launch MicroGridsPy with GUI
-============================================
+4 - Download and Launch MicroGridsPy with GUI
+===============================================
 
 Download the MicroGridsPy Folder
 --------------------------------
