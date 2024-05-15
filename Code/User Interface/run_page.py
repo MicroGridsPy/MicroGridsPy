@@ -11,6 +11,41 @@ current_directory = os.path.dirname(os.path.abspath(__file__))
 model_directory = os.path.join(current_directory, '..', 'Model')
 sys.path.append(model_directory)
 
+class ToolTip(object):
+    def __init__(self, widget, text='widget info'):
+        self.widget = widget
+        self.text = text
+        self.tipwindow = None
+        self.id = None
+        self.x = self.y = 0
+
+    def show_tip(self):
+        "Display text in tooltip window"
+        self.x, self.y, cx, cy = self.widget.bbox("insert")
+        self.x += self.widget.winfo_rootx() + 25
+        self.y += self.widget.winfo_rooty() + 20
+
+        # Creates a toplevel window
+        self.tipwindow = tk.Toplevel(self.widget)
+        # Leaves only the label and removes the app window
+        self.tipwindow.wm_overrideredirect(True)
+        self.tipwindow.wm_geometry("+%d+%d" % (self.x, self.y))
+
+        label = tk.Label(self.tipwindow, text=self.text, justify=tk.LEFT,
+                      background="#ffffff", relief=tk.SOLID, borderwidth=1,
+                      font=("tahoma", "8", "normal"))
+        label.pack(ipadx=1)
+
+    def hide_tip(self):
+        if self.tipwindow:
+            self.tipwindow.destroy()
+        self.tipwindow = None
+        
+def create_tooltip(widget, text):
+        tool_tip = ToolTip(widget, text)
+        widget.bind('<Enter>', lambda event: tool_tip.show_tip())
+        widget.bind('<Leave>', lambda event: tool_tip.hide_tip())
+
 class TopSectionFrame(tk.Frame):
     def __init__(self, parent, university_name, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
@@ -23,10 +58,12 @@ class NavigationFrame(tk.Frame):
     def __init__(self, parent, exit_command, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
         self.configure(background='#0f2c53', highlightbackground='#0f2c53', highlightthickness=2)
-        self.exit_button = ttk.Button(self, text="New Run", command=exit_command)
-        self.exit_button.pack(side='right', padx=10, pady=10)
+        self.restart_button = ttk.Button(self, text="Restart the model", command=exit_command)
+        self.restart_button.pack(side='right', padx=10, pady=10)
         self.pack(side='bottom', fill='x')
-
+        # Add tooltip to the button
+        create_tooltip(self.restart_button, "Press this button to return to the configuration page to start a new model run (with the current data saved).")
+        
 class RedirectOutput:
     def __init__(self, text_widget):
         self.text_widget = text_widget
