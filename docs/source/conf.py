@@ -6,8 +6,8 @@ project = 'MicroGridsPy'
 copyright = '2024, SESAM Polimi'
 author = 'SESAM Polimi'
 
-release = '2.0'
-version = '2.0'
+release = '2.1'
+version = '2.1'
 
 # -- General configuration
 
