@@ -278,7 +278,7 @@ To actually use MicroGridsPy, first download the folder of the model from GitHub
 Click the green "Code" button on the right side and select "Download ZIP" to download the entire folder as a ZIP file. Unzip and place the folder wherever it’s easily accessible in your system.
 
 .. figure:: https://github.com/SESAM-Polimi/MicroGridsPy-SESAM/blob/MicroGridsPy-2.1/docs/source/Images/Mgpy_download.png?raw=true
-   :width: 500
+   :width: 700
    :align: center
 
 ----------------------------------------------------------
