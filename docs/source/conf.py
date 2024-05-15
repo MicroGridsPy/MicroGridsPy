@@ -22,7 +22,8 @@ extensions = [
     "sphinxcontrib.images",
     "sphinx_togglebutton",
     "sphinx_panels",
-    "sphinx_sitemap"
+    "sphinx_sitemap",
+    "sphinx_gallery.gen_gallery"
 ]
 
 # autosummary_generate = True
@@ -75,5 +76,3 @@ html_js_files = [
     'https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js',
     'https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js',
 ]
-
-
