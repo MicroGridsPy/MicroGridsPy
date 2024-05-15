@@ -22,8 +22,7 @@ extensions = [
     "sphinxcontrib.images",
     "sphinx_togglebutton",
     "sphinx_panels",
-    "sphinx_sitemap",
-    "sphinx_gallery.gen_gallery"
+    "sphinx_sitemap"
 ]
 
 # autosummary_generate = True
