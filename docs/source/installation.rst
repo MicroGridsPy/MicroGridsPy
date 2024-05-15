@@ -278,6 +278,8 @@ Click the green "Code" button on the right side and select "Download ZIP" to dow
    :width: 700
    :align: center
 
+----------------------------------------------------------
+
 Launch Spyder using Anaconda Prompt
 -----------------------------------
 
