@@ -334,17 +334,31 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
         
 
         if Solver == 0:
-           opt = SolverFactory('gurobi') # Solver use during the optimization
+            opt = SolverFactory('gurobi') # Solver use during the optimization
 
-           if MILP_Formulation:
-              opt.set_options('Method=3 BarHomogeneous=1 Crossover=1 MIPfocus=1 BarConvTol=1e-3 OptimalityTol=1e-3 FeasibilityTol=1e-4')
-           else:
-              opt.set_options('Method=2 BarHomogeneous=0 Crossover=0 BarConvTol=1e-4 OptimalityTol=1e-4 FeasibilityTol=1e-4')
+            # Setting options for Gurobi
+            if MILP_Formulation:
+                opt.options['Method'] = 3
+                opt.options['BarHomogeneous'] = 1
+                opt.options['Crossover'] = 1
+                opt.options['MIPFocus'] = 1
+                opt.options['BarConvTol'] = 1e-3
+                opt.options['OptimalityTol'] = 1e-3
+                opt.options['FeasibilityTol'] = 1e-4
+            else:
+                opt.options['Method'] = 2
+                opt.options['BarHomogeneous'] = 0
+                opt.options['Crossover'] = 0
+                opt.options['BarConvTol'] = 1e-4
+                opt.options['OptimalityTol'] = 1e-4
+                opt.options['FeasibilityTol'] = 1e-4
+        
+            opt.options['IterationLimit'] = 10000
 
-           print('Calling GUROBI solver...')
-           results = opt.solve(instance, tee=True, options_string=options_string,
-                            warmstart=warmstart,keepfiles=keepfiles,
+            print('Calling GUROBI solver...')
+            results = opt.solve(instance, tee=True, warmstart=warmstart, keepfiles=keepfiles,
                             load_solutions=load_solutions, logfile=logfile) # Solving a model instance 
+
 
         elif Solver == 1:
            opt = SolverFactory('glpk') # Solver use during the optimization
