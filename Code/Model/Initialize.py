@@ -18,8 +18,7 @@ Based on the original model by:
 """
 
 
-import pandas as pd, numpy as np
-import matplotlib.pyplot as plt
+import pandas as pd
 import re
 import os
 from RE_calculation import RE_supply
@@ -123,27 +122,6 @@ generator = [i for i in range(1,n_generators+1)]
 
 #%% This section imports, generates and plots the different types of demands
 
-def plot_average_daily_demand(demand_data, output_path):
-    n_years = demand_data.shape[1]
-    hours_per_day = 24
-
-    plt.figure(figsize=(12, 6))
-
-    # Calculate and plot average daily demand for each year
-    for year in range(n_years):
-        # Reshape yearly data into days and hours (assuming 365 days per year)
-        yearly_data = demand_data.iloc[:, year].values.reshape(-1, hours_per_day)
-        # Calculate average demand for each hour
-        average_daily_demand = np.mean(yearly_data, axis=0) / 1000
-        plt.plot(average_daily_demand, label=f'Year {year + 1}')
-
-    plt.title('Average Daily Electric Demand for Each Year')
-    plt.xlabel('Hour of Day')
-    plt.ylabel('Power [kW]')
-    plt.legend()
-    plt.grid(True)
-    plt.savefig(output_path) 
-
 if Demand_Profile_Generation:
     Demand = demand_generation()
     Demand.columns = Demand.columns.map(str)
@@ -161,11 +139,6 @@ else:
     else:
         print("Error during import of Demand.csv: unable to automatically detect delimiter and decimal. Please try again using delimiter ';' or ',' and decimal ',' or '.'.")
         raise
-
-# Ensuring Matplotlib is in non-interactive mode
-plt.ioff()
-plot_average_daily_demand(Demand, plot_path)
-print("Electric demand plot saved in Results/Plots")
 
 # Validate DataFrame dimensions against expected years and periods
 expected_columns = len(year)  # Expected number of data columns, excluding the index
@@ -230,48 +203,6 @@ def Initialize_Demand(model, s, y, t):
 
 #%% This section imports or generates the renewables and temperature time series data 
 
-def plot_renewable_energy_availability(renewable_energy_data, output_path):
-    hours_per_day = 24
-    if renewable_energy_data.shape[0] % hours_per_day != 0:
-        raise ValueError("Data cannot be reshaped into full days. Ensure each day has exactly 24 hours of data.")
-
-    fig, ax1 = plt.subplots(figsize=(12, 6))
-
-    # Assuming first column is always present as resource 1
-    resource_colors = ['yellow', 'lightblue']  # Colors for each resource type
-    labels = ['Solar', 'Wind']  # Labels for each resource type
-
-    lines = []
-    ax = ax1  # Initial axis for the first resource
-    # Check and plot available resources
-    for index, color, label in zip(range(len(renewable_energy_data.columns)), resource_colors, labels):
-        if index < len(renewable_energy_data.columns):
-            col = renewable_energy_data.columns[index]
-            yearly_data = renewable_energy_data[col].values.reshape(-1, hours_per_day)
-            average_daily_availability = np.mean(yearly_data, axis=0)
-            line = ax.fill_between(range(hours_per_day), average_daily_availability, color=color, alpha=0.5, label=label)
-
-            # Labeling axes based on resource index
-            if index == 0:
-                ax.set_xlabel('Hour of Day')
-                ax.set_ylabel(f'{label} Electricity Production [W]')
-                ax.grid(True)
-            else:
-                # Create a secondary axis only if there's more than one resource
-                ax = ax1.twinx()
-                ax.set_ylabel(f'{label} Electricity Production [W]')
-
-            lines.append(line)
-
-    plt.title('Renewable Energy Resource Availability')
-
-    # Combining legends from both axes if there are multiple lines
-    if len(lines) > 1:
-        labels = [line.get_label() for line in lines]
-        plt.legend(lines, labels, loc='upper right')
-
-    plt.savefig(output_path)
-
 if RE_Supply_Calculation == 0: 
     delimiters = [(';', ','), (';', '.'), (',', '.')]
     for delimiter, decimal in delimiters:
@@ -290,9 +221,6 @@ else:
     Renewable_Energy = RE_supply()
     Renewable_Energy = Renewable_Energy.set_index(pd.Index(range(1, n_periods+1)), inplace=False)
     print("Renewables Time Series data generated endogenously using NASA POWER")
-
-# plot_renewable_energy_availability(Renewable_Energy, plot_path)
-print("Renewables Availability plot saved in Results/Plots")
 
 def Initialize_RES_Energy(model, s, r, t):
     """
