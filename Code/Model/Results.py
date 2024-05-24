@@ -1358,7 +1358,7 @@ def YearlyCosts(instance):
 
     #%% Concatenating
     if instance.Model_Components.value == 0:
-        if instance.Grid_Connection.value == 1:
+        if instance.Grid_Connection.value == 1 and instance.Grid_Connection_Type == 0:
             YearlyCost = pd.concat([round(RES_Yearly_Cost.astype(float),2),
                                     round(BESS_Yearly_Cost.astype(float),2),
                                     round(Generator_Yearly_Cost.astype(float),2),
@@ -1366,8 +1366,17 @@ def YearlyCosts(instance):
                                     round(Lost_Load_Yearly_Cost.astype(float),2),
                                     round(BESS_Replacement_Yearly_Cost.astype(float),2),
                                     round(Fuel_Cost_Yearly_Cost.astype(float),2),
-                                    round(Grid_Yearly_Cost.astype(float),2), 
+                                    round(Grid_Yearly_Cost.astype(float),2),
                                     round(Grid_Yearly_Rev.astype(float),2)], axis=1) 
+        if instance.Grid_Connection.value == 1 and instance.Grid_Connection_Type == 1:
+            YearlyCost = pd.concat([round(RES_Yearly_Cost.astype(float),2),
+                                    round(BESS_Yearly_Cost.astype(float),2),
+                                    round(Generator_Yearly_Cost.astype(float),2),
+                                    round(Grid_Yearly_Fixed_Cost.astype(float),2), 
+                                    round(Lost_Load_Yearly_Cost.astype(float),2),
+                                    round(BESS_Replacement_Yearly_Cost.astype(float),2),
+                                    round(Fuel_Cost_Yearly_Cost.astype(float),2),
+                                    round(Grid_Yearly_Cost.astype(float),2)], axis=1)
         if instance.Grid_Connection.value == 0:
             YearlyCost = pd.concat([round(RES_Yearly_Cost.astype(float),2),
                                     round(BESS_Yearly_Cost.astype(float),2),
@@ -1377,7 +1386,7 @@ def YearlyCosts(instance):
                                     round(Fuel_Cost_Yearly_Cost.astype(float),2)], axis=1) 
             
     if instance.Model_Components.value == 1:
-        if instance.Grid_Connection.value == 1:
+        if instance.Grid_Connection.value == 1 and instance.Grid_Connection_Type == 0:
             YearlyCost = pd.concat([round(RES_Yearly_Cost.astype(float),2),
                                     round(BESS_Yearly_Cost.astype(float),2),
                                     round(Grid_Yearly_Fixed_Cost.astype(float),2), 
@@ -1385,6 +1394,15 @@ def YearlyCosts(instance):
                                     round(BESS_Replacement_Yearly_Cost.astype(float),2),
                                     round(Grid_Yearly_Cost.astype(float),2), 
                                     round(Grid_Yearly_Rev.astype(float),2)], axis=1) 
+        if instance.Grid_Connection.value == 1 and instance.Grid_Connection_Type == 1:
+            YearlyCost = pd.concat([round(RES_Yearly_Cost.astype(float),2),
+                                    round(BESS_Yearly_Cost.astype(float),2),
+                                    round(Generator_Yearly_Cost.astype(float),2),
+                                    round(Grid_Yearly_Fixed_Cost.astype(float),2), 
+                                    round(Lost_Load_Yearly_Cost.astype(float),2),
+                                    round(BESS_Replacement_Yearly_Cost.astype(float),2),
+                                    round(Fuel_Cost_Yearly_Cost.astype(float),2),
+                                    round(Grid_Yearly_Cost.astype(float),2)], axis=1)
         if instance.Grid_Connection.value == 0:
             YearlyCost = pd.concat([round(RES_Yearly_Cost.astype(float),2),
                                     round(BESS_Yearly_Cost.astype(float),2),
@@ -1392,7 +1410,7 @@ def YearlyCosts(instance):
                                     round(BESS_Replacement_Yearly_Cost.astype(float),2)], axis=1)
             
     if instance.Model_Components.value == 2:
-        if instance.Grid_Connection.value == 1:
+        if instance.Grid_Connection.value == 1 and instance.Grid_Connection_Type == 0:
             YearlyCost = pd.concat([round(RES_Yearly_Cost.astype(float),2),
                                     round(Generator_Yearly_Cost.astype(float),2),
                                     round(Grid_Yearly_Fixed_Cost.astype(float),2), 
@@ -1400,6 +1418,15 @@ def YearlyCosts(instance):
                                     round(Fuel_Cost_Yearly_Cost.astype(float),2),
                                     round(Grid_Yearly_Cost.astype(float),2), 
                                     round(Grid_Yearly_Rev.astype(float),2)], axis=1) 
+        if instance.Grid_Connection.value == 1 and instance.Grid_Connection_Type == 1:
+            YearlyCost = pd.concat([round(RES_Yearly_Cost.astype(float),2),
+                                    round(BESS_Yearly_Cost.astype(float),2),
+                                    round(Generator_Yearly_Cost.astype(float),2),
+                                    round(Grid_Yearly_Fixed_Cost.astype(float),2), 
+                                    round(Lost_Load_Yearly_Cost.astype(float),2),
+                                    round(BESS_Replacement_Yearly_Cost.astype(float),2),
+                                    round(Fuel_Cost_Yearly_Cost.astype(float),2),
+                                    round(Grid_Yearly_Cost.astype(float),2)], axis=1)
         if instance.Grid_Connection.value == 0:
             YearlyCost = pd.concat([round(RES_Yearly_Cost.astype(float),2),
                                     round(Generator_Yearly_Cost.astype(float),2),
