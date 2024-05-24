@@ -483,23 +483,23 @@ class GeneratorPage(tk.Frame):
             }
         
         self.gen_params_tooltips = {
-            "Generator_Efficiency": "Average generator efficiency of each generator type [%]",
+            "Generator_Efficiency": "Average generator efficiency of each generator type [-]",
             "Generator_Specific_Investment_Cost": "Specific investment cost for each generator type [USD/W]",
-            "Generator_Specific_OM_Cost": "O&M cost for each generator type as a fraction of specific investment cost [%]",
+            "Generator_Specific_OM_Cost": "Yearly ficed O&M cost for each generator type as a fraction of specific investment cost [-]",
             "Generator_Lifetime": "Generator Lifetime [years]",
             "GEN_unit_CO2_emission": "Specific CO2 emissions associated to each generator type[kgCO2/kW]",
             "Generator_capacity": "Existing Generator capacity [W]",
             "GEN_years": "How many years ago the component was installed [years]",
             "Generator_Nominal_Capacity_milp": "Nominal capacity of each generator [W]",
-            "Generator_Min_output":"Minimum percentage of energy output for the generator in part load [%]",
-            "Generator_pgen":"Percentage of the total operation cost of the generator system at full load [%]"
+            "Generator_Min_output":"Minimum percentage of energy output for the generator in part load [-]",
+            "Generator_pgen":"Percentage of the total operation cost of the generator system at full load [-]"
         }
         
         self.fuel_params_tooltips = {
             "Fuel_Names": "Fuel names (to be specified for each generator, even if they use the same fuel)",
             "Fuel_LHV": "Fuel lower heating value (LHV) for each generator type [Wh/lt]",
             "FUEL_unit_CO2_emission": "Specific CO2 emissions associated to the fuel [kgCO2/lt]",
-            "Fuel_Specific_Start_Cost": "Initial fuel specific cost [USD/Wh] at year 1",
+            "Fuel_Specific_Start_Cost": "Initial fuel specific cost [USD/lt] at year 1",
             "Fuel_Specific_Cost_Rate": "Change rate in fuel specific cost [% per year]"
         }
         

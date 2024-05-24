@@ -388,9 +388,9 @@ class TechnologiesPage(tk.Frame):
         self.res_params_tooltips = {
             "RES_Names":"Renewable technology name",
             "RES_Nominal_Capacity":"Capacity in W per unit of electricity production (read below for further info)",
-            "RES_Inverter_Efficiency": "Average efficiency the inverter [%]",
-            "RES_Specific_Investment_Cost": "Specific investment cost for each renewable technology [USD/W]",
-            "RES_Specific_OM_Cost": "O&M cost for each renewable technology as a fraction of specific investment cost [%]",
+            "RES_Inverter_Efficiency": "Average efficiency the inverter [-]",
+            "RES_Specific_Investment_Cost": "Yearly Specific investment cost for each renewable technology [USD/W]",
+            "RES_Specific_OM_Cost": "Yearly fixed O&M cost for each renewable technology as a fraction of specific investment cost [-]",
             "RES_Lifetime": "Renewables Lifetime [years]",
             "RES_unit_CO2_emission": "Specific CO2 emissions associated to each renewable technology [kgCO2/kW]",
             "RES_capacity": "Existing capacity [-] in brownfield scenario",
