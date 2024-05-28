@@ -359,7 +359,6 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
             results = opt.solve(instance, tee=True, warmstart=warmstart, keepfiles=keepfiles,
                             load_solutions=load_solutions, logfile=logfile) # Solving a model instance 
 
-
         elif Solver == 1:
            opt = SolverFactory('glpk') # Solver use during the optimization
            timelimit = 10000
@@ -371,28 +370,29 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
            print('Calling GLPK solver...')
            results = opt.solve(instance, tee=True, keepfiles=keepfiles, logfile=logfile) # Solving a model instance
            
+        elif Solver == 2:
+            opt = SolverFactory('cplex') # Solver used during the optimization
+
+            # Setting options for CPLEX
+            if MILP_Formulation:
+                opt.options['mip.tolerances.mipgap'] = 0.01
+                opt.options['mip.cuts.cliques'] = 2
+                opt.options['mip.tolerances.absmipgap'] = 1e-3
+                opt.options['mip.tolerances.integrality'] = 1e-4
+            else:
+                opt.options['lpmethod'] = 2
+                opt.options['barrier.convergetol'] = 1e-4
+                opt.options['simplex.tolerances.optimality'] = 1e-4
+                opt.options['simplex.tolerances.feasibility'] = 1e-4
+
+            opt.options['timelimit'] = 10000
+
+            print('Calling CPLEX solver...')
+            results = opt.solve(instance, tee=True, warmstart=warmstart, keepfiles=keepfiles,
+                            load_solutions=load_solutions, logfile=logfile) # Solving a model instance
+           
         print('Instance solved')
         instance.solutions.load_from(results)  # Loading solution into instance
-           
-        # elif Solver == 2:
-           # USING APPSI INTERFACE
-           #############################
-            #from pyomo.contrib.appsi.solvers.highs import HiGHS
-           # solver = HiGHS()
-           # print('Calling HiGHS solver...')
-           # results = solver.solve(instance)
-           # USING GETHIGHS
-           ###################à
-           # solver = HiGHS(time_limit=10000, mip_heuristic_effort=0.2, mip_detect_symmetry="on")
-           # results = solver.solve(instance)
-           # print(results)
-           # SOLVER FACTORY
-           ######################
-           # opt = SolverFactory('highs')
-           # print('Calling HiGHS solver...')
-           # results = opt.solve(instance, tee=True) # Solving a model instance
-           # print('Instance solved')
-           # instance.solutions.load_from(results)  # Loading solution into instance
            
         return instance
         

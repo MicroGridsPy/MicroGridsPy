@@ -313,7 +313,7 @@ class StartPage(tk.Frame):
         self.Periods_var.trace('w', self.check_battery_independence)
         
         # Mapping of solver names to numeric values
-        solver_mapping = {'Gurobi': 0, 'GLPK': 1}
+        solver_mapping = {'Gurobi': 0, 'GLPK': 1, 'CPLEX': 2}
 
         # Solver selection
         ttk.Label(self.inner_frame, text="Select Solver:", anchor='w').grid(row=10, column=2, sticky='w', padx=(30, 0))
