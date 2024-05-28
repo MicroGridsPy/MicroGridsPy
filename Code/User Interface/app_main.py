@@ -1,6 +1,3 @@
-
-
-
 import re
 import os
 import tkinter as tk
