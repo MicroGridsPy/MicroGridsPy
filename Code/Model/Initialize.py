@@ -396,7 +396,18 @@ def Initialize_Fuel_Specific_Cost(model, g, y):
     float: The specific fuel cost for the given generator type and year.
     """
     if Fuel_Specific_Cost_Calculation == 1 and Fuel_Specific_Cost_Import == 1:
-        fuel_cost_data = pd.read_csv(fuel_file_path, delimiter=';', decimal=',',index_col=0)
+        delimiters = [(',', '.'), (';', ','), (';', '.')]
+        for delimiter, decimal in delimiters:
+            try:
+                # Set index_col to 0 if the first column is the index
+                fuel_cost_data = pd.read_csv(res_file_path, delimiter=delimiter, decimal=decimal, header=0)
+                print(f"Diesel Fuel prices loaded exogenously using delimiter '{delimiter}' and decimal '{decimal}'")
+                break
+            except pd.errors.ParserError:
+                continue
+        else:
+            print("Error during import of Fuel_Costs.csv: unable to automatically detect delimiter and decimal. Please try again using delimiter ';' or ',' and decimal ',' or '.'.")
+            raise
 
         # Create a dictionary for fuel costs
         fuel_cost_dict = {(int(gen_type), int(year)): fuel_cost_data.at[year, gen_type]
