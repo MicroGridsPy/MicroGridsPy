@@ -127,7 +127,7 @@ if Demand_Profile_Generation:
     Demand.columns = Demand.columns.map(str)
     print("Electric demand data generated endogenously using archetypes")
 else:
-    delimiters = [(';', ','), (';', '.'), (',', '.')]
+    delimiters = [(',', '.'), (';', ','), (';', '.')]
     for delimiter, decimal in delimiters:
         try:
             # Set index_col to 0 if the first column is the index
@@ -204,7 +204,7 @@ def Initialize_Demand(model, s, y, t):
 #%% This section imports or generates the renewables and temperature time series data 
 
 if RE_Supply_Calculation == 0: 
-    delimiters = [(';', ','), (';', '.'), (',', '.')]
+    delimiters = [(',', '.'), (';', ','), (';', '.')]
     for delimiter, decimal in delimiters:
         try:
             # Set index_col to 0 if the first column is the index
