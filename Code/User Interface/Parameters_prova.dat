@@ -1,0 +1,183 @@
+
+param: base_URL:= 'https://power.larc.nasa.gov/api/temporal/';
+param: loc_id := 'point';
+param: parameters_1 := 'ALLSKY_SFC_SW_DWN';
+param: parameters_2 := 'T2MWET, T2M, WS50M';
+param: parameters_3 := 'WS50M, WS2M,WD50M, T2M';
+param: date_start := '20150101';
+param: date_end := '20201231';
+param: community := 'RE';
+param: temp_res_1 := 'daily';
+param: temp_res_2 := 'hourly';
+param: output_format := 'JSON';
+param: user := 'anonymous';
+
+param: lat := '-11 33 56.4';
+param: lon := '30 21 3.4';
+param: time_zone := +2;
+
+param: nom_power := 300;
+param: tilt := 10;
+param: azim := 180;
+param: ro_ground := 0.2;
+param: k_T := -0.37;
+param: NMOT := 45 ;	
+param: T_NMOT := 20;
+param: G_NMOT := 800;
+param: turbine_type := 'HA';
+param: turbine_model := 'NPS100c-21';
+param: drivetrain_efficiency := 0.9;
+
+param: demand_growth := '0';
+param: cooling_period := 'AY';
+param: h_tier1 := '252';
+param: h_tier2 := '160';
+param: h_tier3 := '50';
+param: h_tier4 := '36';
+param: h_tier5 := '5';
+param: schools := '1';
+param: hospital_1 := '0';
+param: hospital_2 := '1';
+param: hospital_3 := '0';
+param: hospital_4 := '0';
+param: hospital_5 := '0';
+
+param: Periods := 8760;
+param: Years := 20;
+param: Step_Duration := 20;
+param: Min_Last_Step_Duration := 1;
+param: StartDate := '01/01/2023 00:00:00';
+param: Delta_Time := 1.0;
+param: Scenarios := 1;
+param: Scenario_Weight :=
+1      1;
+
+param: Real_Discount_Rate := 0.2;
+param: Investment_Cost_Limit := 500000;
+
+param: Renewable_Penetration := 0;
+param: Battery_Independence := 0;
+
+
+param: Lost_Load_Fraction := 0.0;
+param: Lost_Load_Specific_Cost := 0.0;
+
+param: Solver := 0;
+
+param: Optimization_Goal := 1;
+param: MILP_Formulation := 0;
+param: Generator_Partial_Load := 0;
+param: Multiobjective_Optimization := 0;
+param: Greenfield_Investment := 1;
+param: Plot_Max_Cost := 0;
+param: RE_Supply_Calculation := 0;
+param: Demand_Profile_Generation := 0;
+param: Grid_Connection := 0;
+param: Grid_Availability_Simulation := 0;
+param: Grid_Connection_Type := 0;
+param: WACC_Calculation := 0;
+param: Model_Components := 0;
+
+
+
+param: Pareto_points := 2;
+param: Pareto_solution := 1;
+
+param: cost_of_equity := 0.12;
+param: cost_of_debt := 0.11;
+param: tax := 0.02;
+param: equity_share := 0.10;
+param: debt_share := 0.90;
+
+param: RES_Sources := 1;
+param: RES_Names :=
+1      'PV panels';
+param: RES_Nominal_Capacity :=
+1      1000;                                                                                           
+param: RES_Inverter_Efficiency :=
+1      0.965;
+param: RES_Specific_Investment_Cost :=
+1      1.165;
+param: RES_Specific_OM_Cost :=
+1      0.018;                                                                                                            
+param: RES_Lifetime :=
+1      20;
+param: RES_capacity :=
+1      0;
+param: RES_years :=
+1      0;
+param: RES_unit_CO2_emission :=
+1      0;
+
+param: Battery_Specific_Investment_Cost := 0.333;
+param: Battery_Specific_Electronic_Investment_Cost := 0.25;
+param: Battery_Specific_OM_Cost := 0.06;
+param: Battery_Discharge_Battery_Efficiency := 0.9;
+param: Battery_Charge_Battery_Efficiency := 0.9;
+param: Battery_Depth_of_Discharge := 0.2;
+param: Maximum_Battery_Discharge_Time := 4;
+param: Maximum_Battery_Charge_Time := 4;
+param: Battery_Cycles := 5000;
+param: Battery_Initial_SOC := 1;
+param: Battery_capacity := 0;
+param: BESS_unit_CO2_emission := 0;
+
+param: Battery_Nominal_Capacity_milp := 1000;
+
+param: Generator_Types := 1;
+param: Fuel_Specific_Cost_Calculation := 0; 
+param: Fuel_Specific_Cost_Import := 0; 
+param: Generator_Names :=
+1      'Diesel Genset 1';
+param: Generator_Efficiency :=
+1      0.3;                                                  
+param: Generator_Specific_Investment_Cost :=
+1      0.4;
+param: Generator_Specific_OM_Cost :=
+1      0.08;                                                   
+param: Generator_Lifetime :=
+1      20;
+param: Fuel_Names :=
+1      'Diesel';
+param: Fuel_LHV :=
+1      10140;
+param: Fuel_Specific_Start_Cost :=
+1      1.17;
+param: Fuel_Specific_Cost_Rate :=
+1      0;
+param: Generator_capacity :=
+1      0;
+param: GEN_years :=
+1      0;
+param: GEN_unit_CO2_emission :=
+1      0;
+param: FUEL_unit_CO2_emission :=
+1      2.68;
+
+param: Generator_Min_output :=
+1      0.3;
+param: Generator_Nominal_Capacity_milp :=
+1      30000;
+param: Generator_pgen :=
+1      0.01;
+
+param: Year_Grid_Connection := 1;
+param: Grid_Sold_El_Price := 0;
+param: Grid_Purchased_El_Price := 0.138;
+param: Grid_Distance := 0.5;
+param: Grid_Connection_Cost := 14000;
+param: Grid_Maintenance_Cost := 0.025;
+param: Maximum_Grid_Power := 80;
+param: Grid_Average_Number_Outages := 43.48;
+param: Grid_Average_Outage_Duration := 455;
+param: National_Grid_Specific_CO2_emissions := 0.1495;
+
+param: RES_Colors :=
+1      'FF8800';
+param: Battery_Color := '4CC9F0';
+param: Generator_Colors :=
+1      '00509D';
+param: Lost_Load_Color := 'F21B3F';
+param: Curtailment_Color := 'FFD500';
+param: Energy_To_Grid_Color := '008000';
+param: Energy_From_Grid_Color := '800080';
