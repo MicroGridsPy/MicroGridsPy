@@ -128,17 +128,25 @@ if Demand_Profile_Generation:
     print("Electric demand data generated endogenously using archetypes")
 else:
     delimiters = [(',', '.'), (';', ','), (';', '.')]
+    loaded_successfully = False
     for delimiter, decimal in delimiters:
         try:
             # Set index_col to 0 if the first column is the index
             Demand = pd.read_csv(demand_file_path, delimiter=delimiter, decimal=decimal, header=0, index_col=0)
             print(f"Demand data loaded exogenously using delimiter '{delimiter}' and decimal '{decimal}'")
+            loaded_successfully = True
             break
         except pd.errors.ParserError:
-            continue
-    else:
+            print(f"Failed to load with delimiter '{delimiter}' and decimal '{decimal}'. Trying next combination...")
+        except FileNotFoundError:
+            print(f"File not found: {demand_file_path}. Please check the file path and try again.")
+            raise
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}. Trying next combination...")
+    
+    if not loaded_successfully:
         print("Error during import of Demand.csv: unable to automatically detect delimiter and decimal. Please try again using delimiter ';' or ',' and decimal ',' or '.'.")
-        raise
+        raise ValueError("Failed to load demand data with all provided delimiter and decimal combinations.")
 
 # Validate DataFrame dimensions against expected years and periods
 expected_columns = len(year)  # Expected number of data columns, excluding the index
@@ -205,17 +213,26 @@ def Initialize_Demand(model, s, y, t):
 
 if RE_Supply_Calculation == 0: 
     delimiters = [(',', '.'), (';', ','), (';', '.')]
+    loaded_successfully = False
     for delimiter, decimal in delimiters:
         try:
             # Set index_col to 0 if the first column is the index
-            Renewable_Energy = pd.read_csv(res_file_path, delimiter=delimiter, decimal=decimal, header=0)
+            Renewable_Energy = pd.read_csv(res_file_path, delimiter=delimiter, decimal=decimal, header=0, index_col=0)
             print(f"Renewables Time Series data loaded exogenously using delimiter '{delimiter}' and decimal '{decimal}'")
+            loaded_successfully = True
             break
         except pd.errors.ParserError:
-            continue
-    else:
+            print(f"Failed to load with delimiter '{delimiter}' and decimal '{decimal}'. Trying next combination...")
+        except FileNotFoundError:
+            print(f"File not found: {res_file_path}. Please check the file path and try again.")
+            raise
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}. Trying next combination...")
+    
+    if not loaded_successfully:
         print("Error during import of RES_Time_Series.csv: unable to automatically detect delimiter and decimal. Please try again using delimiter ';' or ',' and decimal ',' or '.'.")
-        raise
+        raise ValueError("Failed to load renewables data with all provided delimiter and decimal combinations.")
+    
     plot_path = os.path.join(results_directory, 'Renewables Availability.png')
 else:
     Renewable_Energy = RE_supply()
@@ -397,17 +414,25 @@ def Initialize_Fuel_Specific_Cost(model, g, y):
     """
     if Fuel_Specific_Cost_Calculation == 1 and Fuel_Specific_Cost_Import == 1:
         delimiters = [(',', '.'), (';', ','), (';', '.')]
+        loaded_successfully = False
         for delimiter, decimal in delimiters:
             try:
                 # Set index_col to 0 if the first column is the index
                 fuel_cost_data = pd.read_csv(res_file_path, delimiter=delimiter, decimal=decimal, header=0)
                 print(f"Diesel Fuel prices loaded exogenously using delimiter '{delimiter}' and decimal '{decimal}'")
+                loaded_successfully = True
                 break
             except pd.errors.ParserError:
-                continue
-        else:
+                print(f"Failed to load with delimiter '{delimiter}' and decimal '{decimal}'. Trying next combination...")
+            except FileNotFoundError:
+                print(f"File not found: {res_file_path}. Please check the file path and try again.")
+                raise
+            except Exception as e:
+                print(f"An unexpected error occurred: {e}. Trying next combination...")
+    
+        if not loaded_successfully:
             print("Error during import of Fuel_Costs.csv: unable to automatically detect delimiter and decimal. Please try again using delimiter ';' or ',' and decimal ',' or '.'.")
-            raise
+            raise ValueError("Failed to load fuel cost data with all provided delimiter and decimal combinations.")
 
         # Create a dictionary for fuel costs
         fuel_cost_dict = {(int(gen_type), int(year)): fuel_cost_data.at[year, gen_type]
@@ -598,8 +623,7 @@ def Initialize_Grid_Availability(model, s, y, t):
     """
     if Grid_Connection: 
         try:
-            # Access the normalized column '0'
-            return float(grid_availability.loc[(s, y, t), 0])
+            return float(grid_availability[list(grid_availability.columns)[0]][(s, y, t)])
         except KeyError:
             return 0
     else:
