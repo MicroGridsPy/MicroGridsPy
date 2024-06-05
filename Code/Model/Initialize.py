@@ -542,12 +542,13 @@ def Initialize_Generator_Marginal_Cost_milp_1(model,g):
     
 #%% This section initializes parameters related to grid connection
 
-"Grid Connection"
+# Reading grid availability data
 if Grid_Connection == 1:
     if Grid_Availability_Simulation: 
-        grid_avail(average_n_outages, average_outage_duration, n_years, year_grid_connection,n_scenarios, n_periods)
+        grid_avail(average_n_outages, average_outage_duration, n_years, year_grid_connection, n_scenarios, n_periods)
         availability = pd.read_csv(grid_file_path, delimiter=';', header=0)
-    else: availability = pd.read_csv(grid_file_path, delimiter=';', header=0)
+    else:
+        availability = pd.read_csv(grid_file_path, delimiter=';', header=0)
 
     # Create grid_availability Series
     grid_availability_Series = pd.Series()
@@ -562,14 +563,19 @@ if Grid_Connection == 1:
     index = pd.MultiIndex.from_product(frame, names=['scenario', 'year', 'period'])
     grid_availability.index = index
 
+    # Normalize the column name to 0 for consistency
+    if grid_availability.columns[0] != 0:
+        grid_availability.columns = [0]
 
     # Create grid_availability_2 DataFrame
     grid_availability_2 = pd.DataFrame()
     for s in scenario:
         grid_availability_Series_2 = pd.Series()
         for y in year:
-            if Grid_Connection: dum_2 = availability[str((s - 1) * n_years + y)]
-            else: dum_2 = availability[(s - 1) * n_years + y]
+            if Grid_Connection: 
+                dum_2 = availability[str((s - 1) * n_years + y)]
+            else: 
+                dum_2 = availability[(s - 1) * n_years + y]
             grid_availability_Series_2 = pd.concat([s for s in [grid_availability_Series_2, dum_2] if not s.empty])
         grid_availability_2[s] = grid_availability_Series_2
 
@@ -590,8 +596,14 @@ def Initialize_Grid_Availability(model, s, y, t):
     Returns:
     float: The grid availability for the specified scenario, year, and time period.
     """
-    if Grid_Connection: return float(grid_availability[0][(s,y,t)])
-    else: 0
+    if Grid_Connection: 
+        try:
+            # Access the normalized column '0'
+            return float(grid_availability.loc[(s, y, t), 0])
+        except KeyError:
+            return 0
+    else:
+        return 0
 
 def Initialize_National_Grid_Inv_Cost(model):
     """
