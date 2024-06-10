@@ -8,7 +8,7 @@ MicroGridsPy 2.1
 
 The MicroGridsPy model main objective is to provide an open-source alternative to the problem of sizing and dispatch of energy in micro-grids in isolated places. It’s written in python(pyomo) and use excel and text files as input and output data handling and visualisation.
 
-Here the link to the online documentation: [MicroGridsPy Documentation](https://microgridspy-documentation.readthedocs.io/en/latest/).
+Here the link to the online documentation: [MicroGridsPy Documentation](https://microgridspy-docs.readthedocs.io/en/latest/).
 
 > :warning: **Warning**: For a MACOS compatible version, please refer to version 2.0. The project is under active development. 
 
