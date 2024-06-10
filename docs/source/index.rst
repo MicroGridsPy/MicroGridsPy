@@ -3,6 +3,8 @@
 Introduction
 =======================================
 
+ECCOCI
+
 .. note::
 
     **Continuous Development:** MicroGridsPy is under continuous development, with new versions being released regularly. We strive to enhance the model by fixing bugs, making small edits, and implementing new features. Therefore, it is advisable to ensure that you have the latest version of the folder downloaded from the repository.
