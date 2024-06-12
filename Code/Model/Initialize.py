@@ -253,7 +253,7 @@ def Initialize_RES_Energy(model, s, r, t):
     float: The amount of renewable energy supplied.
     """
     column = (s - 1) * model.RES_Sources + r
-    return float(Renewable_Energy.iloc[t - 1, column]) 
+    return float(Renewable_Energy.iloc[t - 1, column - 1]) 
 
 #%% This section defines the number of investment steps as well as assigns each year to its corresponding step
 

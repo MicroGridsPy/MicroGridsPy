@@ -53,7 +53,6 @@ def DispatchPlot(instance,Time_Series,PlotScenario,PlotDate,PlotTime,PlotResolut
     
     RES_Names       = instance.RES_Names.extract_values()
     Generator_Names = instance.Generator_Names.extract_values()
-    Fuel_Names      = instance.Fuel_Names.extract_values()
     if MILP_Formulation:
        BESSUnits = instance.Battery_Units.get_values()
        BESSNominalCapacitymilp = instance.Battery_Nominal_Capacity_milp.value
@@ -112,9 +111,11 @@ def DispatchPlot(instance,Time_Series,PlotScenario,PlotDate,PlotTime,PlotResolut
             y_Genset[g] = Series.loc[:,idx[:,'Generator Production',Generator_Names[g],:]].values.flatten()/1e3 
     y_LostLoad    = Series.loc[:,idx[:,'Lost Load',:,:]].values.flatten()/1e3 
     y_Curtailment = -1*Series.loc[:,idx[:,'Curtailment',:,:]].values.flatten()/1e3 
-    if instance.Grid_Connection.value == 1:
+    if instance.Grid_Connection.value == 1 and instance.Grid_Connection_Type.value == 0:
         y_Grid_out   = -1*Series.loc[:,idx[:,'Electricity to grid',:,:]].values.flatten()/1e3  ####
         y_Grid_in    = Series.loc[:,idx[:,'Electricity from grid',:,:]].values.flatten()/1e3  ####
+    elif instance.Grid_Connection.value == 1 and instance.Grid_Connection_Type.value == 1:
+        y_Grid_in    = Series.loc[:,idx[:,'Electricity from grid',:,:]].values.flatten()/1e3
 
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:
         # x_Plot = np.arange(len(y_BESS_out))
@@ -138,8 +139,10 @@ def DispatchPlot(instance,Time_Series,PlotScenario,PlotDate,PlotTime,PlotResolut
             y_Stacked_pos += [y_Genset[g]]
     y_Stacked_pos += [y_LostLoad]  
     y_Stacked_pos += [y_Curtailment]  
-    if instance.Grid_Connection.value == 1:
+    if instance.Grid_Connection.value == 1 and instance.Grid_Connection_Type.value == 0:
         y_Stacked_pos += [y_Grid_out]
+        y_Stacked_pos += [y_Grid_in]
+    elif instance.Grid_Connection.value == 1 and instance.Grid_Connection_Type.value == 1:
         y_Stacked_pos += [y_Grid_in]
     
     y_Demand   = Series.loc[:,idx[:,'Electric Demand',:,:]].values.flatten()/1e3
@@ -170,9 +173,11 @@ def DispatchPlot(instance,Time_Series,PlotScenario,PlotDate,PlotTime,PlotResolut
             Colors_pos += ['#'+Generator_Colors[g]]
     Colors_pos += ['#'+Lost_Load_Color]  
     Colors_pos += ['#'+Curtailment_Color]  
-    if instance.Grid_Connection.value == 1:
+    if instance.Grid_Connection.value == 1 and instance.Grid_Connection_Type.value == 0:
         Colors_pos += ['#'+Energy_to_grid_Color] 
         Colors_pos += ['#'+Energy_from_grid_Color] 
+    elif instance.Grid_Connection.value == 1 and instance.Grid_Connection_Type.value == 1:
+        Colors_pos += ['#'+Energy_from_grid_Color]
 
     Colors_neg = []
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:
@@ -188,9 +193,11 @@ def DispatchPlot(instance,Time_Series,PlotScenario,PlotDate,PlotTime,PlotResolut
             Labels_pos += [Generator_Names[g]]
     Labels_pos += ['Lost load']  
     Labels_pos += ['Curtailment'] 
-    if instance.Grid_Connection.value == 1:
+    if instance.Grid_Connection.value == 1 and instance.Grid_Connection_Type.value == 0:
         Labels_pos += ['Energy to grid']  
         Labels_pos += ['Energy from grid'] 
+    elif instance.Grid_Connection.value == 1 and instance.Grid_Connection_Type.value == 1:
+        Labels_pos += ['Energy from grid']
 
     Labels_neg = []
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:

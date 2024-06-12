@@ -446,6 +446,9 @@ class Constraints_Greenfield():
         elif ut == 1:
             return model.RES_Units[ut,r] == model.RES_Units[ut,r]
     
+    "Maximum land use constraint for Renewables"
+    def Renewables_Max_Land_Use(model,ut):
+        return (sum((model.RES_Units[ut,r]*model.RES_Nominal_Capacity[r]*(model.RES_Specific_Area[r]/1000)) for r in model.renewable_sources)) <= model.Renewables_Total_Area
     
     "Battery Energy Storage constraints"
     def State_of_Charge(model,s,yt,ut,t): # State of Charge of the battery
@@ -502,7 +505,6 @@ class Constraints_Greenfield():
             return model.Generator_Nominal_Capacity[ut,g] >= model.Generator_Nominal_Capacity[ut-1,g]
         elif ut ==1:
             return model.Generator_Nominal_Capacity[ut,g] == model.Generator_Nominal_Capacity[ut,g]
-    
     
     "Lost load constraints"
     def Maximum_Lost_Load(model,s,yt): # Maximum admittable lost load
@@ -590,9 +592,9 @@ class Constraints_Greenfield():
             return model.Energy_From_Grid[s,y,t] <= model.Maximum_Grid_Power*1000 
     
     def Maximum_Power_To_Grid(model,s,y,t):
-        if y < model.Year_Grid_Connection or model.Grid_Connection_Type == 0 or model.Grid_Availability[s, y, t] == 0:
+        if y < model.Year_Grid_Connection or model.Grid_Connection_Type == 1 or model.Grid_Availability[s, y, t] == 0:
             return model.Energy_To_Grid[s, y, t] == 0
-        elif model.Grid_Connection_Type == 1:
+        elif model.Grid_Connection_Type == 0:
             return model.Energy_To_Grid[s, y, t] <= model.Maximum_Grid_Power*1000
         
     def Single_Flow_Energy_To_Grid(model,s,yt,ut,t):
@@ -602,7 +604,6 @@ class Constraints_Greenfield():
         return model.Energy_From_Grid[s,yt,t] <= (1-model.Single_Flow_Grid[s,yt,t])*model.Large_Constant
      
 #%% 
-
 # --- Brownfield ---
 
 class Constraints_Brownfield():
@@ -1055,6 +1056,10 @@ class Constraints_Brownfield():
             return model.RES_Units[ut,r] >= model.RES_Units[ut-1,r]
         elif ut == 1:
             return model.RES_Units[ut,r] == model.RES_Units[ut,r]
+        
+    "Maximum land use constraint for Renewables"
+    def Renewables_Max_Land_Use(model,s,yt,ut,r,t):
+        return  (sum((model.RES_existing_area[r] + (model.RES_Units[ut,r]*model.RES_Nominal_Capacity[r]*(model.RES_Specific_Area[r]/1000))) for r in model.renewable_sources)) <= model.Renewables_Total_Area
     
     "Battery Energy Storage constraints"
     def State_of_Charge(model,s,yt,ut,t): # State of Charge of the battery
@@ -1197,9 +1202,9 @@ class Constraints_Brownfield():
             return model.Energy_From_Grid[s,y,t] <= model.Maximum_Grid_Power*1000 
     
     def Maximum_Power_To_Grid(model,s,y,t):
-        if y < model.Year_Grid_Connection or model.Grid_Connection_Type == 0 or model.Grid_Availability[s, y, t] == 0:
+        if y < model.Year_Grid_Connection or model.Grid_Connection_Type == 1 or model.Grid_Availability[s, y, t] == 0:
             return model.Energy_To_Grid[s, y, t] == 0
-        elif model.Grid_Connection_Type == 1:
+        elif model.Grid_Connection_Type == 0:
             return model.Energy_To_Grid[s, y, t] <= model.Maximum_Grid_Power*1000
         
     def Single_Flow_Energy_To_Grid(model,s,yt,ut,t):
@@ -1683,6 +1688,10 @@ class Constraints_Greenfield_Milp():
             return model.RES_Units_milp[ut,r] >= model.RES_Units_milp[ut-1,r]
         elif ut == 1:
             return model.RES_Units_milp[ut,r] == model.RES_Units_milp[ut,r]
+        
+    "Maximum land use constraint for Renewables"
+    def Renewables_Max_Land_Use(model,s,yt,ut,r,t):
+        return  (sum((model.RES_Units_milp[ut,r]*model.RES_Nominal_Capacity[r]*(model.RES_Specific_Area[r]/1000)) for r in model.renewable_sources)) <= model.Renewables_Total_Area
     
     "Battery Energy Storage constraints"
     def State_of_Charge(model,s,yt,ut,t): # State of Charge of the battery
@@ -1844,9 +1853,9 @@ class Constraints_Greenfield_Milp():
             return model.Energy_From_Grid[s,y,t] <= model.Maximum_Grid_Power*1000 
     
     def Maximum_Power_To_Grid(model,s,y,t):
-        if y < model.Year_Grid_Connection or model.Grid_Connection_Type == 0 or model.Grid_Availability[s, y, t] == 0:
+        if y < model.Year_Grid_Connection or model.Grid_Connection_Type == 1 or model.Grid_Availability[s, y, t] == 0:
             return model.Energy_To_Grid[s, y, t] == 0
-        elif model.Grid_Connection_Type == 1:
+        elif model.Grid_Connection_Type == 0:
             return model.Energy_To_Grid[s, y, t] <= model.Maximum_Grid_Power*1000
         
     def Single_Flow_Energy_To_Grid(model,s,yt,ut,t):
@@ -2339,7 +2348,9 @@ class Constraints_Brownfield_Milp():
         elif ut == 1:
             return model.RES_Units_milp[ut,r] == model.RES_Units_milp[ut,r]
             
-            
+    "Maximum land use constraint for Renewables"
+    def Renewables_Max_Land_Use(model,s,yt,ut,r,t):
+        return  (sum((model.RES_existing_area[r] + (model.RES_Units_milp[ut,r]*model.RES_Nominal_Capacity[r]*(model.RES_Specific_Area[r]/1000))) for r in model.renewable_sources)) <= model.Renewables_Total_Area
     
     
     "Battery Energy Storage constraints"
@@ -2503,9 +2514,9 @@ class Constraints_Brownfield_Milp():
             return model.Energy_From_Grid[s,y,t] <= model.Maximum_Grid_Power*1000 
     
     def Maximum_Power_To_Grid(model,s,y,t):
-        if y < model.Year_Grid_Connection or model.Grid_Connection_Type == 0 or model.Grid_Availability[s, y, t] == 0:
+        if y < model.Year_Grid_Connection or model.Grid_Connection_Type == 1 or model.Grid_Availability[s, y, t] == 0:
             return model.Energy_To_Grid[s, y, t] == 0
-        elif model.Grid_Connection_Type == 1:
+        elif model.Grid_Connection_Type == 0:
             return model.Energy_To_Grid[s, y, t] <= model.Maximum_Grid_Power*1000
         
     def Single_Flow_Energy_To_Grid(model,s,yt,ut,t):

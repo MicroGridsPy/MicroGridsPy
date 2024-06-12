@@ -181,6 +181,7 @@ class StartPage(tk.Frame):
         grid_page.backup_var.set(value=self.Years_var.get())
         self.controller.show_frame("AdvancedPage")
         
+        
     def confirm_and_advance(self):
         if messagebox.askyesno("Confirm Action", "Are you sure you want to proceed? You won't be able to come back and change these configuration options later."):
             self.controller.show_frame('RECalculationPage')
@@ -409,7 +410,7 @@ class StartPage(tk.Frame):
       
         # Advanced Features Frame
         self.advanced_frame = tk.Frame(self.inner_frame, background='#FFFFFF')
-        self.advanced_frame.grid(row=21, column=0, padx=10, pady=10, sticky='ew')
+        self.advanced_frame.grid(row=20, column=0, padx=10, pady=10, sticky='ew')
 
         # Advanced Features Icon
         advanced_icon = Image.open('Images/advanced_icon.png')  # Load the image
