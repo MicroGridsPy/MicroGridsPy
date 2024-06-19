@@ -1397,6 +1397,7 @@ def YearlyCosts(instance):
         if instance.Grid_Connection.value == 1 and instance.Grid_Connection_Type == 1:
             YearlyCost = pd.concat([round(RES_Yearly_Cost.astype(float),2),
                                     round(BESS_Yearly_Cost.astype(float),2),
+                                    round(Generator_Yearly_Cost.astype(float),2),
                                     round(Grid_Yearly_Fixed_Cost.astype(float),2), 
                                     round(Lost_Load_Yearly_Cost.astype(float),2),
                                     round(BESS_Replacement_Yearly_Cost.astype(float),2),
@@ -1419,16 +1420,18 @@ def YearlyCosts(instance):
                                     round(Grid_Yearly_Rev.astype(float),2)], axis=1) 
         if instance.Grid_Connection.value == 1 and instance.Grid_Connection_Type == 1:
             YearlyCost = pd.concat([round(RES_Yearly_Cost.astype(float),2),
+                                    round(BESS_Yearly_Cost.astype(float),2),
                                     round(Generator_Yearly_Cost.astype(float),2),
                                     round(Grid_Yearly_Fixed_Cost.astype(float),2), 
                                     round(Lost_Load_Yearly_Cost.astype(float),2),
+                                    round(BESS_Replacement_Yearly_Cost.astype(float),2),
                                     round(Fuel_Cost_Yearly_Cost.astype(float),2),
                                     round(Grid_Yearly_Cost.astype(float),2)], axis=1)
         if instance.Grid_Connection.value == 0:
             YearlyCost = pd.concat([round(RES_Yearly_Cost.astype(float),2),
                                     round(Generator_Yearly_Cost.astype(float),2),
                                     round(Lost_Load_Yearly_Cost.astype(float),2),
-                                    round(Fuel_Cost_Yearly_Cost.astype(float),2)], axis=1)  
+                                    round(Fuel_Cost_Yearly_Cost.astype(float),2)], axis=1) 
 
     return YearlyCost
 
@@ -1808,49 +1811,49 @@ def PrintResults(instance, Results, callback=None):
     print(f'\nAverage renewable penetration per year = {round(renewable_penetration, 2)} %')
     
     if instance.Model_Components.value == 1 and instance.Grid_Connection == 1:
-        battery_usage = Results['Yearly energy parameters']['Battery usage'].sum().sum() / Y
+        battery_usage = Results['Yearly energy parameters'].iloc[:, -2].sum().sum() / Y
         print(f'Average battery usage per year = {round(battery_usage, 2)} %')
-        grid_usage = Results['Yearly energy parameters']['Grid usage'].sum().sum() / Y
+        grid_usage = Results['Yearly energy parameters'].iloc[:, -1].sum().sum() / Y
         print(f'Average national grid usage per year = {round(grid_usage, 2)} %')
-        curtailment = Results['Yearly energy parameters']['Curtailment share'].sum().sum() / Y
+        curtailment = Results['Yearly energy parameters'].iloc[:, -3].sum().sum() / Y
         print(f'Average curtailment per year = {round(curtailment, 2)} %')
 
     if instance.Model_Components.value == 1 and instance.Grid_Connection == 0:
-        battery_usage = Results['Yearly energy parameters']['Battery usage'].sum().sum() / Y
+        battery_usage = Results['Yearly energy parameters'].iloc[:, -1].sum().sum() / Y
         print(f'Average battery usage per year = {round(battery_usage, 2)} %')
-        curtailment = Results['Yearly energy parameters']['Curtailment share'].sum().sum() / Y
+        curtailment = Results['Yearly energy parameters'].iloc[:, -2].sum().sum() / Y
         print(f'Average curtailment per year = {round(curtailment, 2)} %')
     
     if instance.Model_Components.value == 2 and instance.Grid_Connection == 1:
-        generator_share = Results['Yearly energy parameters']['Generators share'].sum().sum() / Y
+        generator_share = Results['Yearly energy parameters'].iloc[:, 0].sum().sum() / Y
         print(f'Average generator share per year = {round(generator_share, 2)} %')
-        grid_usage = Results['Yearly energy parameters']['Grid usage'].sum().sum() / Y
+        grid_usage = Results['Yearly energy parameters'].iloc[:, -1].sum().sum() / Y
         print(f'Average national grid usage per year = {round(grid_usage, 2)} %')      
-        curtailment = Results['Yearly energy parameters']['Curtailment share'].sum().sum() / Y
+        curtailment = Results['Yearly energy parameters'].iloc[:, -2].sum().sum() / Y
         print(f'Average curtailment per year = {round(curtailment, 2)} %')
 
     if instance.Model_Components.value == 2 and instance.Grid_Connection == 0:
-        generator_share = Results['Yearly energy parameters']['Generators share'].sum().sum() / Y
+        generator_share = Results['Yearly energy parameters'].iloc[:, 0].sum().sum() / Y
         print(f'Average generator share per year = {round(generator_share, 2)} %')
-        curtailment = Results['Yearly energy parameters']['Curtailment share'].sum().sum() / Y
+        curtailment = Results['Yearly energy parameters'].iloc[:, -1].sum().sum() / Y
         print(f'Average curtailment per year = {round(curtailment, 2)} %')
 
     if instance.Model_Components.value == 0 and instance.Grid_Connection == 1:
-        generator_share = Results['Yearly energy parameters']['Generators share'].sum().sum() / Y
+        generator_share = Results['Yearly energy parameters'].iloc[:, 0].sum().sum() / Y
         print(f'Average generator share per year = {round(generator_share, 2)} %')
-        battery_usage = Results['Yearly energy parameters']['Battery usage'].sum().sum() / Y
+        battery_usage = Results['Yearly energy parameters'].iloc[:, -2].sum().sum() / Y
         print(f'Average battery usage per year = {round(battery_usage, 2)} %')
-        grid_usage = Results['Yearly energy parameters']['Grid usage'].sum().sum() / Y
+        grid_usage = Results['Yearly energy parameters'].iloc[:, -1].sum().sum() / Y
         print(f'Average national grid usage per year = {round(grid_usage, 2)} %')
-        curtailment = Results['Yearly energy parameters']['Curtailment share'].sum().sum() / Y
+        curtailment = Results['Yearly energy parameters'].iloc[:, -3].sum().sum() / Y
         print(f'Average curtailment per year = {round(curtailment, 2)} %')
 
     if instance.Model_Components.value == 0 and instance.Grid_Connection == 0:
-        generator_share = Results['Yearly energy parameters']['Generators share'].sum().sum() / Y
+        generator_share = Results['Yearly energy parameters'].iloc[:, 0].sum().sum() / Y
         print(f'Average generator share per year = {round(generator_share, 2)} %')
-        battery_usage = Results['Yearly energy parameters']['Battery usage'].sum().sum() / Y
+        battery_usage = Results['Yearly energy parameters'].iloc[:, -1].sum().sum() / Y
         print(f'Average battery usage per year = {round(battery_usage, 2)} %')
-        curtailment = Results['Yearly energy parameters']['Curtailment share'].sum().sum() / Y
+        curtailment = Results['Yearly energy parameters'].iloc[:, -2].sum().sum() / Y
         print(f'Average curtailment per year = {round(curtailment, 2)} %')
             
 

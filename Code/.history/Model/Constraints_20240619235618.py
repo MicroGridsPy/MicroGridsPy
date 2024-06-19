@@ -1197,9 +1197,9 @@ class Constraints_Brownfield():
             return model.Energy_From_Grid[s,y,t] <= model.Maximum_Grid_Power*1000 
     
     def Maximum_Power_To_Grid(model,s,y,t):
-        if y < model.Year_Grid_Connection or model.Grid_Connection_Type == 1 or model.Grid_Availability[s, y, t] == 0:
+        if y < model.Year_Grid_Connection or model.Grid_Connection_Type == 0 or model.Grid_Availability[s, y, t] == 0:
             return model.Energy_To_Grid[s, y, t] == 0
-        elif model.Grid_Connection_Type == 0:
+        elif model.Grid_Connection_Type == 1:
             return model.Energy_To_Grid[s, y, t] <= model.Maximum_Grid_Power*1000
         
     def Single_Flow_Energy_To_Grid(model,s,yt,ut,t):
@@ -1844,9 +1844,9 @@ class Constraints_Greenfield_Milp():
             return model.Energy_From_Grid[s,y,t] <= model.Maximum_Grid_Power*1000 
     
     def Maximum_Power_To_Grid(model,s,y,t):
-        if y < model.Year_Grid_Connection or model.Grid_Connection_Type == 1 or model.Grid_Availability[s, y, t] == 0:
+        if y < model.Year_Grid_Connection or model.Grid_Connection_Type == 0 or model.Grid_Availability[s, y, t] == 0:
             return model.Energy_To_Grid[s, y, t] == 0
-        elif model.Grid_Connection_Type == 0:
+        elif model.Grid_Connection_Type == 1:
             return model.Energy_To_Grid[s, y, t] <= model.Maximum_Grid_Power*1000
         
     def Single_Flow_Energy_To_Grid(model,s,yt,ut,t):
@@ -2503,16 +2503,16 @@ class Constraints_Brownfield_Milp():
             return model.Energy_From_Grid[s,y,t] <= model.Maximum_Grid_Power*1000 
     
     def Maximum_Power_To_Grid(model,s,y,t):
-        if y < model.Year_Grid_Connection or model.Grid_Connection_Type == 1 or model.Grid_Availability[s, y, t] == 0:
+        if y < model.Year_Grid_Connection or model.Grid_Connection_Type == 0 or model.Grid_Availability[s, y, t] == 0:
             return model.Energy_To_Grid[s, y, t] == 0
-        elif model.Grid_Connection_Type == 0:
+        elif model.Grid_Connection_Type == 1:
             return model.Energy_To_Grid[s, y, t] <= model.Maximum_Grid_Power*1000
         
     def Single_Flow_Energy_To_Grid(model,s,yt,ut,t):
         return model.Energy_To_Grid[s,yt,t] <= model.Single_Flow_Grid[s,yt,t]*model.Large_Constant
         
     def Single_Flow_Energy_From_Grid(model,s,yt,ut,t):
-        return model.Energy_From_Grid[s,yt,t] <= (1-model.Single_Flow_Grid[s,yt,t])*model.Large_Constant 
+        return model.Energy_From_Grid[s,yt,t] <= (1-model.Single_Flow_Grid[s,yt,t])*model.Large_Constant   
 
 
 
