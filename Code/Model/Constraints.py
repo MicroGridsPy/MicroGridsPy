@@ -471,10 +471,13 @@ class Constraints_Greenfield():
     def Max_Power_Battery_Discharge(model,ut):
         return model.Battery_Maximum_Discharge_Power[ut] == model.Battery_Nominal_Capacity[ut]/model.Maximum_Battery_Discharge_Time
     
-    def Max_Bat_in(model,s,yt,ut,t): # Minimun flow of energy for the charge fase
+    def Max_Bat_flow_in(model,s,yt,ut,t): # Minimun flow of energy for the charge fase
         return model.Battery_Inflow[s,yt,t] <= model.Battery_Maximum_Charge_Power[ut]*model.Delta_Time
     
-    def Max_Bat_out(model,s,yt,ut,t): # Minimum flow of energy for the discharge fase
+    def Max_Bat_flow_out(model,s,yt,ut,t): # Minimun flow of energy for the discharge fase
+        return model.Battery_Outflow[s,yt,t] <= model.Battery_Maximum_Discharge_Power[ut]*model.Delta_Time
+    
+    def Max_Bat_out(model,s,yt,ut,t):
         return model.Battery_Outflow[s,yt,t] <= model.Energy_Demand[s,yt,t]
         
     def Battery_Min_Capacity(model,ut):    
@@ -491,7 +494,7 @@ class Constraints_Greenfield():
     
     def Battery_Single_Flow_Charge(model,s,yt,ut,t):
         return   model.Battery_Inflow[s,yt,t] <= (1-model.Single_Flow_BESS[s,yt,t])*model.Battery_Maximum_Charge_Power[ut]*model.Delta_Time
-    
+
     
     "Diesel generator constraints"
     def Maximum_Generator_Energy_1(model,s,yt,ut,g,t): 
