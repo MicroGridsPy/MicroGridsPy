@@ -181,16 +181,7 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
                                                     rule=C.Max_Power_Battery_Charge)  # Max power battery charge constraint
         model.MaxPowerBatteryDischarge = Constraint(model.steps,
                                                     rule=C.Max_Power_Battery_Discharge)    # Max power battery discharge constraint
-        model.MaxBatIn                 = Constraint(model.scenarios,
-                                                    model.years_steps,
-                                                    model.periods, 
-                                                    rule=C.Max_Bat_in) # Minimun flow of energy for the charge fase
-        model.Maxbatout                = Constraint(model.scenarios, 
-                                                    model.years_steps, 
-                                                    model.periods,
-                                                    rule=C.Max_Bat_out) #minimun flow of energy for the discharge fase
-        model.BatteryMinStepCapacity   = Constraint(model.years_steps,                                             
-                                                    rule=C.Battery_Min_Step_Capacity)
+
         if MILP_Formulation:
             model.BatterySingleFlowDischarge = Constraint(model.scenarios,
                                                         model.years_steps,
@@ -200,6 +191,21 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
                                                         model.years_steps,
                                                         model.periods, 
                                                         rule=C. Battery_Single_Flow_Charge)
+        else:
+            model.BatteryFlowCharge                     = Constraint(model.scenarios,
+                                                                    model.years_steps,
+                                                                    model.periods, 
+                                                                    rule=C.Max_Bat_flow_in) # Minimun flow of energy for the charge fase
+            model.BatteryFlowDischarge                 = Constraint(model.scenarios,
+                                                                    model.years_steps,
+                                                                    model.periods, 
+                                                                    rule=C.Max_Bat_flow_out) # Minimun flow of energy for the discharge fase
+        model.Maxbatout                = Constraint(model.scenarios, 
+                                                    model.years_steps, 
+                                                    model.periods,
+                                                    rule=C.Max_Bat_out) #minimun flow of energy for the discharge fase
+        model.BatteryMinStepCapacity   = Constraint(model.years_steps,                                             
+                                                    rule=C.Battery_Min_Step_Capacity)
             
         if Battery_Independence > 0:
             model.BatteryMinCapacity   = Constraint(model.steps, 
