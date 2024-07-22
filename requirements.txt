@@ -1,0 +1,10 @@
+streamlit
+pydantic
+pyyaml
+folium
+streamlit-folium
+geopy
+openpyxl
+matplotlib
+rampdemand
+highspy

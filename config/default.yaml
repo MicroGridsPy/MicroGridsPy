@@ -1,0 +1,141 @@
+project_info:
+  project_name: "Default Project"
+  project_description: "This is a default project."
+
+project_settings:
+  time_horizon: 20
+  start_date: "2023-01-01 00:00:00"
+  discount_rate: 0.1
+  currency: "USD"
+  time_resolution: 8760
+  optimization_goal: 0
+  investment_cost_limit: 500000.0
+  system_configuration: 0
+  solver: 0
+  renewable_penetration: 0.0
+  land_availability: 0.0
+  battery_independence: 0
+  lost_load_fraction: 0.0
+  lost_load_specific_cost: 0.0
+
+advanced_settings:
+  capacity_expansion: false
+  step_duration: 20
+  num_steps: 1
+  min_step_duration: 1
+  milp_formulation: false
+  unit_commitment: false
+  brownfield: false
+  grid_connection: false
+  grid_availability_simulation: false
+  grid_connection_type: 0
+  wacc_calculation: false
+  cost_of_equity: 0.12
+  cost_of_debt: 0.11
+  tax: 0.02
+  equity_share: 0.10
+  debt_share: 0.90
+  multiobjective_optimization: false
+  pareto_points: 2
+  multi_scenario_optimization: false
+  num_scenarios: 1
+  scenario_weights: [1]
+
+resource_assessment:
+  location: "Nairobi, Kenya"
+  lat: -11.56567
+  lon: 34.23567
+  time_zone: 2
+  turbine_type: "Horizontal Axis"
+  turbine_model: "NPS100c-21"
+  drivetrain_efficiency: 0.9
+  nom_power: 1000
+  tilt: 10
+  azim: 180
+  ro_ground: 0.2
+  k_T: -0.37
+  NMOT: 45
+  T_NMOT: 20
+  G_NMOT: 800
+
+# --- RES parameters (non-editable) ---
+nasa_power_params:
+  base_url: 'https://power.larc.nasa.gov/api/temporal/'
+  loc_id: 'point'
+  parameters_1: 'ALLSKY_SFC_SW_DWN'
+  parameters_2: 'T2MWET,T2M,WS50M'
+  parameters_3 : 'WS50M,WS2M,WD50M,T2M'
+  date_start: '20150101'
+  date_end: '20201231'
+  community: 'RE'
+  temp_res_1: 'daily'
+  temp_res_2: 'hourly'
+  output_format: 'JSON'
+  user: 'anonymous'
+
+archetypes_params:
+  demand_growth : 0.0
+  cooling_period : 'AY'
+  h_tier1 : 252
+  h_tier2 : 160
+  h_tier3 : 50
+  h_tier4 : 36
+  h_tier5 : 5
+  schools : 1
+  hospital_1 : 0
+  hospital_2 : 1
+  hospital_3 : 0
+  hospital_4 : 0
+  hospital_5 : 0
+
+renewables_params:
+  res_sources: 1
+  res_names: ["Solar PV"]
+  res_nominal_capacity: [1000] #W
+  res_inverter_efficiency: [0.98] #fraction
+  res_specific_area: [11.49] #m2/kW
+  res_specific_investment_cost: [0.95] #USD/W
+  res_specific_om_cost: [0.018] #% of investment cost
+  res_lifetime: [20] #years
+  res_unit_co2_emission: [0] #kgCO2/kWh
+  res_existing_capacity: [0] #W
+  res_existing_area: [0] #m2
+  res_existing_years: [0] #years
+
+battery_params:
+  battery_chemistry: "LFP"
+  battery_nominal_capacity: 1000.0 #Wh
+  battery_specific_investment_cost: 0.15 #USD/Wh
+  battery_specific_electronic_investment_cost: 0.05 #USD/Wh
+  battery_specific_om_cost: 0.06 #% of investment cost
+  battery_discharge_battery_efficiency: 1 #fraction
+  battery_charge_battery_efficiency: 1 #fraction
+  battery_initial_soc: 1.0 #fraction
+  battery_depth_of_discharge: 0.8 #fraction
+  maximum_battery_discharge_time: 5 #hours
+  maximum_battery_charge_time: 5 #hours
+  battery_cycles: 6000.0 #cycles
+  battery_expected_lifetime: 20 #years
+  bess_unit_co2_emission: 0.0 #kgCO2/kWh
+  battery_existing_capacity: 0.0 #Wh
+  battery_existing_years: 0 #years
+
+generator_params:
+  gen_types: 1
+  gen_names: ["Diesel Generator"]
+  gen_nominal_capacity: [1000] #W
+  gen_nominal_efficiency: [0.3] #fraction
+  gen_partial_load: false
+  gen_specific_investment_cost: [0.4] #USD/W
+  gen_specific_om_cost: [0.08] #% of investment cost
+  gen_lifetime: [20] #years
+  gen_unit_co2_emission: [0] #kgCO2/kWh
+  gen_existing_capacity: [0] #W
+  gen_existing_years: [0] #years
+  fuel_names: ["Diesel"]
+  fuel_lhv: [10140] #Wh/l
+  fuel_co2_emission: [2.68] #kgCO2/l
+  partial_load: false
+  gen_min_output: [0.3] #fraction
+  gen_cost_increase: [0.01] #fraction
+  
