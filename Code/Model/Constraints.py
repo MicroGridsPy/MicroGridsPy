@@ -446,6 +446,9 @@ class Constraints_Greenfield():
         elif ut == 1:
             return model.RES_Units[ut,r] == model.RES_Units[ut,r]
     
+    "Maximum land use constraint for Renewables"
+    def Renewables_Max_Land_Use(model,ut):
+        return (sum((model.RES_Units[ut,r]*model.RES_Nominal_Capacity[r]*(model.RES_Specific_Area[r]/1000)) for r in model.renewable_sources)) <= model.Renewables_Total_Area
     
     "Battery Energy Storage constraints"
     def State_of_Charge(model,s,yt,ut,t): # State of Charge of the battery
@@ -468,10 +471,13 @@ class Constraints_Greenfield():
     def Max_Power_Battery_Discharge(model,ut):
         return model.Battery_Maximum_Discharge_Power[ut] == model.Battery_Nominal_Capacity[ut]/model.Maximum_Battery_Discharge_Time
     
-    def Max_Bat_in(model,s,yt,ut,t): # Minimun flow of energy for the charge fase
+    def Max_Bat_flow_in(model,s,yt,ut,t): # Minimun flow of energy for the charge fase
         return model.Battery_Inflow[s,yt,t] <= model.Battery_Maximum_Charge_Power[ut]*model.Delta_Time
     
-    def Max_Bat_out(model,s,yt,ut,t): # Minimum flow of energy for the discharge fase
+    def Max_Bat_flow_out(model,s,yt,ut,t): # Minimun flow of energy for the discharge fase
+        return model.Battery_Outflow[s,yt,t] <= model.Battery_Maximum_Discharge_Power[ut]*model.Delta_Time
+    
+    def Max_Bat_out(model,s,yt,ut,t):
         return model.Battery_Outflow[s,yt,t] <= model.Energy_Demand[s,yt,t]
         
     def Battery_Min_Capacity(model,ut):    
@@ -488,7 +494,7 @@ class Constraints_Greenfield():
     
     def Battery_Single_Flow_Charge(model,s,yt,ut,t):
         return   model.Battery_Inflow[s,yt,t] <= (1-model.Single_Flow_BESS[s,yt,t])*model.Battery_Maximum_Charge_Power[ut]*model.Delta_Time
-    
+
     
     "Diesel generator constraints"
     def Maximum_Generator_Energy_1(model,s,yt,ut,g,t): 
@@ -502,7 +508,6 @@ class Constraints_Greenfield():
             return model.Generator_Nominal_Capacity[ut,g] >= model.Generator_Nominal_Capacity[ut-1,g]
         elif ut ==1:
             return model.Generator_Nominal_Capacity[ut,g] == model.Generator_Nominal_Capacity[ut,g]
-    
     
     "Lost load constraints"
     def Maximum_Lost_Load(model,s,yt): # Maximum admittable lost load
@@ -602,7 +607,6 @@ class Constraints_Greenfield():
         return model.Energy_From_Grid[s,yt,t] <= (1-model.Single_Flow_Grid[s,yt,t])*model.Large_Constant
      
 #%% 
-
 # --- Brownfield ---
 
 class Constraints_Brownfield():
@@ -1055,6 +1059,10 @@ class Constraints_Brownfield():
             return model.RES_Units[ut,r] >= model.RES_Units[ut-1,r]
         elif ut == 1:
             return model.RES_Units[ut,r] == model.RES_Units[ut,r]
+        
+    "Maximum land use constraint for Renewables"
+    def Renewables_Max_Land_Use(model,s,yt,ut,r,t):
+        return  (sum((model.RES_existing_area[r] + (model.RES_Units[ut,r]*model.RES_Nominal_Capacity[r]*(model.RES_Specific_Area[r]/1000))) for r in model.renewable_sources)) <= model.Renewables_Total_Area
     
     "Battery Energy Storage constraints"
     def State_of_Charge(model,s,yt,ut,t): # State of Charge of the battery
@@ -1683,6 +1691,10 @@ class Constraints_Greenfield_Milp():
             return model.RES_Units_milp[ut,r] >= model.RES_Units_milp[ut-1,r]
         elif ut == 1:
             return model.RES_Units_milp[ut,r] == model.RES_Units_milp[ut,r]
+        
+    "Maximum land use constraint for Renewables"
+    def Renewables_Max_Land_Use(model,s,yt,ut,r,t):
+        return  (sum((model.RES_Units_milp[ut,r]*model.RES_Nominal_Capacity[r]*(model.RES_Specific_Area[r]/1000)) for r in model.renewable_sources)) <= model.Renewables_Total_Area
     
     "Battery Energy Storage constraints"
     def State_of_Charge(model,s,yt,ut,t): # State of Charge of the battery
@@ -2339,7 +2351,9 @@ class Constraints_Brownfield_Milp():
         elif ut == 1:
             return model.RES_Units_milp[ut,r] == model.RES_Units_milp[ut,r]
             
-            
+    "Maximum land use constraint for Renewables"
+    def Renewables_Max_Land_Use(model,s,yt,ut,r,t):
+        return  (sum((model.RES_existing_area[r] + (model.RES_Units_milp[ut,r]*model.RES_Nominal_Capacity[r]*(model.RES_Specific_Area[r]/1000))) for r in model.renewable_sources)) <= model.Renewables_Total_Area
     
     
     "Battery Energy Storage constraints"
@@ -2512,7 +2526,7 @@ class Constraints_Brownfield_Milp():
         return model.Energy_To_Grid[s,yt,t] <= model.Single_Flow_Grid[s,yt,t]*model.Large_Constant
         
     def Single_Flow_Energy_From_Grid(model,s,yt,ut,t):
-        return model.Energy_From_Grid[s,yt,t] <= (1-model.Single_Flow_Grid[s,yt,t])*model.Large_Constant 
+        return model.Energy_From_Grid[s,yt,t] <= (1-model.Single_Flow_Grid[s,yt,t])*model.Large_Constant   
 
 
 
