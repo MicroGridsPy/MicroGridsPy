@@ -158,7 +158,6 @@ class Model:
         print(f"Solving the model using {solver}...")
         self.model.solve(solver_name=solver, io_api=io_api, log_fn=log_fn, **solver_options)
 
-
         # Store the solution
         self.solution: linopy.Model.solution = self.model.solution
 

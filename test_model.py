@@ -36,6 +36,9 @@ def print_solution_results(model: Model):
     
     if model.has_battery:
         print_cost(" - Total Actualized Battery Replacement Cost", "Battery Replacement Cost (Actualized)")
+
+    if model.has_generator:
+        print_cost(" - Total Actualized Fuel Cost", "Total Fuel Cost (Actualized)")
     
     print_cost("Salvage Value", "Salvage Value")
 

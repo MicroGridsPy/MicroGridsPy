@@ -23,7 +23,7 @@ def initialize_sets(data: ProjectParameters, has_generator: bool) -> xr.Dataset:
     num_years = data.project_settings.time_horizon
     num_scenarios = data.advanced_settings.num_scenarios
     num_steps = data.advanced_settings.num_steps
-    renewable_sources = data.renewables_params.res_names
+    renewable_sources = data.resource_assessment.res_names
 
     # Initialize the dictionary for Dataset creation
     dataset_dict = {
@@ -34,7 +34,7 @@ def initialize_sets(data: ProjectParameters, has_generator: bool) -> xr.Dataset:
         'renewable_sources': xr.DataArray(renewable_sources, dims='renewable_sources', name='renewable_sources')
     }
 
-    # Conditionally add generator and fuel types to the dataset
+    # Conditionally add generator types
     if has_generator:
         generator_types = data.generator_params.gen_names
         dataset_dict['generator_types'] = xr.DataArray(generator_types, dims='generator_types', name='generator_types')
@@ -156,13 +156,20 @@ def initialize_project_parameters(data: ProjectParameters, sets: xr.Dataset) -> 
             dims=[],
             name='Investment Cost Limit')
         
+    # Renewable Penetration Limit
+    if data.project_settings.renewable_penetration > 0:
+        project_parameters['MINIMUM_RENEWABLE_PENETRATION'] = xr.DataArray(
+            data.project_settings.renewable_penetration,
+            dims=[],
+            name='Minimum Renewable Penetration')
+        
     # Land Availability (m^2) 
     if data.project_settings.land_availability > 0:
         project_parameters['LAND_AVAILABILITY'] = xr.DataArray(
             data.project_settings.land_availability,
-            dims=['reneable_sources'],
+            dims=['renewable_sources'],
             coords={'renewable_sources': sets.renewable_sources.values},
-            name='Land Availability (m^2)')
+            name='Land Availability')
 
     # Scenario Weights for multi-scenario optimization
     project_parameters['SCENARIO_WEIGHTS'] = xr.DataArray(
@@ -182,7 +189,7 @@ def initialize_res_parameters(data: ProjectParameters, sets: xr.Dataset) -> xr.D
     res_parameters = {
         # Nominal Capacity (W)
         'RES_NOMINAL_CAPACITY': xr.DataArray(
-            data.renewables_params.res_nominal_capacity,
+            data.resource_assessment.res_nominal_capacity,
             dims=['renewable_sources'],
             coords={'renewable_sources': renewable_sources},
             name='Renewables Nominal Capacity'),

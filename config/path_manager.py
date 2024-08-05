@@ -14,9 +14,9 @@ class PathManager:
 
     # Define paths for default and project configurations
     CONFIG_FOLDER_PATH: Path = ROOT_PATH / 'config'
+    PROJECTS_FOLDER_PATH: Path = ROOT_PATH / 'projects'
     DEFAULT_YAML_FILE_PATH: Path = CONFIG_FOLDER_PATH / 'default.yaml'
-    PROJECTS_FOLDER_PATH: Path = CONFIG_FOLDER_PATH / 'projects'
-    POWER_CURVE_FILE_PATH: Path = CONFIG_FOLDER_PATH / 'WT_Power_Curve.xlsx'
+    POWER_CURVE_FILE_PATH: Path = CONFIG_FOLDER_PATH / 'Wind Turbine Power Curves.xlsx'
 
     # Define inputs path
     INPUTS_FOLDER_PATH: Path = ROOT_PATH / 'microgridspy' / 'inputs'

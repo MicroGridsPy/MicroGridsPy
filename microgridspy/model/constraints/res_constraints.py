@@ -24,8 +24,8 @@ def add_res_constraints(model: Model, settings: ProjectParameters, sets: xr.Data
 def add_renewable_energy_production_constraint(model: Model, settings: ProjectParameters, sets: xr.Dataset, param: xr.Dataset, var: Dict[str, linopy.Variable]) -> None:
     """Calculate renewable energy production considering installation lifetime for each step."""
 
-    res_energy_production = (var['res_units'] *
-                            param['RESOURCE'] * param['RES_INVERTER_EFFICIENCY'])
+    res_energy_production = (var['res_units'] * 
+                             param['RESOURCE'] * param['RES_INVERTER_EFFICIENCY'])
             
     model.add_constraints(var['res_energy_production'] == res_energy_production, name=f"Renewable Energy Production Constraint")
 
@@ -71,3 +71,4 @@ def add_land_availability_constraint(model: Model, settings: ProjectParameters, 
             
     # Add the constraint
     model.add_constraints(res_land_use <= param['LAND_AVAILABILITY'], name="Land Availability Constraint")
+

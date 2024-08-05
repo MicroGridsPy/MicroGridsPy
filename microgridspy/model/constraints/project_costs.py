@@ -42,7 +42,10 @@ def add_cost_calculation_constraints(
         # Optimization goal: Variable Cost
         elif settings.project_settings.optimization_goal == 1:
             add_fixed_om_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid, actualized=False)
-            add_scenario_variable_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid, actualized=False)
+            if settings.advanced_settings.milp_formulation and settings.generator_params.partial_load:
+                add_scenario_variable_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid, partial_load=True, actualized=False)
+            else:
+                add_scenario_variable_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid, partial_load=False, actualized=False)
             add_total_variable_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid)
             add_investment_limit(model, settings, sets, param, var, has_battery, has_generator, has_grid)
     except Exception as e:
@@ -226,11 +229,14 @@ def add_generator_fuel_cost(
     yearly_cost: linopy.LinearExpression = 0
     generator_fuel_cost: linopy.LinearExpression = 0
 
+    print("ECCOLO")
+    print(param['GENERATOR_MARGINAL_COST'])
+
     if partial_load == False:
         for year in years:
             yearly_cost = (var['generator_energy_production'].sel(years=year) * param['GENERATOR_MARGINAL_COST'].sel(years=year)).sum('periods')
             if actualized:
-                generator_fuel_cost += yearly_cost.sel(years=year) / ((1 + param['DISCOUNT_RATE'])**(year - years[0] + 1))
+                generator_fuel_cost += yearly_cost / ((1 + param['DISCOUNT_RATE'])**(year - years[0] + 1))
             else:
                 generator_fuel_cost += yearly_cost
     else:

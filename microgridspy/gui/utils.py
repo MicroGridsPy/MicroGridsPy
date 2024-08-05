@@ -2,15 +2,16 @@
 This module provides utility functions for rendering the footer in the MicroGridsPy Streamlit application.
 It includes functions to convert images to base64 strings and to render a footer with links to documentation, GitHub, and contact email.
 """
-
 import base64
+import streamlit as st
+
+from typing import Tuple, Any
 from io import BytesIO
 from pathlib import Path
-
-import streamlit as st
 from PIL import Image
 
 from config.path_manager import PathManager
+
 
 
 def get_base64_image(image_path: Path, width: int, height: int) -> str:
@@ -60,5 +61,40 @@ def render_footer() -> None:
         }}
         </style>
         """,
-        unsafe_allow_html=True
-    )
+        unsafe_allow_html=True)
+
+def initialize_session_state(default_values: Any, settings_type: str) -> None:
+    """Initialize session state variables from default values."""
+    for key, value in vars(getattr(default_values, settings_type)).items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
+
+def csv_upload_interface(key_prefix: str) -> Tuple[st.file_uploader, str, str]:
+    """
+    Create an interface for CSV file upload with delimiter and decimal selection.
+    
+    Args:
+        key_prefix (str): A prefix for Streamlit widget keys to avoid conflicts.
+    
+    Returns:
+        Tuple[st.file_uploader, str, str]: Uploaded file, selected delimiter, and decimal separator.
+    """
+    delimiter_options = {
+        "Comma (,)": ",",
+        "Semicolon (;)": ";",
+        "Tab (\\t)": "\t"}
+    
+    decimal_options = {
+        "Dot (.)": ".",
+        "Comma (,)": ","}
+    
+    delimiter = st.selectbox("Select delimiter", list(delimiter_options.keys()), key=f"{key_prefix}_delimiter")
+    decimal = st.selectbox("Select decimal separator", list(decimal_options.keys()), key=f"{key_prefix}_decimal")
+    
+    delimiter_value = delimiter_options[delimiter]
+    decimal_value = decimal_options[decimal]
+    
+    uploaded_file = st.file_uploader(f"Choose a CSV file", type=["csv"], key=f"{key_prefix}_uploader")
+    
+    return uploaded_file, delimiter_value, decimal_value

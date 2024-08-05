@@ -1,4 +1,5 @@
 import os
+import streamlit as st
 import pandas as pd
 from typing import List, Tuple
 from config.path_manager import PathManager
@@ -7,6 +8,31 @@ class User:
     def __init__(self, name, demand_data):
         self.name = name
         self.demand_data = demand_data
+
+class Household:
+    def __init__(self, zone: str, wealth: int, cooling: str, number: float):
+        self.zone = zone
+        self.wealth = wealth
+        self.cooling = cooling
+        self.number = number
+
+    def load_demand(self, h_load: pd.DataFrame) -> pd.DataFrame:
+        return self.number / 100 * h_load
+
+class Hospital:
+    def __init__(self, type: int, number: float):
+        self.type = type
+        self.number = number
+
+    def load_demand(self, h_load: pd.DataFrame) -> pd.DataFrame:
+        return self.number * h_load
+
+class School:
+    def __init__(self, number: float):
+        self.number = number
+
+    def load_demand(self, s_load: pd.DataFrame) -> pd.DataFrame:
+        return self.number * s_load
 
 def determine_zone(lat: float) -> str:
     """
@@ -50,30 +76,28 @@ def aggregate_load(load_data: pd.DataFrame, periods: int) -> pd.DataFrame:
     aggregated_load = load_data.groupby(load_data.index // agg_factor).sum()
     return aggregated_load
 
-class Household:
-    def __init__(self, zone: str, wealth: int, cooling: str, number: float):
-        self.zone = zone
-        self.wealth = wealth
-        self.cooling = cooling
-        self.number = number
+def load_household_data(household: Household, tier: int, periods: int) -> pd.DataFrame:
+    h_load_name = f"{household.cooling}_{household.zone}_Tier-{tier}"
+    file_path = os.path.join(PathManager.ARCHETYPES_FOLDER_PATH, f"{h_load_name}.xlsx")
+    h_load = pd.read_excel(file_path, skiprows=0, usecols="B")
+    return aggregate_load(h_load, periods)
 
-    def load_demand(self, h_load: pd.DataFrame) -> pd.DataFrame:
-        return self.number / 100 * h_load
+def load_hospital_data(hospital: Hospital, tier: int, periods: int) -> pd.DataFrame:
+    hospital_load_name = f"HOSPITAL_Tier-{tier}"
+    file_path = os.path.join(PathManager.ARCHETYPES_FOLDER_PATH, f"{hospital_load_name}.xlsx")
+    hospital_load = pd.read_excel(file_path, skiprows=0, usecols="B")
+    return aggregate_load(hospital_load, periods)
 
-class Hospital:
-    def __init__(self, type: int, number: float):
-        self.type = type
-        self.number = number
+def load_school_data(school: School, periods: int) -> pd.DataFrame:
+    school_load_name = "SCHOOL"
+    file_path = os.path.join(PathManager.ARCHETYPES_FOLDER_PATH, f"{school_load_name}.xlsx")
+    school_load = pd.read_excel(file_path, skiprows=0, usecols="B")
+    return aggregate_load(school_load, periods)
 
-    def load_demand(self, h_load: pd.DataFrame) -> pd.DataFrame:
-        return self.number * h_load
+def apply_demand_growth(load_total: pd.DataFrame, demand_growth: float) -> None:
+    for column in range(1, load_total.shape[1]):
+        load_total.iloc[:, column] = load_total.iloc[:, column - 1] * (1 + demand_growth / 100)
 
-class School:
-    def __init__(self, number: float):
-        self.number = number
-
-    def load_demand(self, s_load: pd.DataFrame) -> pd.DataFrame:
-        return self.number * s_load
 
 def demand_calculation(
     lat: float, cooling_period: str, num_h_tier1: float, num_h_tier2: float, num_h_tier3: float,
@@ -105,12 +129,12 @@ def demand_calculation(
     Returns:
         Tuple[pd.DataFrame, List[User]]: Total load demand and user profiles.
     """
-    if lat is None:
-        raise ValueError("Latitude is not initialized. Please initialize it in the Resource Assessment page.")
+    if lat is None: raise ValueError("Latitude is not initialized. Please initialize it in the Resource Assessment page.")
     
     zone = determine_zone(lat)
     users = []
 
+    # Households
     households = [
         Household(zone, 1, cooling_period, num_h_tier1),
         Household(zone, 2, cooling_period, num_h_tier2),
@@ -119,12 +143,13 @@ def demand_calculation(
         Household(zone, 5, cooling_period, num_h_tier5)
     ]
     
-    load_households = pd.concat([
-        household.load_demand(load_household_data(household, ii, periods))
-        for ii, household in enumerate(households, start=1)
-        if household.number > 0
-    ], axis=1).sum(axis=1).to_frame()
+    load_households = pd.DataFrame(0, index=range(periods), columns=['Load'])
+    for ii, household in enumerate(households, start=1):
+        if household.number > 0:
+            household_load = household.load_demand(load_household_data(household, ii, periods))
+            load_households['Load'] += household_load.iloc[:, 0]
 
+    # Hospitals
     hospitals = [
         Hospital(1, num_hospitals1),
         Hospital(2, num_hospitals2),
@@ -133,16 +158,25 @@ def demand_calculation(
         Hospital(5, num_hospitals5)
     ]
     
-    load_tot_hospitals = pd.concat([
-        hospital.load_demand(load_hospital_data(hospital, ii, periods))
-        for ii, hospital in enumerate(hospitals, start=1)
-        if hospital.number > 0
-    ], axis=1).sum(axis=1).to_frame()
+    load_tot_hospitals = pd.DataFrame(0, index=range(periods), columns=['Load'])
+    for ii, hospital in enumerate(hospitals, start=1):
+        if hospital.number > 0:
+            hospital_load = hospital.load_demand(load_hospital_data(hospital, ii, periods))
+            load_tot_hospitals['Load'] += hospital_load.iloc[:, 0]
 
-    school = School(num_schools)
-    load_school = school.load_demand(load_school_data(school, periods))
+    # School
+    load_school = pd.DataFrame(0, index=range(periods), columns=['Load'])
+    if num_schools > 0:
+        school = School(num_schools)
+        school_load = school.load_demand(load_school_data(school, periods))
+        load_school['Load'] += school_load.iloc[:, 0]
 
-    load_total = load_tot_hospitals + load_households + load_school
+    # Combine all loads
+    load_total = load_households + load_tot_hospitals + load_school
+    
+    if load_total['Load'].sum() == 0:
+        raise ValueError("Error: Total load is zero. Please input at least one non-zero load (household, hospital, or school).")
+
     load_total = pd.concat([load_total] * years, axis=1)
     apply_demand_growth(load_total, demand_growth)
 
@@ -162,13 +196,13 @@ def demand_calculation(
     for ii, hospital in enumerate(hospitals, start=1):
         if hospital.number > 0:
             user_name = f"Hospital_Tier_{ii}"
-            s_load = hospital.load_demand(load_hospital_data(hospital, ii, periods))
-            s_load = pd.concat([s_load] * years, axis=1)
-            apply_demand_growth(s_load, demand_growth)
-            s_load.columns = [f'Year_{i+1}' for i in range(s_load.shape[1])]
-            users.append(User(name=user_name, demand_data=s_load))
+            h_load = hospital.load_demand(load_hospital_data(hospital, ii, periods))
+            h_load = pd.concat([h_load] * years, axis=1)
+            apply_demand_growth(h_load, demand_growth)
+            h_load.columns = [f'Year_{i+1}' for i in range(h_load.shape[1])]
+            users.append(User(name=user_name, demand_data=h_load))
 
-    if school.number > 0:
+    if num_schools > 0:
         user_name = "School"
         s_load = school.load_demand(load_school_data(school, periods))
         s_load = pd.concat([s_load] * years, axis=1)
@@ -177,25 +211,3 @@ def demand_calculation(
         users.append(User(name=user_name, demand_data=s_load))
 
     return load_total, users
-
-def load_household_data(household: Household, tier: int, periods: int) -> pd.DataFrame:
-    h_load_name = f"{household.cooling}_{household.zone}_Tier-{tier}"
-    file_path = os.path.join(PathManager.ARCHETYPES_FOLDER_PATH, f"{h_load_name}.xlsx")
-    h_load = pd.read_excel(file_path, skiprows=0, usecols="B")
-    return aggregate_load(h_load, periods)
-
-def load_hospital_data(hospital: Hospital, tier: int, periods: int) -> pd.DataFrame:
-    hospital_load_name = f"HOSPITAL_Tier-{tier}"
-    file_path = os.path.join(PathManager.ARCHETYPES_FOLDER_PATH, f"{hospital_load_name}.xlsx")
-    hospital_load = pd.read_excel(file_path, skiprows=0, usecols="B")
-    return aggregate_load(hospital_load, periods)
-
-def load_school_data(school: School, periods: int) -> pd.DataFrame:
-    school_load_name = "SCHOOL"
-    file_path = os.path.join(PathManager.ARCHETYPES_FOLDER_PATH, f"{school_load_name}.xlsx")
-    school_load = pd.read_excel(file_path, skiprows=0, usecols="B")
-    return aggregate_load(school_load, periods)
-
-def apply_demand_growth(load_total: pd.DataFrame, demand_growth: float) -> None:
-    for column in range(1, load_total.shape[1]):
-        load_total.iloc[:, column] = load_total.iloc[:, column - 1] * (1 + demand_growth / 100)

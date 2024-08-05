@@ -68,8 +68,11 @@ def URL_creation_h(base_URL: str, loc_id: str, parameters: str, date_start: str,
 # Wind turbine parameters        
 def wind_parameters(turbine_model: str, type_turb: str):
     
+    # Construct the sheet name for the turbine model
+    full_sheet_name = f"{turbine_model} - {type_turb}"
+    
     # Read the specific sheet for the turbine model
-    df = pd.read_excel(PathManager.POWER_CURVE_FILE_PATH, sheet_name=turbine_model)
+    df = pd.read_excel(PathManager.POWER_CURVE_FILE_PATH, sheet_name=full_sheet_name)
 
     # Extract parameters from the first few rows and convert them to floats
     rot_diam = float(df.iloc[0, 1])

@@ -6,14 +6,17 @@ The application manages session state to keep track of the current page being vi
 
 import streamlit as st
 
-from microgridspy.gui.utils.footer import render_footer
+from microgridspy.gui.utils import render_footer
 from microgridspy.gui.views.advanced_settings import advanced_settings
 from microgridspy.gui.views.demand_page import demand_assessment
 from microgridspy.gui.views.new_project import new_project
 from microgridspy.gui.views.resource_page import resource_assessment
 from microgridspy.gui.views.renewables_page import renewables_technology
 from microgridspy.gui.views.battery_page import battery_technology
+from microgridspy.gui.views.generator_page import generator_technology
 from microgridspy.gui.views.settings_page import settings_page
+from microgridspy.gui.views.run_page import run_model
+from microgridspy.gui.views.plots_dashboard import plots_dashboard
 
 st.set_page_config(
     page_title="MicroGridsPy User Interface",
@@ -65,6 +68,18 @@ def main() -> None:
         if buttons_enabled:
             st.session_state.page = "Battery Characterization"
 
+    if st.sidebar.button("Generator Characterization", disabled=not buttons_enabled):
+        if buttons_enabled:
+            st.session_state.page = "Generator Characterization"
+
+    if st.sidebar.button("Mini-Grid Optimization", disabled=not buttons_enabled):
+        if buttons_enabled:
+            st.session_state.page = "Optimization"
+
+    if st.sidebar.button("Results Dashboard", disabled=not buttons_enabled):
+        if buttons_enabled:
+            st.session_state.page = "Results"
+
     # Set default page to "New Project" if no page is set in session state
     if 'page' not in st.session_state:
         st.session_state.page = "New Project"
@@ -77,7 +92,10 @@ def main() -> None:
         "Resource Assessment": resource_assessment,
         "Demand Assessment": demand_assessment,
         "Renewables Characterization": renewables_technology,
-        "Battery Characterization": battery_technology
+        "Battery Characterization": battery_technology,
+        "Generator Characterization": generator_technology,
+        "Optimization": run_model,
+        "Results": plots_dashboard
     }
 
     # Display the selected frame

@@ -155,10 +155,6 @@ def add_generator_variables(model: Model, settings: ProjectParameters, sets: xr.
         generator_variables['scenario_fuel_emission'] = model.add_variables(lower=0, coords=[sets.scenarios], name='Scenario Fuel Emissions')
 
 
-
-        
-
-
     return generator_variables
 
 

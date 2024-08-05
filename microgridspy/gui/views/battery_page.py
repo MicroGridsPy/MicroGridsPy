@@ -5,32 +5,8 @@ Users can input specific parameters for the battery, ensuring the configuration 
 """
 
 import streamlit as st
-from microgridspy.model.parameters import ProjectParameters
 from config.path_manager import PathManager
-
-def initialize_session_state(default_values: ProjectParameters) -> None:
-    """Initialize session state variables for battery parameters."""
-    battery_params = default_values.battery_params
-    session_state_defaults = {
-        'battery_chemistry': battery_params.battery_chemistry,
-        'battery_nominal_capacity': battery_params.battery_nominal_capacity,
-        'battery_specific_investment_cost': battery_params.battery_specific_investment_cost,
-        'battery_specific_electronic_investment_cost': battery_params.battery_specific_electronic_investment_cost,
-        'battery_specific_om_cost': battery_params.battery_specific_om_cost,
-        'battery_discharge_battery_efficiency': battery_params.battery_discharge_battery_efficiency,
-        'battery_charge_battery_efficiency': battery_params.battery_charge_battery_efficiency,
-        'battery_initial_soc': battery_params.battery_initial_soc,
-        'battery_depth_of_discharge': battery_params.battery_depth_of_discharge,
-        'maximum_battery_discharge_time': battery_params.maximum_battery_discharge_time,
-        'maximum_battery_charge_time': battery_params.maximum_battery_charge_time,
-        'battery_cycles': battery_params.battery_cycles,
-        'battery_expected_lifetime': battery_params.battery_expected_lifetime,
-        'bess_unit_co2_emission': battery_params.bess_unit_co2_emission,
-        'battery_existing_capacity': battery_params.battery_existing_capacity,
-    }
-    for key, value in session_state_defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = value
+from microgridspy.gui.utils import initialize_session_state
 
 
 def battery_technology() -> None:
@@ -40,15 +16,16 @@ def battery_technology() -> None:
     image_path = PathManager.IMAGES_PATH / "technology_characterization.png"
     st.image(str(image_path), use_column_width=True, caption="Overview of the technology characterization parameters")
 
-    # Initialize session state variables
-    initialize_session_state(st.session_state.default_values)
-    currency = st.session_state.get('currency', 'USD')
     has_battery = st.session_state.get('system_configuration', 0) in [0, 1]
-    unit_committment = st.session_state.get('unit_commitment', False)
-    time_horizon = st.session_state.get('time_horizon', 0)
-    brownfield = st.session_state.get('brownfield')
-    
+
     if has_battery:
+        # Initialize session state variables
+        initialize_session_state(st.session_state.default_values, 'battery_params')
+        currency = st.session_state.get('currency', 'USD')
+        unit_committment = st.session_state.get('unit_commitment', False)
+        time_horizon = st.session_state.get('time_horizon', 0)
+        brownfield = st.session_state.get('brownfield')
+    
         st.session_state.battery_chemistry = st.text_input("Battery Chemistry", value=st.session_state.battery_chemistry)
         if unit_committment:
             st.session_state.battery_nominal_capacity = st.number_input("Nominal Capacity [Wh]", value=st.session_state.battery_nominal_capacity)
@@ -82,5 +59,5 @@ def battery_technology() -> None:
             st.rerun()
     with col2:
         if st.button("Next"):
-            st.session_state.page = "TODO: Add next page"
+            st.session_state.page = "Generator Characterization"
             st.rerun()

@@ -150,6 +150,9 @@ class ResourceAssessment(BaseModel):
     capturing location details and various solar and wind energy parameters.
 
     Attributes:
+        res_sources (int): The number of renewable energy sources.
+        res_names (List[str]): The names of the renewable energy sources.
+        res_nominal_capacity (List[float]): The nominal capacity of the renewable energy sources.
         location (str): The geographical location description.
         lat (float): Latitude of the project location.
         lon (float): Longitude of the project location.
@@ -166,6 +169,9 @@ class ResourceAssessment(BaseModel):
         t_nmot (int): Ambient temperature at NMOT in degrees Celsius.
         g_nmot (int): Solar irradiance at NMOT in watts per square meter.
     """
+    res_sources: int
+    res_names: List[str]
+    res_nominal_capacity: List[float]
     location: str
     lat: float
     lon: float
@@ -224,9 +230,6 @@ class RenewablesParams(BaseModel):
     This class represents the renewable energy source parameters for a project.
 
     Attributes:
-        res_sources (int): The number of renewable energy sources.
-        res_names (List[str]): The names of the renewable energy sources.
-        res_nominal_capacity (List[float]): The nominal capacity of the renewable energy sources.
         res_inverter_efficiency (List[float]): The inverter efficiency of the renewable energy sources.
         res_specific_area (Optional[List[float]]): The specific area of the renewable energy sources.
         res_specific_investment_cost (List[float]): The specific investment cost of the renewable energy sources.
@@ -237,9 +240,7 @@ class RenewablesParams(BaseModel):
         res_existing_area (Optional[List[float]]): The existing area of the renewable energy sources.
         res_existing_years (Optional[List[int]]): The existing years of the renewable energy sources.
     """
-    res_sources: int
-    res_names: List[str]
-    res_nominal_capacity: List[float]
+
     res_inverter_efficiency: List[float]
     res_specific_area: Optional[List[float]]
     res_specific_investment_cost: List[float]
@@ -290,9 +291,7 @@ class BatteryParams(BaseModel):
     battery_existing_capacity: Optional[float]
 
 class GeneratorParams(BaseModel):
-  """
-    GeneratorParams configuration model.
-  """
+  """GeneratorParams configuration model."""
   gen_types: int
   gen_names: List[str]
   gen_nominal_capacity: List[float] 

@@ -42,6 +42,9 @@ advanced_settings:
   scenario_weights: [1]
 
 resource_assessment:
+  res_sources: 1
+  res_names: ["Solar PV"]
+  res_nominal_capacity: [1000] #W
   location: "Nairobi, Kenya"
   lat: -11.56567
   lon: 34.23567
@@ -89,9 +92,6 @@ archetypes_params:
   hospital_5 : 0
 
 renewables_params:
-  res_sources: 1
-  res_names: ["Solar PV"]
-  res_nominal_capacity: [1000] #W
   res_inverter_efficiency: [0.98] #fraction
   res_specific_area: [11.49] #m2/kW
   res_specific_investment_cost: [0.95] #USD/W
