@@ -44,8 +44,6 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
             Generator_Partial_Load = int((re.findall('\d+',Data_import[i])[0]))
         if "param: Model_Components" in Data_import[i]:      
             Model_Components = int((re.findall('\d+',Data_import[i])[0]))
-        if "param: Land_Use" in Data_import[i]:      
-            Land_Use = int((re.findall('\d+',Data_import[i])[0]))
         if "param: Solver" in Data_import[i]:      
             Solver = int((re.findall('\d+',Data_import[i])[0]))
         if "param: Grid_Connection " in Data_import[i]:      
@@ -120,10 +118,6 @@ def Model_Resolution(model, datapath=data_file_path, options_string="mipgap=0.05
                                                         rule=C.Battery_Replacement_Cost_Act)
         model.BatteryReplacementCostNonAct = Constraint(model.scenarios,
                                                         rule=C.Battery_Replacement_Cost_NonAct)
-    # Land Use for Renewables
-    if Land_Use == 1:
-        model.RenewablesMaxLandUse         = Constraint(model.steps,
-                                                        rule=C.Renewables_Max_Land_Use)
     # Lost Load
     model.ScenarioLostLoadCostAct      = Constraint(model.scenarios, 
                                                     rule=C.Scenario_Lost_Load_Cost_Act)
