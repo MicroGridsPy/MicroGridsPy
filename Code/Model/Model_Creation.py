@@ -1,20 +1,3 @@
-"""
-MicroGridsPy - Multi-year capacity-expansion (MYCE)
-
-Linear Programming framework for microgrids least-cost sizing,
-able to account for time-variable load demand evolution and capacity expansion.
-
-Authors: 
-    Alessandro Onori   - Department of Energy, Politecnico di Milano
-    Giulia Guidicini   - Department of Energy, Politecnico di Milano 
-    Lorenzo Rinaldi    - Department of Energy, Politecnico di Milano
-    Nicolò Stevanato   - Department of Energy, Politecnico di Milano / Fondazione Eni Enrico Mattei
-    Francesco Lombardi - Department of Energy, Politecnico di Milano
-    Emanuela Colombo   - Department of Energy, Politecnico di Milano
-Based on the original model by:
-    Sergio Balderrama  - Department of Mechanical and Aerospace Engineering, University of Liège / San Simon University, Centro Universitario de Investigacion en Energia
-    Sylvain Quoilin    - Department of Mechanical Engineering Technology, KU Leuven
-"""
 
 
 from pyomo.environ import Param, RangeSet, Any, NonNegativeReals, NonNegativeIntegers, Var, Set, Reals, Binary 
