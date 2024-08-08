@@ -176,6 +176,14 @@ class AdvancedPage(tk.Frame):
                 self.Grid_Connection_Type_label.config(state='disabled')
                 self.Grid_Connection_Type_radio1.config(state='disabled')
                 self.Grid_Connection_Type_radio2.config(state='disabled')
+
+    def toggle_Land_Use(self, *args):
+        if self.Land_Use_var.get() == 1:
+            self.Renewable_Area_label.config(state='normal')
+            self.Renewable_Area_entry.config(state='normal')
+        else:
+            self.Renewable_Area_label.config(state='disabled')
+            self.Renewable_Area_entry.config(state='disabled')
         
     # Function to toggle the state of WACC parameters
     def toggle_wacc_parameters(self):
@@ -200,6 +208,7 @@ class AdvancedPage(tk.Frame):
             partial_load = self.Generator_Partial_Load_var.get()
             brownfield = self.Greenfield_Investment_var.get()
             fuel_cost = self.Fuel_Specific_Cost_Calculation_var.get()
+            land_use = self.Land_Use_var.get()
             res_page = self.controller.frames.get("TechnologiesPage")
             generator_page = self.controller.frames.get("GeneratorPage")
             battery_page = self.controller.frames.get("BatteryPage")
@@ -210,9 +219,12 @@ class AdvancedPage(tk.Frame):
                 battery_page.toggle_milp_parameters()
                 generator_page.toggle_milp_parameters()
             if brownfield == 0:
-                res_page.toggle_brownfield_parameters()
+                if land_use == 0: res_page.toggle_brownfield_parameters()
+                elif land_use == 1:res_page.toggle_land_brownfield_parameters()
                 battery_page.toggle_brownfield_parameters()
                 generator_page.toggle_brownfield_parameters()
+            elif brownfield == 1 and land_use == 1:
+                res_page.toggle_land_use_parameters()
             if fuel_cost == 1:
                 generator_page.toggle_fuel_cost_parameters()
             
@@ -503,6 +515,24 @@ class AdvancedPage(tk.Frame):
         self.Fuel_Specific_Cost_Calculation_checkbutton.grid(row=16, column=1, sticky='w')
         create_tooltip(self.Fuel_Specific_Cost_Calculation_checkbutton, "Allow for variable fuel costs across the years")
 
+        # Land Use
+        self.Land_Use_var = tk.IntVar(value=0)
+        self.Land_Use_label = ttk.Label(self.inner_frame, text="Land Use (Renewables):", anchor='w')
+        self.Land_Use_label.grid(row=17, column=0, sticky='w')
+        self.Land_Use_checkbutton = ttk.Checkbutton(self.inner_frame, text="Activate", variable=self.Land_Use_var, onvalue=1, offvalue=0)
+        self.Land_Use_checkbutton.grid(row=17, column=1, sticky='w')
+        self.Land_Use_var.trace('w', self.toggle_Land_Use)
+        create_tooltip(self.Land_Use_checkbutton, "Allow available area constraints for renewable energy sources")
+
+        # Total Available Area
+        self.Renewable_Area_label = ttk.Label(self.inner_frame, text="Total Available Area [m2]", anchor='w', state='disabled')
+        self.Renewable_Area_label.grid(row=18, column=0, sticky='w')
+        self.Renewable_Area_var = tk.DoubleVar(value=0.0)
+        vcmd = (self.register(self.validate_float), '%P')
+        self.Renewable_Area_entry = ttk.Entry(self.inner_frame, textvariable=self.Renewable_Area_var,validate='key', validatecommand=vcmd, state='disabled')
+        self.Renewable_Area_entry.grid(row=18, column=1,sticky='w')
+        create_tooltip(self.Renewable_Area_entry, "Total available area (land use) associated to renewable energy sources")
+
 
         # WACC Calculation Checkbutton
         self.WACC_Calculation_var = tk.IntVar(value=0)
@@ -548,44 +578,44 @@ class AdvancedPage(tk.Frame):
             
         # Section title: Model Configuration
         self.title_label = ttk.Label(self.inner_frame, text="Advanced Optimization Configuration", font=self.subtitle_font,style='TLabel')
-        self.title_label.grid(row=17, column=0, columnspan=1, pady=10, sticky='w')
+        self.title_label.grid(row=19, column=0, columnspan=1, pady=10, sticky='w')
             
         # Multiobjective Optimization
         self.Multiobjective_Optimization_var = tk.IntVar(value=0)
-        ttk.Label(self.inner_frame, text="Multi-Objective Optimization:", anchor='w').grid(row=18, column=0, sticky='w')
+        ttk.Label(self.inner_frame, text="Multi-Objective Optimization:", anchor='w').grid(row=20, column=0, sticky='w')
         self.Multiobjective_Optimization_checkbutton = ttk.Checkbutton(self.inner_frame, text="Activate", variable=self.Multiobjective_Optimization_var, onvalue=1, offvalue=0)
-        self.Multiobjective_Optimization_checkbutton.grid(row=18, column=1, sticky='w')
+        self.Multiobjective_Optimization_checkbutton.grid(row=20, column=1, sticky='w')
         create_tooltip(self.Multiobjective_Optimization_checkbutton, "Optimization of NPC/operation cost and CO2 emissions")
         self.Multiobjective_Optimization_var.trace('w', self.toggle_MultiObjective)
 
         # Define the variable for Plot Max Cost options
         self.Plot_Max_Cost_var = tk.IntVar(value=0)
         self.Plot_Max_Cost_label = ttk.Label(self.inner_frame, text="Plot Max Cost:", anchor='w')
-        self.Plot_Max_Cost_label.grid(row=19, column=0, sticky='w')
+        self.Plot_Max_Cost_label.grid(row=21, column=0, sticky='w')
         self.Plot_Max_Cost_radio1 = ttk.Radiobutton(self.inner_frame, text="Yes", variable=self.Plot_Max_Cost_var, value=1, state='disabled')
-        self.Plot_Max_Cost_radio1.grid(row=19, column=1, sticky='w')
+        self.Plot_Max_Cost_radio1.grid(row=21, column=1, sticky='w')
         create_tooltip(self.Plot_Max_Cost_radio1, "Pareto curve has to include the point at maxNPC/maxOperationCost")
         self.Plot_Max_Cost_radio0 = ttk.Radiobutton(self.inner_frame, text="No", variable=self.Plot_Max_Cost_var, value=0, state='disabled')
-        self.Plot_Max_Cost_radio0.grid(row=19, column=1, sticky='e')
+        self.Plot_Max_Cost_radio0.grid(row=21, column=1, sticky='e')
         self.Plot_Max_Cost_label.config(state='disabled')
         
         # Number of Pareto points
         self.pareto_points_label = ttk.Label(self.inner_frame, text="Pareto points:", anchor='w', state='disabled')
-        self.pareto_points_label.grid(row=20, column=0, sticky='w')
+        self.pareto_points_label.grid(row=22, column=0, sticky='w')
         self.pareto_points_var = tk.IntVar(value=2)
         vcmd = (self.register(self.validate_integer), '%P')
         self.pareto_points_entry = ttk.Entry(self.inner_frame, textvariable=self.pareto_points_var, state='disabled',validate='key', validatecommand=vcmd)
-        self.pareto_points_entry.grid(row=20, column=1, sticky='w')
+        self.pareto_points_entry.grid(row=22, column=1, sticky='w')
         create_tooltip(self.pareto_points_entry, "Pareto curve points to be analysed during optimization (1 = minimum emissions)")
         
         self.pareto_points_var.trace('w', self.update_pareto_solution_options)
 
         # Pareto solution
         self.pareto_solution_label = ttk.Label(self.inner_frame, text="Pareto solution:", anchor='w', state='disabled')
-        self.pareto_solution_label.grid(row=21, column=0, sticky='w')
+        self.pareto_solution_label.grid(row=23, column=0, sticky='w')
         self.pareto_solution_var = tk.IntVar(value=1)
         self.pareto_solution_combobox = ttk.Combobox(self.inner_frame, textvariable=self.pareto_solution_var, state='disabled')
-        self.pareto_solution_combobox.grid(row=21, column=1, sticky='w')
+        self.pareto_solution_combobox.grid(row=23, column=1, sticky='w')
         create_tooltip(self.pareto_solution_combobox, "Multi-Objective optimization solution to be displayed")
         
         self.toggle_MultiObjective()
@@ -595,24 +625,24 @@ class AdvancedPage(tk.Frame):
 
         # Multiobjective Optimization
         self.Multiscenario_Optimization_var = tk.IntVar(value=0)
-        ttk.Label(self.inner_frame, text="Multi-Scenario Optimization:", anchor='w').grid(row=18, column=3, sticky='w')
+        ttk.Label(self.inner_frame, text="Multi-Scenario Optimization:", anchor='w').grid(row=20, column=3, sticky='w')
         self.Multiscenario_Optimization_checkbutton = ttk.Checkbutton(self.inner_frame, text="Activate", variable=self.Multiscenario_Optimization_var, onvalue=1, offvalue=0)
-        self.Multiscenario_Optimization_checkbutton.grid(row=18, column=4, sticky='w')
+        self.Multiscenario_Optimization_checkbutton.grid(row=20, column=4, sticky='w')
         create_tooltip(self.Multiscenario_Optimization_checkbutton, "Simulate different scenarios of demand and RES time series")
         self.Multiscenario_Optimization_var.trace('w', self.toggle_MultiScenario)
             
         # Number of Scenarios
         self.num_scenarios_var = tk.IntVar(value=1)
         self.num_scenarios_label = ttk.Label(self.inner_frame, text="Number of Scenarios:", anchor='w',state='disabled')
-        self.num_scenarios_label.grid(row=19, column=3, sticky='w')
+        self.num_scenarios_label.grid(row=21, column=3, sticky='w')
         vcmd = (self.register(self.validate_integer), '%P')
         self.num_scenarios_entry = ttk.Entry(self.inner_frame, textvariable=self.num_scenarios_var,validate='key', validatecommand=vcmd,state='disabled')
-        self.num_scenarios_entry.grid(row=19, column=4, sticky='w')
+        self.num_scenarios_entry.grid(row=21, column=4, sticky='w')
         self.num_scenarios_entry.bind("<FocusOut>", self.update_scenario_weights)
 
         # Update Configuration Button
         self.update_config_button = ttk.Button(self.inner_frame, text="Update", command=self.update_scenario_weights)
-        self.update_config_button.grid(row=19, column=4, sticky='e',padx=5)
+        self.update_config_button.grid(row=21, column=4, sticky='e',padx=5)
         self.update_config_button.configure(state='disabled')
         
         self.scenario_weights_entries = []
@@ -638,6 +668,8 @@ class AdvancedPage(tk.Frame):
         'Greenfield_Investment': self.Greenfield_Investment_var.get(),
         'Grid_Connection': self.Grid_Connection_var.get(),
         'Fuel_Specific_Cost_Calculation': self.Fuel_Specific_Cost_Calculation_var.get(),
+        'Land_Use': self.Land_Use_var.get(),
+        'Renewables_Total_Area': self.Renewable_Area_var.get(),
         'Grid_Availability_Simulation': self.Grid_Availability_Simulation_var.get(),
         'Grid_Connection_Type': self.Grid_Connection_Type_var.get(),
         'WACC_Calculation': self.WACC_Calculation_var.get(),

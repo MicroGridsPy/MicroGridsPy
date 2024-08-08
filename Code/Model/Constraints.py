@@ -795,7 +795,6 @@ class Constraints_Brownfield():
             if model.Grid_Connection: cost += OyM_Grid
             return model.Operation_Maintenance_Cost_NonAct == cost  
     
-    
     "Variable costs"
     def Total_Variable_Cost_Act(model):
         return model.Total_Variable_Cost_Act == (sum(model.Total_Scenario_Variable_Cost_Act[s]*model.Scenario_Weight[s] for s in model.scenarios))
@@ -2122,6 +2121,7 @@ class Constraints_Brownfield_Milp():
             cost = OyM_Ren + OyM_Gen
             if model.Grid_Connection: cost += OyM_Grid
             return model.Operation_Maintenance_Cost_NonAct == cost  
+
     
     "Variable costs"
     def Total_Variable_Cost_Act(model):

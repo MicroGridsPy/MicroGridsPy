@@ -56,6 +56,7 @@ param: Real_Discount_Rate := 0.2;
 param: Investment_Cost_Limit := 500000;
 
 param: Renewable_Penetration := 0;
+param: Renewables_Total_Area := 0;
 param: Battery_Independence := 0;
 
 
@@ -77,6 +78,7 @@ param: Grid_Availability_Simulation := 0;
 param: Grid_Connection_Type := 0;
 param: WACC_Calculation := 0;
 param: Model_Components := 0;
+param: Land_Use :=0;
 
 
 
@@ -96,6 +98,8 @@ param: RES_Nominal_Capacity :=
 1      1000;                                                                                           
 param: RES_Inverter_Efficiency :=
 1      0.965;
+param: RES_Specific_Area :=
+1      0.0; 
 param: RES_Specific_Investment_Cost :=
 1      1.165;
 param: RES_Specific_OM_Cost :=
@@ -104,6 +108,8 @@ param: RES_Lifetime :=
 1      20;
 param: RES_capacity :=
 1      0;
+param: RES_existing_area :=
+1      0.0; 
 param: RES_years :=
 1      0;
 param: RES_unit_CO2_emission :=
@@ -153,7 +159,6 @@ param: GEN_unit_CO2_emission :=
 1      0;
 param: FUEL_unit_CO2_emission :=
 1      2.68;
-
 param: Generator_Min_output :=
 1      0.3;
 param: Generator_Nominal_Capacity_milp :=

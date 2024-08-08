@@ -208,6 +208,21 @@ class TechnologiesPage(tk.Frame):
                label.config(state='normal')  
                entry.config(state='normal')
                self.initial_states[label.cget('text')] = {'label': 'normal', 'entry': 'normal'}
+
+    def toggle_land_use_parameters(self):
+        for (var, label, entry) in self.res_entries:
+            if label and label.cget('text') in self.land_use_parameters:
+               label.config(state='normal')  
+               entry.config(state='normal')
+               self.initial_states[label.cget('text')] = {'label': 'normal', 'entry': 'normal'}
+
+    def toggle_land_brownfield_parameters(self):
+        for (var, label, entry) in self.res_entries:
+            if label and label.cget('text') in self.land_brownfield_parameters:
+               label.config(state='normal')  
+               entry.config(state='normal')
+               self.initial_states[label.cget('text')] = {'label': 'normal', 'entry': 'normal'}
+               
         
     def setup_warning(self):
         # Load the warning icon image
@@ -365,11 +380,13 @@ class TechnologiesPage(tk.Frame):
             "RES_Names": "Solar PV",
             "RES_Nominal_Capacity": 1000,
             "RES_Inverter_Efficiency": 0.98,
+            "RES_Specific_Area": 11.49, # https://ieeexplore.ieee.org/document/9676427
             "RES_Specific_Investment_Cost": 0.95,
             "RES_Specific_OM_Cost": 0.018,
             "RES_Lifetime": 25,
             "RES_unit_CO2_emission": 0,
             "RES_capacity": 0,
+            "RES_existing_area": 0,
             "RES_years": 0
         }
         # Additional default values for the second set of entries
@@ -377,11 +394,13 @@ class TechnologiesPage(tk.Frame):
             "RES_Names": "Wind Turbine",
             "RES_Nominal_Capacity": 1670000,
             "RES_Inverter_Efficiency": 0.95,
+            "RES_Specific_Area": 50.51, # https://doi.org/10.1016/j.esd.2020.11.004
             "RES_Specific_Investment_Cost": 1.9,
             "RES_Specific_OM_Cost": 0.05,
             "RES_Lifetime": 20,
             "RES_unit_CO2_emission": 0,
             "RES_capacity": 0,
+            "RES_existing_area": 0,
             "RES_years": 0
             }
         
@@ -389,11 +408,13 @@ class TechnologiesPage(tk.Frame):
             "RES_Names":"Renewable technology name",
             "RES_Nominal_Capacity":"Capacity in W per unit of electricity production (read below for further info)",
             "RES_Inverter_Efficiency": "Average efficiency the inverter [-]",
+            "RES_Specific_Area": "Specific area required for each renewable technology [m2/kW]",
             "RES_Specific_Investment_Cost": "Yearly Specific investment cost for each renewable technology [USD/W]",
             "RES_Specific_OM_Cost": "Yearly fixed O&M cost for each renewable technology as a fraction of specific investment cost [-]",
             "RES_Lifetime": "Renewables Lifetime [years]",
             "RES_unit_CO2_emission": "Specific CO2 emissions associated to each renewable technology [kgCO2/kW]",
-            "RES_capacity": "Existing capacity [-] in brownfield scenario",
+            "RES_capacity": "Existing capacity [W] in brownfield scenario",
+            "RES_existing_area": "Existing area [m2] in brownfield scenario",
             "RES_years": "How many years ago the component was installed [years]"
         }
         
@@ -403,6 +424,8 @@ class TechnologiesPage(tk.Frame):
         
         text_parameters = ['RES_Names']
         self.brownfield_parameters = ['RES_capacity','RES_years']
+        self.land_brownfield_parameters = ['RES_Specific_Area', 'RES_capacity','RES_years', 'RES_existing_area']
+        self.land_use_parameters = ['RES_Specific_Area']
         self.initial_states = {}
         # Initialize the dictionary to hold the StringVars for each parameter
         self.res_entries = {param: [] for param in self.res_params_defaults}
@@ -448,7 +471,7 @@ class TechnologiesPage(tk.Frame):
             label_state = 'normal'
 
             # Conditionally disable entries based on specific parameters
-            if  param in self.brownfield_parameters:
+            if  param in self.brownfield_parameters or param in self.land_brownfield_parameters or param in self.land_use_parameters:
                 entry_state = 'disabled'
                 label_state = 'disabled'
                 

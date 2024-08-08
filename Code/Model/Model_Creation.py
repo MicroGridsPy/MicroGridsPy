@@ -86,7 +86,10 @@ def Model_Creation(model):
     model.Generator_Types                   = Param(within=NonNegativeIntegers)                          # Number of different types of gensets
     model.Year_Grid_Connection              = Param(within=NonNegativeIntegers)                          # Year at which microgrid is connected to the national grid (starting from 1)
     model.Renewable_Penetration             = Param(within=NonNegativeReals)                             # Fraction of electricity produced by renewable sources. Number from 0 to 1. 
-    
+    model.Renewables_Total_Area             = Param(within=NonNegativeReals,
+                                                    initialize = 10^6)                                   # Total available area for technology installation [m^2]
+    model.Battery_Independence              = Param(within=NonNegativeIntegers)                          # Number of days of autonomy of the battery bank
+                                                                                
     # WACC Calculation
     model.cost_of_equity                    = Param(within=NonNegativeReals)                             # Cost of equity (i.e., the return required by the equity shareholders) [-]
     model.cost_of_debt                      = Param(within=NonNegativeReals)                             # Cost of debt (i.e., the interest rate) [-]
@@ -113,7 +116,7 @@ def Model_Creation(model):
     model.WACC_Calculation                  = Param(within=Binary)                                    # 1 to select Weighted Average Cost of Capital calculation, 0 otherwise
     model.Fuel_Specific_Cost_Import         = Param(within=Binary)                                    # 1 to import variable fuel specific cost from csv file (only if Fuel_Specific_Cost_Calculation activated)
     model.Fuel_Specific_Cost_Calculation    = Param(within=Binary)                                    # 1 to allows variable fuel specific cost across the years, 0 otherwise
-    
+    model.Land_Use                          = Param(within=Binary)                                    # 1 to activate the constraint on the total land use, 0 otherwise
     model.Solver                            = Param(within=NonNegativeIntegers)                       # 0 for Gurobi, 1 for GLPK and 2 for HiGHS (currently NOT available)
     
     "Sets"
@@ -142,10 +145,8 @@ def Model_Creation(model):
                                                within=NonNegativeReals)               # Percentage of the total investment spend in operation and management of solar panels in each period in %                                             
     model.RES_Lifetime                 = Param(model.renewable_sources,
                                                within=NonNegativeIntegers)            # Lifetime of each Renewable Energy Source (RES) [y]
-    model.RES_capacity                    = Param(model.renewable_sources,
-                                               within=NonNegativeReals)               # Existing RES units [-] of nominal capacity
-    model.RES_years                    = Param(model.renewable_sources,
-                                               within=NonNegativeIntegers)            # How many years ago the component was installed [y]
+    model.RES_Specific_Area            = Param(model.renewable_sources,
+                                               within=NonNegativeReals)               # Specific area of each PV technology in m^2/W
     model.RES_unit_CO2_emission        = Param(model.renewable_sources,
                                                within=NonNegativeReals)               # [kgCO2/kW]                                   
     model.RES_Unit_Energy_Production   = Param(model.scenarios,
@@ -153,6 +154,13 @@ def Model_Creation(model):
                                               model.periods, 
                                               within=NonNegativeReals, 
                                               initialize=Initialize_RES_Energy)      # Energy production of a RES in Wh
+    # Brownfield
+    model.RES_capacity                 = Param(model.renewable_sources,
+                                               within=NonNegativeReals)               # Existing RES units [-] of nominal capacity
+    model.RES_years                    = Param(model.renewable_sources,
+                                               within=NonNegativeIntegers)            # How many years ago the component was installed [y]
+    model.RES_existing_area            = Param(model.renewable_sources,
+                                               within=NonNegativeReals)               # Existing area of each PV technology in brownfield [m^2] 
 
 
 
@@ -169,20 +177,19 @@ def Model_Creation(model):
     model.Unitary_Battery_Replacement_Cost            = Param(within=NonNegativeReals, 
                                                               initialize=Initialize_Battery_Unit_Repl_Cost)
     model.Battery_Initial_SOC                         = Param(within=NonNegativeReals)
+    # Brownfield
     model.Battery_capacity                            = Param(within=NonNegativeReals)
     model.BESS_unit_CO2_emission                      = Param(within=NonNegativeReals)
-    model.Battery_Independence                        = Param(within=NonNegativeReals)
     model.Battery_Min_Capacity                        = Param(model.steps, 
                                                               initialize=Initialize_Battery_Minimum_Capacity)
     model.BESS_Large_Constant                         = Param(within=NonNegativeReals,
                                                               initialize = 10^6)
-    "MILP Formulation"
+    # MILP Formulation
     model.Battery_Nominal_Capacity_milp               = Param(within=NonNegativeReals)         # Nominal Capacity of each battery
 
    
 # --- Generators ---
 
-    
     "Parameters of the genset"
     model.Generator_Names                    = Param(model.generator_types,
                                                      within=Any)                           # Generators names
@@ -195,7 +202,7 @@ def Model_Creation(model):
     model.Generator_Lifetime                 = Param(model.generator_types,
                                                      within=NonNegativeIntegers)    
     model.Fuel_Names                         = Param(model.generator_types,
-                                                     within=Any)                # Fuel names
+                                                     within=Any)                          # Fuel names
     model.Fuel_LHV                           = Param(model.generator_types,
                                                      within=NonNegativeReals)              # Low heating value of the fuel in kg/l
     model.GEN_years                          = Param(model.generator_types,
@@ -253,7 +260,6 @@ def Model_Creation(model):
 
 # --- National Grid ---
 
-
     "Parameters of the National Grid"
     model.Grid_Sold_El_Price                   = Param(within=NonNegativeReals)
     model.Grid_Purchased_El_Price              = Param(within=NonNegativeReals)
@@ -292,8 +298,7 @@ def Model_Creation(model):
     model.Energy_From_Grid_Color = Param(within=Any)                                               # HEX color codes for Energy from grid
     
 #%% VARIABLES
-#############
-
+##############
 
 
     "Variables associated to the RES"
@@ -306,6 +311,12 @@ def Model_Creation(model):
                                       model.periods,
                                       within=NonNegativeReals)                      # Energy generated by the RES sistem in Wh
     model.RES_emission          = Var(within=NonNegativeReals)
+    model.RES_Land_Use          = Var(model.scenarios, 
+                                      model.years,
+                                      model.steps,
+                                      model.renewable_sources,
+                                      model.periods,
+                                      within=NonNegativeReals)                       # Land use of the RES in m^2
     
     # MILP Formulation
     model.RES_Units_milp        = Var(model.steps, 

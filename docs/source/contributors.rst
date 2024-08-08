@@ -6,27 +6,23 @@ Contributors
 The research activity of SESAM focuses on the use of mathematical models for the study of systems, components and processes in the energy field and 
 industrial ecology.
 
-Contributors:
+### Contributors of the current version:
+* Nicolò Stevanato, Politecnico di Milano 
+* Alessandro Onori, Politecnico di Milano 
+* Riccardo Mereu, Politecnico di Milano 
+* Emanuela Colombo, Politecnico di Milano 
 
-* Alessandro Onori - Department of Energy, Politecnico di Milano
+### Past contributors:
+* Gianluca Pellecchia, Politecnico di Milano 
+* Ivan Sangiorgio, Politecnico di Milano
+* Francesco Lombardi, TU Delft 
+* Giulia Guidicini, Politecnico di Milano
+* Lorenzo Rinaldi, Politecnico di Milano 
 
-* Giulia Guidicini - Department of Energy, Politecnico di Milano
-
-* Lorenzo Rinaldi - Department of Energy, Politecnico di Milano
-
-* Nicolò Stevanato - Department of Energy, Politecnico di Milano / Fondazione Eni Enrico Mattei
-
-* Francesco Lombardi - Department of Energy, Politecnico di Milano
-
-* `Emanuela Colombo <https://www4.ceda.polimi.it/manifesti/manifesti/controller/ricerche/RicercaPerDocentiPublic.do? 
-  EVN_DIDATTICA=evento&k_doc=44891&lang=EN&aa=2014&tab_ricerca=1>`_ : Scientific coordination
-
-Based on the original model by:
-
-* Sergio Balderrama  - Department of Mechanical and Aerospace Engineering, University of Liège, San Simon University, Centro Universitario de Investigacion 
-  en Energia
-* Sylvain Quoilin    - Department of Mechanical Engineering Technology, KU Leuven
+### Based on the original model by:
+* Sergio Balderrama, Universidad Mayor de San Simón <s.balderrama@umss.edu>
+* Sylvain Quoilin, Université de Liège <squoilin@uliege.be>
 
 
-MicroGridsPy is developed in the open on `GitHub (MicroGridsPy-SESAM) <https://github.com/SESAM-Polimi/MicroGridsPy-SESAM>`_ and contributions are very welcome!
+MicroGridsPy is developed in the open on `GitHub (MicroGridsPy*SESAM) <https://github.com/SESAM*Polimi/MicroGridsPy*SESAM>`_ and contributions are very welcome!
 
