@@ -10,7 +10,7 @@ import warnings; warnings.simplefilter(action='ignore', category=FutureWarning)
 #%% Results summary
 def ResultsSummary(instance, Optimization_Goal, TimeSeries):
 
-    from Results import EnergySystemCost, EnergySystemSize, YearlyCosts, YearlyEnergyParams, YearlyEnergyParamsSC, EnergySystemLandUse
+    from Results import EnergySystemCost, EnergySystemSize, YearlyCosts, YearlyEnergyParams, YearlyEnergyParamsSC  
     
     print('Results: exporting economic results...')
     EnergySystemCost                              = EnergySystemCost(instance, Optimization_Goal)
@@ -19,7 +19,6 @@ def ResultsSummary(instance, Optimization_Goal, TimeSeries):
     EnergySystemSize                              = EnergySystemSize(instance)
     YearlyEnergyParams, RenewablePenetration      = YearlyEnergyParams(instance, TimeSeries)
     YearlyEnergyParamsSC, RenewablePenetrationSC  = YearlyEnergyParamsSC(instance, TimeSeries)
-    if instance.Land_Use.value == 1: EnergySystemLandUse = EnergySystemLandUse(instance)
     
     current_directory = os.path.dirname(os.path.abspath(__file__))
     results_directory = os.path.join(current_directory, '..', 'Results/Results_Summary.xlsx')
@@ -27,7 +26,6 @@ def ResultsSummary(instance, Optimization_Goal, TimeSeries):
     Excel = ExcelWriter(results_directory)
 
     EnergySystemSize.to_excel(Excel, sheet_name='Size')
-    if instance.Land_Use.value == 1: EnergySystemLandUse.to_excel(Excel, sheet_name='Land Use')
     EnergySystemCost.to_excel(Excel, sheet_name='Cost')
     YearlyCost.to_excel(Excel, sheet_name='Yearly cash flows')
     YearlyEnergyParams.to_excel(Excel, sheet_name='Yearly energy parameters')
@@ -38,7 +36,6 @@ def ResultsSummary(instance, Optimization_Goal, TimeSeries):
     Results = {
         'Costs': EnergySystemCost,
         'Size': EnergySystemSize,
-        'Land Use': EnergySystemLandUse if instance.Land_Use.value == 1 else None,
         'Yearly cash flows': YearlyCost,
         'Yearly energy parameters': YearlyEnergyParams,
         'Renewables Penetration': RenewablePenetration,
@@ -917,7 +914,7 @@ def EnergySystemSize(instance):
     if instance.MILP_Formulation.value:
      "Renewable sources"
      RES_Units_milp = instance.RES_Units_milp.get_values()
-     RES_Nominal_Capacity = instance.RES_Nominal_Capacity.extract_values()
+     RES_Nominal_Capacity = instance.RES_Nominal_Capacity.extract_values()    
      RES_Size = pd.DataFrame()
      for r in range(1,R+1):
         # r_size = RES_Units_milp[1,r]*RES_Nominal_Capacity[r]/1e3
@@ -933,6 +930,7 @@ def EnergySystemSize(instance):
         for (y,st) in tup_list:
             # res_size = pd.DataFrame([RES_Names[r], 'kW', ((RES_Units_milp[st,r]-RES_Units_milp[st-1,r])*RES_Nominal_Capacity[r])/1e3]).T.set_index([0,1])
             res_size = pd.DataFrame([RES_Names[r], '-', (RES_Units_milp[st,r]-RES_Units_milp[st-1,r])]).T.set_index([0,1])
+            
             if ST == 1:
                 res_size.columns = ['Total']
             else:
@@ -1774,106 +1772,7 @@ def YearlyEnergyParamsSC(instance, TimeSeries):
                                               round(curt_load_sc.astype(float)*100,2)], axis=1)
 
     
-    return YearlyEnergyParamsSC, res_pen_sc    
-
-def EnergySystemLandUse(instance):
-
-    #%% Importing parameters
-    S  = int(instance.Scenarios.extract_values()[None])
-    P  = int(instance.Periods.extract_values()[None])
-    Y  = int(instance.Years.extract_values()[None])
-    ST = int(instance.Steps_Number.extract_values()[None])
-    R  = int(instance.RES_Sources.extract_values()[None])
-    G  = int(instance.Generator_Types.extract_values()[None])
-
-    RES_Names = instance.RES_Names.extract_values()
-    
-    upgrade_years_list = [1 for i in range(ST)]
-    s_dur = instance.Step_Duration.value
-    for i in range(1, ST): 
-        upgrade_years_list[i] = upgrade_years_list[i-1] + s_dur    
-    yu_tuples_list = [0 for i in range(1,Y+1)]    
-    if ST == 1:    
-        for y in range(1,Y+1):            
-            yu_tuples_list[y-1] = (y, 1)    
-    else:        
-        for y in range(1,Y+1):            
-            for i in range(len(upgrade_years_list)-1):
-                if y >= upgrade_years_list[i] and y < upgrade_years_list[i+1]:
-                    yu_tuples_list[y-1] = (y, [st for st in range(ST)][i+1])                
-                elif y >= upgrade_years_list[-1]:
-                    yu_tuples_list[y-1] = (y, ST)   
-    tup_list = [[] for i in range(ST-1)]  
-    for i in range(0,ST-1):
-        tup_list[i] = yu_tuples_list[s_dur*i + s_dur]
-        
-    #%%
-    if instance.MILP_Formulation.value:
-     "Renewable sources"
-     RES_Units_milp = instance.RES_Units_milp.get_values()
-     RES_Specific_Area = instance.RES_Specific_Area.extract_values()
-     RES_Nominal_Capacity = instance.RES_Nominal_Capacity.extract_values()
-     RES_Land = pd.DataFrame()
-     for r in range(1,R+1):
-        r_land = (RES_Specific_Area[r]/1000)*RES_Units_milp[1,r]*RES_Nominal_Capacity[r]
-        res_land = pd.DataFrame([RES_Names[r], 'm2', r_land]).T.set_index([0,1])
-        if ST == 1 :
-            res_land.columns = ['Total']
-        else:
-            res_land.columns = ['Step 1']
-        res_land.index.names = ['Component', 'Unit']
-        RES_Land = pd.concat([RES_Land,res_land], axis=1).fillna(0)
-        for (y,st) in tup_list:
-            res_land = pd.DataFrame([RES_Names[r], 'm2', ((RES_Specific_Area[r]/1000)*(RES_Units_milp[st,r]-RES_Units_milp[st-1,r])*RES_Nominal_Capacity[r])]).T.set_index([0,1])
-            if ST == 1:
-                res_land.columns = ['Total']
-            else:
-                res_land.columns = ['Step '+str(st)]
-            res_land.index.names = ['Component', 'Unit']
-            RES_Land = pd.concat([RES_Land,res_land], axis=1).fillna(0)
-     RES_Land = RES_Land.groupby(level=[0], axis=1, sort=False).sum()
-     res_land_tot = RES_Land.sum(1).to_frame()
-     res_land_tot.columns = ['Total']
-     if ST != 1:
-        RES_Land = pd.concat([RES_Land, res_land_tot],axis=1)
-         
-    else:
-        
-     "Renewable Sources"   
-     RES_Units = instance.RES_Units.get_values()
-     RES_Specific_Area = instance.RES_Specific_Area.extract_values()
-     RES_Nominal_Capacity = instance.RES_Nominal_Capacity.extract_values()
-     RES_Land = pd.DataFrame()
-     for r in range(1,R+1):
-        r_land = (RES_Specific_Area[r]/1000)*RES_Units[1,r]*RES_Nominal_Capacity[r]
-        res_land = pd.DataFrame([RES_Names[r], 'm2', r_land]).T.set_index([0,1])
-        if ST == 1 :
-            res_land.columns = ['Total']
-        else:
-            res_land.columns = ['Step 1']
-        res_land.index.names = ['Component', 'Unit']
-        RES_Land = pd.concat([RES_Land,res_land], axis=1).fillna(0)
-        for (y,st) in tup_list:
-            res_land = pd.DataFrame([RES_Names[r], 'm2', ((RES_Specific_Area[r]/1000)*(RES_Units[st,r]-RES_Units[st-1,r])*RES_Nominal_Capacity[r])]).T.set_index([0,1])
-            if ST == 1:
-                res_land.columns = ['Total']
-            else:
-                res_land.columns = ['Step '+str(st)]
-            res_land.index.names = ['Component', 'Unit']
-            RES_Land = pd.concat([RES_Land,res_land], axis=1).fillna(0)
-     RES_Land = RES_Land.groupby(level=[0], axis=1, sort=False).sum()
-     res_land_tot = RES_Land.sum(1).to_frame()
-     res_land_tot.columns = ['Total']
-     if ST != 1:
-        RES_Land = pd.concat([RES_Land, res_land_tot],axis=1)
-
-               
-    #%% Concatenating
-    SystemLand = pd.concat([round(RES_Land.astype(float),2)], axis=0).fillna('-')
-    print("\nSystem Land Use [m2]")
-    print(SystemLand)
-    print("\n------------------------------------------------------------------------------------")
-    return SystemLand   
+    return YearlyEnergyParamsSC, res_pen_sc       
                   
 #%%
 def PrintResults(instance, Results, callback=None):
@@ -1954,9 +1853,5 @@ def PrintResults(instance, Results, callback=None):
         curtailment = Results['Yearly energy parameters']['Curtailment share'].sum().sum() / Y
         print(f'Average curtailment per year = {round(curtailment, 2)} %')
             
-    if instance.Land_Use.value == 1:
-        total_land_use = Results['Land Use']['Total'].sum()
-        share_land_use = (total_land_use / instance.Renewables_Total_Area.value)*100
-        print(f'Renewables Land Use = {round(share_land_use, 2)} %')
 
 

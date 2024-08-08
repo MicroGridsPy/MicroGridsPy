@@ -871,7 +871,7 @@ def RE_supply():
     inputs_directory = os.path.join(current_directory, '..', 'Inputs')
     filename = os.path.join(inputs_directory, 'RES_Time_Series.csv')
     book = pd.DataFrame(dataf)
-    book.to_csv(filename, sep=';', decimal=',', quotechar = ' ', index=False, header = True)
+    book.to_csv(filename, sep=',', decimal='.', quotechar = ' ', index=False, header = True)
 
     # Timing
     end = time.time()

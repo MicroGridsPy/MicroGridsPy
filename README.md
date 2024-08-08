@@ -90,24 +90,26 @@ To install MicroGridsPy, the conda package manager is recommended. Follow this s
 
 These steps will guide you through a successful installation of MicroGridsPy.
 
-### Contributors
+### Maintenance and Development
 
-**MicroGridsPy** has been developed by the SESAM group in the Department of Energy Engineering at Politecnico di Milano. The research activity of SESAM focuses on using mathematical models for the study of systems, components, and processes in the energy field and industrial ecology.
+**MicroGridsPy** is currently mantained and developed by the SESAM group in the Department of Energy Engineering at Politecnico di Milano. The research activity of SESAM focuses on using mathematical models for the study of systems, components, and processes in the energy field and industrial ecology.
 
-Main Contributors:
+### Contributors of the current version:
+- Nicolò Stevanato, Politecnico di Milano <nicolo.stevanato@polimi.it>
+- Alessandro Onori, Politecnico di Milano <alessandro.onori@polimi.it>
+- Riccardo Mereu, Politecnico di Milano <riccardo.mereu@polimi.it>
+- Emanuela Colombo, Politecnico di Milano <emanuela.colombo@polimi.it>
 
-- **Alessandro Onori** - Department of Energy, Politecnico di Milano
-- **Giulia Guidicini** - Department of Energy, Politecnico di Milano
-- **Lorenzo Rinaldi** - Department of Energy, Politecnico di Milano
-- **Nicolò Stevanato** - Department of Energy, Politecnico di Milano / Fondazione Eni Enrico Mattei
-- **Francesco Lombardi** - Department of Energy, Politecnico di Milano
-- **[Emanuela Colombo](https://www4.ceda.polimi.it/manifesti/manifesti/controller/ricerche/RicercaPerDocentiPublic.do?EVN_DIDATTICA=evento&k_doc=44891&lang=EN&aa=2014&tab_ricerca=1)** : Scientific coordination
+### Past contributors:
+- Gianluca Pellecchia, Politecnico di Milano <gianluca.pellecchia@polimi.it>
+- Ivan Sangiorgio, Politecnico di Milano <ivan.sangiorgio@polimi.it>
+- Francesco Lombardi, TU Delft <f.lombardi@tudelft.nl>
+- Giulia Guidicini, Politecnico di Milano <giulia.guidicini@polimi.it>
+- Lorenzo Rinaldi, Politecnico di Milano <lorenzo.rinaldi@polimi.it>
 
-Based on the original model by:
-
-- **Sergio Balderrama** - Department of Mechanical and Aerospace Engineering, University of Liège, San Simon University, Centro Universitario de Investigacion en Energia
-- **Sylvain Quoilin** - Department of Mechanical Engineering Technology, KU Leuven
-
+### Based on the original model by:
+- Sergio Balderrama, Universidad Mayor de San Simón <s.balderrama@umss.edu>
+- Sylvain Quoilin, Université de Liège <squoilin@uliege.be>
 
 ### License
 This is a free software licensed under the “European Union Public Licence" EUPL v1.1. It 
