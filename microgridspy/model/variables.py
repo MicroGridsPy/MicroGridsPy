@@ -34,9 +34,9 @@ def add_project_variables(model: Model, settings: ProjectParameters, sets: xr.Da
         # Total Variable Cost [USD] of the system (objective function variable)
         project_variables['total_variable_cost'] = model.add_variables(lower=0, name='Total Variable Cost')
         # Total Not Actualized Variable Cost [USD] of the system for each scenario
-        project_variables['total_scenario_variable_cost_nonact'] = model.add_variables(lower=0, coords=[sets.scenarios], name='Scenario Total Variable Cost (Non-Actualized)')
+        project_variables['total_scenario_variable_cost_nonact'] = model.add_variables(lower=0, coords=[sets.scenarios], name='Scenario Total Variable Cost (Not Actualized)')
         # Total Not Actualized Fixed O&M Cost [USD] of the system
-        project_variables['operation_maintenance_cost_nonact'] = model.add_variables(lower=0, name='Operation and Maintenance Cost (Non-Actualized)')
+        project_variables['operation_maintenance_cost_nonact'] = model.add_variables(lower=0, name='Operation and Maintenance Cost (Not Actualized)')
     
     if settings.advanced_settings.multi_scenario_optimization:
         # Total CO2 Emission [kgCO2] of the system (objective function variable)
@@ -86,7 +86,7 @@ def add_battery_variables(model: Model, settings: ProjectParameters, sets: xr.Da
     # Installed capacity [W*period] for battery bank in each investment step
     if settings.advanced_settings.milp_formulation:
         # Boolean variable to determine single flow (inflow or outflow)
-        battery_variables['single_flow_bess'] = model.add_variables(binary=True, coords=[sets.scenarios, sets.years, sets.periods], name='Single Flow BESS')
+        battery_variables['single_flow_bess'] = model.add_variables(binary=True, coords=[sets.scenarios, sets.years, sets.periods], name='Binary for BESS Single Flow')
     
     if settings.advanced_settings.unit_commitment:
         # MILP Formulation: integer units
@@ -114,7 +114,7 @@ def add_battery_variables(model: Model, settings: ProjectParameters, sets: xr.Da
     
     if settings.advanced_settings.multiobjective_optimization:
         # Indirect emissions [kgCO2] of the battery bank associated with installed capacity (LCA)
-        battery_variables['bess_emission'] = model.add_variables(lower=0, coords=[sets.steps], name='BESS Emissions')
+        battery_variables['battery_emission'] = model.add_variables(lower=0, coords=[sets.steps], name='Battery Emissions')
 
     return battery_variables
 
@@ -157,36 +157,34 @@ def add_generator_variables(model: Model, settings: ProjectParameters, sets: xr.
 
     return generator_variables
 
-
 def add_grid_variables(model: Model, settings: ProjectParameters, data: xr.Dataset) -> None:
     """
     Add grid-related variables to the Linopy model.
     """
+    grid_variables = {}
+    
+    # Total grid_connection cost [USD] for actualized and non-actualized scenarios
+    grid_variables['scenario_grid_connection_cost_act'] = model.add_variables(lower=0, coords=[data.scenarios], name='Total Grid Connection Cost (Actualized)')
+    grid_variables['scenario_grid_connection_cost_nonact'] = model.add_variables(lower=0, coords=[data.scenarios], name='Total Grid Connection Cost (Not Actualized)')
+
+    # Energy purchased from the grid [W*period]
+    grid_variables['energy_from_grid'] = model.add_variables(lower=0, coords=[data.scenarios, data.years, data.periods], name='Energy from Grid')
     # Conditionally add variables related to purchase/sell mode
     if settings.advanced_settings.grid_connection_type == 1:
-        # Total revenues [USD] from selling electricity to the grid for actualized and non-actualized scenarios
-        model.total_revenues_act = model.add_variables(lower=0, coords=[data.scenarios], name='total_revenues_act')
-        model.total_revenues_nonact = model.add_variables(lower=0, coords=[data.scenarios], name='total_revenues_nonact')
-    
-    # Total electricity cost [USD] for actualized and non-actualized scenarios
-    model.total_electricity_cost_act = model.add_variables(lower=0, coords=[data.scenarios], name='total_electricity_cost_act')
-    model.total_electricity_cost_nonact = model.add_variables(lower=0, coords=[data.scenarios], name='total_electricity_cost_nonact')
-    
-    # Energy provided to the grid [W*period]
-    model.energy_to_grid = model.add_variables(lower=0, coords=[data.scenarios, data.years, data.periods], name='energy_to_grid')
-    
-    # Energy purchased from the grid [W*period]
-    model.energy_from_grid = model.add_variables(lower=0, coords=[data.scenarios, data.years, data.periods], name='energy_from_grid')
+        # Energy provided to the grid [W*period]
+        grid_variables['energy_to_grid'] = model.add_variables(lower=0, coords=[data.scenarios, data.years, data.periods], name='Energy to Grid')
     
     if settings.advanced_settings.milp_formulation == 1:
         # Boolean variable allowing single flow (inflow or outflow)
-        model.single_flow_grid = model.add_variables(lower=0, upper=1, binary=True, coords=[data.scenarios, data.years, data.periods], name='single_flow_grid')
+        grid_variables['single_flow_grid'] = model.add_variables(binary=True, coords=[data.scenarios, data.years, data.periods], name='Binary for Grid Single Flow')
     
-    # Indirect emissions [kgCO2] associated with national energy mix emissions coefficient 
-    model.grid_emission = model.add_variables(lower=0, coords=[data.scenarios, data.years, data.periods], name='grid_emission')
-    
-    # Total indirect CO2 emissions [kgCO2] associated with national energy mix emissions coefficient for each scenario
-    model.scenario_grid_emission = model.add_variables(lower=0, coords=[data.scenarios], name='scenario_grid_emission')
+    if settings.advanced_settings.multiobjective_optimization:
+        # Indirect emissions [kgCO2] associated with national energy mix emissions coefficient 
+        grid_variables['grid_emission'] = model.add_variables(lower=0, coords=[data.scenarios, data.years, data.periods], name='Electricity from Grid Emission')
+        # Total indirect CO2 emissions [kgCO2] associated with national energy mix emissions coefficient for each scenario
+        grid_variables['scenario_grid_emission'] = model.add_variables(lower=0, coords=[data.scenarios], name='Scenario Grid Emission')
+
+    return grid_variables
 
 
 def add_lost_load_variables(model: Model, settings: ProjectParameters, sets: xr.Dataset) -> Dict[str, linopy.Variable]:

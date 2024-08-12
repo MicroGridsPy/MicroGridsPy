@@ -10,21 +10,25 @@ from microgridspy.model.initialize import (
     initialize_demand, 
     initialize_resource, 
     initialize_temperature,
+    initialize_grid_availability,
     initialize_project_parameters, 
     initialize_res_parameters, 
     initialize_battery_parameters,
-    initialize_generator_parameters)
+    initialize_generator_parameters,
+    initialize_grid_parameters)
 from microgridspy.model.variables import (
     add_project_variables, 
     add_res_variables,
     add_lost_load_variables,
     add_battery_variables,
-    add_generator_variables)
+    add_generator_variables,
+    add_grid_variables)
 from microgridspy.model.constraints.project_costs import add_cost_calculation_constraints
 from microgridspy.model.constraints.energy_balance import add_energy_balance_constraints
 from microgridspy.model.constraints.res_constraints import add_res_constraints
 from microgridspy.model.constraints.battery_constraints import add_battery_constraints
 from microgridspy.model.constraints.generator_constraints import add_generator_constraints
+from microgridspy.model.constraints.grid_constraints import add_grid_constraints
 from microgridspy.model.objectives import add_objectives
 
 
@@ -38,7 +42,7 @@ class Model:
         # Define system components
         self.has_battery: bool = settings.project_settings.system_configuration in [0, 1]
         self.has_generator: bool = settings.project_settings.system_configuration in [0, 2]
-        self.has_grid: bool = settings.advanced_settings.grid_connection
+        self.has_grid_connection: bool = settings.advanced_settings.grid_connection
         
         # Initialize linopy model
         self.model = linopy.Model()
@@ -61,10 +65,13 @@ class Model:
         self.resource: xr.DataArray = initialize_resource(self.sets)
         self.temperature: xr.DataArray = initialize_temperature(self.sets)
 
-        # Combine all time series data into a single xr.Dataset
+        # Combine time series data into a single xr.Dataset
         self.time_series: xr.Dataset = xr.merge([self.demand.to_dataset(name='DEMAND'),
                                                  self.resource.to_dataset(name='RESOURCE'),
                                                  self.temperature.to_dataset(name='TEMPERATURE'),])
+        if self.has_grid_connection:
+            self.grid_availability: xr.DataArray = initialize_grid_availability(self.sets)
+            self.time_series = xr.merge([self.time_series, self.grid_availability.to_dataset(name='GRID_AVAILABILITY')])
         
         print("Time series data loaded and initialized successfully.")
 
@@ -72,6 +79,8 @@ class Model:
         """Initialize the model parameters."""
         self.project_parameters: xr.Dataset = initialize_project_parameters(self.settings, self.sets)
         self.res_parameters: xr.Dataset = initialize_res_parameters(self.settings, self.sets)
+
+        # Combine parameters into a single xr.Dataset
         self.parameters: xr.Dataset = xr.merge([self.time_series,self.project_parameters, self.res_parameters])
         
         if self.has_battery:
@@ -81,6 +90,10 @@ class Model:
         if self.has_generator:
             self.generator_parameters: xr.Dataset = initialize_generator_parameters(self.settings, self.sets)
             self.parameters = xr.merge([self.parameters, self.generator_parameters])
+
+        if self.has_grid_connection:
+            self.grid_parameters: xr.Dataset = initialize_grid_parameters(self.settings, self.sets)
+            self.parameters = xr.merge([self.parameters, self.grid_parameters])
         
         print("Parameters initialized successfully.")
 
@@ -98,6 +111,10 @@ class Model:
             self.generator_variables: Dict[str, linopy.Variable] = add_generator_variables(self.model, self.settings, self.sets)
             self.variables.update(self.generator_variables)
 
+        if self.has_grid_connection:
+            self.grid_variables: Dict[str, linopy.Variable] = add_grid_variables(self.model, self.settings, self.sets)
+            self.variables.update(self.grid_variables)
+
         if self.settings.project_settings.lost_load_fraction > 0:
             self.lost_load_variables: Dict[str, linopy.Variable] = add_lost_load_variables(self.model, self.settings, self.sets)
             self.variables.update(self.lost_load_variables)
@@ -107,14 +124,17 @@ class Model:
     def _add_constraints(self):
         """Add constraints to the model."""
         add_res_constraints(self.model, self.settings, self.sets, self.parameters, self.variables)
-        add_cost_calculation_constraints(self.model, self.settings, self.sets, self.parameters, self.variables, self.has_battery, self.has_generator, self.has_grid)
-        add_energy_balance_constraints(self.model, self.settings, self.sets, self.parameters, self.variables, self.has_battery, self.has_generator, self.has_grid)
+        add_cost_calculation_constraints(self.model, self.settings, self.sets, self.parameters, self.variables, self.has_battery, self.has_generator, self.has_grid_connection)
+        add_energy_balance_constraints(self.model, self.settings, self.sets, self.parameters, self.variables, self.has_battery, self.has_generator, self.has_grid_connection)
         
         if self.has_battery:
             add_battery_constraints(self.model, self.settings, self.sets, self.parameters, self.variables)
 
         if self.has_generator:
             add_generator_constraints(self.model, self.settings, self.sets, self.parameters, self.variables)
+
+        if self.has_grid_connection:
+            add_grid_constraints(self.model, self.settings, self.sets, self.parameters, self.variables)
         
         print("Constraints added to the model successfully.")
 
@@ -136,8 +156,6 @@ class Model:
         """Solve the model using the specified solver."""
         # Build the model
         self._build()
-        print(self.model.variables)
-        print(self.model.constraints)
 
         # Choose the solver
         if solver is None:

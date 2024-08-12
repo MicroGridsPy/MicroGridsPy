@@ -1,11 +1,13 @@
 import streamlit as st
 import pandas as pd
 
+from typing import Dict, Any, List
+
 from microgridspy.model.model import Model
 from config.path_manager import PathManager
-from microgridspy.post_process.cost_calculations import calculate_actualized_investment_cost, calculate_actualized_salvage_value, calculate_lcoe
+from microgridspy.post_process.cost_calculations import calculate_actualized_investment_cost, calculate_actualized_salvage_value, calculate_lcoe, calculate_grid_costs
 from microgridspy.post_process.energy_calculations import calculate_energy_usage, calculate_renewable_penetration
-from microgridspy.post_process.data_retrieval import get_generator_usage, get_battery_soc, get_renewables_usage
+from microgridspy.post_process.data_retrieval import get_generator_usage, get_battery_soc, get_renewables_usage, get_grid_usage
 from microgridspy.post_process.plots import(
     create_bar_of_pie_chart, 
     create_energy_usage_pie_chart, 
@@ -15,82 +17,84 @@ from microgridspy.post_process.plots import(
 )
 from microgridspy.post_process.export_results import save_results_to_excel, save_plots
 
-# Define default colors
-DEFAULT_COLORS = {
-    'Demand': '#000000',  # Black
-    'Curtailment': '#FFA500',  # Orange
-    'Battery': '#ADD8E6',  # Light Blue
-    'RES': '#FFFF00',  # Yellow
-    'Generator': '#00008B',  # Dark Blue
-}
-
 def display_cost_breakdown(model: Model, optimization_goal: str):
-
-    def get_cost(var_name: str):
-        value = model.get_solution_variable(var_name)
-        return value.values.item() / 1000 if value is not None else 0
-    
     currency = st.session_state.get('currency', 'USD')
+    actualized = optimization_goal == "NPC"
     
-    if optimization_goal == "NPC":
-        npc = get_cost("Net Present Cost")
-        lcoe = calculate_lcoe(model, 'NPC')
-        # Display NPC and LCOE
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Net Present Cost", f"{npc:.2f} k{currency}")
-        with col2:
-            st.metric("Levelized Cost of Energy (LCOE)", f"{lcoe:.4f} {currency}/kWh")
-
-    elif optimization_goal == "Total Variable Cost":
-        total_variable_cost = get_cost("Total Variable Cost")
-        lcoe = calculate_lcoe(model, 'Total Variable Cost')
-        # Display Total Variable Cost and LCOE
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Total Variable Cost", f"{total_variable_cost:.2f} k{currency}")
-        with col2:
-            st.metric("Levelized Variable Cost (LVC)", f"{lcoe:.4f} {currency}/kWh")
-
-    # Display cost details in a table
+    cost_data: List[Dict[str, Any]] = []
+    
+    def add_cost_item(label: str, value: float, condition: bool = True):
+        if condition:
+            cost_data.append({
+                "Cost Item": label,
+                f"Value (k{currency})": f"{value / 1000:.2f}"
+            })
+    
+    # Main cost (NPC or Total Variable Cost)
+    if actualized:
+        main_cost = model.get_solution_variable('Net Present Cost').values.item()
+    else:
+        main_cost = model.get_solution_variable('Total Variable Cost').values.item()
+    
+    # Display main metrics
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric(optimization_goal, f"{main_cost / 1000:.2f} k{currency}")
+    
+    with col2:
+        lcoe = calculate_lcoe(model, optimization_goal)
+        lcoe_label = "Levelized Cost of Energy (LCOE)" if actualized else "Levelized Variable Cost (LVC)"
+        st.metric(lcoe_label, f"{lcoe:.4f} {currency}/kWh")
+    
+    # Calculate and add cost items
+    if actualized:
+        add_cost_item("Total Investment Cost (Actualized)", 
+                      model.get_solution_variable("Total Investment Cost").values.item())
+    else:
+        add_cost_item("Total Investment Cost (Actualized)", 
+                      calculate_actualized_investment_cost(model) * 1000)
+    
+    add_cost_item(f"Total Variable Cost ({'Actualized' if actualized else 'Not Actualized'})", 
+                  model.get_solution_variable(f"Scenario Total Variable Cost {'(Actualized)' if actualized else '(Not Actualized)'}").values.item())
+    
+    add_cost_item(f" - Total Fixed O&M Cost ({'Actualized' if actualized else 'Not Actualized'})", 
+                  model.get_solution_variable(f"Operation and Maintenance Cost {'(Actualized)' if actualized else '(Not Actualized)'}").values.item())
+    
+    if model.has_battery:
+        add_cost_item(f" - Total Battery Replacement Cost ({'Actualized' if actualized else 'Not Actualized'})", 
+                    model.get_solution_variable(f"Battery Replacement Cost {'(Actualized)' if actualized else '(Not Actualized)'}").values.item(),
+                    model.has_battery)
+    
+    if model.has_generator:
+        add_cost_item(f" - Total Fuel Cost ({'Actualized' if actualized else 'Not Actualized'})", 
+                    model.get_solution_variable(f"Total Fuel Cost {'(Actualized)' if actualized else '(Not Actualized)'}").values.item(),
+                    model.has_generator)
+    
+    if actualized:
+        add_cost_item("Total Salvage Value (Actualized)", 
+                      model.get_solution_variable("Salvage Value").values.item())
+    else:
+        add_cost_item("Total Salvage Value (Actualized)", 
+                      calculate_actualized_salvage_value(model) * 1000)
+    
+    if model.has_grid_connection:
+        grid_investment_cost, grid_fixed_om_cost, cost_electricity_purchased, cost_electricity_sold = calculate_grid_costs(model, actualized)
+        
+        add_cost_item("Grid Investment Cost (Actualized)", grid_investment_cost)
+        
+        add_cost_item(f"Grid Fixed O&M Cost ({'Actualized' if actualized else 'Not Actualized'})", 
+                      grid_fixed_om_cost)
+        
+        add_cost_item(f"Total Electricity Purchased Cost ({'Actualized' if actualized else 'Not Actualized'})", 
+                      cost_electricity_purchased)
+        
+        if model.get_settings('grid_connection_type', advanced=True) == 1:
+            add_cost_item(f"Total Electricity Sold Revenue ({'Actualized' if actualized else 'Not Actualized'})", 
+                          cost_electricity_sold)
+    
+    # Display cost details
     st.subheader("Cost Details")
-    if optimization_goal == "NPC":
-        total_investment_cost = get_cost("Total Investment Cost")
-        scenario_total_variable_cost = get_cost("Scenario Total Variable Cost (Actualized)")
-        total_fixed_operation_cost = get_cost("Operation and Maintenance Cost (Actualized)")
-        total_battery_replacement_cost = get_cost("Battery Replacement Cost (Actualized)") if model.has_battery else 0
-        total_fuel_cost = get_cost("Total Fuel Cost (Actualized)") if model.has_generator else 0
-        total_salvage_value = get_cost("Salvage Value")
-        
-        cost_details = {
-            "Total Investment Cost (Actualized)": total_investment_cost,
-            "Total Variable Cost (Actualized)": scenario_total_variable_cost,
-            " - Total Fixed O&M Cost (Actualized)": total_fixed_operation_cost,
-            " - Total Battery Replacement Cost (Actualized)": total_battery_replacement_cost,
-            " - Total Fuel Cost (Actualized)": total_fuel_cost,
-            "Total Salvage Value (Actualized)": total_salvage_value}
-        
-    elif optimization_goal == "Total Variable Cost":
-        total_investment_cost = calculate_actualized_investment_cost(model)
-        scenario_total_variable_cost = get_cost("Scenario Total Variable Cost (Non-Actualized)")
-        total_fixed_operation_cost = get_cost("Operation and Maintenance Cost (Non-Actualized)")
-        total_battery_replacement_cost = get_cost("Battery Replacement Cost (Not Actualized)") if model.has_battery else 0
-        total_fuel_cost = get_cost("Total Fuel Cost (Non-Actualized)") if model.has_generator else 0
-        total_salvage_value = calculate_actualized_salvage_value(model)
-
-        cost_details = {
-            "Total Investment Cost (Actualized)": total_investment_cost,
-            "Total Variable Cost (Not Actualized)": scenario_total_variable_cost,
-            " - Total Fixed O&M Cost (Not Actualized)": total_fixed_operation_cost,
-            " - Total Battery Replacement Cost (Not Actualized)": total_battery_replacement_cost,
-            " - Total Fuel Cost (Not Actualized)": total_fuel_cost,
-            "Total Salvage Value (Actualized)": total_salvage_value}
-    
-    # Create a DataFrame for the cost details
-    cost_df = pd.DataFrame.from_dict(cost_details, orient='index', columns=[f'Value (k{currency})'])
-    cost_df[f'Value (k{currency})'] = cost_df[f'Value (k{currency})'].round(2)
-    
-    # Display the table
+    cost_df = pd.DataFrame(cost_data)
     st.table(cost_df)
 
 
@@ -132,7 +136,29 @@ def plots_dashboard():
         return
     else:
         # Get the results from the model
-        model = st.session_state.model
+        model: Model = st.session_state.model
+
+    # Define default colors
+    DEFAULT_COLORS = {
+        'Demand': '#000000',  # Black
+        'Curtailment': '#FFA500',  # Orange
+        'Battery': '#4CC9F0',  # Light Blue
+        'Electricity Purchased': '#800080',  # Purple
+        'Electricity Sold': '#008000',  # Green
+        'Lost Load': '#F21B3F'  # Red
+}
+
+    # Add RES names to DEFAULT_COLORS
+    for i, res_name in enumerate(model.sets['renewable_sources'].values):
+        DEFAULT_COLORS[res_name] = ['#FFFF00', '#FFFFE0', '#FFFACD', '#FAFAD2'][i % 4]  # Shades of yellow
+
+    # Add Generator names to DEFAULT_COLORS
+    for i, gen_name in enumerate(model.sets['generator_types'].values):
+        DEFAULT_COLORS[gen_name] = ['#00509D', '#0066CC', '#0077B6', '#0088A3'][i % 4]  # Shades of blue
+
+    # Initialize color dictionary in session state if not present
+    if 'color_dict' not in st.session_state:
+        st.session_state.color_dict = DEFAULT_COLORS.copy()
 
     # Cost breakdown
     st.header("Cost Breakdown")
@@ -158,42 +184,43 @@ def plots_dashboard():
 
     # Color customization section
     st.write("Customize colors for each technology: click on the color picker to change the color.")
-    
-    if 'color_dict' not in st.session_state:
-        st.session_state.color_dict = DEFAULT_COLORS.copy()
 
-    res_names = st.session_state.res_names
-    gen_names = st.session_state.gen_names
+    # Define all possible elements
+    all_elements = ["Demand", "Curtailment"] + list(model.sets['renewable_sources'].values)
 
-    for res in res_names:
-        if res not in st.session_state.color_dict:
-            st.session_state.color_dict[res] = DEFAULT_COLORS['RES']
-    for gen in gen_names:
-        if gen not in st.session_state.color_dict:
-            st.session_state.color_dict[gen] = DEFAULT_COLORS['Generator']
+    # Add elements based on system configuration
+    if model.has_battery:
+        all_elements.append("Battery")
+    if model.has_generator:
+        all_elements.extend(list(model.sets['generator_types'].values))
+    if model.has_grid_connection:
+        all_elements.append("Electricity Purchased")
+        if model.get_settings('grid_connection_type', advanced=True) == 1:
+            all_elements.append("Electricity Sold")
+    if model.get_settings('lost_load_fraction') > 0.0:
+        all_elements.append("Lost Load")
 
-    # Create a single line of color pickers
-    all_elements = ["Demand", "Curtailment", "Battery"] + res_names + gen_names
-    num_columns = len(all_elements)
-    cols = st.columns(num_columns)
-
-    for i, element in enumerate(all_elements):
-        with cols[i]:
+    # Create color pickers
+    cols = st.columns(len(all_elements))
+    for element, col in zip(all_elements, cols):
+        with col:
+            default_color = st.session_state.color_dict.get(element, DEFAULT_COLORS.get(element))
             st.session_state.color_dict[element] = st.color_picker(
                 element,
                 key=f"color_{element}",
-                value=st.session_state.color_dict[element])
+                value=default_color)
+
 
     # Sizing results
     st.header("Mini-Grid Sizing")
     
     # Create and display the sizing plot
-    sizing_fig, categories, capacities, capacity_units = create_sizing_plot(model, st.session_state.color_dict)
+    sizing_fig, categories, capacities, existing_capacities, capacity_units = create_sizing_plot(model, st.session_state.color_dict)
     fig['System Sizing'] = sizing_fig
     st.pyplot(sizing_fig)
     
     # Display sizing results in a formatted table
-    sizing_df = format_sizing_table(categories, capacities, capacity_units)
+    sizing_df = format_sizing_table(categories, capacities, existing_capacities, capacity_units)
     st.table(sizing_df)
 
     # Create a dictionary of installed capacities
@@ -241,6 +268,10 @@ def plots_dashboard():
     fig['Energy Usage Pie Chart'] = energy_usage_fig
     st.pyplot(energy_usage_fig)
 
+    if model.get_settings('lost_load_fraction') > 0.0:
+        lost_load_percentage = energy_usage["Lost Load"]
+        st.metric("Lost Load Fraction", f"{lost_load_percentage:.2f}%")
+
     # Renewables Usage 
     st.subheader("Renewables Usage")
     res_sources = model.get_solution_variable('Energy Production by Renewables').coords['renewable_sources'].values
@@ -254,32 +285,34 @@ def plots_dashboard():
             selected_year = st.slider("Select Year for Renewable Usage", 
                                       min_value=min_year,
                                       max_value=max_year,
-                                      value=min_year)
+                                      value=min_year,
+                                      key=f"res_year_slider_{selected_res}")
             res_heatmap = create_heatmap(res_usage, f'{selected_res} Usage', selected_year, st.session_state.color_dict[selected_res])
             fig['Renewables Usage Heatmap'] = res_heatmap
             st.pyplot(res_heatmap)
     else:
-        st.warning("No renewable sources with installed capacity.")
+        st.warning("No installed capacity for renewable sources.")
     
     # Battery State of Charge (if applicable)
-    if model.has_battery and installed_capacities.get("Battery Bank", 0) > 0:
-        st.subheader("Battery State of Charge")
+    st.subheader("Battery State of Charge")
+    if model.has_battery:
         soc_data = get_battery_soc(model)
         if not soc_data.empty:
             soc_data.index = pd.date_range(start=f"{min_year}-01-01", periods=len(soc_data), freq='H')
             selected_year_battery = st.slider("Select Year for Battery SoC", 
                                               min_value=min_year,
                                               max_value=max_year,
-                                              value=min_year)
+                                              value=min_year,
+                                              key="battery_soc_year_slider")
             battery_soc_heatmap = create_heatmap(soc_data, 'Battery State of Charge', selected_year_battery, st.session_state.color_dict['Battery'])
             fig['Battery SoC Heatmap'] = battery_soc_heatmap
             st.pyplot(battery_soc_heatmap)
     elif model.has_battery:
-        st.warning("Battery is present in the model but has no installed capacity.")
+        st.warning("No installed capacity for battery bank.")
 
     # Generator Usage (if applicable)
+    st.subheader("Generator Usage")
     if model.has_generator:
-        st.subheader("Generator Usage")
         gen_types = model.get_solution_variable('Generator Energy Production').coords['generator_types'].values
         available_gens = [gen for gen in gen_types if installed_capacities.get(gen, 0) > 0]
         
@@ -291,12 +324,29 @@ def plots_dashboard():
                 selected_year = st.slider("Select Year for Generator Usage", 
                                           min_value=min_year,
                                           max_value=max_year,
-                                          value=min_year)
+                                          value=min_year,
+                                          key=f"gen_year_slider_{selected_gen}")
                 generator_heatmap = create_heatmap(gen_usage, f'{selected_gen} Usage', selected_year, st.session_state.color_dict[selected_gen])
                 fig['Generator Usage Heatmap'] = generator_heatmap
                 st.pyplot(generator_heatmap)
         else:
-            st.warning("No generators with installed capacity.")
+            st.warning("No installed capacity for generators.")
+
+    # Grid Connection (if applicable)
+    st.subheader("Grid Connection")
+    if model.has_grid_connection:
+        grid_usage = get_grid_usage(model)
+        grid_usage.index = pd.date_range(start=f"{min_year}-01-01", periods=len(grid_usage), freq='H')
+        selected_year_grid = st.slider("Select Year for Grid Usage", 
+                                            min_value=min_year,
+                                            max_value=max_year,
+                                            value=min_year,
+                                            key="grid_year_slider")
+        grid_heatmap = create_heatmap(grid_usage, 'Electricity from Grid', selected_year_grid, st.session_state.color_dict['Electricity Purchased'])
+        fig['Grid Usage Heatmap'] = grid_heatmap
+        st.pyplot(grid_heatmap)
+    else:
+        st.warning("No grid connection.")
 
     st.write("---")  # Add a separator
 

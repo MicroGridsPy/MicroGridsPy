@@ -14,7 +14,7 @@ def add_cost_calculation_constraints(
     var: Dict[str, linopy.Variable],
     has_battery: bool,
     has_generator: bool,
-    has_grid: bool) -> None:
+    has_grid_connection: bool) -> None:
     """
     Add cost calculation constraints to the model.
 
@@ -25,31 +25,28 @@ def add_cost_calculation_constraints(
     :param var: Dictionary of variables
     :param has_battery: Boolean indicating whether the system has a battery
     :param has_generator: Boolean indicating whether the system has a generator
-    :param has_grid: Boolean indicating whether the system has a grid connection
+    :param has_grid_connection: Boolean indicating whether the system has a grid connection
     """
-    try:
-        add_investment_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid)
-        # Optimization goal: NPC
-        if settings.project_settings.optimization_goal == 0:
-            add_fixed_om_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid, actualized=True)
-            if settings.advanced_settings.milp_formulation and settings.generator_params.partial_load:
-                add_scenario_variable_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid, partial_load=True, actualized=True)
-            else:
-                add_scenario_variable_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid, partial_load = False, actualized=True)
-            add_salvage_value(model, settings, sets, param, var, has_battery, has_generator, has_grid)
-            add_scenario_net_present_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid)
-            add_net_present_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid)
-        # Optimization goal: Variable Cost
-        elif settings.project_settings.optimization_goal == 1:
-            add_fixed_om_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid, actualized=False)
-            if settings.advanced_settings.milp_formulation and settings.generator_params.partial_load:
-                add_scenario_variable_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid, partial_load=True, actualized=False)
-            else:
-                add_scenario_variable_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid, partial_load=False, actualized=False)
-            add_total_variable_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid)
-            add_investment_limit(model, settings, sets, param, var, has_battery, has_generator, has_grid)
-    except Exception as e:
-        raise ValueError(f"Error in adding cost calculation constraints: {str(e)}")
+    add_investment_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid_connection)
+    # Optimization goal: NPC
+    if settings.project_settings.optimization_goal == 0:
+        add_fixed_om_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid_connection, actualized=True)
+        if settings.advanced_settings.milp_formulation and settings.generator_params.partial_load:
+            add_scenario_variable_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid_connection, partial_load=True, actualized=True)
+        else:
+            add_scenario_variable_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid_connection, partial_load = False, actualized=True)
+        add_salvage_value(model, settings, sets, param, var, has_battery, has_generator, has_grid_connection)
+        add_scenario_net_present_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid_connection)
+        add_net_present_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid_connection)
+    # Optimization goal: Variable Cost
+    elif settings.project_settings.optimization_goal == 1:
+        add_fixed_om_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid_connection, actualized=False)
+        if settings.advanced_settings.milp_formulation and settings.generator_params.partial_load:
+            add_scenario_variable_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid_connection, partial_load=True, actualized=False)
+        else:
+            add_scenario_variable_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid_connection, partial_load=False, actualized=False)
+        add_total_variable_cost(model, settings, sets, param, var, has_battery, has_generator, has_grid_connection)
+        add_investment_limit(model, settings, sets, param, var, has_battery, has_generator, has_grid_connection)
 
 def add_investment_cost(
     model: Model, 
@@ -59,28 +56,30 @@ def add_investment_cost(
     var: Dict[str, linopy.Variable],
     has_battery: bool,
     has_generator: bool,
-    has_grid: bool) -> None:
+    has_grid_connection: bool) -> None:
     """ Add investment cost constraint to the model."""
+    # Check if it's a brownfield scenario
+    is_brownfield: bool = settings.advanced_settings.brownfield
     step_duration: int = settings.advanced_settings.step_duration    
     # Create a list of years for each investment step
     investment_steps_years: List = [step * step_duration for step in range(len(sets.steps.values))]
     # Calculate discount factor for each year
     discount_factor = xr.DataArray([1 / ((1 + param['DISCOUNT_RATE']) ** inv_year) for inv_year in investment_steps_years],
                                     coords={'steps': sets.steps.values})
-
+    # Initialize investment cost
     investment_cost: linopy.LinearExpression = 0
 
     for step in sets.steps.values:
         if step == 1:
             # Initial Investment Cost
-            investment_cost += (var['res_units'].sel(steps=step) * 
-                                param['RES_NOMINAL_CAPACITY'] * param['RES_SPECIFIC_INVESTMENT_COST']).sum('renewable_sources')
+            investment_cost += (var['res_units'].sel(steps=step) * param['RES_NOMINAL_CAPACITY'] * 
+                                param['RES_SPECIFIC_INVESTMENT_COST']).sum('renewable_sources')
             if has_battery:
-                investment_cost += (var['battery_units'].sel(steps=step) * 
-                                    param['BATTERY_NOMINAL_CAPACITY'] * param['BATTERY_SPECIFIC_INVESTMENT_COST'])
+                investment_cost += (var['battery_units'].sel(steps=step) * param['BATTERY_NOMINAL_CAPACITY'] * 
+                                    param['BATTERY_SPECIFIC_INVESTMENT_COST'])
             if has_generator:
                 investment_cost += (var['generator_units'].sel(steps=step) * 
-                                    param['GENERATOR_NOMINAL_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'])
+                                    param['GENERATOR_NOMINAL_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST']).sum('generator_types')
         else:
             # Subsequent Investment Cost
             investment_cost += ((var['res_units'].sel(steps=step) - var['res_units'].sel(steps=step - 1)) * 
@@ -93,7 +92,15 @@ def add_investment_cost(
             if has_generator:
                 investment_cost += ((var['generator_units'].sel(steps=step) - var['generator_units'].sel(steps=step - 1)) * 
                                     param['GENERATOR_NOMINAL_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] *
-                                    discount_factor.sel(steps=step))
+                                    discount_factor.sel(steps=step)).sum('generator_types')
+                
+    if has_grid_connection:
+        year_grid_connection: int = settings.grid_params.year_grid_connection
+        years: List[int] = sets.years.values
+        start_year: int = years[0]
+        grid_connection_discount = 1 / ((1 + param['DISCOUNT_RATE']) ** (year_grid_connection - start_year))
+        investment_cost += (param['GRID_DISTANCE'] * param['GRID_CONNECTION_COST'] * grid_connection_discount)
+    
     try:
         # Add constraint
         model.add_constraints(var['total_investment_cost'] == investment_cost, name="Total Investment Cost Constraint")
@@ -108,7 +115,7 @@ def add_fixed_om_cost(
     var: Dict[str, linopy.Variable],
     has_battery: bool,
     has_generator: bool,
-    has_grid: bool,
+    has_grid_connection: bool,
     actualized: bool) -> None:
     """Calculate fixed operation and maintenance cost and add the corresponding constraint to the model."""
     years = sets.years.values
@@ -126,40 +133,118 @@ def add_fixed_om_cost(
         for year in sets.years.values:
             # Retrieve the step for the current year
             step = years_steps_tuples[year - years[0]][1]
-            
+
             # RES O&M cost (actualized)
             om_cost += ((var['res_units'].sel(steps=step) * 
                         param['RES_NOMINAL_CAPACITY'] * param['RES_SPECIFIC_INVESTMENT_COST'] * param['RES_SPECIFIC_OM_COST']) *
                         discount_factor.sel(years=year)).sum('renewable_sources')
+            
+            if settings.advanced_settings.brownfield:
+                # Calculate the total age of the existing capacity at each year
+                total_age = param['RES_EXISTING_YEARS'] + (year - sets.years[0])
+        
+                # Create a boolean mask for renewable sources that have exceeded their lifetime
+                lifetime_exceeded = total_age > param['RES_LIFETIME']
+
+                if lifetime_exceeded is False:
+                    # Existing RES O&M cost (actualized)
+                    om_cost += ((param['RES_EXISTING_CAPACITY'] * param['RES_SPECIFIC_INVESTMENT_COST'] * param['RES_SPECIFIC_OM_COST'] *
+                                discount_factor.sel(years=year)).sum('renewable_sources'))
 
             # Battery O&M cost (actualized)
             if has_battery:
                 om_cost += ((var['battery_units'].sel(steps=step) * 
                             param['BATTERY_NOMINAL_CAPACITY'] * param['BATTERY_SPECIFIC_INVESTMENT_COST'] * param['BATTERY_SPECIFIC_OM_COST'] * 
                             discount_factor.sel(years=year)))
+                
+                if settings.advanced_settings.brownfield:
+                    # Calculate the total age of the existing capacity at each year
+                    total_age = param['BATTERY_EXISTING_YEARS'] + (year - sets.years[0])
+        
+                    # Create a boolean mask for renewable sources that have exceeded their lifetime
+                    lifetime_exceeded = total_age > param['BATTERY_LIFETIME']
+
+                    if lifetime_exceeded is False:
+                        # Existing Battery O&M cost (actualized)
+                        om_cost += ((param['BATTERY_EXISTING_CAPACITY'] * param['BATTERY_SPECIFIC_INVESTMENT_COST'] * param['BATTERY_SPECIFIC_OM_COST'] * 
+                                    discount_factor.sel(years=year)))
             
             # Generator O&M cost (actualized)
             if has_generator:
                 om_cost += ((var['generator_units'].sel(steps=step) * 
                             param['GENERATOR_NOMINAL_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] * param['GENERATOR_SPECIFIC_OM_COST'] * 
-                            discount_factor.sel(years=year)))
+                            discount_factor.sel(years=year))).sum('generator_types')
+                if settings.advanced_settings.brownfield:
+                    # Calculate the total age of the existing capacity at each year
+                    total_age = param['GENERATOR_EXISTING_YEARS'] + (year - sets.years[0])
+        
+                    # Create a boolean mask for renewable sources that have exceeded their lifetime
+                    lifetime_exceeded = total_age > param['GENERATOR_LIFETIME']
+
+                    if lifetime_exceeded is False:
+                        # Existing Generator O&M cost (actualized)
+                        om_cost += ((param['GENERATOR_EXISTING_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] * param['GENERATOR_SPECIFIC_OM_COST'] * 
+                                    discount_factor.sel(years=year)).sum('generator_types'))
+            
+            # Grid connection cost (actualized)
+            if has_grid_connection:
+                if year >= settings.grid_params.year_grid_connection:
+                    om_cost += (param['GRID_DISTANCE'] * param['GRID_CONNECTION_COST'] * param['GRID_MAINTENANCE_COST'] * 
+                                discount_factor.sel(years=year))
 
     else:
-        for step in sets.steps.values:
+        for year in sets.years.values:
+            # Retrieve the step for the current year
+            step = years_steps_tuples[year - years[0]][1]
+            
             # RES O&M cost
             om_cost += (var['res_units'].sel(steps=step) * 
                         param['RES_NOMINAL_CAPACITY'] * param['RES_SPECIFIC_INVESTMENT_COST'] * param['RES_SPECIFIC_OM_COST']).sum('renewable_sources')
+            if settings.advanced_settings.brownfield:
+                # Calculate the total age of the existing capacity at each year
+                total_age = param['RES_EXISTING_YEARS'] + (year - sets.years[0])
+        
+                # Create a boolean mask for renewable sources that have exceeded their lifetime
+                lifetime_exceeded = total_age > param['RES_LIFETIME']
+
+                if lifetime_exceeded is False:
+                    # Existing RES O&M cost
+                    om_cost += (param['RES_EXISTING_CAPACITY'] * param['RES_SPECIFIC_INVESTMENT_COST'] * param['RES_SPECIFIC_OM_COST']).sum('renewable_sources')
 
             # Battery O&M cost
             if has_battery:
                 om_cost += (var['battery_units'].sel(steps=step) * 
                             param['BATTERY_NOMINAL_CAPACITY'] * param['BATTERY_SPECIFIC_INVESTMENT_COST'] * param['BATTERY_SPECIFIC_OM_COST'])
+                if settings.advanced_settings.brownfield:
+                    # Calculate the total age of the existing capacity at each year
+                    total_age = param['BATTERY_EXISTING_YEARS'] + (year - sets.years[0])
+        
+                    # Create a boolean mask for renewable sources that have exceeded their lifetime
+                    lifetime_exceeded = total_age > param['BATTERY_LIFETIME']
+
+                    if lifetime_exceeded is False:
+                        # Existing Battery O&M cost
+                        om_cost += (param['BATTERY_EXISTING_CAPACITY'] * param['BATTERY_SPECIFIC_INVESTMENT_COST'] * param['BATTERY_SPECIFIC_OM_COST'])
             
             # Generator O&M cost
             if has_generator:
                 om_cost += (var['generator_units'].sel(steps=step) * 
-                            param['GENERATOR_NOMINAL_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] * param['GENERATOR_SPECIFIC_OM_COST']) 
+                            param['GENERATOR_NOMINAL_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] * param['GENERATOR_SPECIFIC_OM_COST']).sum('generator_types') 
+                if settings.advanced_settings.brownfield:
+                    # Calculate the total age of the existing capacity at each year
+                    total_age = param['GENERATOR_EXISTING_YEARS'] + (year - sets.years[0])
+        
+                    # Create a boolean mask for renewable sources that have exceeded their lifetime
+                    lifetime_exceeded = total_age > param['GENERATOR_LIFETIME']
 
+                    if lifetime_exceeded is False:
+                        # Existing Generator O&M cost
+                        om_cost += (param['GENERATOR_EXISTING_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] * param['GENERATOR_SPECIFIC_OM_COST']).sum('generator_types')
+                
+            # Grid connection cost
+            if has_grid_connection:
+                if year >= settings.grid_params.year_grid_connection:
+                    om_cost += (param['GRID_DISTANCE'] * param['GRID_CONNECTION_COST'] * param['GRID_MAINTENANCE_COST'])
 
     try:
         # Add constraint
@@ -229,9 +314,6 @@ def add_generator_fuel_cost(
     yearly_cost: linopy.LinearExpression = 0
     generator_fuel_cost: linopy.LinearExpression = 0
 
-    print("ECCOLO")
-    print(param['GENERATOR_MARGINAL_COST'])
-
     if partial_load == False:
         for year in years:
             yearly_cost = (var['generator_energy_production'].sel(years=year) * param['GENERATOR_MARGINAL_COST'].sel(years=year)).sum('periods')
@@ -258,65 +340,180 @@ def add_generator_fuel_cost(
         model.add_constraints(var[var_name] == generator_fuel_cost, name=constraint_name)
     except Exception as e:
         raise ValueError(f"Error in calculating the Total Fuel Cost ({'Actualized' if actualized else 'Not Actualized'}): {str(e)}")
-
-def add_salvage_value(
+    
+def add_electricity_cost(
     model: Model, 
+    settings: ProjectParameters, 
+    sets: xr.Dataset, 
+    param: xr.Dataset, 
+    var: Dict[str, linopy.Variable],
+    actualized: bool) -> None:
+    """
+    Add grid connection cost constraint to the model.
+
+    :param model: The optimization model
+    :param settings: Project parameters
+    :param sets: Dataset containing sets
+    :param param: Dataset containing parameters
+    :param var: Dictionary of variables
+    :param actualized: Boolean indicating whether to use actualized costs
+    """
+    start_year = sets.years.values[0]
+    energy_from_grid_cost = (var['energy_from_grid'] * param['ELECTRICTY_PURCHASED_COST']).sum('periods')
+
+    # Add revenues related to purchase/sell mode
+    if settings.advanced_settings.grid_connection_type == 1:
+        energy_to_grid_revenue = (var['energy_to_grid'] * param['ELECTRICTY_SOLD_PRICE']).sum('periods')
+
+    # Initialize total grid connection cost
+    total_electricity_cost: linopy.LinearExpression = 0
+
+    for year in sets.years.values:
+        # Calculate yearly cost
+        if settings.advanced_settings.grid_connection_type == 1:
+            yearly_cost = energy_from_grid_cost.sel(years=year) - energy_to_grid_revenue.sel(years=year)
+        else: 
+            yearly_cost = energy_from_grid_cost.sel(years=year)
+
+        # Calculate discounted yearly cost and sum over years
+        if actualized:
+            # Calculate discounted yearly cost and sum over years
+            total_electricity_cost += yearly_cost / ((1 + param['DISCOUNT_RATE'])**(year - start_year + 1))
+        else:
+            total_electricity_cost += yearly_cost
+
+    try:
+        # Add constraint
+        constraint_name = "Grid Connection Cost ({}) Constraint".format("Actualized" if actualized else "Not Actualized")
+        var_name = 'scenario_grid_connection_cost_act' if actualized else 'scenario_grid_connection_cost_nonact'
+        model.add_constraints(var[var_name] == total_electricity_cost, name=constraint_name)
+    except Exception as e:
+        raise ValueError(f"Error in calculating the Grid Connection Cost ({'Actualized' if actualized else 'Not Actualized'}): {str(e)}")
+    
+def add_lost_load_cost(
+    model: Model, 
+    settings: ProjectParameters, 
+    sets: xr.Dataset, 
+    param: xr.Dataset, 
+    var: Dict[str, linopy.Variable],
+    actualized: bool) -> None:
+    """
+    Add grid connection cost constraint to the model.
+
+    :param model: The optimization model
+    :param settings: Project parameters
+    :param sets: Dataset containing sets
+    :param param: Dataset containing parameters
+    :param var: Dictionary of variables
+    :param actualized: Boolean indicating whether to use actualized costs
+    """
+    start_year = sets.years.values[0]
+    lost_load_cost = (var['lost_load'] * param['LOST_LOAD_SPECIFIC_COST']).sum('periods')
+
+    # Initialize total grid connection cost
+    total_lost_load_cost: linopy.LinearExpression = 0
+    
+    for year in sets.years.values:
+        if actualized:
+            # Calculate discounted yearly cost and sum over years
+            total_lost_load_cost += lost_load_cost.sel(years=year) / ((1 + param['DISCOUNT_RATE'])**(year - start_year + 1))
+        else:
+            total_lost_load_cost += lost_load_cost.sel(years=year)
+
+    try:
+        # Add constraint
+        constraint_name = "Lost Load Cost ({}) Constraint".format("Actualized" if actualized else "Not Actualized")
+        var_name = 'scenario_lost_load_cost_act' if actualized else 'scenario_lost_load_cost_nonact'
+        model.add_constraints(var[var_name] == total_lost_load_cost, name=constraint_name)
+    except Exception as e:
+        raise ValueError(f"Error in calculating the Lost Load Cost ({'Actualized' if actualized else 'Not Actualized'}): {str(e)}")
+    
+def add_salvage_value(
+    model: linopy.Model, 
     settings: ProjectParameters, 
     sets: xr.Dataset, 
     param: xr.Dataset, 
     var: Dict[str, linopy.Variable],
     has_battery: bool,
     has_generator: bool,
-    has_grid: bool) -> None:
-    """Add salvage value constraint to the model."""
+    has_grid_connection: bool
+) -> None:
     project_duration = settings.project_settings.time_horizon
     step_duration = settings.advanced_settings.step_duration
+    years = sets.years.values
     discount_factor = 1 / ((1 + param['DISCOUNT_RATE']) ** project_duration)
     salvage_value: linopy.LinearExpression = 0
 
-
     for step in sets.steps.values:
+        # Initial investment step (including existing capacity for brownfield)
         if step == 1:
-            # Initial investment step
+            
+            # RES salvage
             salvage_value += (var['res_units'].sel(steps=step) * 
                               param['RES_NOMINAL_CAPACITY'] * param['RES_SPECIFIC_INVESTMENT_COST'] *
-                              ((param['RES_LIFETIME'] - project_duration) / param['RES_LIFETIME']) *
+                              (max(0, param['RES_LIFETIME'] - project_duration) / param['RES_LIFETIME']) *
                               discount_factor).sum('renewable_sources')
+            
+            if settings.advanced_settings.brownfield:
+                # Existing RES salvage (brownfield)
+                salvage_value += (param['RES_EXISTING_CAPACITY'] * param['RES_SPECIFIC_INVESTMENT_COST'] *
+                                 (max(0, param['RES_LIFETIME'] - param['RES_EXISTING_YEARS'] - project_duration) / param['RES_LIFETIME']) *
+                                 discount_factor).sum('renewable_sources')
+
             if has_battery:
                 salvage_value += (var['battery_units'].sel(steps=step) * 
                                   param['BATTERY_NOMINAL_CAPACITY'] * param['BATTERY_SPECIFIC_INVESTMENT_COST'] *
-                                  ((param['BATTERY_LIFETIME'] - project_duration) / param['BATTERY_LIFETIME']) *
+                                  (max(0, param['BATTERY_LIFETIME'] - project_duration) / param['BATTERY_LIFETIME']) *
                                   discount_factor)
+                if settings.advanced_settings.brownfield:
+                    # Existing battery salvage (brownfield)
+                    salvage_value += (param['BATTERY_EXISTING_CAPACITY'] * param['BATTERY_SPECIFIC_INVESTMENT_COST'] *
+                                     (max(0, param['BATTERY_LIFETIME'] - param['BATTERY_EXISTING_YEARS'] - project_duration) / param['BATTERY_LIFETIME']) *
+                                     discount_factor)
+
             if has_generator:
                 salvage_value += (var['generator_units'].sel(steps=step) * 
                                   param['GENERATOR_NOMINAL_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] *
-                                  ((param['GENERATOR_LIFETIME'] - project_duration) / param['GENERATOR_LIFETIME']) *
-                                  discount_factor)
+                                  (max(0, param['GENERATOR_LIFETIME'] - project_duration) / param['GENERATOR_LIFETIME']) *
+                                  discount_factor).sum('generator_types')
+                if settings.advanced_settings.brownfield:
+                    # Existing generator salvage (brownfield)
+                    salvage_value += (param['GENERATOR_EXISTING_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] *
+                                     (max(0, param['GENERATOR_LIFETIME'] - param['GENERATOR_EXISTING_YEARS'] - project_duration) / param['GENERATOR_LIFETIME']) *
+                                     discount_factor).sum('generator_types')
+        # Subsequent investment steps
         else:
-            # Subsequent investment steps
+            # RES salvage
             additional_units = var['res_units'].sel(steps=step) - var['res_units'].sel(steps=step - 1)
-            remaining_lifetime = param['RES_LIFETIME'] - (project_duration - (step * step_duration))
+            remaining_lifetime = max(0, param['RES_LIFETIME'] - (project_duration - (step * step_duration)))
             salvage_value += (additional_units * 
                               param['RES_NOMINAL_CAPACITY'] * param['RES_SPECIFIC_INVESTMENT_COST'] *
                               (remaining_lifetime / param['RES_LIFETIME']) *
                               discount_factor).sum('renewable_sources')
+
             if has_battery:
                 additional_battery_units = var['battery_units'].sel(steps=step) - var['battery_units'].sel(steps=step - 1)
-                remaining_battery_lifetime = param['BATTERY_LIFETIME'] - (project_duration - (step * step_duration))
+                remaining_battery_lifetime = max(0, param['BATTERY_LIFETIME'] - (project_duration - (step * step_duration)))
                 salvage_value += (additional_battery_units * 
                                   param['BATTERY_NOMINAL_CAPACITY'] * param['BATTERY_SPECIFIC_INVESTMENT_COST'] *
                                   (remaining_battery_lifetime / param['BATTERY_LIFETIME']) *
                                   discount_factor)
+
             if has_generator:
                 additional_generator_units = var['generator_units'].sel(steps=step) - var['generator_units'].sel(steps=step - 1)
-                remaining_generator_lifetime = param['GENERATOR_LIFETIME'] - (project_duration - (step * step_duration))
+                remaining_generator_lifetime = max(0, param['GENERATOR_LIFETIME'] - (project_duration - (step * step_duration)))
                 salvage_value += (additional_generator_units * 
                                   param['GENERATOR_NOMINAL_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] *
                                   (remaining_generator_lifetime / param['GENERATOR_LIFETIME']) *
-                                  discount_factor)
+                                  discount_factor).sum('generator_types')
+
+    if has_grid_connection:
+        year_grid_connection = (settings.grid_params.year_grid_connection - years[0])
+        salvage_value += (param['GRID_DISTANCE'] * param['GRID_CONNECTION_COST'] /
+                         ((1 + param['DISCOUNT_RATE'])**(project_duration - year_grid_connection)))
+
     try:
-        # Add constraint
-        model.add_constraints(var['salvage_value'] == salvage_value.sum(), name="Salvage Value Constraint")
+        model.add_constraints(var['salvage_value'] == salvage_value, name="Salvage Value Constraint")
     except Exception as e:
         raise ValueError(f"Error in calculating salvage value: {str(e)}")
 
@@ -328,7 +525,7 @@ def add_scenario_variable_cost(
     var: Dict[str, linopy.Variable],
     has_battery: bool,
     has_generator: bool,
-    has_grid: bool,
+    has_grid_connection: bool,
     partial_load: bool,
     actualized: bool) -> None:
     """Add scenario variable cost constraint to the model."""
@@ -350,7 +547,14 @@ def add_scenario_variable_cost(
         generator_fuel_cost_var = 'total_fuel_cost_act' if actualized else 'total_fuel_cost_nonact'
         scenario_variable_cost += var[generator_fuel_cost_var]
 
+    # Add grid connection cost
+    if has_grid_connection:
+        add_electricity_cost(model, settings, sets, param, var, actualized)
+        grid_connection_cost_var = 'scenario_grid_connection_cost_act' if actualized else 'scenario_grid_connection_cost_nonact'
+        scenario_variable_cost += var[grid_connection_cost_var]
+
     if settings.project_settings.lost_load_specific_cost > 0.0:
+        add_lost_load_cost(model, settings, sets, param, var, actualized)
         lost_load_cost_var = 'scenario_lost_load_cost_act' if actualized else 'scenario_lost_load_cost_nonact'
         scenario_variable_cost += var[lost_load_cost_var]
     
@@ -370,7 +574,7 @@ def add_total_variable_cost(
     var: Dict[str, linopy.Variable],
     has_battery: bool,
     has_generator: bool,
-    has_grid: bool) -> None:
+    has_grid_connection: bool) -> None:
     """
     Add total variable cost (objective) constraint to the model.
 
@@ -396,7 +600,7 @@ def add_investment_limit(
     var: Dict[str, linopy.Variable],
     has_battery: bool,
     has_generator: bool,
-    has_grid: bool) -> None:
+    has_grid_connection: bool) -> None:
     """
     Add investment limit constraint to the model.
 
@@ -420,7 +624,7 @@ def add_scenario_net_present_cost(
     var: Dict[str, linopy.Variable],
     has_battery: bool,
     has_generator: bool,
-    has_grid: bool) -> None:
+    has_grid_connection: bool) -> None:
     """Add scenario net present cost constraint to the model."""
     try:
         # Add constraint
@@ -439,7 +643,7 @@ def add_net_present_cost(
     var: Dict[str, linopy.Variable],
     has_battery: bool,
     has_generator: bool,
-    has_grid: bool) -> None:
+    has_grid_connection: bool) -> None:
     """Add net present cost constraint (objective function) to the model."""
     try:
         # Add constraint

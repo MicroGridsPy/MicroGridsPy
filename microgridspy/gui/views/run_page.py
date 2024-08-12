@@ -1,7 +1,8 @@
 import streamlit as st
 import contextlib
 import io
-import yaml
+import threading
+import time
 
 from pathlib import Path
 from datetime import datetime
@@ -9,12 +10,6 @@ from datetime import datetime
 from microgridspy.model.parameters import ProjectParameters
 from microgridspy.model.model import Model
 from config.path_manager import PathManager
-
-def capture_solver_output(model):
-    output = io.StringIO()
-    with contextlib.redirect_stdout(output):
-        model.solve(solver="gurobi")
-    return output.getvalue()
 
 def datetime_to_str(obj):
     if isinstance(obj, datetime):
@@ -58,8 +53,7 @@ def update_renewable_params(renewables_params, res_sources):
     renewable_fields = [
         'res_existing_area', 'res_existing_capacity', 'res_existing_years',
         'res_inverter_efficiency', 'res_lifetime', 'res_specific_area',
-        'res_specific_investment_cost', 'res_specific_om_cost', 'res_unit_co2_emission'
-    ]
+        'res_specific_investment_cost', 'res_specific_om_cost', 'res_unit_co2_emission']
     
     for field in renewable_fields:
         if hasattr(renewables_params, field):
@@ -82,8 +76,7 @@ def update_generator_params(generator_params, gen_types):
         'gen_existing_capacity', 'gen_existing_years', 'gen_lifetime',
         'gen_min_output', 'gen_names', 'gen_nominal_capacity',
         'gen_nominal_efficiency', 'gen_specific_investment_cost',
-        'gen_specific_om_cost', 'gen_unit_co2_emission'
-    ]
+        'gen_specific_om_cost', 'gen_unit_co2_emission']
     
     for field in generator_fields:
         if hasattr(generator_params, field):
@@ -105,6 +98,11 @@ def run_model():
     
     # Get the current project's YAML file path
     project_name: str = st.session_state.get('project_name')
+    solver: str = st.session_state.get('solver')
+    if not project_name:
+        st.error("No project is currently loaded. Please create or load a project first.")
+        return
+
     path_manager: PathManager = PathManager(project_name)
     yaml_filepath: Path = path_manager.PROJECTS_FOLDER_PATH / project_name / f"{project_name}.yaml"
     results_enabled = False
@@ -140,8 +138,7 @@ def run_model():
     for your mini-grid project. The model will determine the optimal sizing and dispatch strategy (perfect foresight)
     for your mini-grid components based on the provided parameters.
     
-    Click the 'Run Optimization Model' button below to start the process. You'll be able to see
-    the solver's output in real-time as it progresses.
+    Click the 'Run Optimization Model' button below to start the process. The solver's output will be displayed in the IDE console.
     """)
 
     # Run model button
@@ -153,15 +150,22 @@ def run_model():
         # Initialize the linopy optimization model
         model = Model(settings)
         
-        # Create a placeholder for the solver output
-        solver_output_placeholder = st.empty()
+        # Create a log file path
+        log_file_path = path_manager.PROJECTS_FOLDER_PATH / project_name / f"{project_name}_solver_log.txt"
         
-        with st.spinner("Running optimization model..."):
-            # Capture and display solver output
-            solver_output = capture_solver_output(model)
-            solver_output_placeholder.text_area("Solver Output", solver_output, height=300)
+        with st.spinner(f"Optimizing the energy system using {solver}. Please check the IDE console for solver progress..."):
+            # Solve the model
+            model.solve(solver=solver, log_fn=str(log_file_path))
         
         st.success("Optimization completed successfully!")
+
+        # Display the solver log
+        if log_file_path.exists():
+            with open(log_file_path, 'r') as log_file:
+                solver_log = log_file.read()
+            st.text_area("Solver Log", solver_log, height=300)
+        else:
+            st.warning("Solver log file not found.")
 
         # Store results in session state
         st.session_state.model = model

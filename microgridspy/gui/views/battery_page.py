@@ -28,14 +28,14 @@ def battery_technology() -> None:
     
         st.session_state.battery_chemistry = st.text_input("Battery Chemistry", value=st.session_state.battery_chemistry)
         if unit_committment:
-            st.session_state.battery_nominal_capacity = st.number_input("Nominal Capacity [Wh]", value=st.session_state.battery_nominal_capacity)
-        st.session_state.battery_specific_investment_cost = st.number_input(f"Specific Investment Cost [{currency}/Wh]", value=st.session_state.battery_specific_investment_cost,)
-        st.session_state.battery_specific_electronic_investment_cost = st.number_input(f"Specific Electronic Investment Cost [{currency}/Wh]", value=st.session_state.battery_specific_electronic_investment_cost)
-        st.session_state.battery_specific_om_cost = st.number_input("Specific O&M Cost [% of investment cost]", value=st.session_state.battery_specific_om_cost)
-        st.session_state.battery_discharge_battery_efficiency = st.number_input("Discharge Efficiency [-]", min_value=0.0, max_value=1.0, value=st.session_state.battery_discharge_battery_efficiency)
-        st.session_state.battery_charge_battery_efficiency = st.number_input("Charge Efficiency [-]", min_value=0.0, max_value=1.0, value=st.session_state.battery_charge_battery_efficiency)
-        st.session_state.battery_initial_soc = st.number_input("Initial State of Charge [-]", min_value=0.0, max_value=1.0, value=st.session_state.battery_initial_soc)
-        st.session_state.battery_depth_of_discharge = st.number_input("Depth of Discharge [-]", min_value=0.0, max_value=1.0, value=st.session_state.battery_depth_of_discharge)
+            st.session_state.battery_nominal_capacity = st.number_input("Nominal Capacity [Wh]", min_value=0.0, value=st.session_state.battery_nominal_capacity)
+        st.session_state.battery_specific_investment_cost = st.number_input(f"Specific Investment Cost [{currency}/Wh]", min_value=0.0, value=st.session_state.battery_specific_investment_cost,)
+        st.session_state.battery_specific_electronic_investment_cost = st.number_input(f"Specific Electronic Investment Cost [{currency}/Wh]", min_value=0.0, value=st.session_state.battery_specific_electronic_investment_cost)
+        st.session_state.battery_specific_om_cost = st.number_input(f"Specific O&M Cost as % of investment cost [%]", min_value=0.0, value=st.session_state.battery_specific_om_cost * 100) / 100
+        st.session_state.battery_discharge_battery_efficiency = st.number_input("Discharge Efficiency [%]", min_value=0.0, max_value=100.0, value=st.session_state.battery_discharge_battery_efficiency * 100) / 100
+        st.session_state.battery_charge_battery_efficiency = st.number_input("Charge Efficiency [%]", min_value=0.0, max_value=100.0, value=st.session_state.battery_charge_battery_efficiency * 100) / 100
+        st.session_state.battery_initial_soc = st.number_input("Initial State of Charge [%]", min_value=0.0, max_value=100.0, value=st.session_state.battery_initial_soc * 100) / 100
+        st.session_state.battery_depth_of_discharge = st.number_input("Depth of Discharge [%]", min_value=0.0, max_value=100.0, value=st.session_state.battery_depth_of_discharge * 100) / 100
         st.session_state.maximum_battery_discharge_time = st.number_input("Maximum Discharge Time [hours]", value=st.session_state.maximum_battery_discharge_time)
         st.session_state.maximum_battery_charge_time = st.number_input("Maximum Charge Time [hours]", value=st.session_state.maximum_battery_charge_time)
         st.session_state.battery_cycles = st.number_input("Battery Cycles [cycles]", value=st.session_state.battery_cycles)
@@ -48,7 +48,11 @@ def battery_technology() -> None:
         if brownfield:
             st.write(f"### Brownfield project:")
             st.session_state.battery_existing_capacity = st.number_input(
-                "Existing Capacity [Wh]", value=st.session_state.battery_existing_capacity)
+                "Existing Capacity [kWh]",
+                min_value=0.0, 
+                value=st.session_state.battery_existing_capacity * 1000) / 1000
+            st.session_state.battery_existing_years = st.number_input(
+                "Existing Years [years]", min_value=0, max_value=(st.session_state.battery_expected_lifetime - 1), value=st.session_state.battery_existing_years)
     else:
         st.warning("Battery technology is not included in the system configuration. If you want to include a battery, please edit the project settings page.")
 

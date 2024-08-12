@@ -11,7 +11,7 @@ project_settings:
   optimization_goal: 0
   investment_cost_limit: 500000.0
   system_configuration: 0
-  solver: 0
+  solver: "highs"
   renewable_penetration: 0.0
   land_availability: 0.0
   battery_independence: 0
@@ -27,7 +27,6 @@ advanced_settings:
   unit_commitment: false
   brownfield: false
   grid_connection: false
-  grid_availability_simulation: false
   grid_connection_type: 0
   wacc_calculation: false
   cost_of_equity: 0.12
@@ -138,4 +137,18 @@ generator_params:
   partial_load: false
   gen_min_output: [0.3] #fraction
   gen_cost_increase: [0.01] #fraction
+
+grid_params:
+  year_grid_connection : 1
+  electricity_purchased_cost : 0.00014 #USD/Wh
+  electricity_sold_price : 0.0 #USD/Wh
+  grid_distance : 0.5 #km
+  grid_connection_cost : 14000 #USD
+  grid_maintenance_cost : 0.025 #fraction
+  maximum_grid_power : 80000 #W
+  national_grid_specific_co2_emissions : 0.1495 #kgCO2/kWh
+  grid_availability_simulation: false
+  grid_average_number_outages : 43.48 #outages/year
+  grid_average_outage_duration : 455 #hours
+  
   

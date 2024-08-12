@@ -1,21 +1,61 @@
 import xarray as xr
+import numpy as np
 
-from typing import List
+from typing import List, Tuple
 
 from microgridspy.model.model import Model
+
+def calculate_grid_costs(model: Model, actualized: bool) -> Tuple[float, float, float, float]:
+    """Calculate grid-related costs."""
+    grid_investment_cost = model.parameters['GRID_CONNECTION_COST'].values * model.parameters['GRID_DISTANCE'].values
+    grid_fixed_om_cost = grid_investment_cost * model.parameters['GRID_MAINTENANCE_COST'].values
+    
+    years = model.sets['years'].values
+    start_year = years[0]
+    discount_rate = model.parameters['DISCOUNT_RATE'].values.item()
+    energy_from_grid = model.get_solution_variable("Energy from Grid")
+    electricity_cost = model.parameters['ELECTRICTY_PURCHASED_COST']
+    
+    if actualized:
+        cost_electricity_purchased = sum(
+            np.sum(energy_from_grid.sel(years=year).values * electricity_cost.values) / 
+            ((1 + discount_rate) ** (year - start_year + 1))
+            for year in years
+        )
+    else:
+        cost_electricity_purchased = sum(
+            np.sum(energy_from_grid.sel(years=year).values * electricity_cost.values)
+            for year in years
+        )
+    
+    cost_electricity_sold = 0
+    if model.get_settings('grid_connection_type', advanced=True) == 1:
+        energy_to_grid = model.get_solution_variable("Energy to Grid")
+        electricity_price = model.parameters['ELECTRICTY_SOLD_PRICE']
+        if actualized:
+            cost_electricity_sold = sum(
+                np.sum(energy_to_grid.sel(years=year).values * electricity_price.values) / 
+                ((1 + discount_rate) ** (year - start_year + 1))
+                for year in years
+            )
+        else:
+            cost_electricity_sold = sum(
+                np.sum(energy_to_grid.sel(years=year).values * electricity_price.values)
+                for year in years
+            )
+    
+    return grid_investment_cost.item(), grid_fixed_om_cost.item(), cost_electricity_purchased, cost_electricity_sold
+
 
 def calculate_actualized_investment_cost(model: Model) -> float:
     """Calculate the actualized investment cost based on the optimal capacities."""
     
-    # Extract necessary parameters and variables from the model
     step_duration: int = model.get_settings('step_duration', advanced=True)
     num_steps: int = model.get_settings('num_steps', advanced=True)
     discount_rate: float = model.parameters['DISCOUNT_RATE'].values.item()
     
-    # Create a list of years for each investment step
     investment_steps_years: List = [step * step_duration for step in range(num_steps)]
     
-    # Calculate discount factor for each year
     discount_factor = xr.DataArray(
         [1 / ((1 + discount_rate) ** inv_year) for inv_year in investment_steps_years],
         coords={'steps': range(1, num_steps + 1)})
@@ -72,6 +112,11 @@ def calculate_actualized_investment_cost(model: Model) -> float:
                                     generator_nominal_capacity * 
                                     generator_specific_investment_cost * 
                                     discount_factor.sel(steps=step)).sum('generator_types').values.item()
+    
+    # Add grid investment cost if applicable
+    if model.has_grid_connection:
+        grid_investment_cost, _, _ = calculate_grid_costs(model)
+        investment_cost += grid_investment_cost
     
     return investment_cost / 1000  # Convert to thousands of currency units
 
@@ -161,11 +206,13 @@ def calculate_actualized_salvage_value(model: Model) -> float:
     return salvage_value / 1000
 
 def calculate_lcoe(model: Model, optimization_goal: str) -> float:
+    """Calculate the Levelized Cost of Energy (LCOE) or Levelized Variable Cost (LVC)."""
     demand = model.parameters['DEMAND'] / 1000 # kW
     discount_rate = model.parameters['DISCOUNT_RATE'].values.item()
     num_years = len(demand.coords['years'])
     project_years = range(num_years)
     pv_demand = sum(demand.isel(years=year-1, scenarios=0).sum().values / ((1 + discount_rate) ** year) for year in project_years)
+    
     if optimization_goal == 'NPC':
         net_present_cost = model.get_solution_variable('Net Present Cost').values.item()
         lcoe = net_present_cost / pv_demand
@@ -174,3 +221,34 @@ def calculate_lcoe(model: Model, optimization_goal: str) -> float:
         total_variable_cost = model.get_solution_variable('Total Variable Cost').values.item()
         lvc = total_variable_cost / pv_demand
         return lvc
+    
+def get_cost_details(model: Model, optimization_goal: int) -> dict:
+    """Get detailed cost breakdown."""
+    def get_cost(var_name: str) -> float:
+        value = model.get_solution_variable(var_name)
+        return value.values.item() / 1000 if value is not None else 0
+
+    actualized = optimization_goal == "NPC"
+    suffix = "(Actualized)" if actualized else "(Not Actualized)"
+    
+    cost_details = {
+        "Total Investment Cost (Actualized)": get_cost("Total Investment Cost") if actualized else calculate_actualized_investment_cost(model),
+        f"Total Variable Cost {suffix}": get_cost(f"Scenario Total Variable Cost {suffix}"),
+        f"Total Fixed O&M Cost {suffix}": get_cost(f"Operation and Maintenance Cost {suffix}"),
+        f"Total Battery Replacement Cost {suffix}": get_cost(f"Battery Replacement Cost {suffix}") if model.has_battery else 0,
+        f"Total Fuel Cost {suffix}": get_cost(f"Total Fuel Cost {suffix}") if model.has_generator else 0,
+        f"Total Salvage Value (Actualized)": get_cost("Salvage Value") if actualized else calculate_actualized_salvage_value(model)
+    }
+    
+    if model.has_grid_connection:
+        grid_investment_cost, grid_fixed_om_cost, cost_electricity_purchased, cost_electricity_sold = calculate_grid_costs(model, actualized)
+        cost_details.update({
+            f"Total Grid Connection Cost (Actualized)": get_cost("Total Grid Connection Cost (Actualized)"),
+            f"Grid Investment Cost (Actualized)": grid_investment_cost / 1000,
+            f"Grid Fixed O&M Cost {suffix}": grid_fixed_om_cost / 1000,
+            f"Total Electricity Purchased Cost {suffix}": cost_electricity_purchased / 1000
+        })
+        if model.get_settings('grid_connection_type', advanced=True) == 1:
+            cost_details[f"Total Electricity Sold Revenue {suffix}"] = cost_electricity_sold / 1000
+    
+    return cost_details

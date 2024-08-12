@@ -54,11 +54,7 @@ def load_fuel_cost_data(file_path):
     if os.path.exists(file_path):
         return pd.read_csv(file_path)
     return None
-
-def save_fuel_cost_data(df, file_path):
-    """Save fuel cost data to CSV file."""
-    df.to_csv(file_path, index=False)
-    st.success(f"Fuel Specific Cost data saved and exported successfully to {file_path}")
+    
 
 def generator_technology() -> None:
     """Streamlit page for configuring generator technology parameters."""
@@ -163,11 +159,14 @@ def generator_technology() -> None:
             if brownfield:
                 st.write("### Brownfield project parameters:")
                 st.session_state.gen_existing_capacity[i] = st.number_input(
-                    f"Existing Capacity of {gen_name} [W]", 
-                    value=st.session_state.gen_existing_capacity[i],
-                    help="The capacity of existing generators of this type.")
+                    f"Existing Capacity of {gen_name} [kW]", 
+                    min_value=0.0,
+                    value=float(st.session_state.gen_existing_capacity[i]) * 1000,
+                    help="The capacity of existing generators of this type.") / 1000
                 st.session_state.gen_existing_years[i] = st.number_input(
                     f"Existing Years of {gen_name} [years]", 
+                    min_value=0,
+                    max_value=(st.session_state.gen_lifetime[i] - 1),
                     value=st.session_state.gen_existing_years[i],
                     help="The number of years the existing generators have been in operation.")
 
@@ -194,8 +193,9 @@ def generator_technology() -> None:
                 fuel_cost_df = pd.DataFrame({
                     'Year': list(range(1, time_horizon + 1)),
                     gen_name: [fixed_price] * time_horizon})
-            
-                save_fuel_cost_data(fuel_cost_df, fuel_cost_file_path)
+                
+                # Save the data to CSV file
+                fuel_cost_df.to_csv(fuel_cost_file_path, index=False)
         
             else:  # Variable prices
                 st.write(f"Please input the fuel specific cost for {gen_name} over the project timeline:")
@@ -220,7 +220,9 @@ def generator_technology() -> None:
                     fuel_cost_df = manual_fuel_cost_input(time_horizon, [gen_name], currency)
 
                 if st.button(f"Save and Export Fuel Cost Data for {gen_name}"):
-                    save_fuel_cost_data(fuel_cost_df, fuel_cost_file_path)
+                    # Save the data to CSV file
+                    fuel_cost_df.to_csv(fuel_cost_file_path, index=False)
+                    st.success(f"Fuel Specific Cost data saved and exported successfully to {fuel_cost_file_path}")
 
                 # Create line plot
                 fig, ax = plt.subplots(figsize=(10, 6))
@@ -268,5 +270,5 @@ def generator_technology() -> None:
             st.rerun()
     with col2:
         if st.button("Next"):
-            st.session_state.page = "Optimization"
+            st.session_state.page = "Grid Connection"
             st.rerun()

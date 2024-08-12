@@ -59,3 +59,18 @@ def get_generator_usage(model, generator_type=None):
     
     column_name = f'{generator_type} Production (kWh)'
     return pd.DataFrame(all_data, columns=[column_name])
+
+def get_grid_usage(model: Model, year=None):
+    """Get grid usage for a given year or all years."""
+    grid_usage = model.get_solution_variable('Energy from Grid')
+    if grid_usage is None:
+        return pd.DataFrame()
+    
+    if year is not None:
+        return pd.DataFrame(grid_usage.isel(scenarios=0, years=year).values / 1000, columns=['Grid Usage (kWh)'])
+    else:
+        all_data = []
+        for year in range(len(grid_usage.coords['years'])):
+            year_data = grid_usage.isel(scenarios=0, years=year).values / 1000
+            all_data.extend(year_data)
+        return pd.DataFrame(all_data, columns=['Grid Usage (kWh)'])

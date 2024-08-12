@@ -52,7 +52,7 @@ class ProjectSettings(BaseModel):
     optimization_goal: int
     investment_cost_limit: Optional[float]
     system_configuration: int
-    solver: int
+    solver: str
     renewable_penetration: float
     land_availability: float
     battery_independence: int
@@ -72,7 +72,6 @@ class AdvancedSettings(BaseModel):
         unit_committment (bool): Allows for unit committment approach on the sizing variables (integers)
         brownfield (bool): Indicates if brownfield is enabled.
         grid_connection (bool): Indicates if grid connection is enabled.
-        grid_availability_simulation (Optional[bool]): Indicates if grid availability simulation is enabled.
         grid_connection_type (Optional[int]): The type of grid connection.
         wacc_calculation (bool): Indicates if WACC calculation is enabled.
         cost_of_equity (Optional[float]): The cost of equity.
@@ -95,7 +94,6 @@ class AdvancedSettings(BaseModel):
     unit_commitment: bool
     brownfield: bool
     grid_connection: bool
-    grid_availability_simulation: Optional[bool]
     grid_connection_type: Optional[int]
     wacc_calculation: bool
     cost_of_equity: Optional[float]
@@ -289,6 +287,7 @@ class BatteryParams(BaseModel):
     battery_expected_lifetime: int
     bess_unit_co2_emission: float
     battery_existing_capacity: Optional[float]
+    battery_existing_years: Optional[int]
 
 class GeneratorParams(BaseModel):
   """GeneratorParams configuration model."""
@@ -310,6 +309,37 @@ class GeneratorParams(BaseModel):
   gen_min_output: Optional[List[float]]
   gen_cost_increase: Optional[List[float]]
 
+class GridParams(BaseModel):
+    """
+    GridParams configuration model.
+
+    This class represents the grid connection parameters for a project.
+
+    Attributes:
+        year_grid_connection (int): Year of grid connection.
+        electricity_purchased_cost (float): Cost of purchased electricity from grid (USD/kWh).
+        electricity_sold_price (Optional[float]): Price of electricity sold to grid (USD/kWh).
+        grid_distance (float): Distance to grid connection point (km).
+        grid_connection_cost (float): Cost of grid connection (USD).
+        grid_maintenance_cost (float): Annual grid maintenance cost as a fraction of connection cost.
+        maximum_grid_power (float): Maximum power that can be drawn from or fed to the grid (W).
+        national_grid_specific_co2_emissions (float): CO2 emissions per kWh from the national grid (kgCO2/kWh).
+        grid_availability_simulation (Optional[bool]): Indicates if grid availability simulation is enabled.
+        grid_average_number_outages (Optional[float]): Average number of grid outages per year.
+        grid_average_outage_duration (Optional[float]): Average duration of grid outages (hours).
+    """
+    year_grid_connection: int
+    electricity_purchased_cost: float
+    electricity_sold_price: Optional[float]
+    grid_distance: float
+    grid_connection_cost: float
+    grid_maintenance_cost: float
+    maximum_grid_power: float
+    national_grid_specific_co2_emissions: float
+    grid_availability_simulation: Optional[bool]
+    grid_average_number_outages: Optional[float]
+    grid_average_outage_duration: Optional[float]
+
 class ProjectParameters(BaseModel):
     """
     Model representing the default values for the project.
@@ -322,6 +352,7 @@ class ProjectParameters(BaseModel):
         resource_assessment (ResourceAssessment): The resource assessment parameters.
         archetypes_params (ArchetypesParams): The archetype parameters.
         renewables_params (RenewablesParams): The renewable energy source parameters.
+        grid_params (GridParams): The grid connection parameters.
     """
     # Pydantic configuration
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -336,6 +367,7 @@ class ProjectParameters(BaseModel):
     renewables_params: RenewablesParams
     battery_params: BatteryParams
     generator_params: GeneratorParams
+    grid_params: GridParams
 
     @classmethod
     def instantiate_from_yaml(cls, filepath: str) -> 'ProjectParameters':

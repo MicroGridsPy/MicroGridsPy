@@ -13,6 +13,8 @@ def display_timeline(time_horizon, step_duration):
         step_durations.append(min_step_duration)
         num_steps += 1
 
+    st.session_state.num_steps = num_steps
+
     timeline_data = {
         "Step": [f"Investment Step {i + 1}" for i in range(num_steps)],
         "Duration [Years]": step_durations} 
@@ -55,10 +57,15 @@ def advanced_settings():
         
         st.session_state.brownfield = project_type_choice == "Brownfield"
 
-        st.session_state.capacity_expansion = st.checkbox(
-            "Activate Capacity Expansion", 
-            value=st.session_state.capacity_expansion,
+        capacity_expansion_options = ["Single Investment Step", "Capacity Expansion over Time"]
+        capacity_expansion_index = 1 if st.session_state.capacity_expansion else 0
+        capacity_expansion_choice = st.selectbox(
+            "Investment Strategy:",
+            options=capacity_expansion_options,
+            index=capacity_expansion_index,
             help="Enable to allow system capacity to increase over time through discrete investment steps.")
+        
+        st.session_state.capacity_expansion = capacity_expansion_choice == "Capacity Expansion over Time"
 
         if st.session_state.capacity_expansion:
             st.session_state.step_duration = st.slider(
@@ -77,10 +84,6 @@ def advanced_settings():
             help="Include national grid connection in the model. This affects energy balance and can impact system economics significantly.")
         
         if st.session_state.grid_connection:
-            st.session_state.grid_availability_simulation = st.checkbox(
-                "Enable Grid Availability Simulation", 
-                value=st.session_state.grid_availability_simulation,
-                help="Model intermittent grid availability. This is crucial for areas with unreliable grid supply.")
             
             grid_connection_type = st.radio(
                 "Grid Connection Type:", 
@@ -97,40 +100,54 @@ def advanced_settings():
             help="Activate to calculate the Weighted Average Cost of Capital. This provides a more accurate discount rate for financial calculations.")
         
         if st.session_state.wacc_calculation:
-            st.session_state.cost_of_equity = st.number_input(
+            cost_of_equity = st.number_input(
                 "Cost of Equity [%]:", 
                 min_value=0.0, max_value=100.0,
                 value=st.session_state.cost_of_equity * 100,
                 help="Expected return on equity investment. Higher values indicate higher risk or expected returns.")
-            st.session_state.cost_of_equity /= 100 
+            st.session_state.cost_of_equity = cost_of_equity / 100 
             
-            st.session_state.cost_of_debt = st.number_input(
+            cost_of_debt = st.number_input(
                 "Cost of Debt [%]:", 
                 min_value=0.0, max_value=100.0,
                 value=st.session_state.cost_of_debt * 100,
                 help="Interest rate on project debt. This is typically lower than the cost of equity.")
-            st.session_state.cost_of_debt /= 100  
+            st.session_state.cost_of_debt = cost_of_debt / 100  
             
-            st.session_state.tax = st.number_input(
+            tax = st.number_input(
                 "Corporate Tax Rate [%]:", 
                 min_value=0.0, max_value=100.0,
                 value=st.session_state.tax * 100,
                 help="Applicable corporate tax rate. This affects the after-tax cost of debt.")
-            st.session_state.tax /= 100  
+            st.session_state.tax = tax / 100  
             
-            st.session_state.equity_share = st.number_input(
+            equity_share = st.number_input(
                 "Equity Share [%]:", 
                 min_value=0.0, max_value=100.0,
                 value=st.session_state.equity_share * 100,
                 help="Percentage of project financed through equity. Must sum to 100% with debt share.")
-            st.session_state.equity_share /= 100  
+            st.session_state.equity_share = equity_share / 100  
             
-            st.session_state.debt_share = st.number_input(
+            debt_share = st.number_input(
                 "Debt Share [%]:", 
                 min_value=0.0, max_value=100.0,
                 value=st.session_state.debt_share * 100,
                 help="Percentage of project financed through debt. Must sum to 100% with equity share.")
-            st.session_state.debt_share /= 100  
+            st.session_state.debt_share = debt_share / 100  
+
+        # Calculate and display WACC
+        if st.session_state.equity_share + st.session_state.debt_share != 1.0:
+            st.warning("Equity Share and Debt Share must sum to 100%.")
+        else:
+            if st.session_state.equity_share == 0:
+                wacc = st.session_state.cost_of_debt * (1 - st.session_state.tax)
+            else:
+                leverage = st.session_state.debt_share / st.session_state.equity_share
+                wacc = (st.session_state.cost_of_debt * (1 - st.session_state.tax) * leverage / (1 + leverage) + 
+                        st.session_state.cost_of_equity / (1 + leverage))
+            
+            st.metric("Calculated WACC", f"{wacc:.2%}")
+            st.session_state.calculated_wacc = wacc
 
     with st.expander("🎯 Multi-Objective Optimization", expanded=False):
         st.session_state.multiobjective_optimization = st.checkbox(

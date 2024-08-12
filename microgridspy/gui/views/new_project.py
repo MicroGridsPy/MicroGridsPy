@@ -7,7 +7,7 @@ def load_image(image_path):
     """Load an image from the images folder."""
     return str(PathManager.IMAGES_PATH / image_path)
 
-def create_new_project(project_name, project_description):
+def create_new_project(project_name):
     """Create a new project with the given name and description."""
     path_manager = PathManager(project_name)
     project_folder = path_manager.PROJECTS_FOLDER_PATH / project_name
@@ -25,11 +25,11 @@ def create_new_project(project_name, project_description):
     (project_folder / "technology characterization").mkdir(exist_ok=True)
     (project_folder / "grid").mkdir(exist_ok=True)
     
+    # Instantiate the default values and save in session state
     st.session_state.path_manager = path_manager
     st.session_state.default_values = ProjectParameters.instantiate_from_yaml(PathManager.DEFAULT_YAML_FILE_PATH)
-    st.session_state.default_values.project_info.project_name = project_name
-    st.session_state.default_values.project_info.project_description = project_description
     
+    # Create a YAML file for the project with default values
     yaml_file_path = project_folder / f"{project_name}.yaml"
     st.session_state.default_values.save_to_yaml(yaml_file_path)
     
@@ -50,6 +50,7 @@ def load_existing_project(uploaded_file):
             (project_folder / "technology characterization").mkdir(exist_ok=True)
             (project_folder / "grid").mkdir(exist_ok=True)
         
+        # Save the uploaded file to the project folder
         yaml_file_path = project_folder / f"{project_name}.yaml"
         with open(yaml_file_path, "wb") as f:
             f.write(uploaded_file.getvalue())
@@ -81,8 +82,7 @@ def new_project():
             <i>Multi-Objective and Multi-Scenario Optimization</i>.
         </div>
         """,
-        unsafe_allow_html=True
-    )
+        unsafe_allow_html=True)
     
     st.image(load_image("model_overview.png"), use_column_width=True, caption="Model Overview")
     
@@ -90,11 +90,13 @@ def new_project():
     st.subheader("Create a New Project")
     st.write("Enter the details below to create a new project.")
     project_name = st.text_input("Project Name", key="new_project_name")
-    project_description = st.text_area("Project Description", key="new_project_description")
+    # Store the project name in session state
+    st.session_state.project_name = project_name
+    st.session_state.project_description = st.text_area("Project Description", key="new_project_description")
     
     if st.button("Create Project"):
         if project_name:
-            if create_new_project(project_name, project_description):
+            if create_new_project(project_name):
                 st.success(f"Project '{project_name}' created successfully!")
                 st.session_state.page = "Project Settings"
                 st.session_state.new_project_completed = True

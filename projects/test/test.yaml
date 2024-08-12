@@ -5,7 +5,6 @@ advanced_settings:
   cost_of_equity: 0.12
   debt_share: 0.9
   equity_share: 0.1
-  grid_availability_simulation: false
   grid_connection: false
   grid_connection_type: 0
   milp_formulation: false
@@ -13,11 +12,11 @@ advanced_settings:
   multi_scenario_optimization: false
   multiobjective_optimization: false
   num_scenarios: 1
-  num_steps: 1
+  num_steps: 2
   pareto_points: 2
   scenario_weights:
   - 1.0
-  step_duration: 20
+  step_duration: 10
   tax: 0.02
   unit_commitment: false
   wacc_calculation: false
@@ -41,7 +40,8 @@ battery_params:
   battery_cycles: 6000
   battery_depth_of_discharge: 0.8
   battery_discharge_battery_efficiency: 1.0
-  battery_existing_capacity: 0.0
+  battery_existing_capacity: 500.0
+  battery_existing_years: 10
   battery_expected_lifetime: 20
   battery_initial_soc: 1.0
   battery_nominal_capacity: 1000.0
@@ -83,6 +83,18 @@ generator_params:
   gen_unit_co2_emission:
   - 0.0
   partial_load: false
+grid_params:
+  electricity_purchased_cost: 0.00014
+  electricity_sold_price: 0.0
+  grid_availability_simulation: false
+  grid_average_number_outages: 43.48
+  grid_average_outage_duration: 455.0
+  grid_connection_cost: 14000.0
+  grid_distance: 0.5
+  grid_maintenance_cost: 0.025
+  maximum_grid_power: 80000.0
+  national_grid_specific_co2_emissions: 0.1495
+  year_grid_connection: 1
 nasa_power_params:
   base_url: https://power.larc.nasa.gov/api/temporal/
   community: RE
@@ -109,7 +121,7 @@ project_settings:
   lost_load_specific_cost: 0.0
   optimization_goal: 0
   renewable_penetration: 0.0
-  solver: 0
+  solver: gurobi
   start_date: 2023-01-01
   system_configuration: 0
   time_horizon: 20
@@ -118,9 +130,9 @@ renewables_params:
   res_existing_area:
   - 0.0
   res_existing_capacity:
-  - 0.0
+  - 10000.0
   res_existing_years:
-  - 0
+  - 10
   res_inverter_efficiency:
   - 0.98
   res_lifetime:

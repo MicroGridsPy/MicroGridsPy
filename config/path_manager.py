@@ -26,6 +26,7 @@ class PathManager:
     RESOURCE_FILE_PATH: Path = INPUTS_FOLDER_PATH / 'Resources Availability.csv'
     TEMPERATURE_FILE_PATH: Path = INPUTS_FOLDER_PATH / 'Temperature.csv'
     FUEL_SPECIFIC_COST_FILE_PATH: Path = INPUTS_FOLDER_PATH / 'Fuel Specific Cost.csv'
+    GRID_AVAILABILITY_FILE_PATH: Path = INPUTS_FOLDER_PATH / 'Grid Availability.csv'
 
     # Define paths for archetypes folder
     ARCHETYPES_FOLDER_PATH: Path = ROOT_PATH / 'microgridspy' / 'utils' / 'demand_archetypes'

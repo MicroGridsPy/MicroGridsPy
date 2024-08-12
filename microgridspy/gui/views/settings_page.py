@@ -71,15 +71,14 @@ def settings_page():
         
         st.session_state.system_configuration = system_configuration_options.index(selected_system_config)
 
-        solver_options = ["HiGHS", "Gurobi"]
+        solver_options = ["highs", "gurobi"]
 
         selected_solver = st.selectbox(
             "Select Solver:", 
             options=solver_options, 
-            index=st.session_state.solver,
             help="Select the solver to be used for optimization. Different solvers may have varying performance characteristics.")
         
-        st.session_state.solver = solver_options.index(selected_solver)
+        st.session_state.solver = selected_solver
 
     with st.expander("🔒 Optimization Constraints", expanded=False):
         renewable_penetration_percent = st.number_input(
@@ -89,11 +88,12 @@ def settings_page():
             help="Set the minimum percentage of energy that must come from renewable sources. Higher values promote cleaner energy but may increase costs.")
         st.session_state.renewable_penetration = renewable_penetration_percent / 100
         
-        st.session_state.battery_independence = st.number_input(
-            "Battery Independence [Days]:", 
-            min_value=0,
-            value=st.session_state.battery_independence,
-            help="Specify the number of days the battery should be able to supply average load without recharging. Higher values increase energy security but also system cost.")
+        if st.session_state.system_configuration in [0, 1]:
+            st.session_state.battery_independence = st.number_input(
+                "Battery Independence [Days]:", 
+                min_value=0,
+                value=st.session_state.battery_independence,
+                help="Specify the number of days the battery should be able to supply average load without recharging. Higher values increase energy security but also system cost.")
         
         lost_load_fraction_percent = st.number_input(
             "Maximum Lost Load Fraction [%]:", 
@@ -105,7 +105,7 @@ def settings_page():
         if st.session_state.lost_load_fraction > 0:
             st.session_state.lost_load_specific_cost = st.number_input(
                 f"Lost Load Specific Cost [{st.session_state.currency}/Wh]:", 
-                min_value=0.0, max_value=1.0,
+                min_value=0.0,
                 value=st.session_state.lost_load_specific_cost,
                 help=f"Define the economic cost of unmet demand. This helps balance the trade-off between system cost and reliability.")
             

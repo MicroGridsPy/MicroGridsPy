@@ -31,62 +31,75 @@ def calculate_yearly_production(model):
 def calculate_energy_usage(model):
     """Calculate average energy usage by technology."""
     demand = model.parameters['DEMAND']
+    res_production = model.get_solution_variable('Energy Production by Renewables')
     curtailment = model.get_solution_variable('Curtailment by Renewables')
-    total_renewable_production = model.get_solution_variable('Energy Production by Renewables')
-    battery_outflow = model.get_solution_variable('Battery Outflow')
-    battery_inflow = model.get_solution_variable('Battery Inflow')
-    generator_energy_production = model.get_solution_variable('Generator Energy Production')
+    battery_inflow = model.get_solution_variable('Battery Inflow') if model.has_battery else None
+    battery_outflow = model.get_solution_variable('Battery Outflow') if model.has_battery else None
+    generator_production = model.get_solution_variable('Generator Energy Production') if model.has_generator else None
+    energy_from_grid = model.get_solution_variable('Energy from Grid') if model.has_grid_connection else None
+    energy_to_grid = model.get_solution_variable('Energy to Grid') if model.has_grid_connection and model.get_settings('grid_connection_type', advanced=True) == 1 else None
+    lost_load = model.get_solution_variable('Lost Load') if model.get_settings('lost_load_fraction') > 0.0 else None
 
     years = demand.coords['years'].values
-    renewable_sources = total_renewable_production.coords['renewable_sources'].values
-    generator_types = generator_energy_production.coords['generator_types'].values if generator_energy_production is not None else []
+    renewable_sources = model.sets['renewable_sources'].values
+    generator_types = model.sets['generator_types'].values if model.has_generator else []
 
     yearly_usage = {source: [] for source in renewable_sources}
+    yearly_curtailment_percentage = []
     yearly_battery_usage = []
     yearly_generator_usage = {gen: [] for gen in generator_types}
-    yearly_curtailment_percentage = []
+    yearly_grid_usage = []
+    yearly_lost_load = []  
 
     for year in years:
         yearly_demand = demand.sel(years=year).sum().values.item()
-        yearly_curtailment = curtailment.sel(years=year).sum().values.item() if curtailment is not None else 0
+        yearly_curtailment = curtailment.sel(years=year).sum().values.item()
+        yearly_curtailment_percentage.append((yearly_curtailment / yearly_demand) * 100)
 
         # Calculate renewable energy usage
         for source in renewable_sources:
-            yearly_source_production = total_renewable_production.sel(renewable_sources=source, steps=1).sum().values.item()
-            yearly_source_curtailment = curtailment.sel(renewable_sources=source, years=year).sum().values.item() if curtailment is not None else 0
+            yearly_source_production = res_production.sel(renewable_sources=source, steps=1).sum().values.item()
+            yearly_source_curtailment = curtailment.sel(renewable_sources=source, years=year).sum().values.item()
             yearly_source_used = yearly_source_production - yearly_source_curtailment
             yearly_usage[source].append((yearly_source_used / yearly_demand) * 100)
 
         # Calculate battery usage
-        if battery_outflow is not None:
+        if model.has_battery:
             yearly_battery_out = battery_outflow.sel(years=year).sum().values.item()
             yearly_battery_usage.append((yearly_battery_out / yearly_demand) * 100)
 
         # Calculate generator usage
-        if generator_energy_production is not None:
+        if model.has_generator:
             for gen in generator_types:
-                yearly_gen_production = generator_energy_production.sel(generator_types=gen, years=year).sum().values.item()
+                yearly_gen_production = generator_production.sel(generator_types=gen, years=year).sum().values.item()
                 yearly_generator_usage[gen].append((yearly_gen_production / yearly_demand) * 100)
 
-        # Calculate curtailment percentage
-        yearly_total_production = total_renewable_production.sel(steps=1).sum().values.item()
-        if yearly_total_production > 0:
-            yearly_curtailment_percentage.append((yearly_curtailment / yearly_total_production) * 100)
-        else:
-            yearly_curtailment_percentage.append(0)
+        if model.has_grid_connection:
+            yearly_grid_consumption = energy_from_grid.sel(years=year).sum().values.item()
+            yearly_grid_usage.append((yearly_grid_consumption / yearly_demand) * 100)
+
+        if model.get_settings('lost_load_fraction') > 0.0:
+            yearly_lost_load.append((lost_load.sel(years=year).sum().values.item() / yearly_demand) * 100)
 
     # Prepare the results
     results = {}
     for source in renewable_sources:
         results[f"{source} Usage"] = np.mean(yearly_usage[source])
+
+    results["Curtailment"] = np.mean(yearly_curtailment_percentage)
     
-    if battery_outflow is not None:
+    if model.has_battery:
         results["Battery Usage"] = np.mean(yearly_battery_usage)
     
-    for gen in generator_types:
-        results[f"{gen} Usage"] = np.mean(yearly_generator_usage[gen])
-    
-    results["Curtailment"] = np.mean(yearly_curtailment_percentage)
+    if model.has_generator:
+        for gen in generator_types:
+            results[f"{gen} Usage"] = np.mean(yearly_generator_usage[gen])
+
+    if model.has_grid_connection:
+        results["Grid Usage"] = np.mean(yearly_grid_usage)
+
+    if model.get_settings('lost_load_fraction') > 0.0:
+        results["Lost Load"] = np.mean(yearly_lost_load)
 
     return results
 

@@ -125,6 +125,35 @@ def initialize_temperature(sets: xr.Dataset) -> xr.DataArray:
         },
         name="Temperature")
 
+def initialize_grid_availability(sets: xr.Dataset) -> xr.DataArray:
+    """
+    Load the grid availability time series data into an xarray DataArray.
+    """
+    try:
+        grid_availability_df = read_csv_data(PathManager.GRID_AVAILABILITY_FILE_PATH)
+    except (FileNotFoundError, pd.errors.EmptyDataError, pd.errors.ParserError) as e:
+        raise RuntimeError(f"Failed to initialize demand data: {str(e)}")
+
+    num_scenarios = len(sets.scenarios)
+    num_years = len(sets.years)
+    num_periods = len(sets.periods)
+
+    # Reshape the data to match other variables' dimension order
+    grid_availability_data = grid_availability_df.values.reshape(num_scenarios, num_periods, num_years)
+
+    # Create xarray DataArray with consistent dimension order
+    grid_availability_array = xr.DataArray(
+        data=grid_availability_data,
+        dims=["scenarios", "periods", "years"],
+        coords={
+            "scenarios": sets.scenarios.values,
+            "periods": sets.periods.values,
+            "years": sets.years.values
+        },
+        name="Aggregated Load Demand")
+
+    return grid_availability_array
+
 def initialize_project_parameters(data: ProjectParameters, sets: xr.Dataset) -> xr.Dataset:
     """
     Initialize the project parameters as xr.Dataset.
@@ -155,6 +184,18 @@ def initialize_project_parameters(data: ProjectParameters, sets: xr.Dataset) -> 
             data.project_settings.investment_cost_limit,
             dims=[],
             name='Investment Cost Limit')
+        
+    # Lost load specific cost
+    if data.project_settings.lost_load_fraction > 0.0:
+        project_parameters['LOST_LOAD_FRACTION'] = xr.DataArray(
+            data.project_settings.lost_load_fraction,
+            dims=[],
+            name='Yearly allowed Lost Load Fraction of the Demand')
+        
+        project_parameters['LOST_LOAD_SPECIFIC_COST'] = xr.DataArray(
+            data.project_settings.lost_load_specific_cost,
+            dims=[],
+            name='Lost Load Specific Cost')
         
     # Renewable Penetration Limit
     if data.project_settings.renewable_penetration > 0:
@@ -237,13 +278,13 @@ def initialize_res_parameters(data: ProjectParameters, sets: xr.Dataset) -> xr.D
             data.renewables_params.res_existing_capacity,
             dims=['renewable_sources'],
             coords={'renewable_sources': renewable_sources},
-            name='Existing Capacity (kW)')
+            name='Renewable Existing Capacity (W)')
         
         res_parameters['RES_EXISTING_YEARS'] = xr.DataArray(
             data.renewables_params.res_existing_years,
             dims=['renewable_sources'],
             coords={'renewable_sources': renewable_sources},
-            name='Existing Years')
+            name='Renewable Existing Years')
 
     # Specific Area (m^2)
     if data.project_settings.land_availability > 0:
@@ -252,14 +293,6 @@ def initialize_res_parameters(data: ProjectParameters, sets: xr.Dataset) -> xr.D
             dims=['renewable_sources'],
             coords={'renewable_sources': renewable_sources},
             name='Specific Area (m^2)')
-        
-        # Brownfield Investment scenario
-        if data.advanced_settings.brownfield:
-            res_parameters['RES_EXISTING_AREA'] = xr.DataArray(
-                data.renewables_params.res_existing_area,
-                dims=['renewable_sources'],
-                coords={'renewable_sources': renewable_sources},
-                name='Existing Area (m^2)')
 
     return xr.Dataset(res_parameters)
 
@@ -331,25 +364,24 @@ def initialize_battery_parameters(data: ProjectParameters, time_series: xr.Datas
         'BATTERY_INITIAL_SOC': xr.DataArray(
             data.battery_params.battery_initial_soc,
             dims=[],
-            name='Battery Initial State of Charge'),
-    }
+            name='Battery Initial State of Charge'),}
 
     if data.advanced_settings.multiobjective_optimization:
-        battery_parameters['BESS_UNIT_CO2_EMISSION'] = xr.DataArray(
+        battery_parameters['BATTERY_UNIT_CO2_EMISSION'] = xr.DataArray(
             data.battery_params.bess_unit_co2_emission,
             dims=[],
-            name='BESS Unit CO2 Emission')
+            name='Battery Unit CO2 Emission (LCA)')
 
     # Brownfield Investment scenario
     if data.advanced_settings.brownfield:
         battery_parameters['BATTERY_EXISTING_CAPACITY'] = xr.DataArray(
             data.battery_params.battery_existing_capacity,
             dims=[],
-            name='Existing Capacity (Wh)')
+            name='Battery Existing Capacity (Wh)')
         battery_parameters['BATTERY_EXISTING_YEARS'] = xr.DataArray(
             data.battery_params.battery_existing_years,
             dims=[],
-            name='Existing Years (years)')
+            name='Battery Existing Years (years)')
     
     # Battery Independence
     if data.project_settings.battery_independence > 0:
@@ -411,8 +443,21 @@ def initialize_generator_parameters(data: ProjectParameters, sets: xr.Dataset) -
                                   partial_load=False),
             dims=['generator_types', 'years'],
             coords={'generator_types': generator_types, 'years': sets.years.values},
-            name='Marginal Cost of operation at nominal efficiency'),
-    }
+            name='Marginal Cost of operation at nominal efficiency')}
+    
+    # Brownfield Investment scenario
+    if data.advanced_settings.brownfield:
+        generator_parameters['GENERATOR_EXISTING_CAPACITY'] = xr.DataArray(
+            data.generator_params.gen_existing_capacity,
+            dims=['generator_types'],
+            coords={'generator_types': generator_types},
+            name='Generator Existing Capacity (Wh)')
+        generator_parameters['GENERATOR_EXISTING_YEARS'] = xr.DataArray(
+            data.generator_params.gen_existing_years,
+            dims=['generator_types'],
+            coords={'generator_types': generator_types},
+            name='Generator Existing Years (years)')
+
     if data.advanced_settings.multiobjective_optimization:
         generator_parameters['GENERATOR_UNIT_CO2_EMISSION'] = xr.DataArray(
             data.generator_params.gen_unit_co2_emission,
@@ -451,3 +496,37 @@ def initialize_generator_parameters(data: ProjectParameters, sets: xr.Dataset) -
             name='Marginal Cost of operation in partial load')
         
     return xr.Dataset(generator_parameters)
+
+def initialize_grid_parameters(data: ProjectParameters, sets: xr.Dataset) -> xr.Dataset:
+    """
+    Initialize the grid parameters as xr.Dataset.
+    """
+
+    grid_parameters = {
+        'ELECTRICTY_PURCHASED_COST': xr.DataArray(
+            data.grid_params.electricity_purchased_cost,
+            dims=[],
+            name='Electricity Purchased Cost'),
+
+        'ELECTRICTY_SOLD_PRICE': xr.DataArray(
+            data.grid_params.electricity_sold_price,
+            dims=[],
+            name='Electricity Sold Price'),
+
+        'GRID_CONNECTION_COST': xr.DataArray(
+            data.grid_params.grid_connection_cost,
+            dims=[],
+            name='Cost of Grid Connection'),
+
+        'GRID_DISTANCE': xr.DataArray(
+            data.grid_params.grid_distance,
+            dims=[],
+            name='Distance to the Grid Connection'),
+
+        'GRID_MAINTENANCE_COST': xr.DataArray(
+            data.grid_params.grid_maintenance_cost,
+            dims=[],
+            name='Grid Maintenance Cost'),
+    }
+
+    return xr.Dataset(grid_parameters)
