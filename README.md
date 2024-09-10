@@ -80,8 +80,6 @@ The current version of **MicroGridsPy** in linopy has been developed by **Alessa
 - **Nicolò Stevanato**, Politecnico di Milano
 - **Riccardo Mereu**, Politecnico di Milano
 - **Emanuela Colombo**, Politecnico di Milano
-
-### Past contributors:
 - **Gianluca Pellecchia**, Politecnico di Milano
 - **Ivan Sangiorgio**, Politecnico di Milano
 - **Francesco Lombardi**, TU Delft
@@ -92,5 +90,5 @@ The current version of **MicroGridsPy** in linopy has been developed by **Alessa
 - **Sergio Balderrama**, Universidad Mayor de San Simón <s.balderrama@umss.edu>
 - **Sylvain Quoilin**, Université de Liège <squoilin@uliege.be>
 
-MicroGridsPy is developed in the open on GitHub ([MicroGridsPy-SESAM](https://github.com/SESAM-Polimi/MicroGridsPy-SESAM)) and contributions are very welcome!
-
+## License
+This is a free software licensed under the “European Union Public Licence" EUPL v1.1. It can be redistributed and/or modified under the terms of this license.
