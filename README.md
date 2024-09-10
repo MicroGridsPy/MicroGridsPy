@@ -1,6 +1,8 @@
 # Welcome to MicroGridsPy!
 
-![MicroGridsPy](microgridspy\gui\assets\images\model_overview.png)
+> **Note:** This version of MicroGridsPy is under **active development** and has not been officially released yet. It is recommended to check regularly for updates and changes in the repository.
+
+![MicroGridsPy](https://github.com/MicroGridsPy/MicroGridsPy/blob/master/docs/source/Images/Mgpy_Scheme_2.png?raw=true)
 
 **MicroGridsPy** is a modern, open-source optimization model for **energy scaling and dispatch optimization** in microgrids, specifically designed for remote locations. The model now runs using the [Linopy](https://linopy.readthedocs.io/) optimization framework, which provides fast, efficient, and scalable solutions for linear and mixed-integer programming. MicroGridsPy supports both open-source solvers like **HiGHS** and common commercial solvers, giving users a range of options for solving optimization problems.
 
@@ -31,8 +33,8 @@ MicroGridsPy is under continuous development and the latest version includes:
 - **Multi-Objective Optimization**: Balances between cost and environmental goals.
 - **Mixed-Integer Linear Programming (MILP)**: Ensures optimal generation scheduling while accounting for complex system behavior.
 - **Partial Load Generator Modeling**: Considers generator efficiency under varied loads.
-- **Endogenous Load Curve Estimation**: Creates load curves based on local rural village data.
-- **Endogenous RES Production Time Series**: Utilizes NASA POWER for solar and wind predictions.
+- **Endogenous Load Curve Estimation**: Creates load curves based on local rural village data or estimate load demand profiles using excel inputs file with [RAMP](https://github.com/RAMP-project/RAMP), an open-source bottom-up stochastic model for generating multi-energy load profiles
+- **Endogenous RES Production Time Series**: Utilizes NASA POWER API for solar and wind predictions.
 - **Brownfield Feature**: Takes into account existing technologies in the field.
 - **Main Grid Connectivity Simulation**: Models interactions with an existing main grid, including outages.
 
@@ -91,6 +93,4 @@ The current version of **MicroGridsPy** in linopy has been developed by **Alessa
 - **Sylvain Quoilin**, Université de Liège <squoilin@uliege.be>
 
 MicroGridsPy is developed in the open on GitHub ([MicroGridsPy-SESAM](https://github.com/SESAM-Polimi/MicroGridsPy-SESAM)) and contributions are very welcome!
-
-> **Note:** This version of MicroGridsPy is under **active development** and has not been officially released yet. It is recommended to check regularly for updates and changes in the repository.
 
