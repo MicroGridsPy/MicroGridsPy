@@ -366,3 +366,15 @@ def plots_dashboard():
         with st.spinner("Saving current plots..."):
             save_plots(plots_filepath, fig)
         st.success(f"Plots saved successfully to {plots_filepath}")
+
+    st.write("---")  # Add a separator
+
+    col1, col2 = st.columns([1, 8])
+    with col1:
+        if st.button("Back"):
+            st.session_state.page = "Optimization"
+            st.rerun()
+    with col2:
+        if st.button("Next"):
+            st.session_state.page = "Project Profitability"
+            st.rerun()

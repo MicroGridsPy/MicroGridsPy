@@ -17,6 +17,7 @@ from microgridspy.gui.views.renewables_page import renewables_technology
 from microgridspy.gui.views.battery_page import battery_technology
 from microgridspy.gui.views.generator_page import generator_technology
 from microgridspy.gui.views.grid_page import grid_technology
+from microgridspy.gui.views.profit_page import project_profitability
 from microgridspy.gui.views.run_page import run_model
 from microgridspy.gui.views.plots_dashboard import plots_dashboard
 
@@ -96,6 +97,10 @@ def main() -> None:
         if buttons_enabled:
             st.session_state.page = "Results"
 
+    if st.sidebar.button("Project Profitability", disabled=not buttons_enabled):
+        if buttons_enabled:
+            st.session_state.page = "Project Profitability"
+
     # Set default page to "New Project" if no page is set in session state
     if 'page' not in st.session_state:
         st.session_state.page = "New Project"
@@ -111,6 +116,7 @@ def main() -> None:
         "Battery Characterization": battery_technology,
         "Generator Characterization": generator_technology,
         "Grid Connection": grid_technology,
+        "Project Profitability": project_profitability,
         "Optimization": run_model,
         "Results": plots_dashboard
     }
