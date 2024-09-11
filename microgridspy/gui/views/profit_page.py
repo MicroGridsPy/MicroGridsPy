@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 
 from microgridspy.model.utils import read_csv_data
 from config.path_manager import PathManager
+from microgridspy.model.model import Model
+from microgridspy.post_process.cost_calculations import calculate_actualized_investment_cost
 
 # Function to load CSV files and identify user categories from the demand folder
 def initialize_user_categories(folder: str) -> dict:
@@ -50,13 +52,25 @@ def plot_yearly_energy(data: dict):
     ax.set_title('Total Yearly Energy by User Category')
     st.pyplot(fig)
 
-# Function to calculate profit for each category based on tariff settings
-def calculate_profit(data: dict, tariff_settings: dict) -> pd.DataFrame:
+# Function to plot yearly profit with cumulative bar chart
+def plot_yearly_profit(profit_data: pd.DataFrame, currency: str):
     """
-    Calculate the yearly profit for each user category based on selected tariff settings.
-    Returns a DataFrame with profit data for each category and year.
+    Plot yearly profit for each user category as a stacked bar chart.
     """
-    total_profit = pd.DataFrame()
+    fig, ax = plt.subplots(figsize=(10, 6))
+    profit_data.plot(kind='bar', stacked=True, ax=ax)
+    ax.set_xlabel('Years')
+    ax.set_ylabel(f'Total Profit ({currency})')
+    ax.set_title('Yearly Profit by User Category')
+    st.pyplot(fig)
+
+# Function to calculate actualized profit for each category based on tariff settings and discount rate
+def calculate_actualized_profit(data: dict, tariff_settings: dict, discount_rate: float, time_horizon: int) -> pd.DataFrame:
+    """
+    Calculate the yearly actualized profit for each user category based on selected tariff settings and discount rate.
+    Returns a DataFrame with actualized profit data for each category and year.
+    """
+    actualized_profit = pd.DataFrame()
     
     for category, df in data.items():
         energy = df.iloc[:, 1:].sum(axis=0)  # Total energy for each year in kWh
@@ -80,23 +94,12 @@ def calculate_profit(data: dict, tariff_settings: dict) -> pd.DataFrame:
                               fixed_value * 12, 
                               fixed_value * 12 + (monthly_energy - threshold) * 12 * consumption_tariff)
         
-        # Store profit in a DataFrame with years as index
-        total_profit[category] = profit
+        # Actualize profit for each year using the discount rate
+        discount_factors = [(1 / ((1 + discount_rate) ** year)) for year in range(1, time_horizon + 1)]
+        actualized_profit[category] = profit * discount_factors[:len(profit)]
 
-    total_profit.index = years
-    return total_profit
-
-# Function to plot yearly profit with cumulative bar chart
-def plot_yearly_profit(profit_data: pd.DataFrame, currency: str):
-    """
-    Plot yearly profit for each user category as a stacked bar chart.
-    """
-    fig, ax = plt.subplots(figsize=(10, 6))
-    profit_data.plot(kind='bar', stacked=True, ax=ax)
-    ax.set_xlabel('Years')
-    ax.set_ylabel(f'Total Profit ({currency})')
-    ax.set_title('Yearly Profit by User Category')
-    st.pyplot(fig)
+    actualized_profit.index = years
+    return actualized_profit
 
 # Main function to run the Streamlit app page for project profitability
 def project_profitability():
@@ -120,6 +123,16 @@ def project_profitability():
 
     currency = st.session_state.get('currency', 'USD')
     time_horizon = st.session_state.get("time_horizon", 20)
+    discount_rate = st.session_state.get("discount_rate", 0.05)
+    # Get the results from the model
+    model: Model = st.session_state.model
+
+    # Get the Net Present Cost (NPC) value from the model
+    if model.get_settings('optimization_goal') == 0:
+        npc_value = model.get_solution_variable('Net Present Cost').values.item() / 1000  # Convert to kUSD
+    else:
+        npc_value = calculate_actualized_investment_cost(model) / 1000  # Convert to kUSD
+    
     tariff_settings = {}
     
     st.header("Tariff Settings")
@@ -150,23 +163,33 @@ def project_profitability():
             }
 
     # Profit calculation section
-    profit_data = calculate_profit(user_category_data, tariff_settings)
+    actualized_profit_data = calculate_actualized_profit(user_category_data, tariff_settings, discount_rate, time_horizon)
+    st.write("Actualized Profit Data:", actualized_profit_data)
     
-    # Calculate total profit in kUSD
-    total_profit = profit_data.sum().sum() / 1000  # Convert to kUSD
+    # Calculate total actualized profit in kUSD
+    total_actualized_profit = actualized_profit_data.sum().sum() / 1000  # Convert to kUSD
+    
+    # Calculate payback period by comparing actualized revenues and NPC
+    cumulative_profit = actualized_profit_data.sum(axis=1).cumsum()
 
-    # Display total profit with the time horizon
+    # Find the first year where cumulative actualized profit exceeds or equals the NPC
+    payback_period_year = next((year for year, profit in enumerate(cumulative_profit) if profit >= npc_value), None)
+    if payback_period_year is None:
+        payback_period = "No payback period"
+    else:
+        payback_period = f"{payback_period_year + 1} years"  # Add 1 to convert from index to year number
+
+    # Display total actualized profit and payback period
     st.header("Profit Analysis Visualization")
-    st.metric(label=f"Total Profit over the {time_horizon} years of time horizon", value=f"{total_profit:,.2f} k{currency}")
-
-    # Display yearly total profit in a table
-    yearly_total_profit = profit_data.sum(axis=1) / 1000  # Convert yearly profits to kUSD
-    yearly_total_profit_df = pd.DataFrame(yearly_total_profit, columns=[f'Total Profit (k{currency})'])
-    st.write(f"Yearly total profit (in k{currency}):")
-    st.dataframe(yearly_total_profit_df)
+    # Display main metrics
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric(label=f"Total Actualized Profit over {time_horizon} years", value=f"{total_actualized_profit:,.2f} k{currency}")
+    with col2:
+        st.metric(label="Payback Period", value=payback_period)
     
     # Visualization section
-    plot_yearly_profit(profit_data, currency)
+    plot_yearly_profit(actualized_profit_data, currency)
 
     if st.button("Back"):
         st.session_state.page = "Results"

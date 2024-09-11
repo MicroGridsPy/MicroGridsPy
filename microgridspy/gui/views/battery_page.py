@@ -56,6 +56,8 @@ def battery_technology() -> None:
     else:
         st.warning("Battery technology is not included in the system configuration. If you want to include a battery, please edit the project settings page.")
 
+    st.markdown("---")
+    
     col1, col2 = st.columns([1, 8])
     with col1:
         if st.button("Back"):

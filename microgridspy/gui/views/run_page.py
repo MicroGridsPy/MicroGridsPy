@@ -171,6 +171,14 @@ def run_model():
         st.session_state.model = model
         results_enabled = True
 
-    if st.button("View Results", disabled=not results_enabled):
-        st.session_state.page = "Results"
-        st.rerun()
+    st.write("---")  # Add a separator
+
+    col1, col2 = st.columns([1, 8])
+    with col1:
+        if st.button("Back"):
+            st.session_state.page = "Grid Connection"
+            st.rerun()
+    with col2:
+        if st.button("View Results", disabled=not results_enabled):
+            st.session_state.page = "Results"
+            st.rerun()
