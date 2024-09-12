@@ -281,7 +281,7 @@ def plots_dashboard():
         selected_res = st.selectbox("Select Renewable Sources", available_res)
         res_usage = get_renewables_usage(model, selected_res)
         if not res_usage.empty:
-            res_usage.index = pd.date_range(start=f"{min_year}-01-01", periods=len(res_usage), freq='H')
+            res_usage.index = pd.date_range(start=f"{min_year}-01-01", periods=len(res_usage), freq='h')
             selected_year = st.slider("Select Year for Renewable Usage", 
                                       min_value=min_year,
                                       max_value=max_year,
@@ -298,7 +298,7 @@ def plots_dashboard():
     if model.has_battery:
         soc_data = get_battery_soc(model)
         if not soc_data.empty:
-            soc_data.index = pd.date_range(start=f"{min_year}-01-01", periods=len(soc_data), freq='H')
+            soc_data.index = pd.date_range(start=f"{min_year}-01-01", periods=len(soc_data), freq='h')
             selected_year_battery = st.slider("Select Year for Battery SoC", 
                                               min_value=min_year,
                                               max_value=max_year,
@@ -320,7 +320,7 @@ def plots_dashboard():
             selected_gen = st.selectbox("Select Generator Type", available_gens)
             gen_usage = get_generator_usage(model, selected_gen)
             if not gen_usage.empty:
-                gen_usage.index = pd.date_range(start=f"{min_year}-01-01", periods=len(gen_usage), freq='H')
+                gen_usage.index = pd.date_range(start=f"{min_year}-01-01", periods=len(gen_usage), freq='h')
                 selected_year = st.slider("Select Year for Generator Usage", 
                                           min_value=min_year,
                                           max_value=max_year,
@@ -336,7 +336,7 @@ def plots_dashboard():
     st.subheader("Grid Connection")
     if model.has_grid_connection:
         grid_usage = get_grid_usage(model)
-        grid_usage.index = pd.date_range(start=f"{min_year}-01-01", periods=len(grid_usage), freq='H')
+        grid_usage.index = pd.date_range(start=f"{min_year}-01-01", periods=len(grid_usage), freq='h')
         selected_year_grid = st.slider("Select Year for Grid Usage", 
                                             min_value=min_year,
                                             max_value=max_year,

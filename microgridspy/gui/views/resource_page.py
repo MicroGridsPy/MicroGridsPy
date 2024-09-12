@@ -505,6 +505,7 @@ def resource_assessment():
     else:
         st.warning("No resource data file found. Please upload or download resource data first.")
 
+    st.write("---")  # Add a separator
 
     col1, col2 = st.columns([1, 8])
     with col1:

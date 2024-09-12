@@ -499,6 +499,8 @@ def demand_assessment() -> None:
     # Visualization of aggregated demand data                
     st.write("### Demand Data Visualization")
     demand_visualization()
+
+    st.write("---")  # Add a separator
     
     col1, col2 = st.columns([1, 8])
     with col1:

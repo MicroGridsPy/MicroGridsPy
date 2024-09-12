@@ -47,7 +47,6 @@ def plot_yearly_energy(data: dict):
     
     fig, ax = plt.subplots(figsize=(10, 6))
     energy_df.plot(kind='bar', ax=ax)
-    ax.set_xlabel('Years')
     ax.set_ylabel('Total Energy (MWh)')
     ax.set_title('Total Yearly Energy by User Category')
     st.pyplot(fig)
@@ -58,27 +57,30 @@ def plot_yearly_profit(profit_data: pd.DataFrame, currency: str):
     Plot yearly profit for each user category as a stacked bar chart.
     """
     fig, ax = plt.subplots(figsize=(10, 6))
+    profit_data = profit_data / 1000  # Convert to kUSD
     profit_data.plot(kind='bar', stacked=True, ax=ax)
-    ax.set_xlabel('Years')
-    ax.set_ylabel(f'Total Profit ({currency})')
-    ax.set_title('Yearly Profit by User Category')
+    ax.set_ylabel(f'Total Annual Profit - Actualized (k{currency})')
+    ax.set_title('Yearly Profit by User Category - Actualized')
     st.pyplot(fig)
 
-# Function to calculate actualized profit for each category based on tariff settings and discount rate
 def calculate_actualized_profit(data: dict, tariff_settings: dict, discount_rate: float, time_horizon: int) -> pd.DataFrame:
     """
     Calculate the yearly actualized profit for each user category based on selected tariff settings and discount rate.
     Returns a DataFrame with actualized profit data for each category and year.
     """
     actualized_profit = pd.DataFrame()
-    
+
     for category, df in data.items():
         energy = df.iloc[:, 1:].sum(axis=0)  # Total energy for each year in kWh
         years = df.columns[1:]  # Get year columns
-        
+
+        # Apply discount factors to actualize demand and profit
+        discount_factors = [(1 / ((1 + discount_rate) ** year)) for year in range(1, time_horizon + 1)]
+
+        # Calculate profit based on tariff model (without discounting yet)
         if tariff_settings[category]['type'] == 'consumption':
             tariff = tariff_settings[category]['value']
-            profit = energy * tariff
+            profit = energy * tariff  # Raw profit
         
         elif tariff_settings[category]['type'] == 'fixed':
             tariff = tariff_settings[category]['value']
@@ -93,10 +95,8 @@ def calculate_actualized_profit(data: dict, tariff_settings: dict, discount_rate
             profit = np.where(monthly_energy <= threshold, 
                               fixed_value * 12, 
                               fixed_value * 12 + (monthly_energy - threshold) * 12 * consumption_tariff)
-        
-        # Actualize profit for each year using the discount rate
-        discount_factors = [(1 / ((1 + discount_rate) ** year)) for year in range(1, time_horizon + 1)]
-        actualized_profit[category] = profit * discount_factors[:len(profit)]
+
+        actualized_profit[category] = profit * discount_factors[:len(profit)]  # Actualized profit
 
     actualized_profit.index = years
     return actualized_profit
@@ -132,6 +132,8 @@ def project_profitability():
         npc_value = model.get_solution_variable('Net Present Cost').values.item() / 1000  # Convert to kUSD
     else:
         npc_value = calculate_actualized_investment_cost(model) / 1000  # Convert to kUSD
+
+    st.write(f"Net Present Cost (NPC): {npc_value:,.2f} k{currency}")
     
     tariff_settings = {}
     
@@ -164,20 +166,14 @@ def project_profitability():
 
     # Profit calculation section
     actualized_profit_data = calculate_actualized_profit(user_category_data, tariff_settings, discount_rate, time_horizon)
-    st.write("Actualized Profit Data:", actualized_profit_data)
-    
+    st.write(f"Actualized Profit Data: {actualized_profit_data} k{currency}")
+
     # Calculate total actualized profit in kUSD
     total_actualized_profit = actualized_profit_data.sum().sum() / 1000  # Convert to kUSD
-    
-    # Calculate payback period by comparing actualized revenues and NPC
-    cumulative_profit = actualized_profit_data.sum(axis=1).cumsum()
 
-    # Find the first year where cumulative actualized profit exceeds or equals the NPC
-    payback_period_year = next((year for year, profit in enumerate(cumulative_profit) if profit >= npc_value), None)
-    if payback_period_year is None:
-        payback_period = "No payback period"
-    else:
-        payback_period = f"{payback_period_year + 1} years"  # Add 1 to convert from index to year number
+    # Calculate payback period
+    payback_period = (npc_value / total_actualized_profit) * time_horizon
+
 
     # Display total actualized profit and payback period
     st.header("Profit Analysis Visualization")
@@ -186,10 +182,12 @@ def project_profitability():
     with col1:
         st.metric(label=f"Total Actualized Profit over {time_horizon} years", value=f"{total_actualized_profit:,.2f} k{currency}")
     with col2:
-        st.metric(label="Payback Period", value=payback_period)
+        st.metric(label="Payback Period", value=f"{payback_period:.2f} years")
     
     # Visualization section
     plot_yearly_profit(actualized_profit_data, currency)
+
+    st.write("---")  # Add a separator
 
     if st.button("Back"):
         st.session_state.page = "Results"
