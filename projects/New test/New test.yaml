@@ -123,7 +123,7 @@ project_settings:
   renewable_penetration: 0.0
   solver: gurobi
   start_date: 2023-01-01
-  system_configuration: 0
+  system_configuration: 1
   time_horizon: 20
   time_resolution: 8760
 renewables_params:

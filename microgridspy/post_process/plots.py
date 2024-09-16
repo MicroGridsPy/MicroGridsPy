@@ -311,7 +311,7 @@ def dispatch_plot(model: Model, scenario: int, year: int, day: int, color_dict: 
 
     return fig
 
-def create_energy_usage_pie_chart(energy_usage, model, res_names, gen_names, color_dict):
+def create_energy_usage_pie_chart(energy_usage: dict, model: Model, res_names, color_dict, gen_names=None):
     """Create a pie chart of energy usage percentages with a legend and external labels."""
     fig, ax = plt.subplots(figsize=(8, 6))
     

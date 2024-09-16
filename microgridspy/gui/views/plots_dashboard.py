@@ -152,9 +152,10 @@ def plots_dashboard():
     for i, res_name in enumerate(model.sets['renewable_sources'].values):
         DEFAULT_COLORS[res_name] = ['#FFFF00', '#FFFFE0', '#FFFACD', '#FAFAD2'][i % 4]  # Shades of yellow
 
-    # Add Generator names to DEFAULT_COLORS
-    for i, gen_name in enumerate(model.sets['generator_types'].values):
-        DEFAULT_COLORS[gen_name] = ['#00509D', '#0066CC', '#0077B6', '#0088A3'][i % 4]  # Shades of blue
+    if model.has_generator:
+        # Add Generator names to DEFAULT_COLORS
+        for i, gen_name in enumerate(model.sets['generator_types'].values):
+            DEFAULT_COLORS[gen_name] = ['#00509D', '#0066CC', '#0077B6', '#0088A3'][i % 4]  # Shades of blue
 
     # Initialize color dictionary in session state if not present
     if 'color_dict' not in st.session_state:
@@ -264,7 +265,10 @@ def plots_dashboard():
         st.metric("Renewable Penetration", f"{renewable_penetration:.2f}%")
     
     # Create and display pie chart
-    energy_usage_fig = create_energy_usage_pie_chart(energy_usage, model, st.session_state.res_names, st.session_state.gen_names, st.session_state.color_dict)
+    if model.has_generator:
+        energy_usage_fig = create_energy_usage_pie_chart(energy_usage, model, st.session_state.res_names, st.session_state.color_dict, st.session_state.gen_names)
+    else:
+        energy_usage_fig = create_energy_usage_pie_chart(energy_usage, model, st.session_state.res_names, st.session_state.color_dict)
     fig['Energy Usage Pie Chart'] = energy_usage_fig
     st.pyplot(energy_usage_fig)
 
@@ -331,6 +335,8 @@ def plots_dashboard():
                 st.pyplot(generator_heatmap)
         else:
             st.warning("No installed capacity for generators.")
+    else:
+        st.warning("No generator within the system configuration.")
 
     # Grid Connection (if applicable)
     st.subheader("Grid Connection")
