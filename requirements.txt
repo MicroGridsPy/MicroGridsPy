@@ -11,3 +11,5 @@ seaborn
 rampdemand
 highspy
 linopy==0.3.14
+geopandas
+osmnx
