@@ -31,6 +31,9 @@ class PathManager:
     # Define paths for archetypes folder
     ARCHETYPES_FOLDER_PATH: Path = ROOT_PATH / 'microgridspy' / 'utils' / 'demand_archetypes'
 
+    # Define paths for grid routing
+    SHAPEFILE_PATH = ROOT_PATH / 'microgridspy' / 'grid_routing' / 'files'
+
     # Define paths for assets
     IMAGES_PATH: Path = ROOT_PATH / 'microgridspy'/ 'gui' / 'assets' / 'images'
     ICONS_PATH: Path = ROOT_PATH / 'microgridspy'/ 'gui' / 'assets' / 'icons'

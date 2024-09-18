@@ -18,6 +18,7 @@ from microgridspy.gui.views.battery_page import battery_technology
 from microgridspy.gui.views.generator_page import generator_technology
 from microgridspy.gui.views.grid_page import grid_technology
 from microgridspy.gui.views.profit_page import project_profitability
+from microgridspy.gui.views.grid_network import grid_routing
 from microgridspy.gui.views.run_page import run_model
 from microgridspy.gui.views.plots_dashboard import plots_dashboard
 
@@ -93,6 +94,10 @@ def main() -> None:
         if buttons_enabled:
             st.session_state.page = "Optimization"
 
+    if st.sidebar.button("Grid Network", disabled=not buttons_enabled):
+        if buttons_enabled:
+            st.session_state.page = "Grid Network"
+
     if st.sidebar.button("Results Dashboard", disabled=not buttons_enabled):
         if buttons_enabled:
             st.session_state.page = "Results"
@@ -116,9 +121,10 @@ def main() -> None:
         "Battery Characterization": battery_technology,
         "Generator Characterization": generator_technology,
         "Grid Connection": grid_technology,
-        "Project Profitability": project_profitability,
         "Optimization": run_model,
-        "Results": plots_dashboard
+        "Grid Network": grid_routing,
+        "Results": plots_dashboard,
+        "Project Profitability": project_profitability,
     }
 
     # Display the selected frame

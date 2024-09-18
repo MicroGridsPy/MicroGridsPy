@@ -12,8 +12,8 @@ Main da richiamare dal main di MG.py
 
 import pandas as pd
 import geopandas as gpd
-from functions_routing import roads_import, roads_to_multipoints, users_geodataframe_prep
-from trees import routing_simple, routing_roads_no_P, routing_roads_P
+from microgridspy.grid_routing.functions_routing import roads_import, roads_to_multipoints, users_geodataframe_prep
+from microgridspy.grid_routing.trees import routing_simple, routing_roads_no_P, routing_roads_P
 
 
 def Distribution_Line(Routing_Method, model):
