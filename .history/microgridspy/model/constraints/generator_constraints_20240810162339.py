@@ -32,34 +32,24 @@ def add_generator_max_energy_production_constraint(model: Model, settings: Proje
         for year in sets.years.values:
             # Retrieve the step for the current year
             step = years_steps_tuples[year - years[0]][1]
-
-            for gen in sets.generator_types.values:
-
-                # Calculate total_age over 'generator_types' and 'years'
-                total_age = param['GENERATOR_EXISTING_YEARS'].sel(generator_types=gen) + (year - years[0])
-
-                # Calculate lifetime_exceeded over 'generator_types' and 'years'
-                lifetime_exceeded = total_age > param['GENERATOR_LIFETIME'].sel(generator_types=gen)
-
-                if lifetime_exceeded:
-                    # Calculate total_production considering just the new capacity
-                    max_production = (var['generator_units'].sel(steps=step) * param['GENERATOR_NOMINAL_CAPACITY']).sel(generator_types=gen)
-                else:
-                    # Calculate total_production considering the existing and new capacity
-                    max_production = ((var['generator_units'].sel(steps=step) + (param['GENERATOR_EXISTING_CAPACITY'] / param['GENERATOR_NOMINAL_CAPACITY'])) * param['GENERATOR_NOMINAL_CAPACITY']).sel(generator_types=gen)
-
-                # Add constraints for all generator types at once
-                model.add_constraints(var['generator_energy_production'].sel(years=year, generator_types=gen) <= max_production, name=f"Generator Energy Production Constraint - Year {year}, Type {gen}")
-    else:
-        # Non-brownfield scenario
-        max_production = var['generator_units'] * param['GENERATOR_NOMINAL_CAPACITY']
-        model.add_constraints(var['generator_energy_production'] <= max_production, name="Generator Energy Production Constraint")
-"""
-    # Ensure that production does not exceed demand (assuming 'DEMAND' is over 'years' and 'generator_types')
-    model.add_constraints(
-        var['generator_energy_production'] <= param['DEMAND'],
-        name="Maximum Energy Production Constraint for Generator")
-"""
+            # Calculate the total age of the existing capacity at each year
+            total_age = param['GENERATOR_EXISTING_YEARS'] + (year - sets.years[0])
+        
+            # Create a boolean mask for renewable sources that have exceeded their lifetime
+            lifetime_exceeded = total_age > param['GENERATOR_LIFETIME']
+            
+            # Calculate the total energy production
+            if lifetime_exceeded:
+                model.add_constraints(var['generator_energy_production'].sel(years=year) <= var['generator_units'].sel(steps=step) * param['GENERATOR_NOMINAL_CAPACITY'], 
+                            name=f"Generator Energy Production Constraint - Year {year}")
+            else:
+                model.add_constraints(var['generator_energy_production'].sel(years=year) <= (var['generator_units'].sel(steps=step) * param['GENERATOR_NOMINAL_CAPACITY']) + param['GENERATOR_EXISTING_CAPACITY'], 
+                            name=f"Generator Energy Production Constraint with Existing Capacity - Year {year}")
+    else: 
+        model.add_constraints(var['generator_energy_production'] <= var['generator_units'] * param['GENERATOR_NOMINAL_CAPACITY'], 
+                            name=f"Generator Energy Production Constraint")
+    
+    model.add_constraints(var['generator_energy_production'] <= param['DEMAND'], name=f"Maximum Energy Production Constraint for generator")
 
 def add_generator_capacity_expansion_constraints(model: Model, settings: ProjectParameters, sets: xr.Dataset, param: xr.Dataset, var: Dict[str, linopy.Variable]) -> None:
     """Add constraints for generator capacity expansion."""

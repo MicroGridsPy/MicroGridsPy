@@ -53,7 +53,7 @@ def add_renewable_energy_production_constraints(model: Model, settings: ProjectP
                     total_production = ((var['res_units'].sel(steps=step) * param['RESOURCE'] + ((param['RES_EXISTING_CAPACITY'] / param['RES_NOMINAL_CAPACITY']) * param['RESOURCE'])) * param['RES_INVERTER_EFFICIENCY']).sel(renewable_sources=res)
 
                 # Add constraints over 'res_types'
-                model.add_constraints(var['res_energy_production'].sel(steps=step, renewable_sources=res) == total_production, name=f"Renewable Energy Production Constraint - Year {year}, Source {res}")
+                model.add_constraints(var['res_energy_production'].sel(years=year, renewable_sources=res) == total_production, name=f"Renewable Energy Production Constraint - Year {year}, Source {res}")
     else:
         # Non-brownfield scenario
         res_energy_production = (var['res_units'] * param['RESOURCE'] * param['RES_INVERTER_EFFICIENCY'])

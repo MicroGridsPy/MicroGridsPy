@@ -29,31 +29,41 @@ def add_generator_max_energy_production_constraint(model: Model, settings: Proje
         # Create a list of tuples with years and steps
         years_steps_tuples = [((years[i] - years[0]) + 1, steps[i // step_duration]) for i in range(len(years))]
 
+        # Calculate total_age over 'generator_types' and 'years'
+        total_age = param['GENERATOR_EXISTING_YEARS'] + (years - years[0])
+
+        # Calculate lifetime exceeded for each generator type and year
+        lifetime_exceeded = total_age > param['GENERATOR_LIFETIME']
+
         for year in sets.years.values:
             # Retrieve the step for the current year
             step = years_steps_tuples[year - years[0]][1]
 
-            for gen in sets.generator_types.values:
+            # Select the relevant slice for the current year
+            lifetime_exceeded_year = lifetime_exceeded.sel(years=year)
 
-                # Calculate total_age over 'generator_types' and 'years'
-                total_age = param['GENERATOR_EXISTING_YEARS'].sel(generator_types=gen) + (year - years[0])
+            # Existing capacity (array over generator_types)
+            existing_capacity = param['GENERATOR_EXISTING_CAPACITY']
 
-                # Calculate lifetime_exceeded over 'generator_types' and 'years'
-                lifetime_exceeded = total_age > param['GENERATOR_LIFETIME'].sel(generator_types=gen)
+            # New capacity limit (variable over generator_types)
+            new_capacity_limit = var['generator_units'].sel(steps=step) * param['GENERATOR_NOMINAL_CAPACITY']
 
-                if lifetime_exceeded:
-                    # Calculate total_production considering just the new capacity
-                    max_production = (var['generator_units'].sel(steps=step) * param['GENERATOR_NOMINAL_CAPACITY']).sel(generator_types=gen)
-                else:
-                    # Calculate total_production considering the existing and new capacity
-                    max_production = ((var['generator_units'].sel(steps=step) + (param['GENERATOR_EXISTING_CAPACITY'] / param['GENERATOR_NOMINAL_CAPACITY'])) * param['GENERATOR_NOMINAL_CAPACITY']).sel(generator_types=gen)
+            # Maximum production depends on whether lifetime is exceeded
+            max_production = xr.where(
+                lifetime_exceeded_year,
+                new_capacity_limit,
+                new_capacity_limit + existing_capacity * param['GENERATOR_NOMINAL_CAPACITY'])
 
-                # Add constraints for all generator types at once
-                model.add_constraints(var['generator_energy_production'].sel(years=year, generator_types=gen) <= max_production, name=f"Generator Energy Production Constraint - Year {year}, Type {gen}")
+            # Add constraints for all generator types at once
+            model.add_constraints(
+                var['generator_energy_production'].sel(years=year) <= max_production,
+                name=f"Generator Energy Production Constraint - Year {year}")
     else:
         # Non-brownfield scenario
         max_production = var['generator_units'] * param['GENERATOR_NOMINAL_CAPACITY']
-        model.add_constraints(var['generator_energy_production'] <= max_production, name="Generator Energy Production Constraint")
+        model.add_constraints(
+            var['generator_energy_production'] <= max_production,
+            name="Generator Energy Production Constraint")
 """
     # Ensure that production does not exceed demand (assuming 'DEMAND' is over 'years' and 'generator_types')
     model.add_constraints(

@@ -66,8 +66,8 @@ def update_parameters(i: int, res_name: str, time_horizon: int, brownfield: bool
             key=f"exist_cap_{i}") / 1000
         st.session_state.res_existing_years[i] = st.number_input(
             f"Existing Years [years]", 
-            min_value=0.0,
-            max_value=float(st.session_state.res_lifetime[i] - 1),
+            min_value=0,
+            max_value=(st.session_state.res_lifetime[i] - 1),
             value=float(st.session_state.res_existing_years[i]), 
             key=f"exist_years_{i}")
 

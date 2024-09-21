@@ -118,6 +118,7 @@ def main() -> None:
         "Generator Characterization": generator_technology,
         "Grid Connection": grid_technology,
         "Optimization": run_model,
+        "Grid Network": grid_routing,
         "Results": plots_dashboard,
         "Project Profitability": project_profitability,
     }

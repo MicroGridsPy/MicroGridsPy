@@ -31,34 +31,36 @@ def add_renewable_energy_production_constraints(model: Model, settings: ProjectP
         # Create a list of tuples with years and steps
         years_steps_tuples = [((years[i] - years[0]) + 1, steps[i // step_duration]) for i in range(len(years))]
         # Initialize the energy production
-        res_energy_production = 0
+        res_energy_production: linopy.LinearExpression = 0
 
         for year in sets.years.values:
             # Retrieve the step for the current year
             step = years_steps_tuples[year - years[0]][1]
-
-            for res in sets.renewable_sources.values:
-
-                # Calculate total_age over 'res_types' and 'years'
-                total_age = param['RES_EXISTING_YEARS'].sel(renewable_sources=res) + (year - years[0])
-
-                # Calculate lifetime_exceeded over 'res_types' and 'years'
-                lifetime_exceeded = total_age > param['RES_LIFETIME'].sel(renewable_sources=res)
-
-                if lifetime_exceeded:
-                    # Calculate total_production considering just the new capacity
-                    total_production = (var['res_units'].sel(steps=step) * param['RESOURCE'] * param['RES_INVERTER_EFFICIENCY']).sel(renewable_sources=res)
-                else:
-                    # Calculate total_production considering the existing and new capacity
-                    total_production = ((var['res_units'].sel(steps=step) * param['RESOURCE'] + ((param['RES_EXISTING_CAPACITY'] / param['RES_NOMINAL_CAPACITY']) * param['RESOURCE'])) * param['RES_INVERTER_EFFICIENCY']).sel(renewable_sources=res)
-
-                # Add constraints over 'res_types'
-                model.add_constraints(var['res_energy_production'].sel(steps=step, renewable_sources=res) == total_production, name=f"Renewable Energy Production Constraint - Year {year}, Source {res}")
+            # Calculate the total age of the existing capacity at each year
+            total_age = param['RES_EXISTING_YEARS'] + (year - sets.years[0])
+        
+            # Create a boolean mask for renewable sources that have exceeded their lifetime
+            lifetime_exceeded = total_age > param['RES_LIFETIME']
+        
+            # Calculate the energy production from existing capacity
+            existing_capacity_production = ((param['RES_EXISTING_CAPACITY'] / param['RES_NOMINAL_CAPACITY']) * param['RESOURCE'] * param['RES_INVERTER_EFFICIENCY'])
+            
+            # Calculate the energy production from new installed capacity
+            new_capacity_production = (var['res_units'].sel(steps=step) * param['RESOURCE'] * param['RES_INVERTER_EFFICIENCY'])
+            
+            # Calculate the total energy production
+            if lifetime_exceeded:
+                model.add_constraints(var['res_energy_production'].sel(steps=step) == new_capacity_production, 
+                                      name=f"Renewable Energy Production Constraint - Year {year}")
+            else:
+                model.add_constraints(var['res_energy_production'].sel(steps=step) - new_capacity_production == existing_capacity_production, 
+                                      name=f"Renewable Energy Production Constraint - Year {year}")
+           
     else:
-        # Non-brownfield scenario
-        res_energy_production = (var['res_units'] * param['RESOURCE'] * param['RES_INVERTER_EFFICIENCY'])
-
-        model.add_constraints(var['res_energy_production'] == res_energy_production, name="Renewable Energy Production Constraint")
+        res_energy_production = (var['res_units'] * 
+                                param['RESOURCE'] * param['RES_INVERTER_EFFICIENCY'])
+            
+        model.add_constraints(var['res_energy_production'] == res_energy_production, name=f"Renewable Energy Production Constraint")
 
 def add_renewables_capacity_expansion_constraints(model: Model, settings: ProjectParameters, sets: xr.Dataset, param: xr.Dataset, var: Dict[str, linopy.Variable]) -> None:
     """Add minimum step units constraint for renewables."""

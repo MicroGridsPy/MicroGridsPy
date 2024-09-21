@@ -353,3 +353,86 @@ Iter       Primal          Dual         Primal    Dual     Compl     Time
 Barrier solved model in 25 iterations and 9.67 seconds (11.03 work units)
 Optimal objective 2.53328003e+07
 
+
+Gurobi 11.0.2 (win64) logging started Sat Sep 21 12:45:02 2024
+
+Set parameter LogFile to value "C:\Users\onori\Documents\GitHub\MicroGridsPy-SESAM\MicroGridsPy-SESAM\projects\New test\New test_solver_log.txt"
+Gurobi Optimizer version 11.0.2 build v11.0.2rc0 (win64 - Windows 11.0 (22631.2))
+
+CPU model: 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz, instruction set [SSE2|AVX|AVX2|AVX512]
+Thread count: 8 physical cores, 16 logical processors, using up to 16 threads
+
+Optimize a model with 438127 rows, 359170 columns and 1138937 nonzeros
+Model fingerprint: 0x37b3d02e
+Coefficient statistics:
+  Matrix range     [8e-05, 1e+03]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [5e-06, 3e+06]
+Presolve removed 438127 rows and 359170 columns
+Presolve time: 0.19s
+Presolve: All rows and columns removed
+
+Barrier solved model in 0 iterations and 0.19 seconds (0.21 work units)
+Optimal objective 0.00000000e+00
+
+Gurobi 11.0.2 (win64) logging started Sat Sep 21 12:49:18 2024
+
+Set parameter LogFile to value "C:\Users\onori\Documents\GitHub\MicroGridsPy-SESAM\MicroGridsPy-SESAM\projects\New test\New test_solver_log.txt"
+Gurobi Optimizer version 11.0.2 build v11.0.2rc0 (win64 - Windows 11.0 (22631.2))
+
+CPU model: 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz, instruction set [SSE2|AVX|AVX2|AVX512]
+Thread count: 8 physical cores, 16 logical processors, using up to 16 threads
+
+Optimize a model with 525607 rows, 359170 columns and 1314137 nonzeros
+Model fingerprint: 0xe8dc9b51
+Coefficient statistics:
+  Matrix range     [8e-05, 1e+03]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [5e-06, 3e+06]
+Presolve removed 350167 rows and 271448 columns
+Presolve time: 0.39s
+Presolved: 175440 rows, 87722 columns, 350880 nonzeros
+Ordering time: 0.02s
+
+Barrier statistics:
+ Dense cols : 2
+ AA' NZ     : 2.632e+05
+ Factor NZ  : 6.140e+05 (roughly 110 MB of memory)
+ Factor Ops : 2.193e+06 (less than 1 second per iteration)
+ Threads    : 8
+
+                  Objective                Residual
+Iter       Primal          Dual         Primal    Dual     Compl     Time
+   0   2.18317416e+09  2.38872315e+07  1.60e+06 0.00e+00  2.15e+06     1s
+   1   2.64936685e+09  2.38966631e+08  0.00e+00 3.53e-01  1.31e+06     1s
+   2   2.57771658e+09  2.66205577e+07  0.00e+00 6.54e-04  1.21e+04     1s
+   3   1.23140927e+08  2.57665148e+07  0.00e+00 3.71e-12  3.70e+02     1s
+   4   4.73013287e+07  2.62216189e+07  0.00e+00 3.47e-18  8.01e+01     1s
+   5   3.31618049e+07  2.69067186e+07  0.00e+00 5.77e-15  2.38e+01     1s
+   6   3.03275233e+07  2.78171869e+07  0.00e+00 5.57e-12  9.54e+00     1s
+   7   2.99228017e+07  2.82622185e+07  0.00e+00 3.26e-12  6.31e+00     1s
+   8   2.95458729e+07  2.86052369e+07  0.00e+00 2.89e-12  3.57e+00     1s
+   9   2.94696117e+07  2.89229630e+07  0.00e+00 3.01e-12  2.08e+00     1s
+  10   2.94461217e+07  2.90701071e+07  0.00e+00 1.86e-12  1.43e+00     1s
+  11   2.94403065e+07  2.92590859e+07  0.00e+00 1.16e-10  6.89e-01     1s
+  12   2.94375139e+07  2.92923576e+07  0.00e+00 9.89e-11  5.52e-01     1s
+  13   2.94346290e+07  2.93228156e+07  0.00e+00 8.17e-11  4.25e-01     2s
+  14   2.94334151e+07  2.93503975e+07  0.00e+00 6.38e-11  3.15e-01     2s
+  15   2.94326235e+07  2.93972879e+07  0.00e+00 4.20e-11  1.34e-01     2s
+  16   2.94320542e+07  2.94100716e+07  0.00e+00 3.55e-11  8.35e-02     2s
+  17   2.94318638e+07  2.94185517e+07  0.00e+00 2.16e-11  5.06e-02     2s
+  18   2.94317424e+07  2.94199907e+07  0.00e+00 5.20e-11  4.47e-02     2s
+  19   2.94315899e+07  2.94230634e+07  0.00e+00 1.03e-10  3.24e-02     2s
+  20   2.94315165e+07  2.94254953e+07  0.00e+00 1.35e-10  2.29e-02     2s
+  21   2.94313046e+07  2.94274668e+07  0.00e+00 1.55e-10  1.46e-02     2s
+  22   2.94312808e+07  2.94294466e+07  0.00e+00 9.15e-11  6.97e-03     2s
+  23   2.94312504e+07  2.94296997e+07  0.00e+00 8.45e-11  5.89e-03     2s
+  24   2.94312106e+07  2.94305491e+07  0.00e+00 5.20e-11  2.51e-03     2s
+  25   2.94312066e+07  2.94311217e+07  0.00e+00 9.20e-12  3.23e-04     2s
+  26   2.94311995e+07  2.94311962e+07  0.00e+00 4.06e-12  1.23e-05     2s
+
+Barrier solved model in 26 iterations and 2.35 seconds (1.81 work units)
+Optimal objective 2.94311995e+07
+

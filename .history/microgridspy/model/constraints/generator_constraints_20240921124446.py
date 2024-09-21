@@ -49,7 +49,7 @@ def add_generator_max_energy_production_constraint(model: Model, settings: Proje
                     max_production = ((var['generator_units'].sel(steps=step) + (param['GENERATOR_EXISTING_CAPACITY'] / param['GENERATOR_NOMINAL_CAPACITY'])) * param['GENERATOR_NOMINAL_CAPACITY']).sel(generator_types=gen)
 
                 # Add constraints for all generator types at once
-                model.add_constraints(var['generator_energy_production'].sel(years=year, generator_types=gen) <= max_production, name=f"Generator Energy Production Constraint - Year {year}, Type {gen}")
+                model.add_constraints(var['generator_energy_production'].sel(years=year) <= max_production, name=f"Generator Energy Production Constraint - Year {year}, Type {gen}")
     else:
         # Non-brownfield scenario
         max_production = var['generator_units'] * param['GENERATOR_NOMINAL_CAPACITY']
