@@ -42,7 +42,76 @@ MicroGridsPy is under continuous development and the latest version includes:
 
 ## Quick Start
 
+To get started with **MicroGridsPy**, follow the detailed steps below. These instructions will guide you through setting up your Python environment, downloading the project files, and running the web-based interface for the model.
 
+### 1. Install Anaconda or Miniconda (Recommended)
+
+For the smoothest experience, it's recommended to install [Anaconda](https://www.anaconda.com/products/individual) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html). These tools allow you to manage Python environments, ensuring that you can install and manage the dependencies required for **MicroGridsPy** without interfering with your system Python or other projects.
+
+- **Anaconda**: A full-featured environment manager and Python distribution with numerous scientific packages included by default.
+- **Miniconda**: A lightweight version of Anaconda, containing just the essentials, letting you install only the packages you need.
+
+After installation, you can create isolated Python environments and easily install any required libraries for **MicroGridsPy**.
+
+#### Install Anaconda or Miniconda:
+- **For Anaconda**: [Download and install Anaconda](https://www.anaconda.com/products/individual).
+- **For Miniconda**: [Download and install Miniconda](https://docs.conda.io/en/latest/miniconda.html).
+
+### 2. Create a Python Environment
+
+Once Anaconda or Miniconda is installed, the next step is to create a Python environment dedicated to running **MicroGridsPy**. This keeps the required libraries isolated from your main Python environment.
+
+#### Step-by-step process:
+1. Open the **Anaconda Prompt** or any terminal of your choice.
+2. Use the following command to create a new Python environment. In this example, the environment is named `myenv`, but you can use any name you prefer.
+
+```bash
+# Create a new environment (replace 'myenv' with your preferred environment name)
+conda create --name myenv python=3.9
+
+# Activate the environment
+conda activate myenv
+```
+
+Now that your environment is active, install the required packages using the requirements.txt file provided in the project repository. This file lists all the dependencies needed to run MicroGridsPy.
+
+```bash
+# Install required packages from the requirements.txt file
+pip install -r requirements.txt
+```
+
+### 3. Clone or Download the GitHub Repository
+
+Next, download the MicroGridsPy code by cloning the GitHub repository:
+
+```bash
+git clone https://github.com/MicroGridsPy/MicroGridsPy/tree/Development_Linopy.git
+```
+
+If you prefer not to use Git, you can directly download the zip folder from GitHub. Once downloaded, extract the zip file to a location of your choice.
+
+### 4. Navigate to the Project Directory
+
+After cloning or downloading the project files, navigate to the folder where the MicroGridsPy files are located. If you cloned the repository, use the following command to move into the project directory:
+
+```bash
+# Replace with the actual path where you saved the MicroGridsPy project
+cd path/to/MicroGridsPy
+```
+
+### 5. Launch the Streamlit user interface
+
+To run the MicroGridsPy model, execute the following command from within the project directory. Make sure that your environment is still activated:
+
+```bash
+streamlit run main.py
+```
+
+This will launch a local instance of the Streamlit web app in your default web browser. A web page will open on localhost (typically at http://localhost:8501), where you can interact with the model through an intuitive user interface.
+
+The web interface allows you to input parameters, run simulations, and visualize the results directly.
+
+Happy modeling!
 
 ---
 
