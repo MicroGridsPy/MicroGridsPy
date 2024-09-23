@@ -42,32 +42,7 @@ MicroGridsPy is under continuous development and the latest version includes:
 
 ## Quick Start
 
-Here below is a general introduction to the different steps in building and running a model:
 
-### Time Series Data Input
-Begin by providing specific data, over the lifetime of the project, about the available renewable resources and demand profiles. For sub-Saharan Africa, it is also possible to estimate these time series data **endogenously** based on editable parameters and built-in load demand archetypes.
-
-### Configuration and Optimization Setup
-Set the model’s general parameters, such as:
-- The number of periods (e.g., 8760 for hourly analysis).
-- The total duration of the project.
-- Specific features and modes like **MILP formulation**, **Multi-Objective optimization**, **Grid connection**, etc.
-
-Also, define the model's optimization goals and constraints, such as:
-- Aiming for a minimum renewable penetration.
-- Achieving a certain level of battery independence.
-
-### Component Selection
-Choose the technologies to include, such as PV panels, wind turbines, or batteries. Define their capacities and operational characteristics.
-
-### Execution
-Run the model to perform the optimization. MicroGridsPy processes the inputs through its algorithms to find the most cost-effective and efficient system setup.
-
-### Output Analysis
-Review the outputs, which include:
-- The sizing of system components.
-- Financial analyses like **Net Present Cost (NPC)** and **Levelized Cost of Energy (LCOE)**.
-- **Dispatch plots** showing system operation over time.
 
 ---
 
