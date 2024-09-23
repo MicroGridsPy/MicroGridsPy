@@ -80,6 +80,29 @@ Now that your environment is active, install the required packages using the req
 pip install -r requirements.txt
 ```
 
+Alternatively, you can manually install the required packages using pip. An example is:
+
+```bash
+# Install Streamlit for the user interface
+pip install streamlit
+
+# Install the linopy optimization library
+pip install linopy==0.3.14
+
+# Install additional libraries for data handling, plotting, and other functionalities
+pip install xarray==2024.3.0
+pip install pydantic
+pip install pyyaml
+pip install folium
+pip install streamlit-folium
+pip install geopy
+pip install openpyxl
+pip install matplotlib
+pip install seaborn
+pip install rampdemand
+pip install highspy
+```
+
 ### 3. Clone or Download the GitHub Repository
 
 Next, download the MicroGridsPy code by cloning the GitHub repository:
@@ -88,7 +111,7 @@ Next, download the MicroGridsPy code by cloning the GitHub repository:
 git clone https://github.com/MicroGridsPy/MicroGridsPy/tree/Development_Linopy.git
 ```
 
-If you prefer not to use Git, you can directly download the zip folder from GitHub. Once downloaded, extract the zip file to a location of your choice.
+If you prefer not to use Git, you can directly download the zip folder from GitHub [here](https://github.com/MicroGridsPy/MicroGridsPy/tree/Development_Linopy). Once downloaded, extract the zip file to a location of your choice.
 
 ### 4. Navigate to the Project Directory
 
