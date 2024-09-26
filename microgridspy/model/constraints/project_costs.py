@@ -58,8 +58,6 @@ def add_investment_cost(
     has_generator: bool,
     has_grid_connection: bool) -> None:
     """ Add investment cost constraint to the model."""
-    # Check if it's a brownfield scenario
-    is_brownfield: bool = settings.advanced_settings.brownfield
     step_duration: int = settings.advanced_settings.step_duration    
     # Create a list of years for each investment step
     investment_steps_years: List = [step * step_duration for step in range(len(sets.steps.values))]
@@ -74,6 +72,7 @@ def add_investment_cost(
             # Initial Investment Cost
             investment_cost += (var['res_units'].sel(steps=step) * param['RES_NOMINAL_CAPACITY'] * 
                                 param['RES_SPECIFIC_INVESTMENT_COST']).sum('renewable_sources')
+
             if has_battery:
                 investment_cost += (var['battery_units'].sel(steps=step) * param['BATTERY_NOMINAL_CAPACITY'] * 
                                     param['BATTERY_SPECIFIC_INVESTMENT_COST'])
@@ -118,9 +117,13 @@ def add_fixed_om_cost(
     has_grid_connection: bool,
     actualized: bool) -> None:
     """Calculate fixed operation and maintenance cost and add the corresponding constraint to the model."""
+    # Set useful alias for parameters
     years = sets.years.values
     steps = sets.steps.values
+    renewables = sets.renewable_sources.values
+    generators = sets.generator_types.values
     step_duration = settings.advanced_settings.step_duration
+    is_brownfield: bool = settings.advanced_settings.brownfield
     # Create a list of tuples with years and steps
     years_steps_tuples = [((years[i] - years[0]) + 1, steps[i // step_duration]) for i in range(len(years))]
     # Calculate discount factor for each year
@@ -130,7 +133,7 @@ def add_fixed_om_cost(
     om_cost: linopy.LinearExpression = 0
 
     if actualized:
-        for year in sets.years.values:
+        for year in years:
             # Retrieve the step for the current year
             step = years_steps_tuples[year - years[0]][1]
 
@@ -139,17 +142,19 @@ def add_fixed_om_cost(
                         param['RES_NOMINAL_CAPACITY'] * param['RES_SPECIFIC_INVESTMENT_COST'] * param['RES_SPECIFIC_OM_COST']) *
                         discount_factor.sel(years=year)).sum('renewable_sources')
             
-            if settings.advanced_settings.brownfield:
-                # Calculate the total age of the existing capacity at each year
-                total_age = param['RES_EXISTING_YEARS'] + (year - sets.years[0])
-        
-                # Create a boolean mask for renewable sources that have exceeded their lifetime
-                lifetime_exceeded = total_age > param['RES_LIFETIME']
+            if is_brownfield:
+                # Calculate the total age of the existing capacity at each year for each renewable source
+                for res in renewables:
+                    # Calculate total_age
+                    total_age = param['RES_EXISTING_YEARS'].sel(renewable_sources=res) + (year - years[0])
 
-                if lifetime_exceeded is False:
-                    # Existing RES O&M cost (actualized)
-                    om_cost += ((param['RES_EXISTING_CAPACITY'] * param['RES_SPECIFIC_INVESTMENT_COST'] * param['RES_SPECIFIC_OM_COST'] *
-                                discount_factor.sel(years=year)).sum('renewable_sources'))
+                    # Calculate lifetime_exceeded
+                    lifetime_exceeded = total_age > param['RES_LIFETIME'].sel(renewable_sources=res)
+
+                    if lifetime_exceeded is False:
+                        # Existing RES O&M cost (actualized)
+                        om_cost += ((param['RES_EXISTING_CAPACITY'] * param['RES_SPECIFIC_INVESTMENT_COST'] * param['RES_SPECIFIC_OM_COST'] *
+                                    discount_factor.sel(years=year)).sel(renewable_sources=res))
 
             # Battery O&M cost (actualized)
             if has_battery:
@@ -157,7 +162,7 @@ def add_fixed_om_cost(
                             param['BATTERY_NOMINAL_CAPACITY'] * param['BATTERY_SPECIFIC_INVESTMENT_COST'] * param['BATTERY_SPECIFIC_OM_COST'] * 
                             discount_factor.sel(years=year)))
                 
-                if settings.advanced_settings.brownfield:
+                if is_brownfield:
                     # Calculate the total age of the existing capacity at each year
                     total_age = param['BATTERY_EXISTING_YEARS'] + (year - sets.years[0])
         
@@ -174,17 +179,20 @@ def add_fixed_om_cost(
                 om_cost += ((var['generator_units'].sel(steps=step) * 
                             param['GENERATOR_NOMINAL_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] * param['GENERATOR_SPECIFIC_OM_COST'] * 
                             discount_factor.sel(years=year))).sum('generator_types')
-                if settings.advanced_settings.brownfield:
-                    # Calculate the total age of the existing capacity at each year
-                    total_age = param['GENERATOR_EXISTING_YEARS'] + (year - sets.years[0])
+                
+                if is_brownfield:
+                    # Calculate the total age of the existing capacity at each year for each generator type
+                    for gen in generators:
+                        # Calculate the total age of the existing capacity at each year
+                        total_age = param['GENERATOR_EXISTING_YEARS'].sel(generator_types=gen) + (year - sets.years[0])
         
-                    # Create a boolean mask for renewable sources that have exceeded their lifetime
-                    lifetime_exceeded = total_age > param['GENERATOR_LIFETIME']
+                        # Create a boolean mask for renewable sources that have exceeded their lifetime
+                        lifetime_exceeded = total_age > param['GENERATOR_LIFETIME'].sel(generator_types=gen)
 
-                    if lifetime_exceeded is False:
-                        # Existing Generator O&M cost (actualized)
-                        om_cost += ((param['GENERATOR_EXISTING_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] * param['GENERATOR_SPECIFIC_OM_COST'] * 
-                                    discount_factor.sel(years=year)).sum('generator_types'))
+                        if lifetime_exceeded is False:
+                            # Existing Generator O&M cost (actualized)
+                            om_cost += ((param['GENERATOR_EXISTING_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] * param['GENERATOR_SPECIFIC_OM_COST'] * 
+                                        discount_factor.sel(years=year)).sel(generator_types=gen))
             
             # Grid connection cost (actualized)
             if has_grid_connection:
@@ -200,22 +208,26 @@ def add_fixed_om_cost(
             # RES O&M cost
             om_cost += (var['res_units'].sel(steps=step) * 
                         param['RES_NOMINAL_CAPACITY'] * param['RES_SPECIFIC_INVESTMENT_COST'] * param['RES_SPECIFIC_OM_COST']).sum('renewable_sources')
-            if settings.advanced_settings.brownfield:
-                # Calculate the total age of the existing capacity at each year
-                total_age = param['RES_EXISTING_YEARS'] + (year - sets.years[0])
-        
-                # Create a boolean mask for renewable sources that have exceeded their lifetime
-                lifetime_exceeded = total_age > param['RES_LIFETIME']
+            
+            if is_brownfield:
+                # Calculate the total age of the existing capacity at each year for each renewable source
+                for res in renewables:
+                    # Calculate total_age
+                    total_age = param['RES_EXISTING_YEARS'].sel(renewable_sources=res) + (year - years[0])
 
-                if lifetime_exceeded is False:
-                    # Existing RES O&M cost
-                    om_cost += (param['RES_EXISTING_CAPACITY'] * param['RES_SPECIFIC_INVESTMENT_COST'] * param['RES_SPECIFIC_OM_COST']).sum('renewable_sources')
+                    # Calculate lifetime_exceeded
+                    lifetime_exceeded = total_age > param['RES_LIFETIME'].sel(renewable_sources=res)
+
+                    if lifetime_exceeded is False:
+                        # Existing RES O&M cost (actualized)
+                        om_cost += (param['RES_EXISTING_CAPACITY'] * param['RES_SPECIFIC_INVESTMENT_COST'] * param['RES_SPECIFIC_OM_COST']).sel(renewable_sources=res)
 
             # Battery O&M cost
             if has_battery:
                 om_cost += (var['battery_units'].sel(steps=step) * 
                             param['BATTERY_NOMINAL_CAPACITY'] * param['BATTERY_SPECIFIC_INVESTMENT_COST'] * param['BATTERY_SPECIFIC_OM_COST'])
-                if settings.advanced_settings.brownfield:
+                
+                if is_brownfield:
                     # Calculate the total age of the existing capacity at each year
                     total_age = param['BATTERY_EXISTING_YEARS'] + (year - sets.years[0])
         
@@ -230,16 +242,19 @@ def add_fixed_om_cost(
             if has_generator:
                 om_cost += (var['generator_units'].sel(steps=step) * 
                             param['GENERATOR_NOMINAL_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] * param['GENERATOR_SPECIFIC_OM_COST']).sum('generator_types') 
-                if settings.advanced_settings.brownfield:
-                    # Calculate the total age of the existing capacity at each year
-                    total_age = param['GENERATOR_EXISTING_YEARS'] + (year - sets.years[0])
+                
+                if is_brownfield:
+                    # Calculate the total age of the existing capacity at each year for each generator type
+                    for gen in generators:
+                        # Calculate the total age of the existing capacity at each year
+                        total_age = param['GENERATOR_EXISTING_YEARS'].sel(generator_types=gen) + (year - sets.years[0])
         
-                    # Create a boolean mask for renewable sources that have exceeded their lifetime
-                    lifetime_exceeded = total_age > param['GENERATOR_LIFETIME']
+                        # Create a boolean mask for renewable sources that have exceeded their lifetime
+                        lifetime_exceeded = total_age > param['GENERATOR_LIFETIME'].sel(generator_types=gen)
 
-                    if lifetime_exceeded is False:
-                        # Existing Generator O&M cost
-                        om_cost += (param['GENERATOR_EXISTING_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] * param['GENERATOR_SPECIFIC_OM_COST']).sum('generator_types')
+                        if lifetime_exceeded is False:
+                            # Existing Generator O&M cost
+                            om_cost += (param['GENERATOR_EXISTING_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] * param['GENERATOR_SPECIFIC_OM_COST']).sel(generator_types=gen)
                 
             # Grid connection cost
             if has_grid_connection:
@@ -272,7 +287,7 @@ def add_battery_replacement_cost(
     :param var: Dictionary of variables
     :param actualized: Boolean indicating whether to use actualized costs
     """
-    battery_cost_in = (var['battery_inflow'] * param['UNITARY_BATTERY_REPLACEMENT_COST']).sum('periods')
+    battery_cost_in = (var['battery_inflow'] * param['UNITARY_BATTERY_REPLACEMENT_COST']).sum('periods')    # Energy flows include also the existing capacity in brownfield scenario
     battery_cost_out = (var['battery_outflow'] * param['UNITARY_BATTERY_REPLACEMENT_COST']).sum('periods')
     yearly_cost = battery_cost_in + battery_cost_out
     start_year = sets.years.values[0]
@@ -438,10 +453,14 @@ def add_salvage_value(
     has_generator: bool,
     has_grid_connection: bool
 ) -> None:
-    project_duration = settings.project_settings.time_horizon
-    step_duration = settings.advanced_settings.step_duration
-    years = sets.years.values
-    discount_factor = 1 / ((1 + param['DISCOUNT_RATE']) ** project_duration)
+    # Set useful alias for parameters
+    project_duration: int = settings.project_settings.time_horizon
+    step_duration: int = settings.advanced_settings.step_duration
+    years: xr.DataArray = sets.years.values
+    renewable_sources: xr.DataArray = sets.renewable_sources.values
+    generators: xr.DataArray = sets.generator_types.values
+    is_brownfield: bool = settings.advanced_settings.brownfield
+    discount_factor: xr.DataArray = 1 / ((1 + param['DISCOUNT_RATE']) ** project_duration)
     salvage_value: linopy.LinearExpression = 0
 
     for step in sets.steps.values:
@@ -454,18 +473,20 @@ def add_salvage_value(
                               (max(0, param['RES_LIFETIME'] - project_duration) / param['RES_LIFETIME']) *
                               discount_factor).sum('renewable_sources')
             
-            if settings.advanced_settings.brownfield:
-                # Existing RES salvage (brownfield)
-                salvage_value += (param['RES_EXISTING_CAPACITY'] * param['RES_SPECIFIC_INVESTMENT_COST'] *
-                                 (max(0, param['RES_LIFETIME'] - param['RES_EXISTING_YEARS'] - project_duration) / param['RES_LIFETIME']) *
-                                 discount_factor).sum('renewable_sources')
+            if is_brownfield:
+                for res in renewable_sources:
+                    # Existing salvage value (brownfield) for each renewable source
+                    salvage_value += (param['RES_EXISTING_CAPACITY'] * param['RES_SPECIFIC_INVESTMENT_COST'] *
+                                    (max(0, param['RES_LIFETIME'] - param['RES_EXISTING_YEARS'] - project_duration) / param['RES_LIFETIME']) *
+                                    discount_factor).sel(renewable_sources=res)
 
             if has_battery:
                 salvage_value += (var['battery_units'].sel(steps=step) * 
                                   param['BATTERY_NOMINAL_CAPACITY'] * param['BATTERY_SPECIFIC_INVESTMENT_COST'] *
                                   (max(0, param['BATTERY_LIFETIME'] - project_duration) / param['BATTERY_LIFETIME']) *
                                   discount_factor)
-                if settings.advanced_settings.brownfield:
+                
+                if is_brownfield:
                     # Existing battery salvage (brownfield)
                     salvage_value += (param['BATTERY_EXISTING_CAPACITY'] * param['BATTERY_SPECIFIC_INVESTMENT_COST'] *
                                      (max(0, param['BATTERY_LIFETIME'] - param['BATTERY_EXISTING_YEARS'] - project_duration) / param['BATTERY_LIFETIME']) *
@@ -476,11 +497,13 @@ def add_salvage_value(
                                   param['GENERATOR_NOMINAL_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] *
                                   (max(0, param['GENERATOR_LIFETIME'] - project_duration) / param['GENERATOR_LIFETIME']) *
                                   discount_factor).sum('generator_types')
-                if settings.advanced_settings.brownfield:
-                    # Existing generator salvage (brownfield)
-                    salvage_value += (param['GENERATOR_EXISTING_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] *
-                                     (max(0, param['GENERATOR_LIFETIME'] - param['GENERATOR_EXISTING_YEARS'] - project_duration) / param['GENERATOR_LIFETIME']) *
-                                     discount_factor).sum('generator_types')
+                
+                if is_brownfield:
+                    for gen in generators:
+                        # Existing generator salvage (brownfield)
+                        salvage_value += (param['GENERATOR_EXISTING_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] *
+                                        (max(0, param['GENERATOR_LIFETIME'] - param['GENERATOR_EXISTING_YEARS'] - project_duration) / param['GENERATOR_LIFETIME']) *
+                                        discount_factor).sel(generator_types=gen)
         # Subsequent investment steps
         else:
             # RES salvage

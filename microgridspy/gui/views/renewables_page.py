@@ -59,17 +59,23 @@ def update_parameters(i: int, res_name: str, time_horizon: int, brownfield: bool
 
     if brownfield:
         st.write("##### Brownfield project parameters:")
-        st.session_state.res_existing_capacity[i] = st.number_input(
+    
+        # Get user input in kW, but store the value in W
+        res_capacity_kw = st.number_input(
             f"Existing Capacity [kW]", 
             min_value=0.0,
-            value=float(st.session_state.res_existing_capacity[i]) * 1000, 
-            key=f"exist_cap_{i}") / 1000
-        st.session_state.res_existing_years[i] = st.number_input(
-            f"Existing Years [years]", 
-            min_value=0.0,
-            max_value=float(st.session_state.res_lifetime[i] - 1),
-            value=float(st.session_state.res_existing_years[i]), 
-            key=f"exist_years_{i}")
+            value=float(st.session_state.res_existing_capacity[i]) / 1000,  # Display in kW
+            key=f"exist_cap_{i}")
+
+        # Store the value in W in session_state
+        st.session_state.res_existing_capacity[i] = res_capacity_kw * 1000  # Convert back to W
+        if res_capacity_kw >0:
+            st.session_state.res_existing_years[i] = st.number_input(
+                f"Existing Years [years]", 
+                min_value=0.0,
+                max_value=float(st.session_state.res_lifetime[i] - 1),
+                value=float(st.session_state.res_existing_years[i]), 
+                key=f"exist_years_{i}")
 
 def renewables_technology() -> None:
     """Streamlit page for configuring renewable energy technology parameters."""

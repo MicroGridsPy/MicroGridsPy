@@ -166,7 +166,8 @@ def project_profitability():
 
     # Profit calculation section
     actualized_profit_data = calculate_actualized_profit(user_category_data, tariff_settings, discount_rate, time_horizon)
-    st.write(f"Actualized Profit Data: {actualized_profit_data} k{currency}")
+    st.write(f"Actualized Profit Data (k{currency})")
+    st.table(actualized_profit_data)
 
     # Calculate total actualized profit in kUSD
     total_actualized_profit = actualized_profit_data.sum().sum() / 1000  # Convert to kUSD

@@ -158,17 +158,23 @@ def generator_technology() -> None:
 
             if brownfield:
                 st.write("### Brownfield project parameters:")
-                st.session_state.gen_existing_capacity[i] = st.number_input(
+                
+                # Get user input in kW, but store the value in W
+                gen_capacity_kw = st.number_input(
                     f"Existing Capacity of {gen_name} [kW]", 
                     min_value=0.0,
-                    value=float(st.session_state.gen_existing_capacity[i]) * 1000,
-                    help="The capacity of existing generators of this type.") / 1000
-                st.session_state.gen_existing_years[i] = st.number_input(
-                    f"Existing Years of {gen_name} [years]", 
-                    min_value=0,
-                    max_value=(st.session_state.gen_lifetime[i] - 1),
-                    value=st.session_state.gen_existing_years[i],
-                    help="The number of years the existing generators have been in operation.")
+                    value=float(st.session_state.gen_existing_capacity[i]) / 1000,  # Display in kW
+                    help="The capacity of existing generators of this type.")
+                
+                # Store the value in W in session_state
+                st.session_state.gen_existing_capacity[i] = gen_capacity_kw * 1000  # Convert back to W
+                if gen_capacity_kw > 0:
+                    st.session_state.gen_existing_years[i] = st.number_input(
+                        f"Existing Years of {gen_name} [years]", 
+                        min_value=0,
+                        max_value=(st.session_state.gen_lifetime[i] - 1),
+                        value=st.session_state.gen_existing_years[i],
+                        help="The number of years the existing generators have been in operation.")
 
             # Variable Fuel Cost
             st.subheader(f"Variable Fuel Cost for {gen_name}")

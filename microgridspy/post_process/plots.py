@@ -95,26 +95,26 @@ def create_sizing_plot(model: Model, color_dict: dict):
     res_units = model.get_solution_variable('Unit of Nominal Capacity for Renewables')
     if res_units is not None:
         res_nominal_capacity = model.parameters['RES_NOMINAL_CAPACITY']
-        res_existing_capacity = model.parameters.get('RES_EXISTING_CAPACITY', None)
+        res_existing_capacity = model.parameters.get('RES_EXISTING_CAPACITY', 0)
         for source in res_units.renewable_sources.values:
             components_kw.append((source, res_units.sel(renewable_sources=source), 
                                   res_nominal_capacity.sel(renewable_sources=source),
-                                  res_existing_capacity.sel(renewable_sources=source) if res_existing_capacity is not None else 0))
+                                  res_existing_capacity.sel(renewable_sources=source)))
 
     if model.has_generator:
         gen_units = model.get_solution_variable('Unit of Nominal Capacity for Generators')
         if gen_units is not None:
             gen_nominal_capacity = model.parameters['GENERATOR_NOMINAL_CAPACITY']
-            gen_existing_capacity = model.parameters.get('GENERATOR_EXISTING_CAPACITY', None)
+            gen_existing_capacity = model.parameters.get('GENERATOR_EXISTING_CAPACITY', 0)
             for gen_type in gen_units.generator_types.values:
                 components_kw.append((gen_type, gen_units.sel(generator_types=gen_type), 
                                       gen_nominal_capacity.sel(generator_types=gen_type),
-                                      gen_existing_capacity.sel(generator_types=gen_type) if gen_existing_capacity is not None else 0))
+                                      gen_existing_capacity.sel(generator_types=gen_type)))
 
     for name, units, nominal_capacity, existing_capacity in components_kw:
         categories.append(name)
-        capacities.append(np.round((units.values * nominal_capacity.values) / 1000))  # Rounded to whole numbers
-        existing_capacities.append(np.round(existing_capacity / 1000))  # Rounded to whole numbers
+        capacities.append(np.round((units.values * nominal_capacity.values) / 1000))  # Rounded to whole numbers and converted to kW
+        existing_capacities.append(np.round(existing_capacity))  # Rounded to whole numbers
         colors.append(color_dict.get(name))
         capacity_units.append('kW')
 
@@ -125,14 +125,15 @@ def create_sizing_plot(model: Model, color_dict: dict):
             battery_nominal_capacity = model.parameters['BATTERY_NOMINAL_CAPACITY']
             battery_existing_capacity = model.parameters.get('BATTERY_EXISTING_CAPACITY', 0)
             categories.append("Battery Bank")
-            capacities.append(np.round((bat_units.values * battery_nominal_capacity.values) / 1000))  # Rounded to whole numbers
-            existing_capacities.append(np.round(battery_existing_capacity / 1000))  # Rounded to whole numbers
+            capacities.append(np.round((bat_units.values * battery_nominal_capacity.values) / 1000))  # Rounded to whole numbers and converted to kWh
+            existing_capacities.append(np.round(battery_existing_capacity))  # Rounded to whole numbers
             colors.append(color_dict.get('Battery'))
             capacity_units.append('kWh')
 
     # Convert capacities to numpy array for easier manipulation
     capacities = np.array(capacities)
     existing_capacities = np.array(existing_capacities)
+    print("Existing Capacity to be plotted (array): ", existing_capacities)
 
     # Create plot with two y-axes
     fig, ax1 = plt.subplots(figsize=(12, 6))

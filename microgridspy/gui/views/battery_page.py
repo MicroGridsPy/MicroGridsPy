@@ -47,12 +47,17 @@ def battery_technology() -> None:
     
         if brownfield:
             st.write(f"### Brownfield project:")
-            st.session_state.battery_existing_capacity = st.number_input(
-                "Existing Capacity [kWh]",
+    
+            # Get user input in kW, but the stored value should be in W
+            battery_capacity_kw = st.number_input(
+                "Existing Capacity [kW]", 
                 min_value=0.0, 
-                value=st.session_state.battery_existing_capacity * 1000) / 1000
-            st.session_state.battery_existing_years = st.number_input(
-                "Existing Years [years]", min_value=0, max_value=(st.session_state.battery_expected_lifetime - 1), value=st.session_state.battery_existing_years)
+                value=st.session_state.battery_existing_capacity / 1000)  # Display in kW
+
+            # Store the value in W in the session_state
+            st.session_state.battery_existing_capacity = battery_capacity_kw * 1000  # Convert back to W
+            if battery_capacity_kw > 0:
+                st.session_state.battery_existing_years = st.number_input("Existing Years [years]", min_value=0, max_value=(st.session_state.battery_expected_lifetime - 1), value=st.session_state.battery_existing_years)
     else:
         st.warning("Battery technology is not included in the system configuration. If you want to include a battery, please edit the project settings page.")
 

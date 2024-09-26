@@ -18,7 +18,7 @@ from microgridspy.gui.views.battery_page import battery_technology
 from microgridspy.gui.views.generator_page import generator_technology
 from microgridspy.gui.views.grid_page import grid_technology
 from microgridspy.gui.views.profit_page import project_profitability
-# from microgridspy.gui.views.grid_network import grid_routing  #TODO
+# from microgridspy.gui.views.grid_network import grid_routing  #TODO Implement grid routing
 from microgridspy.gui.views.run_page import run_model
 from microgridspy.gui.views.plots_dashboard import plots_dashboard
 
