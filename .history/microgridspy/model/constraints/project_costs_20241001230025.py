@@ -121,7 +121,7 @@ def add_fixed_om_cost(
     years = sets.years.values
     steps = sets.steps.values
     renewables = sets.renewable_sources.values
-    generators = sets.generator_types.values if has_generator else []
+    generators = sets.generator_types.values
     step_duration = settings.advanced_settings.step_duration
     is_brownfield: bool = settings.advanced_settings.brownfield
     # Create a list of tuples with years and steps
@@ -458,7 +458,7 @@ def add_salvage_value(
     step_duration: int = settings.advanced_settings.step_duration
     years: xr.DataArray = sets.years.values
     renewable_sources: xr.DataArray = sets.renewable_sources.values
-    generators: xr.DataArray = sets.generator_types.values if has_generator else []
+    generators: xr.DataArray = sets.generator_types.values
     is_brownfield: bool = settings.advanced_settings.brownfield
     discount_factor: xr.DataArray = 1 / ((1 + param['DISCOUNT_RATE']) ** project_duration)
     salvage_value: linopy.LinearExpression = 0

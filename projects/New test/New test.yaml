@@ -40,8 +40,8 @@ battery_params:
   battery_cycles: 6000
   battery_depth_of_discharge: 0.8
   battery_discharge_battery_efficiency: 1.0
-  battery_existing_capacity: 0.0
-  battery_existing_years: 0
+  battery_existing_capacity: 50000.0
+  battery_existing_years: 5
   battery_expected_lifetime: 20
   battery_initial_soc: 1.0
   battery_nominal_capacity: 1000.0
@@ -61,9 +61,9 @@ generator_params:
   gen_cost_increase:
   - 0.01
   gen_existing_capacity:
-  - 0.0
+  - 50000.0
   gen_existing_years:
-  - 0
+  - 9
   gen_lifetime:
   - 20
   gen_min_output:
@@ -123,16 +123,16 @@ project_settings:
   renewable_penetration: 0.0
   solver: gurobi
   start_date: 2023-01-01
-  system_configuration: 0
+  system_configuration: 1
   time_horizon: 20
   time_resolution: 8760
 renewables_params:
   res_existing_area:
   - 0.0
   res_existing_capacity:
-  - 0.0
+  - 50000.0
   res_existing_years:
-  - 10.0
+  - 5.0
   res_inverter_efficiency:
   - 0.98
   res_lifetime:

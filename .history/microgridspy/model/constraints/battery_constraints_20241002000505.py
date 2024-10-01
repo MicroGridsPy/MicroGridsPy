@@ -30,9 +30,19 @@ def add_battery_state_of_charge_constraints(model: Model, settings: ProjectParam
 
     # Initial battery capacity (only battery units multiplied by nominal capacity)
     battery_capacity = var['battery_units'].sel(steps=1) * param['BATTERY_NOMINAL_CAPACITY']
+    print("Battery capacity (without existing capacity):")
+    print(battery_capacity)
 
     # If brownfield, add existing capacity
-    if is_brownfield: battery_capacity += param['BATTERY_EXISTING_CAPACITY']
+    if is_brownfield:
+        print("Adding existing capacity...")
+        print(f"Shape of battery_units: {var['battery_units'].shape}")
+        print(f"Shape of BATTERY_NOMINAL_CAPACITY: {param['BATTERY_NOMINAL_CAPACITY'].shape}")
+        print(f"Shape of BATTERY_EXISTING_CAPACITY: {param['BATTERY_EXISTING_CAPACITY'].shape}")
+
+        battery_capacity += param['BATTERY_EXISTING_CAPACITY']
+        print("Battery capacity (with existing capacity):")
+        print(battery_capacity)
 
     # Contribution from battery units (without existing capacity)
     first_year_first_period = (
@@ -63,6 +73,8 @@ def add_battery_state_of_charge_constraints(model: Model, settings: ProjectParam
     step_duration = settings.advanced_settings.step_duration
     # Create a list of tuples with years and steps
     years_steps_tuples = [(years[i] - years[0], steps[i // step_duration]) for i in range(len(years))]
+    # Debugging
+    is_brownfield = False
 
     for year in sets.years.values:
         step = years_steps_tuples[year - years[0]][1]
@@ -104,6 +116,8 @@ def add_battery_flow_constraints(model: Model, settings: ProjectParameters, sets
     steps = sets.steps.values
     step_duration = settings.advanced_settings.step_duration
     is_brownfield = settings.advanced_settings.brownfield
+    # Debugging
+    is_brownfield = False
     # Create a list of tuples with years and steps
     years_steps_tuples = [(years[i] - years[0], steps[i // step_duration]) for i in range(len(years))]
     for year in sets.years.values:
@@ -166,6 +180,8 @@ def add_min_battery_independence_constraints(model: Model, settings: ProjectPara
     steps = sets.steps.values
     step_duration = settings.advanced_settings.step_duration
     is_brownfield = settings.advanced_settings.brownfield
+    # Debugging
+    is_brownfield = False
     # Create a list of tuples with years and steps
     years_steps_tuples = [(years[i] - years[0], steps[i // step_duration]) for i in range(len(years))]
 
@@ -194,6 +210,8 @@ def add_battery_single_flow_constraints(model: Model, settings: ProjectParameter
     steps = sets.steps.values
     step_duration = settings.advanced_settings.step_duration
     is_brownfield = settings.advanced_settings.brownfield
+    # Debugging
+    is_brownfield = False
     # Create a list of tuples with years and steps
     years_steps_tuples = [(years[i] - years[0], steps[i // step_duration]) for i in range(len(years))]
     for year in sets.years.values:

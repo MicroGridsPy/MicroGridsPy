@@ -1,5 +1,4 @@
 import xarray as xr
-import numpy as np
 import linopy
 from linopy import Model
 from microgridspy.model.parameters import ProjectParameters
@@ -26,20 +25,19 @@ def add_battery_constraints(model: Model, settings: ProjectParameters, sets: xr.
 def add_battery_state_of_charge_constraints(model: Model, settings: ProjectParameters, sets: xr.Dataset, param: xr.Dataset, var: Dict[str, linopy.Variable]) -> None:
     is_first_year = xr.DataArray(sets.years == sets.years[0], dims='years')
     is_first_period = xr.DataArray(sets.periods == sets.periods[0], dims='periods')
-    is_brownfield = settings.advanced_settings.brownfield
 
-    # Initial battery capacity (only battery units multiplied by nominal capacity)
-    battery_capacity = var['battery_units'].sel(steps=1) * param['BATTERY_NOMINAL_CAPACITY']
-
-    # If brownfield, add existing capacity
-    if is_brownfield: battery_capacity += param['BATTERY_EXISTING_CAPACITY']
-
-    # Contribution from battery units (without existing capacity)
-    first_year_first_period = (
-        (battery_capacity * param['BATTERY_INITIAL_SOC']) -
-        (var['battery_outflow'] / param['BATTERY_DISCHARGE_EFFICIENCY']) +
-        (var['battery_inflow'] * param['BATTERY_CHARGE_EFFICIENCY'])
-    ).where(is_first_year & is_first_period, 0)
+    if settings.advanced_settings.brownfield:
+        first_year_first_period = (
+            (var['battery_units'].sel(steps=1) * param['BATTERY_NOMINAL_CAPACITY'] + param['BATTERY_EXISTING_CAPACITY']) * param['BATTERY_INITIAL_SOC'] -
+            var['battery_outflow'] / param['BATTERY_DISCHARGE_EFFICIENCY'] +
+            var['battery_inflow'] * param['BATTERY_CHARGE_EFFICIENCY']
+        ).where(is_first_year & is_first_period, 0)
+    else:
+        first_year_first_period = (
+            var['battery_units'].sel(steps=1) * param['BATTERY_NOMINAL_CAPACITY'] * param['BATTERY_INITIAL_SOC'] -
+            var['battery_outflow'] / param['BATTERY_DISCHARGE_EFFICIENCY'] +
+            var['battery_inflow'] * param['BATTERY_CHARGE_EFFICIENCY']
+        ).where(is_first_year & is_first_period, 0)
 
     other_years_first_period = (
         var['battery_soc'].shift(years=1, fill_value=0).sel(periods=sets.periods[-1]) -
@@ -66,7 +64,7 @@ def add_battery_state_of_charge_constraints(model: Model, settings: ProjectParam
 
     for year in sets.years.values:
         step = years_steps_tuples[year - years[0]][1]
-        if is_brownfield:
+        if settings.advanced_settings.brownfield:
             # Calculate the total age of the existing capacity at each year
             total_age = param['BATTERY_EXISTING_YEARS'] + (year - sets.years[0])
         
@@ -103,12 +101,11 @@ def add_battery_flow_constraints(model: Model, settings: ProjectParameters, sets
     years = sets.years.values
     steps = sets.steps.values
     step_duration = settings.advanced_settings.step_duration
-    is_brownfield = settings.advanced_settings.brownfield
     # Create a list of tuples with years and steps
     years_steps_tuples = [(years[i] - years[0], steps[i // step_duration]) for i in range(len(years))]
     for year in sets.years.values:
         step = years_steps_tuples[year - years[0]][1]
-        if is_brownfield:
+        if settings.advanced_settings.brownfield:
             # Calculate the total age of the existing capacity at each year
             total_age = param['BATTERY_EXISTING_YEARS'] + (year - sets.years[0])
         
@@ -165,11 +162,10 @@ def add_min_battery_independence_constraints(model: Model, settings: ProjectPara
     years = sets.years.values
     steps = sets.steps.values
     step_duration = settings.advanced_settings.step_duration
-    is_brownfield = settings.advanced_settings.brownfield
     # Create a list of tuples with years and steps
     years_steps_tuples = [(years[i] - years[0], steps[i // step_duration]) for i in range(len(years))]
 
-    if is_brownfield:
+    if settings.advanced_settings.brownfield:
         for year in sets.years.values:
             step = years_steps_tuples[year - years[0]][1]
             # Calculate the total age of the existing capacity at each year
@@ -193,12 +189,11 @@ def add_battery_single_flow_constraints(model: Model, settings: ProjectParameter
     years = sets.years.values
     steps = sets.steps.values
     step_duration = settings.advanced_settings.step_duration
-    is_brownfield = settings.advanced_settings.brownfield
     # Create a list of tuples with years and steps
     years_steps_tuples = [(years[i] - years[0], steps[i // step_duration]) for i in range(len(years))]
     for year in sets.years.values:
         step = years_steps_tuples[year - years[0]][1]
-        if is_brownfield:
+        if settings.advanced_settings.brownfield:
             # Calculate the total age of the existing capacity at each year
             total_age = param['BATTERY_EXISTING_YEARS'] + (year - sets.years[0])
         

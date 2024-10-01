@@ -24,6 +24,7 @@ def add_res_constraints(model: Model, settings: ProjectParameters, sets: xr.Data
 def add_renewable_energy_production_constraints(model: Model, settings: ProjectParameters, sets: xr.Dataset, param: xr.Dataset, var: Dict[str, linopy.Variable]) -> None:
     """Calculate renewable energy production considering installation lifetime for each step."""
     is_brownfield = settings.advanced_settings.brownfield
+    print(f"Existing res units: {param['RES_EXISTING_CAPACITY'] / param['RES_NOMINAL_CAPACITY']}")
 
     if is_brownfield:
         years = sets.years.values

@@ -42,12 +42,12 @@ def add_generator_max_energy_production_constraint(model: Model, settings: Proje
                 # Calculate lifetime_exceeded over 'generator_types' and 'years'
                 lifetime_exceeded = total_age > param['GENERATOR_LIFETIME'].sel(generator_types=gen)
 
-                # Calculate total_production considering just the new capacity
-                max_production = (var['generator_units'].sel(steps=step) * param['GENERATOR_NOMINAL_CAPACITY']).sel(generator_types=gen)
-
-                if lifetime_exceeded is False:
+                if lifetime_exceeded:
                     # Calculate total_production considering just the new capacity
-                    max_production += (param['GENERATOR_EXISTING_CAPACITY'] / param['GENERATOR_NOMINAL_CAPACITY']).sel(generator_types=gen)
+                    max_production = (var['generator_units'].sel(steps=step) * param['GENERATOR_NOMINAL_CAPACITY']).sel(generator_types=gen)
+                else:
+                    # Calculate total_production considering the existing and new capacity
+                    max_production = ((var['generator_units'].sel(steps=step) + (param['GENERATOR_EXISTING_CAPACITY'] / param['GENERATOR_NOMINAL_CAPACITY'])) * param['GENERATOR_NOMINAL_CAPACITY']).sel(generator_types=gen)
 
                 # Add constraints for all generator types at once
                 model.add_constraints(var['generator_energy_production'].sel(years=year, generator_types=gen) <= max_production, name=f"Generator Energy Production Constraint - Year {year}, Type {gen}")
