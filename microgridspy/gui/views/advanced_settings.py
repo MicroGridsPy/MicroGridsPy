@@ -171,7 +171,7 @@ def advanced_settings():
         if st.session_state.multi_scenario_optimization:
             st.session_state.num_scenarios = st.number_input(
                 "Number of Scenarios:", 
-                min_value=2, 
+                min_value=1, 
                 value=st.session_state.num_scenarios,
                 help="Set the number of scenarios to consider. More scenarios capture more uncertainty but increase computational requirements.")
             
