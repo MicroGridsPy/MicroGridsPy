@@ -31,8 +31,7 @@ from microgridspy.model.constraints.generator_constraints import add_generator_c
 from microgridspy.model.constraints.grid_constraints import add_grid_constraints
 from microgridspy.model.objectives import add_objectives
 
-
-
+# Define the Model class
 class Model:
     def __init__(self, settings: ProjectParameters) -> None:
         """Initialize the Model class."""
