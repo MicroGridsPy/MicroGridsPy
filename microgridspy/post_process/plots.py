@@ -99,7 +99,7 @@ def create_sizing_plot(model: Model, color_dict: dict):
         for source in res_units.renewable_sources.values:
             components_kw.append((source, res_units.sel(renewable_sources=source), 
                                   res_nominal_capacity.sel(renewable_sources=source),
-                                  res_existing_capacity.sel(renewable_sources=source)))
+                                  res_existing_capacity.sel(renewable_sources=source) if is_brownfield else 0))
 
     if model.has_generator:
         gen_units = model.get_solution_variable('Unit of Nominal Capacity for Generators')
@@ -109,7 +109,7 @@ def create_sizing_plot(model: Model, color_dict: dict):
             for gen_type in gen_units.generator_types.values:
                 components_kw.append((gen_type, gen_units.sel(generator_types=gen_type), 
                                       gen_nominal_capacity.sel(generator_types=gen_type),
-                                      gen_existing_capacity.sel(generator_types=gen_type)))
+                                      gen_existing_capacity.sel(generator_types=gen_type)if is_brownfield else 0))
 
     for name, units, nominal_capacity, existing_capacity in components_kw:
         categories.append(name)
