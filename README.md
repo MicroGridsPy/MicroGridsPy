@@ -101,11 +101,11 @@ These steps will guide you through a successful installation of MicroGridsPy.
 - Emanuela Colombo, Politecnico di Milano <emanuela.colombo@polimi.it>
 
 ### Past contributors:
-- Gianluca Pellecchia, Politecnico di Milano <gianluca.pellecchia@polimi.it>
-- Ivan Sangiorgio, Politecnico di Milano <ivan.sangiorgio@polimi.it>
-- Francesco Lombardi, TU Delft <f.lombardi@tudelft.nl>
-- Giulia Guidicini, Politecnico di Milano <giulia.guidicini@polimi.it>
-- Lorenzo Rinaldi, Politecnico di Milano <lorenzo.rinaldi@polimi.it>
+- Gianluca Pellecchia, Politecnico di Milano 
+- Ivan Sangiorgio, Politecnico di Milano 
+- Francesco Lombardi, TU Delft 
+- Giulia Guidicini, Politecnico di Milano 
+- Lorenzo Rinaldi, Politecnico di Milano 
 
 ### Based on the original model by:
 - Sergio Balderrama, Universidad Mayor de San Simón <s.balderrama@umss.edu>
