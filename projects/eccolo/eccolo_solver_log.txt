@@ -1,0 +1,251 @@
+Coefficient ranges:
+  Matrix [2e-04, 1e+03]
+  Cost   [1e+00, 1e+00]
+  Bound  [0e+00, 0e+00]
+  RHS    [6e+01, 2e+04]
+Presolving model
+Problem status detected on presolve: Infeasible
+Model   status      : Infeasible
+Objective value     :  0.0000000000e+00
+HiGHS run time      :          0.38
+
+Gurobi 11.0.2 (win64) logging started Sun Nov  3 19:37:11 2024
+
+Set parameter LogFile to value "C:\Users\onori\Documents\GitHub\MicroGridsPy-SESAM\MicroGridsPy-SESAM\projects\eccolo\eccolo_solver_log.txt"
+Gurobi Optimizer version 11.0.2 build v11.0.2rc0 (win64 - Windows 11.0 (22631.2))
+
+CPU model: 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz, instruction set [SSE2|AVX|AVX2|AVX512]
+Thread count: 8 physical cores, 16 logical processors, using up to 16 threads
+
+Optimize a model with 262809 rows, 192732 columns and 656789 nonzeros
+Model fingerprint: 0x0f695e47
+Coefficient statistics:
+  Matrix range     [2e-04, 1e+03]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [8e+02, 2e+04]
+Presolve removed 131645 rows and 105126 columns
+Presolve time: 0.21s
+Presolved: 131164 rows, 87606 columns, 349935 nonzeros
+Ordering time: 0.04s
+
+Barrier statistics:
+ Dense cols : 4
+ AA' NZ     : 3.059e+05
+ Factor NZ  : 5.246e+05 (roughly 100 MB of memory)
+ Factor Ops : 2.193e+06 (less than 1 second per iteration)
+ Threads    : 8
+
+                  Objective                Residual
+Iter       Primal          Dual         Primal    Dual     Compl     Time
+   0   6.41419318e+05  0.00000000e+00  4.02e+05 0.00e+00  1.62e+03     0s
+   1   1.21656693e+07 -1.35835906e+04  2.49e+04 4.09e-02  7.30e+02     0s
+   2   1.06045803e+07  1.02582360e+05  9.78e+02 2.70e-03  9.56e+01     1s
+   3   2.39867308e+06  1.05673273e+05  3.71e+00 2.38e-03  3.67e+01     1s
+   4   9.98548378e+05  1.46256845e+05  1.15e-08 8.18e-05  4.75e+00     1s
+   5   3.30305645e+05  1.59893709e+05  1.70e-06 5.23e-14  7.79e-01     1s
+   6   2.41156517e+05  1.70763017e+05  5.02e-07 1.74e-15  3.22e-01     1s
+   7   2.17168441e+05  1.75688115e+05  1.97e-07 1.03e-13  1.90e-01     1s
+   8   2.12330467e+05  1.79625974e+05  1.35e-07 2.93e-14  1.49e-01     1s
+   9   2.12194363e+05  1.88366396e+05  1.34e-07 9.87e-15  1.09e-01     1s
+  10   2.09507431e+05  1.91408797e+05  9.20e-08 1.42e-13  8.27e-02     1s
+  11   2.08749315e+05  1.95984463e+05  7.58e-08 1.37e-13  5.83e-02     1s
+  12   2.07439963e+05  1.99894110e+05  2.52e-08 8.80e-14  3.45e-02     1s
+  13   2.05629097e+05  2.01737911e+05  1.14e-08 1.47e-14  1.78e-02     1s
+  14   2.04618811e+05  2.02204818e+05  1.80e-09 5.25e-15  1.10e-02     1s
+  15   2.04122318e+05  2.02592612e+05  1.10e-09 3.56e-14  6.99e-03     1s
+  16   2.04086569e+05  2.02868451e+05  7.59e-10 3.64e-15  5.57e-03     1s
+  17   2.04047504e+05  2.03595775e+05  3.77e-10 6.80e-14  2.06e-03     2s
+  18   2.04038264e+05  2.03705087e+05  3.26e-10 3.71e-14  1.52e-03     2s
+  19   2.04039944e+05  2.03747996e+05  3.11e-10 8.77e-14  1.33e-03     2s
+  20   2.04027226e+05  2.03799980e+05  1.22e-10 2.67e-15  1.04e-03     2s
+  21   2.04024326e+05  2.03831688e+05  2.42e-10 1.43e-13  8.81e-04     2s
+  22   2.04021954e+05  2.03852682e+05  1.20e-10 2.21e-14  7.74e-04     2s
+  23   2.04015037e+05  2.03880186e+05  1.00e-11 7.04e-15  6.16e-04     2s
+  24   2.04012342e+05  2.03904382e+05  6.91e-11 1.26e-14  4.93e-04     2s
+  25   2.04006506e+05  2.03923625e+05  3.95e-10 2.59e-14  3.79e-04     2s
+  26   2.04005329e+05  2.03951274e+05  7.91e-11 1.05e-13  2.47e-04     2s
+  27   2.04004917e+05  2.03957409e+05  1.11e-10 1.47e-13  2.17e-04     2s
+  28   2.04004242e+05  2.03972707e+05  2.26e-10 2.45e-14  1.44e-04     2s
+  29   2.04003526e+05  2.03981008e+05  1.24e-09 4.71e-14  1.03e-04     2s
+  30   2.04003378e+05  2.03993548e+05  2.71e-09 3.20e-14  4.49e-05     2s
+
+Barrier solved model in 30 iterations and 2.35 seconds (1.57 work units)
+Optimal objective 2.04003378e+05
+
+
+Gurobi 11.0.2 (win64) logging started Sun Nov  3 20:15:06 2024
+
+Set parameter LogFile to value "C:\Users\onori\Documents\GitHub\MicroGridsPy-SESAM\MicroGridsPy-SESAM\projects\eccolo\eccolo_solver_log.txt"
+Gurobi Optimizer version 11.0.2 build v11.0.2rc0 (win64 - Windows 11.0 (22631.2))
+
+CPU model: 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz, instruction set [SSE2|AVX|AVX2|AVX512]
+Thread count: 8 physical cores, 16 logical processors, using up to 16 threads
+
+Optimize a model with 884789 rows, 543142 columns and 2689155 nonzeros
+Model fingerprint: 0xb314df4c
+Coefficient statistics:
+  Matrix range     [4e-06, 1e+03]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [4e+02, 8e+04]
+Presolve removed 651679 rows and 337582 columns
+Presolve time: 1.11s
+Presolved: 233110 rows, 205560 columns, 1180961 nonzeros
+Ordering time: 0.13s
+
+Barrier statistics:
+ Dense cols : 6
+ AA' NZ     : 1.437e+06
+ Factor NZ  : 3.841e+06 (roughly 200 MB of memory)
+ Factor Ops : 7.243e+07 (less than 1 second per iteration)
+ Threads    : 8
+
+                  Objective                Residual
+Iter       Primal          Dual         Primal    Dual     Compl     Time
+   0   2.70640749e+05 -1.52540108e+07  3.46e+05 0.00e+00  2.03e+03     2s
+   1   1.52219614e+06 -1.34232495e+07  1.37e+05 4.61e-02  8.87e+02     2s
+   2   1.35105896e+06 -1.35447265e+07  4.91e+04 1.50e-02  3.15e+02     2s
+   3   1.25153583e+06 -8.26667246e+06  1.55e+03 2.21e-03  4.80e+01     2s
+   4   7.78174988e+05 -3.94809218e+05  5.06e-07 5.70e-05  3.19e+00     2s
+   5   4.43421523e+05 -1.24187713e+05  2.06e-07 1.96e-05  1.45e+00     2s
+   6   3.31043561e+05 -4.54656127e+04  1.90e-07 1.14e-05  9.30e-01     2s
+   7   2.61146518e+05 -1.66252608e+04  9.92e-08 8.22e-06  6.77e-01     2s
+   8   2.13901678e+05  1.25360392e+04  8.74e-08 5.68e-06  4.84e-01     3s
+   9   1.98904778e+05  4.83276550e+04  9.89e-08 4.03e-06  3.57e-01     3s
+  10   1.77544918e+05  6.27289108e+04  4.38e-08 3.12e-06  2.74e-01     3s
+  11   1.55575893e+05  9.18538766e+04  1.01e-07 1.61e-06  1.52e-01     3s
+  12   1.48964786e+05  1.06232671e+05  1.14e-07 9.90e-07  1.01e-01     3s
+  13   1.47901462e+05  1.07803357e+05  1.09e-07 9.31e-07  9.53e-02     3s
+  14   1.45852063e+05  1.11356734e+05  2.21e-07 8.09e-07  8.21e-02     3s
+  15   1.41799384e+05  1.17234362e+05  2.45e-07 6.03e-07  5.87e-02     4s
+  16   1.40162897e+05  1.20861511e+05  6.37e-07 4.91e-07  4.62e-02     4s
+  17   1.37688062e+05  1.27704116e+05  3.85e-07 2.58e-07  2.40e-02     4s
+  18   1.36475459e+05  1.33251608e+05  4.15e-07 6.51e-08  7.71e-03     4s
+  19   1.36204392e+05  1.34492156e+05  6.01e-07 2.86e-08  4.09e-03     4s
+  20   1.36122043e+05  1.35185246e+05  2.83e-07 1.31e-08  2.23e-03     4s
+  21   1.36075126e+05  1.35588390e+05  1.25e-07 4.95e-09  1.16e-03     4s
+  22   1.36050740e+05  1.35837950e+05  5.52e-08 1.05e-09  5.02e-04     5s
+  23   1.36033365e+05  1.35945791e+05  2.54e-08 1.39e-10  2.06e-04     5s
+  24   1.36027407e+05  1.35999606e+05  1.09e-08 6.37e-17  6.51e-05     5s
+  25   1.36024576e+05  1.36013269e+05  4.88e-09 5.07e-17  2.64e-05     5s
+
+Barrier solved model in 25 iterations and 5.03 seconds (4.49 work units)
+Optimal objective 1.36024576e+05
+
+
+Gurobi 11.0.2 (win64) logging started Sun Nov  3 20:22:06 2024
+
+Set parameter LogFile to value "C:\Users\onori\Documents\GitHub\MicroGridsPy-SESAM\MicroGridsPy-SESAM\projects\eccolo\eccolo_solver_log.txt"
+Gurobi Optimizer version 11.0.2 build v11.0.2rc0 (win64 - Windows 11.0 (22631.2))
+
+CPU model: 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz, instruction set [SSE2|AVX|AVX2|AVX512]
+Thread count: 8 physical cores, 16 logical processors, using up to 16 threads
+
+Optimize a model with 2382748 rows, 543140 columns and 6245905 nonzeros
+Model fingerprint: 0xf5514b6a
+Variable types: 455534 continuous, 87606 integer (87600 binary)
+Coefficient statistics:
+  Matrix range     [6e-06, 1e+03]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [3e+03, 2e+04]
+Presolve removed 1827947 rows and 338733 columns
+Presolve time: 2.68s
+Presolved: 554801 rows, 204407 columns, 1532770 nonzeros
+Variable types: 204401 continuous, 6 integer (0 binary)
+
+Concurrent LP optimizer: primal simplex, dual simplex, and barrier
+Showing barrier log only...
+
+Root barrier log...
+
+Ordering time: 0.44s
+
+Barrier statistics:
+ Dense cols : 6
+ AA' NZ     : 2.555e+06
+ Factor NZ  : 7.437e+06 (roughly 400 MB of memory)
+ Factor Ops : 1.080e+08 (less than 1 second per iteration)
+ Threads    : 1
+
+                  Objective                Residual
+Iter       Primal          Dual         Primal    Dual     Compl     Time
+   0   1.55597551e+06 -5.96808580e+07  8.33e+03 5.61e-03  1.84e+03    24s
+   1   1.47032497e+06 -4.89808490e+07  3.10e+03 2.95e-01  8.65e+02    25s
+   2   1.42613532e+06 -2.67973354e+07  5.85e+02 9.22e-02  2.70e+02    25s
+   3   1.35316706e+06 -3.57519661e+06  1.61e+01 9.25e-03  2.82e+01    26s
+   4   6.41798495e+05 -4.52206994e+05  1.41e+00 2.37e-03  4.92e+00    26s
+   5   3.36607461e+05  5.91207548e+04  2.02e-01 7.25e-04  1.12e+00    27s
+   6   2.73759935e+05  1.48558675e+05  7.45e-02 3.48e-04  4.52e-01    27s
+   7   2.54447085e+05  1.88388726e+05  3.79e-02 1.88e-04  2.09e-01    28s
+   8   2.42345586e+05  2.18602414e+05  1.78e-02 5.87e-05  6.01e-02    28s
+   9   2.42072273e+05  2.23919246e+05  1.73e-02 3.42e-05  4.06e-02    29s
+  10   2.37325326e+05  2.25558098e+05  9.67e-03 2.55e-05  2.58e-02    29s
+  11   2.37641245e+05  2.25942020e+05  9.57e-03 2.39e-05  2.52e-02    30s
+  12   2.33357777e+05  2.26733981e+05  2.26e-03 2.03e-05  1.46e-02    30s
+  13   2.33054882e+05  2.27194880e+05  1.74e-03 1.85e-05  1.29e-02    31s
+  14   2.32120851e+05  2.28268035e+05  1.96e-04 1.43e-05  8.42e-03    32s
+  15   2.31935769e+05  2.29028669e+05  1.11e-04 1.10e-05  6.31e-03    33s
+  16   2.31922857e+05  2.29143351e+05  1.08e-04 1.05e-05  6.02e-03    33s
+  17   2.31850401e+05  2.29208769e+05  8.86e-05 1.02e-05  5.74e-03    34s
+  18   2.31824508e+05  2.29448016e+05  8.18e-05 9.09e-06  5.14e-03    34s
+  19   2.31727120e+05  2.29712908e+05  5.14e-05 7.93e-06  4.36e-03    35s
+  20   2.31636494e+05  2.30227678e+05  3.20e-05 5.62e-06  3.03e-03    36s
+  21   2.31547718e+05  2.30419810e+05  1.17e-05 4.73e-06  2.45e-03    36s
+  22   2.31504430e+05  2.30866459e+05  7.17e-06 2.64e-06  1.37e-03    37s
+  23   2.31498375e+05  2.30893968e+05  6.68e-06 2.50e-06  1.30e-03    38s
+  24   2.31484178e+05  2.30965223e+05  5.42e-06 2.16e-06  1.11e-03    38s
+  25   2.31468901e+05  2.31038313e+05  4.16e-06 1.80e-06  9.24e-04    39s
+  26   2.31447363e+05  2.31132992e+05  2.39e-06 1.34e-06  6.78e-04    40s
+  27   2.31435999e+05  2.31221308e+05  1.68e-06 9.04e-07  4.62e-04    40s
+
+Barrier solved model in 27 iterations and 40.41 seconds (36.57 work units)
+Optimal objective 2.31435999e+05
+
+
+Root crossover log...
+
+      60 DPushes remaining with DInf 0.0000000e+00                41s
+       0 DPushes remaining with DInf 0.0000000e+00                41s
+
+   93587 PPushes remaining with PInf 0.0000000e+00                41s
+       0 PPushes remaining with PInf 0.0000000e+00                45s
+
+  Push phase complete: Pinf 0.0000000e+00, Dinf 5.0927643e+01     45s
+
+
+Root simplex log...
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+   93630    2.3142760e+05   0.000000e+00   5.092764e+01     45s
+   93651    2.3140854e+05   0.000000e+00   0.000000e+00     45s
+   93651    2.3140854e+05   0.000000e+00   0.000000e+00     46s
+
+Solved with barrier
+
+Root relaxation: objective 2.314085e+05, 93651 iterations, 24.27 seconds (13.34 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 231408.537    0    6          - 231408.537      -     -   45s
+     0     0 231435.616    0    6          - 231435.616      -     -   64s
+H    0     0                    1181671.3180 231435.616  80.4%     -   83s
+     0     0 231435.659    0    6 1181671.32 231435.659  80.4%     -   85s
+     0     0 231435.659    0    6 1181671.32 231435.659  80.4%     -   87s
+H    0     0                    231465.94740 231435.659  0.01%     -   92s
+
+Cutting planes:
+  Gomory: 5
+  Network: 1
+
+Explored 1 nodes (93671 simplex iterations) in 95.25 seconds (107.15 work units)
+Thread count was 16 (of 16 available processors)
+
+Solution count 3: 231466 231466 1.18167e+06 
+
+Optimal solution found (tolerance 1.00e-04)
+Warning: max constraint violation (1.1525e-04) exceeds tolerance
+Warning: max bound violation (1.1530e-04) exceeds tolerance
+Best objective 2.314659474002e+05, best bound 2.314640768613e+05, gap 0.0008%
