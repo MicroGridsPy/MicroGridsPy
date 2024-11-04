@@ -5,6 +5,7 @@ pyyaml
 folium
 streamlit-folium
 geopy
+timezonefinder
 openpyxl
 matplotlib
 seaborn
