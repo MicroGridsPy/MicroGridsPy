@@ -173,57 +173,57 @@ class Model:
 
         return self.model.solution
     
-    def solve_single_objective(self):
+    def solve_single_objective(self) -> None:
         """Solve the model for a single objective based on the project's optimization goal."""
         # Build the model
         self._build()
+
+        # Clear any existing objectives
+        self.model.remove_objective()
 
         # Define the objective function
         if self.settings.project_settings.optimization_goal == 0:
             # Minimize Net Present Cost (NPC)
             npc_objective = (self.variables["scenario_net_present_cost"] * self.parameters['SCENARIO_WEIGHTS']).sum('scenarios')
-            self.model.add_objective(npc_objective)
+            self.model.add_objective(npc_objective, sense="min")
             print("Objective function: Minimize Net Present Cost (NPC) added to the model.")
         else:
             # Minimize Total Variable Cost
             variable_cost_objective = (self.variables["total_scenario_variable_cost_nonact"] * self.parameters['SCENARIO_WEIGHTS']).sum('scenarios')
-            self.model.add_objective(variable_cost_objective)
+            self.model.add_objective(variable_cost_objective, sense="min")
             print("Objective function: Minimize Total Variable Cost added to the model.")
 
         # Solve the model
-        return self._solve()
+        self.solution = self._solve()
+        print("Model solved successfully for single objective optimization.")
 
     
-    def solve_multi_objective(self, num_points: int):
+    def solve_multi_objective(self, num_points: int) -> List[Tuple[float, float]]:
         """Solve the multi-objective optimization problem to generate a Pareto front."""
         self._build()
         # Define the objective function
         if self.settings.project_settings.optimization_goal == 0:
             # Minimize Net Present Cost (NPC)
             cost_objective = (self.variables["scenario_net_present_cost"] * self.parameters['SCENARIO_WEIGHTS']).sum('scenarios')
-            cost_objective_variable = "Net Present Cost"
         else:
             # Minimize Total Variable Cost
             cost_objective = (self.variables["total_scenario_variable_cost_nonact"] * self.parameters['SCENARIO_WEIGHTS']).sum('scenarios')
-            cost_objective_variable = "Total Variable Cost"
 
         solutions = []
         # Step 1: Minimize NPC without CO₂ constraint (max CO₂ emissions)
-        print("Step 1: Minimize NPC without CO₂ constraint (max CO₂ emissions)")
-        self.model.add_objective(cost_objective)
+        self.model.remove_objective()
+        self.model.add_objective(cost_objective, sense="min")
         solution = self._solve()
-        max_co2 = solution.get(cost_objective_variable).values
+        max_co2 = solution.objective_value
         solutions.append(solution)
-        print(f"Max CO₂ emissions: {max_co2 / 1000} tonCO₂")
 
         # Step 2: Minimize CO₂ emissions without NPC constraint (max NPC)
-        print("Step 2: Minimize CO₂ emissions without NPC constraint (max NPC)")
+        self.model.remove_objective()
         emissions_objective = (self.variables["scenario_co2_emission"] * self.parameters['SCENARIO_WEIGHTS']).sum('scenarios')
-        self.model.add_objective(emissions_objective, overwrite=True)
+        self.model.add_objective(emissions_objective, sense="min")
         solution = self._solve()
-        min_co2 = solution.get("Total CO2 Emissions").values
+        min_co2 = solution.objective_value
         solutions.append(solution)
-        print(f"Min CO₂ emissions: {min_co2 / 1000} tonCO₂")
 
         # Initialize lists to store Pareto front data
         npc_values = []
@@ -236,18 +236,17 @@ class Model:
         for i in range(num_points):
             # Define the current CO₂ emission threshold
             emission_threshold = min_co2 + i * emission_step
-            print(f"Step {i}: Minimize NPC under CO₂ constraint: {emission_threshold / 1000} tonCO₂")
             self.model.add_constraints(emissions_objective <= emission_threshold, name=f"co2_threshold_{i}")
 
             # Minimize NPC under this CO₂ constraint
-            self.model.add_objective(cost_objective, overwrite=True)
+            self.model.remove_objective()
+            self.model.add_objective(cost_objective, sense="min")
             solution = self._solve()
             solutions.append(solution)
 
             # Collect results
-            npc_values.append(solution.get(cost_objective_variable).values)
+            npc_values.append(solution.objective_value)
             co2_values.append(emission_threshold)
-            print(f"NPC: {npc_values[-1] / 1000} kUSD, CO₂: {co2_values[-1] / 1000} tonCO₂")
 
             # Remove CO₂ constraint for the next iteration
             self.model.remove_constraints(f"co2_threshold_{i}")

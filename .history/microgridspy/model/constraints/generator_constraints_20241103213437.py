@@ -112,5 +112,5 @@ def add_generator_emissions_constraints(model: Model, settings: ProjectParameter
                                     param['GENERATOR_NOMINAL_CAPACITY'] * param['GENERATOR_UNIT_CO2_EMISSION']).sum('generator_types')
 
     # Add the constraint
-    model.add_constraints(var['gen_emission'] == generator_emissions, name="Generator Emissions Constraint")
+    model.add_constraints(var['gen_emissions'] == generator_emissions, name="Generator Emissions Constraint")
     

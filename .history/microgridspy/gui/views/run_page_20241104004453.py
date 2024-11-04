@@ -91,106 +91,130 @@ def update_generator_params(generator_params, gen_types):
 
     return generator_params
 
-
-# Main function to run the model
 def run_model():
     st.title("MiniGrid Optimization Process")
-
-    # Load the project settings and necessary data
-    project_name = st.session_state.get('project_name')
-    solver = st.session_state.get('solver')
-    pareto_points = st.session_state.get('pareto_points', 10)
-
+    
+    # Get the current project's YAML file path
+    project_name: str = st.session_state.get('project_name')
+    solver: str = st.session_state.get('solver')
+    pareto_points: int = st.session_state.get('pareto_points', 10)
+    
     if not project_name:
         st.error("No project is currently loaded. Please create or load a project first.")
         return
 
-    path_manager = PathManager(project_name)
-    yaml_filepath = path_manager.PROJECTS_FOLDER_PATH / project_name / f"{project_name}.yaml"
-
+    path_manager: PathManager = PathManager(project_name)
+    yaml_filepath: Path = path_manager.PROJECTS_FOLDER_PATH / project_name / f"{project_name}.yaml"
+    results_enabled = False
+    
     if not yaml_filepath.exists():
         st.error(f"YAML file for project '{project_name}' not found. Please ensure the project is set up correctly.")
         return
 
     # Load current project parameters
     current_settings = ProjectParameters.instantiate_from_yaml(yaml_filepath)
-    print("Parameters loaded successfully")
     
-    # UI for updating and saving settings
+    # Update YAML with current session state
     st.subheader("Update and Save Current Settings")
+    st.write("Before running the optimization, you can update and save your current settings to the YAML file.")
+    
     if st.button("Update and Save Current Settings"):
         try:
+            # Update current_settings with values from session state
             updated_settings = update_nested_settings(current_settings)
+
+            # Save updated settings to YAML
             updated_settings.save_to_yaml(str(yaml_filepath))
+
             st.success(f"Settings successfully updated and saved to {yaml_filepath}")
         except Exception as e:
             st.error(f"An error occurred while saving settings: {str(e)}")
-
-    st.write("---")
+    
+    st.write("---")  # Add a separator
 
     st.subheader("Optimize the System and Find a Solution")
-    currency = st.session_state.get('currency', 'USD')
+    st.write("""
+    This page allows you to run the optimization model for your mini-grid project.
+    You can either run a single-objective optimization or generate a Pareto front for a multi-objective analysis.
+    """)
+    
+    # Initialize the linopy optimization model
+    model = None
+    # Reload settings from the updated YAML file
+    settings = ProjectParameters.instantiate_from_yaml(str(yaml_filepath))
 
-    # Check if the model has been solved already (avoid recomputation)
-    if 'model' not in st.session_state:
-        st.session_state.model = None
+    if st.session_state.get('multiobjective_optimization', False):
 
-    if 'multiobjective_optimization' in st.session_state and st.session_state.multiobjective_optimization:
         if st.button("Run Multi-Objective Optimization"):
             # Initialize the model
-            model = Model(current_settings)
+            model = Model(settings)
+            
+            # Solve the multi-objective optimization
             with st.spinner("Generating Pareto front..."):
                 pareto_front, multiobjective_solutions = model.solve_multi_objective(num_points=pareto_points)
             
-            st.session_state.pareto_front = pareto_front
-            st.session_state.multiobjective_solutions = multiobjective_solutions
-            st.session_state.model = model
             st.success("Multi-objective optimization completed successfully!")
 
+            # Plot the Pareto front
             st.write("### Pareto Front Plot")
-            co2_values, npc_values = zip(*st.session_state.pareto_front)
+            co2_values, npc_values = zip(*pareto_front)
             fig, ax = plt.subplots()
             ax.plot(npc_values, co2_values, 'o-', color='blue', label='Pareto Optimal Front')
-            ax.set_xlabel(f"Net Present Cost [{currency}]")
-            ax.set_ylabel("CO₂ Emissions [CO₂]")
+            ax.set_xlabel("Net Present Cost")
+            ax.set_ylabel("CO₂ Emissions")
             ax.set_title("Pareto Front: Trade-off between CO₂ Emissions and NPC")
             ax.legend()
             st.pyplot(fig)
 
             # Display Pareto front data
             st.write("### Pareto Front Data")
-            pareto_front_df = pd.DataFrame(st.session_state.pareto_front, columns=["CO₂ Emissions", "Net Present Cost"])
+            pareto_front_df = pd.DataFrame(pareto_front, columns=["CO₂ Emissions", "Net Present Cost"])
             st.dataframe(pareto_front_df)
 
-            # Allow user to select a solution from the Pareto front without re-running the whole app
-            selected_index = st.selectbox(
-                "Select a solution to explore",
-                range(len(st.session_state.pareto_front)),
-                format_func=lambda x: f"Solution {x + 1}: CO₂ = {co2_values[x]}, NPC = {npc_values[x]}",
-                key='selected_solution_index')
 
-            # Store the selected solution for later use
-            st.session_state.model.solution = st.session_state.multiobjective_solutions[selected_index]
-            model.solution = st.session_state.model.solution
+            # Allow user to select a solution from the Pareto front
+            selected_index = st.selectbox("Select a solution to explore", range(len(pareto_front)),
+                                        format_func=lambda x: f"Solution {x + 1}: CO₂ = {co2_values[x]}, NPC = {npc_values[x]}")
+            
+            # Store the selected solution
+            selected_solution = multiobjective_solutions[selected_index]
+            model.solution = selected_solution
+            results_enabled = True
 
     else:
         if st.button("Run Single-Objective Optimization"):
-            model = Model(current_settings)
+            # Initialize the model
+            model = Model(settings)
+            
+            # Create a log file path
+            log_file_path = path_manager.PROJECTS_FOLDER_PATH / project_name / f"{project_name}_solver_log.txt"
+            
             with st.spinner(f"Optimizing for a single objective using {solver}..."):
+                # Solve the model
                 solution = model.solve_single_objective()
-            st.session_state.model = model
-            model.solution = solution
+            
             st.success("Single-objective optimization completed successfully!")
+            model.solution = solution
+            results_enabled = True
 
-    st.write("---")
+    # Display the solver log if available
+    if model:
+        log_file_path = path_manager.PROJECTS_FOLDER_PATH / project_name / f"{project_name}_solver_log.txt"
+        if log_file_path.exists():
+            with open(log_file_path, 'r') as log_file:
+                solver_log = log_file.read()
+            st.text_area("Solver Log", solver_log, height=300)
+        else:
+            st.warning("Solver log file not found.")
 
-    # Navigation buttons
+    st.write("---")  # Add a separator
+
     col1, col2 = st.columns([1, 8])
     with col1:
         if st.button("Back"):
             st.session_state.page = "Grid Connection"
             st.rerun()
     with col2:
-        if st.button("View Results", disabled=st.session_state.model is None):
+        if st.button("View Results", disabled=not results_enabled):
             st.session_state.page = "Results"
             st.rerun()

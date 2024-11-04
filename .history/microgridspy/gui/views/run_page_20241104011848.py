@@ -114,7 +114,6 @@ def run_model():
 
     # Load current project parameters
     current_settings = ProjectParameters.instantiate_from_yaml(yaml_filepath)
-    print("Parameters loaded successfully")
     
     # UI for updating and saving settings
     st.subheader("Update and Save Current Settings")
@@ -147,6 +146,7 @@ def run_model():
             st.session_state.model = model
             st.success("Multi-objective optimization completed successfully!")
 
+        if 'pareto_front' in st.session_state:
             st.write("### Pareto Front Plot")
             co2_values, npc_values = zip(*st.session_state.pareto_front)
             fig, ax = plt.subplots()
@@ -167,7 +167,8 @@ def run_model():
                 "Select a solution to explore",
                 range(len(st.session_state.pareto_front)),
                 format_func=lambda x: f"Solution {x + 1}: CO₂ = {co2_values[x]}, NPC = {npc_values[x]}",
-                key='selected_solution_index')
+                key='selected_solution_index'
+            )
 
             # Store the selected solution for later use
             st.session_state.model.solution = st.session_state.multiobjective_solutions[selected_index]
@@ -177,9 +178,8 @@ def run_model():
         if st.button("Run Single-Objective Optimization"):
             model = Model(current_settings)
             with st.spinner(f"Optimizing for a single objective using {solver}..."):
-                solution = model.solve_single_objective()
+                model.solve_single_objective()
             st.session_state.model = model
-            model.solution = solution
             st.success("Single-objective optimization completed successfully!")
 
     st.write("---")

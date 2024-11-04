@@ -214,16 +214,14 @@ class Model:
         solution = self._solve()
         max_co2 = solution.get(cost_objective_variable).values
         solutions.append(solution)
-        print(f"Max CO₂ emissions: {max_co2 / 1000} tonCO₂")
+        print(f"Max CO₂ emissions: {max_co2 / 1000} kgCO2")
 
         # Step 2: Minimize CO₂ emissions without NPC constraint (max NPC)
-        print("Step 2: Minimize CO₂ emissions without NPC constraint (max NPC)")
         emissions_objective = (self.variables["scenario_co2_emission"] * self.parameters['SCENARIO_WEIGHTS']).sum('scenarios')
         self.model.add_objective(emissions_objective, overwrite=True)
         solution = self._solve()
         min_co2 = solution.get("Total CO2 Emissions").values
         solutions.append(solution)
-        print(f"Min CO₂ emissions: {min_co2 / 1000} tonCO₂")
 
         # Initialize lists to store Pareto front data
         npc_values = []
@@ -236,7 +234,6 @@ class Model:
         for i in range(num_points):
             # Define the current CO₂ emission threshold
             emission_threshold = min_co2 + i * emission_step
-            print(f"Step {i}: Minimize NPC under CO₂ constraint: {emission_threshold / 1000} tonCO₂")
             self.model.add_constraints(emissions_objective <= emission_threshold, name=f"co2_threshold_{i}")
 
             # Minimize NPC under this CO₂ constraint
@@ -247,7 +244,6 @@ class Model:
             # Collect results
             npc_values.append(solution.get(cost_objective_variable).values)
             co2_values.append(emission_threshold)
-            print(f"NPC: {npc_values[-1] / 1000} kUSD, CO₂: {co2_values[-1] / 1000} tonCO₂")
 
             # Remove CO₂ constraint for the next iteration
             self.model.remove_constraints(f"co2_threshold_{i}")

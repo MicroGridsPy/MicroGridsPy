@@ -177,9 +177,8 @@ def run_model():
         if st.button("Run Single-Objective Optimization"):
             model = Model(current_settings)
             with st.spinner(f"Optimizing for a single objective using {solver}..."):
-                solution = model.solve_single_objective()
+                model.solve_single_objective()
             st.session_state.model = model
-            model.solution = solution
             st.success("Single-objective optimization completed successfully!")
 
     st.write("---")
