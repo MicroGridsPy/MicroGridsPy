@@ -357,7 +357,6 @@ def demand_assessment() -> None:
     lat = st.session_state.get("lat")
     start_year = str(st.session_state.get("start_date").year)
     project_name = st.session_state.get("project_name")
-    st.session_state.aggregated_demand_flag = False
     # Initialize session state variables
     initialize_session_state(st.session_state.default_values, "archetypes_params")
     # Initialize variables for demand data
@@ -404,7 +403,6 @@ def demand_assessment() -> None:
                 aggregated_demand = np.sum([user.demand_data.to_numpy().flatten() for user in users], axis=0)
                 demand_df = multi_years_demand(aggregated_demand, time_horizon)
                 save_demand_data(demand_df, filename="Aggregated Demand.csv", project_name=project_name, start_year=start_year)
-                st.session_state.aggregated_demand_flag = True
     
         elif import_type == "Aggregated demand CSV":
             uploaded_file, delimiter_value, decimal_value = csv_upload_interface("aggregated")

@@ -145,7 +145,7 @@ class Model:
         self._add_variables()
         self._add_constraints()
 
-    def _solve(self, solver: str, lp_path: Optional[str] = None, io_api: str = "lp", log_fn: str = ""):
+    def solve_model(self, solver: str, lp_path: Optional[str] = None, io_api: str = "lp", log_fn: str = ""):
         """
         Solve the model using a specified solver or a default one.
 
@@ -173,7 +173,7 @@ class Model:
 
         return self.model.solution
     
-    def solve_single_objective(self, solver: str, lp_path: Optional[str] = None, io_api: str = "lp", log_fn: str = ""):
+    def solve_single_objective(self):
         """Solve the model for a single objective based on the project's optimization goal."""
         # Build the model
         self._build()
@@ -191,10 +191,10 @@ class Model:
             print("Objective function: Minimize Total Variable Cost added to the model.")
 
         # Solve the model
-        return self._solve(solver, lp_path, io_api, log_fn)
+        return self._solve()
 
     
-    def solve_multi_objective(self, num_points: int, solver: str, lp_path: Optional[str] = None, io_api: str = "lp", log_fn: str = ""):
+    def solve_multi_objective(self, num_points: int):
         """Solve the multi-objective optimization problem to generate a Pareto front."""
         self._build()
         # Define the objective function
@@ -211,7 +211,7 @@ class Model:
         # Step 1: Minimize NPC without CO₂ constraint (max CO₂ emissions)
         print("Step 1: Minimize NPC without CO₂ constraint (max CO₂ emissions)")
         self.model.add_objective(cost_objective)
-        solution = self._solve(solver, lp_path, io_api, log_fn)
+        solution = self._solve()
         max_co2 = solution.get(cost_objective_variable).values
         solutions.append(solution)
         print(f"Max CO₂ emissions: {max_co2 / 1000} tonCO₂")
@@ -220,7 +220,7 @@ class Model:
         print("Step 2: Minimize CO₂ emissions without NPC constraint (max NPC)")
         emissions_objective = (self.variables["scenario_co2_emission"] * self.parameters['SCENARIO_WEIGHTS']).sum('scenarios')
         self.model.add_objective(emissions_objective, overwrite=True)
-        solution = self._solve(solver, lp_path, io_api, log_fn)
+        solution = self._solve()
         min_co2 = solution.get("Total CO2 Emissions").values
         solutions.append(solution)
         print(f"Min CO₂ emissions: {min_co2 / 1000} tonCO₂")
@@ -241,7 +241,7 @@ class Model:
 
             # Minimize NPC under this CO₂ constraint
             self.model.add_objective(cost_objective, overwrite=True)
-            solution = self._solve(solver, lp_path, io_api, log_fn)
+            solution = self._solve()
             solutions.append(solution)
 
             # Collect results

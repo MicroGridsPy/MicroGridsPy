@@ -357,7 +357,6 @@ def demand_assessment() -> None:
     lat = st.session_state.get("lat")
     start_year = str(st.session_state.get("start_date").year)
     project_name = st.session_state.get("project_name")
-    st.session_state.aggregated_demand_flag = False
     # Initialize session state variables
     initialize_session_state(st.session_state.default_values, "archetypes_params")
     # Initialize variables for demand data

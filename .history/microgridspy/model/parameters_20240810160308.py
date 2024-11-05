@@ -37,6 +37,7 @@ class ProjectSettings(BaseModel):
         optimization_goal (int): The optimization goal for the project.
         investment_cost_limit (Optional[float]): The investment cost limit for the project.
         system_configuration (int): The system configuration for the project.
+        solver (int): The solver used for the project.
         renewable_penetration (float): The renewable penetration percentage.
         land_availability (float): The land availability for renewables in m2.
         battery_independence (int): The battery independence (number of days).
@@ -51,6 +52,7 @@ class ProjectSettings(BaseModel):
     optimization_goal: int
     investment_cost_limit: Optional[float]
     system_configuration: int
+    solver: str
     renewable_penetration: float
     land_availability: float
     battery_independence: int

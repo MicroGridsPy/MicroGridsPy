@@ -111,84 +111,82 @@ def project_profitability():
     from different user categories. The application dynamically reads CSV files from the demand folder, allows users to 
     input tariffs for each category, and displays the resulting total and yearly profits.
     """)
-    if st.session_state.aggregated_demand_flag is True:
-        # Load user category data from the demand folder
-        user_category_data = initialize_user_categories(PathManager.DEMAND_FOLDER_PATH)
-        
-        if not user_category_data:
-            return  # If no data, exit the function
 
-        # Plot total yearly energy
-        plot_yearly_energy(user_category_data)
+    # Load user category data from the demand folder
+    user_category_data = initialize_user_categories(PathManager.DEMAND_FOLDER_PATH)
+    
+    if not user_category_data:
+        return  # If no data, exit the function
 
-        currency = st.session_state.get('currency', 'USD')
-        time_horizon = st.session_state.get("time_horizon", 20)
-        discount_rate = st.session_state.get("discount_rate", 0.05)
-        # Get the results from the model
-        model: Model = st.session_state.model
+    # Plot total yearly energy
+    plot_yearly_energy(user_category_data)
 
-        # Get the Net Present Cost (NPC) value from the model
-        if model.get_settings('optimization_goal') == 0:
-            npc_value = model.get_solution_variable('Net Present Cost').values.item() / 1000  # Convert to kUSD
-        else:
-            npc_value = calculate_actualized_investment_cost(model) / 1000  # Convert to kUSD
+    currency = st.session_state.get('currency', 'USD')
+    time_horizon = st.session_state.get("time_horizon", 20)
+    discount_rate = st.session_state.get("discount_rate", 0.05)
+    # Get the results from the model
+    model: Model = st.session_state.model
 
-        st.write(f"Net Present Cost (NPC): {npc_value:,.2f} k{currency}")
-        
-        tariff_settings = {}
-        
-        st.header("Tariff Settings")
-        tariff_models = ['Tariff per consumption', 'Fixed tariff', 'Fixed tariff up to threshold']
-
-        # Dynamic input fields for tariffs
-        for category in user_category_data.keys():
-            st.subheader(f"{category}")
-            tariff_type = st.selectbox(f"Select tariff model for {category}", tariff_models)
-            
-            if tariff_type == 'Tariff per consumption':
-                tariff_value = st.number_input(f"Enter tariff per kWh for {category} ({currency}/kWh)", value=0.0)
-                tariff_settings[category] = {'type': 'consumption', 'value': tariff_value}
-            
-            elif tariff_type == 'Fixed tariff':
-                fixed_value = st.number_input(f"Enter fixed tariff for {category} ({currency}/month)", value=0.0)
-                tariff_settings[category] = {'type': 'fixed', 'value': fixed_value}
-            
-            elif tariff_type == 'Fixed tariff up to threshold':
-                fixed_value = st.number_input(f"Enter fixed tariff for {category} ({currency}/month)", value=0.0)
-                threshold = st.number_input(f"Enter energy threshold for {category} (kWh/month)", value=0.0)
-                consumption_tariff = st.number_input(f"Tariff per kWh after threshold ({currency}/kWh)", value=0.0)
-                tariff_settings[category] = {
-                    'type': 'threshold',
-                    'fixed_value': fixed_value,
-                    'threshold': threshold,
-                    'consumption_tariff': consumption_tariff
-                }
-
-        # Profit calculation section
-        actualized_profit_data = calculate_actualized_profit(user_category_data, tariff_settings, discount_rate, time_horizon)
-        st.write(f"Actualized Profit Data (k{currency})")
-        st.table(actualized_profit_data)
-
-        # Calculate total actualized profit in kUSD
-        total_actualized_profit = actualized_profit_data.sum().sum() / 1000  # Convert to kUSD
-
-        # Calculate payback period
-        payback_period = (npc_value / total_actualized_profit) * time_horizon
-
-
-        # Display total actualized profit and payback period
-        st.header("Profit Analysis Visualization")
-        # Display main metrics
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric(label=f"Total Actualized Profit over {time_horizon} years", value=f"{total_actualized_profit:,.2f} k{currency}")
-        with col2:
-            st.metric(label="Payback Period", value=f"{payback_period:.2f} years")
-        
-        # Visualization section
-        plot_yearly_profit(actualized_profit_data, currency)
+    # Get the Net Present Cost (NPC) value from the model
+    if model.get_settings('optimization_goal') == 0:
+        npc_value = model.get_solution_variable('Net Present Cost').values.item() / 1000  # Convert to kUSD
     else:
-        st.warning("To calculate project profitability with different tariffs, you need to provide demand data for various user categories. Please edit the load demand assessment section to include this data.")
+        npc_value = calculate_actualized_investment_cost(model) / 1000  # Convert to kUSD
+
+    st.write(f"Net Present Cost (NPC): {npc_value:,.2f} k{currency}")
+    
+    tariff_settings = {}
+    
+    st.header("Tariff Settings")
+    tariff_models = ['Tariff per consumption', 'Fixed tariff', 'Fixed tariff up to threshold']
+
+    # Dynamic input fields for tariffs
+    for category in user_category_data.keys():
+        st.subheader(f"{category}")
+        tariff_type = st.selectbox(f"Select tariff model for {category}", tariff_models)
+        
+        if tariff_type == 'Tariff per consumption':
+            tariff_value = st.number_input(f"Enter tariff per kWh for {category} ({currency}/kWh)", value=0.0)
+            tariff_settings[category] = {'type': 'consumption', 'value': tariff_value}
+        
+        elif tariff_type == 'Fixed tariff':
+            fixed_value = st.number_input(f"Enter fixed tariff for {category} ({currency}/month)", value=0.0)
+            tariff_settings[category] = {'type': 'fixed', 'value': fixed_value}
+        
+        elif tariff_type == 'Fixed tariff up to threshold':
+            fixed_value = st.number_input(f"Enter fixed tariff for {category} ({currency}/month)", value=0.0)
+            threshold = st.number_input(f"Enter energy threshold for {category} (kWh/month)", value=0.0)
+            consumption_tariff = st.number_input(f"Tariff per kWh after threshold ({currency}/kWh)", value=0.0)
+            tariff_settings[category] = {
+                'type': 'threshold',
+                'fixed_value': fixed_value,
+                'threshold': threshold,
+                'consumption_tariff': consumption_tariff
+            }
+
+    # Profit calculation section
+    actualized_profit_data = calculate_actualized_profit(user_category_data, tariff_settings, discount_rate, time_horizon)
+    st.write(f"Actualized Profit Data (k{currency})")
+    st.table(actualized_profit_data)
+
+    # Calculate total actualized profit in kUSD
+    total_actualized_profit = actualized_profit_data.sum().sum() / 1000  # Convert to kUSD
+
+    # Calculate payback period
+    payback_period = (npc_value / total_actualized_profit) * time_horizon
+
+
+    # Display total actualized profit and payback period
+    st.header("Profit Analysis Visualization")
+    # Display main metrics
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric(label=f"Total Actualized Profit over {time_horizon} years", value=f"{total_actualized_profit:,.2f} k{currency}")
+    with col2:
+        st.metric(label="Payback Period", value=f"{payback_period:.2f} years")
+    
+    # Visualization section
+    plot_yearly_profit(actualized_profit_data, currency)
 
     st.write("---")  # Add a separator
 

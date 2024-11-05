@@ -140,16 +140,16 @@ def run_model():
         
         - **HiGHS**: An open-source solver that comes pre-installed with the MicroGridsPy environment. If you're unsure about 
         solver setup or don't have a specific preference, HiGHS is a reliable default option. It's already configured 
-        and ready to use for most linear optimization problems.""")
+        and ready to use for most linear optimization problems.
+        
+        By default, the model will save the LP representation in the project folder, but you can specify a different path 
+        if needed. If you opt to use a custom path, make sure the directory exists and is writable.
+        """)
 
     # Dropdown for solver selection
     solver = st.selectbox("Select a Solver", ["gurobi", "highs"], key="solver")
 
     # Option to provide a different LP path
-    st.write("""
-             By default, the model will save the LP representation in the project folder, but you can specify a different path 
-             if needed. If you opt to use a custom path, make sure the directory exists and is writable.""")
-    
     use_custom_path = st.checkbox("Provide a custom LP file path")
     lp_path = None
     if use_custom_path:

@@ -98,7 +98,7 @@ def run_model():
 
     # Load the project settings and necessary data
     project_name = st.session_state.get('project_name')
-    currency = st.session_state.get('currency', 'USD')
+    solver = st.session_state.get('solver')
     pareto_points = st.session_state.get('pareto_points', 10)
 
     if not project_name:
@@ -130,38 +130,8 @@ def run_model():
     st.write("---")
 
     st.subheader("Optimize the System and Find a Solution")
-    st.write("""
-        Choose your solver and run the optimization process. 
-        Before proceeding, ensure that the selected solver is properly installed and available on your laptop.
-        
-        - **Gurobi**: A commercial solver known for its efficiency with mixed-integer linear programming (MILP) problems. 
-        Make sure you have installed Gurobi and have a valid license configured. If you select Gurobi, the optimization 
-        process will only run if the solver is accessible and correctly set up in your environment.
-        
-        - **HiGHS**: An open-source solver that comes pre-installed with the MicroGridsPy environment. If you're unsure about 
-        solver setup or don't have a specific preference, HiGHS is a reliable default option. It's already configured 
-        and ready to use for most linear optimization problems.""")
-
-    # Dropdown for solver selection
-    solver = st.selectbox("Select a Solver", ["gurobi", "highs"], key="solver")
-
-    # Option to provide a different LP path
-    st.write("""
-             By default, the model will save the LP representation in the project folder, but you can specify a different path 
-             if needed. If you opt to use a custom path, make sure the directory exists and is writable.""")
-    
-    use_custom_path = st.checkbox("Provide a custom LP file path")
-    lp_path = None
-    if use_custom_path:
-        st.write("Specify a custom path for saving the LP representation of the model:")
-        lp_path = st.text_input("Custom LP Path", value="")
-        st.write("Specify the input/output API to use (default is 'lp'):")
-        io_api = st.text_input("Input/Output API", value="lp")
-        st.write("Specify a custom name for for logging the solver's output:")
-        log_fname = st.text_input("Custom Log File Name", value="")
-    else:
-        io_api = "lp"
-        log_fname = ""
+    st.write("Click the button to run the optimization process. Check the IDE console for detailed information about the optimization log.")
+    currency = st.session_state.get('currency', 'USD')
 
     # Check if the model has been solved already (avoid recomputation)
     if 'model' not in st.session_state:
@@ -172,11 +142,7 @@ def run_model():
             # Initialize the model
             model = Model(current_settings)
             with st.spinner("Generating Pareto front..."):
-                pareto_front, multiobjective_solutions = model.solve_multi_objective(num_points=pareto_points, 
-                                                                                     solver=solver, 
-                                                                                     lp_path=lp_path,
-                                                                                     io_api=io_api,
-                                                                                     log_fn=log_fname)
+                pareto_front, multiobjective_solutions = model.solve_multi_objective(num_points=pareto_points)
             
             st.session_state.pareto_front = pareto_front
             st.session_state.multiobjective_solutions = multiobjective_solutions
@@ -213,10 +179,7 @@ def run_model():
         if st.button("Run Single-Objective Optimization"):
             model = Model(current_settings)
             with st.spinner(f"Optimizing for a single objective using {solver}..."):
-                solution = model.solve_single_objective(solver=solver, 
-                                                        lp_path=lp_path,
-                                                        io_api=io_api,
-                                                        log_fn=log_fname)
+                solution = model.solve_single_objective()
             st.session_state.model = model
             model.solution = solution
             st.success("Single-objective optimization completed successfully!")

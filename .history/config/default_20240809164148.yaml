@@ -11,6 +11,7 @@ project_settings:
   optimization_goal: 0
   investment_cost_limit: 500000.0
   system_configuration: 0
+  solver: "highs"
   renewable_penetration: 0.0
   land_availability: 0.0
   battery_independence: 0

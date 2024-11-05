@@ -145,7 +145,7 @@ class Model:
         self._add_variables()
         self._add_constraints()
 
-    def _solve(self, solver: str, lp_path: Optional[str] = None, io_api: str = "lp", log_fn: str = ""):
+    def solve_model(self, solver: str, lp_path: Optional[str] = None, io_api: str = "lp", log_fn: str = ""):
         """
         Solve the model using a specified solver or a default one.
 

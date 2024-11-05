@@ -71,6 +71,15 @@ def settings_page():
         
         st.session_state.system_configuration = system_configuration_options.index(selected_system_config)
 
+        solver_options = ["highs", "gurobi"]
+
+        selected_solver = st.selectbox(
+            "Select Solver:", 
+            options=solver_options, 
+            help="Select the solver to be used for optimization. Different solvers may have varying performance characteristics.")
+        
+        st.session_state.solver = selected_solver
+
     with st.expander("🔒 Optimization Constraints", expanded=False):
         renewable_penetration_percent = st.number_input(
             "Minimum Renewable Penetration [%]:", 
