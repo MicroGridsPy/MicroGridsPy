@@ -86,6 +86,10 @@ conda activate myenv
 Now that your environment is active, install the required packages using the requirements.txt file contained in the project repository. This file lists all the dependencies needed to run MicroGridsPy.
 
 ```bash
+# Change Directory to MicroGridsPy downloaded project folder
+# Replace with the actual path where you saved the MicroGridsPy project
+cd path/to/MicroGridsPy
+
 # Install required packages from the requirements.txt file
 pip install -r requirements.txt
 ```
