@@ -119,7 +119,7 @@ pip install highspy
 
 ### 4. Navigate to the Project Directory
 
-After cloning or downloading the project files, navigate to the folder where the MicroGridsPy files are located. If you cloned the repository, use the following command to move into the project directory:
+Everytime you want to launch the model, change directory to the folder where the MicroGridsPy files are located. If you cloned the repository, use the following command to move into the project directory:
 
 ```bash
 # Replace with the actual path where you saved the MicroGridsPy project
