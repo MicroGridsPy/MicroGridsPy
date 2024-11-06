@@ -46,7 +46,7 @@ To get started with **MicroGridsPy**, follow the detailed steps below. These ins
 
 ### 1. Clone or Download the GitHub Repository
 
-Next, download the MicroGridsPy code by cloning the GitHub repository:
+Download the MicroGridsPy code by cloning the GitHub repository:
 
 ```bash
 git clone https://github.com/MicroGridsPy/MicroGridsPy/tree/Development_Linopy.git
