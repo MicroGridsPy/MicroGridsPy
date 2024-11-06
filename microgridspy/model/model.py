@@ -1,9 +1,9 @@
-from typing import Optional, Dict
-
 import xarray as xr
 import linopy
+import os
 
-from typing import List, Tuple
+from typing import Optional, Dict
+from pathlib import Path
 
 from config.solver_settings import get_gurobi_settings
 from microgridspy.model.parameters import ProjectParameters
@@ -145,35 +145,60 @@ class Model:
         self._add_variables()
         self._add_constraints()
 
-    def _solve(self, solver: str, lp_path: Optional[str] = None, io_api: str = "lp", log_fn: str = ""):
+    def _solve(self, solver: str, problem_fn: Optional[str] = None, log_file_path: Optional[str] = None):
         """
         Solve the model using a specified solver or a default one.
 
         Parameters:
-        - solver_name: The name of the solver to use. 
-        - lp_path: Optional file path to save the LP representation of the model. If not provided, the LP file will not be saved.
-        - io_api: The input/output API to use, default is 'lp'.
-        - log_fn: The file name for logging the solver's output.
+        - solver: The name of the solver to use.
+        - problem_fn: The file path for saving the solver's problem formulation. If not provided, no file will be saved.
+        - log_file_path: The file path for logging the solver's output. If not provided, no log will be saved.
         """
 
-        # Choose the solver
+        # Ensure the solver is available
         if solver not in linopy.available_solvers:
             print(f"Solver {solver} not available. Choose from {linopy.available_solvers}.")
-        else:
-            # Set specific Gurobi options
-            if solver == 'gurobi':
-                solver_options = {}
-                solver_options = get_gurobi_settings(self.settings.advanced_settings.milp_formulation)
-            # Set log file path if specified
-            if lp_path: self.model.to_file(lp_path)
+            return None
 
-            # Solve the model
-            print(f"Solving the model using {solver}...")
-            self.model.solve(solver_name=solver, io_api=io_api, log_fn=log_fn, **solver_options)
+        # Set specific Gurobi options if using Gurobi solver
+        solver_options = {}
+        if solver == 'gurobi':
+            solver_options = get_gurobi_settings(self.settings.advanced_settings.milp_formulation)
+
+        # Handle problem file path if specified
+        if problem_fn:
+            try:
+                problem_fn = Path(problem_fn)  # Convert to Path object
+                problem_dir = problem_fn.parent
+                if not problem_dir.exists():
+                    problem_dir.mkdir(parents=True, exist_ok=True)
+                print(f"Saving problem formulation to {problem_fn}")
+            except Exception as e:
+                print(f"Error with problem file path: {e}. Proceeding without saving the problem formulation.")
+                problem_fn = None
+
+        # Handle log file path if specified
+        if log_file_path:
+            try:
+                log_file_path = Path(log_file_path)  # Convert to Path object
+                log_dir = log_file_path.parent
+                if not log_dir.exists():
+                    log_dir.mkdir(parents=True, exist_ok=True)
+                print(f"Using log file at {log_file_path}")
+            except Exception as e:
+                print(f"Error with log file path: {e}. Proceeding without a log file.")
+                log_file_path = None  
+
+        # Attempt to solve the model
+        print(f"Solving the model using {solver}...")
+        try:
+            self.model.solve(solver_name=solver, problem_fn=problem_fn, log_fn=log_file_path, **solver_options)
+        except AttributeError as e:
+            print(f"Error during solving: {e}. Check if the log path is valid or if the solver supports logging.")
 
         return self.model.solution
     
-    def solve_single_objective(self, solver: str, lp_path: Optional[str] = None, io_api: str = "lp", log_fn: str = ""):
+    def solve_single_objective(self, solver: str, problem_fn: Optional[str] = None, log_path: Optional[str] = None):
         """Solve the model for a single objective based on the project's optimization goal."""
         # Build the model
         self._build()
@@ -191,10 +216,10 @@ class Model:
             print("Objective function: Minimize Total Variable Cost added to the model.")
 
         # Solve the model
-        return self._solve(solver, lp_path, io_api, log_fn)
+        return self._solve(solver, problem_fn, log_path)
 
     
-    def solve_multi_objective(self, num_points: int, solver: str, lp_path: Optional[str] = None, io_api: str = "lp", log_fn: str = ""):
+    def solve_multi_objective(self, num_points: int, solver: str, problem_fn: Optional[str] = None, log_path: Optional[str] = None):
         """Solve the multi-objective optimization problem to generate a Pareto front."""
         self._build()
         # Define the objective function
@@ -211,7 +236,7 @@ class Model:
         # Step 1: Minimize NPC without CO₂ constraint (max CO₂ emissions)
         print("Step 1: Minimize NPC without CO₂ constraint (max CO₂ emissions)")
         self.model.add_objective(cost_objective)
-        solution = self._solve(solver, lp_path, io_api, log_fn)
+        solution = self._solve(solver, problem_fn, log_path)
         max_co2 = solution.get(cost_objective_variable).values
         solutions.append(solution)
         print(f"Max CO₂ emissions: {max_co2 / 1000} tonCO₂")
@@ -220,7 +245,7 @@ class Model:
         print("Step 2: Minimize CO₂ emissions without NPC constraint (max NPC)")
         emissions_objective = (self.variables["scenario_co2_emission"] * self.parameters['SCENARIO_WEIGHTS']).sum('scenarios')
         self.model.add_objective(emissions_objective, overwrite=True)
-        solution = self._solve(solver, lp_path, io_api, log_fn)
+        solution = self._solve(solver, problem_fn, log_path)
         min_co2 = solution.get("Total CO2 Emissions").values
         solutions.append(solution)
         print(f"Min CO₂ emissions: {min_co2 / 1000} tonCO₂")
@@ -241,7 +266,7 @@ class Model:
 
             # Minimize NPC under this CO₂ constraint
             self.model.add_objective(cost_objective, overwrite=True)
-            solution = self._solve(solver, lp_path, io_api, log_fn)
+            solution = self._solve(solver, problem_fn, log_path)
             solutions.append(solution)
 
             # Collect results

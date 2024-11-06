@@ -147,21 +147,27 @@ def run_model():
 
     # Option to provide a different LP path
     st.write("""
-             By default, the model will save the LP representation in the project folder, but you can specify a different path 
+             By default, the model will NOT save the LP representation and the log file, but you can specify a path 
              if needed. If you opt to use a custom path, make sure the directory exists and is writable.""")
     
-    use_custom_path = st.checkbox("Provide a custom LP file path")
-    lp_path = None
-    if use_custom_path:
-        st.write("Specify a custom path for saving the LP representation of the model:")
-        lp_path = st.text_input("Custom LP Path", value="")
-        st.write("Specify the input/output API to use (default is 'lp'):")
-        io_api = st.text_input("Input/Output API", value="lp")
-        st.write("Specify a custom name for for logging the solver's output:")
-        log_fname = st.text_input("Custom Log File Name", value="")
+    # Custom LP and log file paths
+    use_lp_path = st.checkbox("Provide a custom LP file path")
+    if use_lp_path: 
+        st.write("Specify a custom path to the file (.lp) for problem LP representation:")
+        lp_path = st.text_input("Custom LP File Path", value="")
+        if Path(lp_path).suffix != ".lp": 
+            st.error("File path not valid. The file should have a .lp extension.")
     else:
-        io_api = "lp"
-        log_fname = ""
+        lp_path = None
+    
+    use_log_path = st.checkbox("Provide a custom Log file path")
+    if use_log_path:
+        st.write("Specify a custom path to the file (.log) for logging the solver's output:")
+        log_path = st.text_input("Custom Log File Path", value="")
+        if Path(log_path).suffix != ".log": 
+            st.error("File path not valid. The log file should have a .log extension.")           
+    else:
+        log_path = None
 
     # Check if the model has been solved already (avoid recomputation)
     if 'model' not in st.session_state:
@@ -173,10 +179,9 @@ def run_model():
             model = Model(current_settings)
             with st.spinner("Generating Pareto front..."):
                 pareto_front, multiobjective_solutions = model.solve_multi_objective(num_points=pareto_points, 
-                                                                                     solver=solver, 
-                                                                                     lp_path=lp_path,
-                                                                                     io_api=io_api,
-                                                                                     log_fn=log_fname)
+                                                                                     solver=solver,
+                                                                                     problem_fn=lp_path, 
+                                                                                     log_path=log_path)
             
             st.session_state.pareto_front = pareto_front
             st.session_state.multiobjective_solutions = multiobjective_solutions
@@ -213,10 +218,7 @@ def run_model():
         if st.button("Run Single-Objective Optimization"):
             model = Model(current_settings)
             with st.spinner(f"Optimizing for a single objective using {solver}..."):
-                solution = model.solve_single_objective(solver=solver, 
-                                                        lp_path=lp_path,
-                                                        io_api=io_api,
-                                                        log_fn=log_fname)
+                solution = model.solve_single_objective(solver=solver, problem_fn=lp_path, log_path=log_path)
             st.session_state.model = model
             model.solution = solution
             st.success("Single-objective optimization completed successfully!")
