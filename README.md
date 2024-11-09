@@ -2,9 +2,7 @@
 
 > **Note:** This version of MicroGridsPy is under **active development** and has not been officially released yet. It is recommended to check regularly for updates and changes in the repository.
 
-![MicroGridsPy](https://github.com/MicroGridsPy/MicroGridsPy/blob/master/docs/source/Images/Mgpy_Scheme_2.png?raw=true)
-
-**MicroGridsPy** is a modern, open-source optimization model for **energy scaling and dispatch optimization** in microgrids, specifically designed for remote locations. The model now runs using the [Linopy](https://linopy.readthedocs.io/) optimization framework, which provides fast, efficient, and scalable solutions for linear and mixed-integer programming. MicroGridsPy supports both open-source solvers like **HiGHS** and common commercial solvers, giving users a range of options for solving optimization problems.
+**MicroGridsPy** is an open-source optimization model for **energy scaling and dispatch optimization** in microgrids, specifically designed for remote locations. The model now runs using the [Linopy](https://linopy.readthedocs.io/) optimization framework, which provides fast, efficient, and scalable solutions for linear and mixed-integer programming. MicroGridsPy supports both open-source solvers like **HiGHS** and common commercial solvers, giving users a range of options for solving optimization problems.
 
 The model features a **streamlined web interface** built using [Streamlit](https://streamlit.io/), offering a dynamic and user-friendly environment for inputting data, visualizing results, and running optimizations. **Pydantic** is used for robust data validation, ensuring data accuracy and consistency.
 
