@@ -111,11 +111,12 @@ def project_profitability():
     from different user categories. The application dynamically reads CSV files from the demand folder, allows users to 
     input tariffs for each category, and displays the resulting total and yearly profits.
     """)
-    if st.session_state.aggregated_demand_flag is True:
+    if len(os.listdir(PathManager.DEMAND_FOLDER_PATH)) != 0:
         # Load user category data from the demand folder
         user_category_data = initialize_user_categories(PathManager.DEMAND_FOLDER_PATH)
         
         if not user_category_data:
+            st.warning("No user categories found in the demand folder.")
             return  # If no data, exit the function
 
         # Plot total yearly energy
@@ -188,7 +189,7 @@ def project_profitability():
         # Visualization section
         plot_yearly_profit(actualized_profit_data, currency)
     else:
-        st.warning("To calculate project profitability with different tariffs, you need to provide demand data for various user categories. Please edit the load demand assessment section to include this data.")
+        st.warning("Demand folder empty. To calculate project profitability with different tariffs, you need to provide demand data for various user categories. Please edit the load demand assessment section to include this data.")
 
     st.write("---")  # Add a separator
 

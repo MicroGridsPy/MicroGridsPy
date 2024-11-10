@@ -13,8 +13,13 @@ def battery_technology() -> None:
     """Streamlit page for configuring battery technology parameters."""
     st.title("Battery Parameters")
     st.subheader("Define the parameters for the battery storage system")
-    image_path = PathManager.IMAGES_PATH / "technology_characterization.png"
-    st.image(str(image_path), use_column_width=True, caption="Overview of the technology characterization parameters")
+    st.write("""
+    This page is dedicated to initializing parameters for the battery storage system within the project. 
+    Here, you can configure the relevant settings and values associated with the battery type used in the model.
+    Below is a brief overview of the mathematical formulation of backup system within MicroGridsPy:
+    """)
+    image_path = PathManager.IMAGES_PATH / "battery_math_formulation.PNG"
+    st.image(str(image_path), use_column_width=True, caption="Overview of the main equations for battery")
 
     has_battery = st.session_state.get('system_configuration', 0) in [0, 1]
 
@@ -42,7 +47,7 @@ def battery_technology() -> None:
         if brownfield: 
             st.session_state.battery_expected_lifetime = st.number_input("Expected Lifetime [years]", value=st.session_state.battery_expected_lifetime)
         else: 
-            st.session_state.battery_expected_lifetime = st.number_input("Expected Lifetime [years]", min_value=time_horizon, value=st.session_state.battery_expected_lifetime)
+            st.session_state.battery_expected_lifetime = st.number_input("Expected Lifetime [years]", min_value=1, value=st.session_state.battery_expected_lifetime)
         st.session_state.bess_unit_co2_emission = st.number_input("Unit CO2 Emission [kgCO2/kWh]", value=st.session_state.bess_unit_co2_emission)
     
         if brownfield:

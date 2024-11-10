@@ -81,8 +81,13 @@ def renewables_technology() -> None:
     """Streamlit page for configuring renewable energy technology parameters."""
     st.title("Renewables Parameters")
     st.subheader("Define the parameters for each renewable source")
-    image_path = PathManager.IMAGES_PATH / "technology_characterization.png"
-    st.image(str(image_path), use_column_width=True, caption="Overview of the technology characterization parameters")
+    st.write("""
+    This page is dedicated to initializing parameters for renewable energy technologies within the project. 
+    Here, you can configure the relevant settings and values associated with each renewable source used in the model.
+    Below is a brief overview of the mathematical formulation of renewables within MicroGridsPy:
+    """)
+    image_path = PathManager.IMAGES_PATH / "renewables_math_formulation.PNG"
+    st.image(str(image_path), use_column_width=True, caption="Overview of the main equations for renewables")
 
     # Initialize session state variables
     initialize_session_state(st.session_state.default_values, 'renewables_params')

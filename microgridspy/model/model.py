@@ -193,8 +193,8 @@ class Model:
         print(f"Solving the model using {solver}...")
         try:
             self.model.solve(solver_name=solver, problem_fn=problem_fn, log_fn=log_file_path, **solver_options)
-        except AttributeError as e:
-            print(f"Error during solving: {e}. Check if the log path is valid or if the solver supports logging.")
+        except Exception as e:
+            raise RuntimeError(f"Error during solving: {e}")
 
         return self.model.solution
     
@@ -233,6 +233,7 @@ class Model:
             cost_objective_variable = "Total Variable Cost"
 
         solutions = []
+        print(f"Starting multi-objective optimization with {num_points} pareto points...")
         # Step 1: Minimize NPC without CO₂ constraint (max CO₂ emissions)
         print("Step 1: Minimize NPC without CO₂ constraint (max CO₂ emissions)")
         self.model.add_objective(cost_objective)
@@ -261,7 +262,7 @@ class Model:
         for i in range(num_points):
             # Define the current CO₂ emission threshold
             emission_threshold = min_co2 + i * emission_step
-            print(f"Step {i}: Minimize NPC under CO₂ constraint: {emission_threshold / 1000} tonCO₂")
+            print(f"Step {i+2}: Minimize NPC under CO₂ constraint: {emission_threshold / 1000} tonCO₂")
             self.model.add_constraints(emissions_objective <= emission_threshold, name=f"co2_threshold_{i}")
 
             # Minimize NPC under this CO₂ constraint
@@ -276,6 +277,8 @@ class Model:
 
             # Remove CO₂ constraint for the next iteration
             self.model.remove_constraints(f"co2_threshold_{i}")
+
+        print("Pareto front generation completed.")
 
         # Return NPC and CO₂ values as a list of tuples for Pareto front plotting
         return list(zip(co2_values, npc_values)), solutions

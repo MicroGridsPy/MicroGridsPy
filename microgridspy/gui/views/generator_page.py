@@ -60,8 +60,13 @@ def generator_technology() -> None:
     """Streamlit page for configuring generator technology parameters."""
     st.title("Generator Parameters")
     st.subheader("Define the parameters for the generator types in your project")
-    image_path = PathManager.IMAGES_PATH / "technology_characterization.png"
-    st.image(str(image_path), use_column_width=True, caption="Overview of the technology characterization parameters")
+    st.write("""
+    This page is dedicated to initializing parameters for backup systems within the project. 
+    Here, you can configure the relevant settings and values associated with each technology (generators) used in the model.
+    Below is a brief overview of the mathematical formulation of backup system within MicroGridsPy:
+    """)
+    image_path = PathManager.IMAGES_PATH / "generator_math_formulation.PNG"
+    st.image(str(image_path), use_column_width=True, caption="Overview of the main equations for generator")
 
     has_generator = st.session_state.get('system_configuration', 0) in [0, 2]
     
@@ -191,7 +196,7 @@ def generator_technology() -> None:
                 fixed_price = st.number_input(
                     f"Fixed fuel price for {gen_name} [{currency}/l]",
                     min_value=0.0,
-                    value=existing_fuel_cost_data[gen_name].mean() if existing_fuel_cost_data is not None else 0.0,
+                    value=existing_fuel_cost_data[gen_name].iloc[0],
                     step=0.01,
                     format="%.2f",
                     key=f"fixed_price_{i}")

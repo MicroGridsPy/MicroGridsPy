@@ -67,6 +67,7 @@ def advanced_settings():
         
         st.session_state.capacity_expansion = capacity_expansion_choice == "Capacity Expansion over Time"
 
+        # Display timeline if capacity expansion is enabled
         if st.session_state.capacity_expansion:
             st.session_state.step_duration = st.slider(
                 "Duration of each Investment Step [Years]:", 
@@ -75,6 +76,10 @@ def advanced_settings():
                 help="Set the interval between potential capacity expansions. Shorter intervals allow more frequent upgrades but increase computational load.")
             
             display_timeline(st.session_state.time_horizon, st.session_state.step_duration)
+        # Set step duration to time horizon if single investment step
+        else:
+            st.session_state.step_duration = st.session_state.time_horizon
+            st.session_state.num_steps = 1
 
 
     with st.expander("⚡ Grid Connection", expanded=False):
@@ -148,19 +153,6 @@ def advanced_settings():
             
             st.metric("Calculated WACC", f"{wacc:.2%}")
             st.session_state.calculated_wacc = wacc
-
-    with st.expander("🎯 Multi-Objective Optimization", expanded=False):
-        st.session_state.multiobjective_optimization = st.checkbox(
-            "Enable Multi-Objective Optimization", 
-            value=st.session_state.multiobjective_optimization,
-            help="Optimize for both cost and CO2 emissions. This provides a range of solutions with different trade-offs.")
-        
-        if st.session_state.multiobjective_optimization:
-            st.session_state.pareto_points = st.number_input(
-                "Number of Pareto Curve Points:", 
-                min_value=2, 
-                value=st.session_state.pareto_points,
-                help="Specify the number of solutions to generate along the Pareto front. More points provide a more detailed trade-off curve but increase computation time.")
 
     with st.expander("🔀 Multi-Scenario Optimization", expanded=False):
         st.session_state.multi_scenario_optimization = st.checkbox(

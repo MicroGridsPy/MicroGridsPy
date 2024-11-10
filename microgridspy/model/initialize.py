@@ -1,5 +1,6 @@
 import xarray as xr
 import pandas as pd
+import streamlit as st
 
 from config.path_manager import PathManager
 from microgridspy.model.parameters import ProjectParameters
@@ -54,6 +55,14 @@ def initialize_demand(sets: xr.Dataset) -> xr.DataArray:
     num_scenarios = len(sets.scenarios)
     num_years = len(sets.years)
     num_periods = len(sets.periods)
+
+    # Check if the number of years in the demand data file is less than the number of years in the project settings
+    num_columns = demand_df.shape[1]
+    if num_columns < num_years:
+        raise RuntimeError(f"The number of years in the demand data file ({num_columns}) is less than the number of years in the time horizon ({num_years}). Please edit the demand data from the user interface.")
+    else:
+        demand_df = demand_df.iloc[:, :num_years]
+        st.warning(f"Number of years detected in the demand data file ({num_columns}) higher than the number of years in the time horizon ({num_years}). The data will be truncated to match the project settings.")
 
     # Reshape the data to match other variables' dimension order
     demand_data = demand_df.values.reshape(num_scenarios, num_periods, num_years)
@@ -137,6 +146,14 @@ def initialize_grid_availability(sets: xr.Dataset) -> xr.DataArray:
     num_scenarios = len(sets.scenarios)
     num_years = len(sets.years)
     num_periods = len(sets.periods)
+
+    # Check if the number of years in the demand data file is less than the number of years in the project settings
+    num_columns = grid_availability_df.shape[1]
+    if num_columns < num_years:
+        raise RuntimeError(f"The number of years in the grid availability data file ({num_columns}) is less than the number of years in the time horizon ({num_years}). Please edit the grid availability data from the user interface.")
+    else:
+        grid_availability_df = grid_availability_df.iloc[:, :num_years]
+        st.warning(f"Number of years detected in the grid availability data file ({num_columns}) higher than the number of years in the time horizon ({num_years}). The data will be truncated to match the project settings.")
 
     # Reshape the data to match other variables' dimension order
     grid_availability_data = grid_availability_df.values.reshape(num_scenarios, num_periods, num_years)
