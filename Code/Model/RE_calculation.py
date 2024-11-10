@@ -1,9 +1,8 @@
 from collections import defaultdict
 import time, sys, concurrent.futures, urllib.request, urllib.parse, urllib.error    
-import pandas as pd, math, numpy as np, re, bisect, json, operator, copy, matplotlib.pyplot as plt
-# from windrose import WindroseAxes
-import csv
+import pandas as pd, math, numpy as np, re, bisect, json, operator
 import os
+    
 #%% Input data section
 
 ### Import URL components for the POWER API by NASA and generate the URL (two different functions depending on time resolution)

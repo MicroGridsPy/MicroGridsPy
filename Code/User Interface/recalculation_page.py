@@ -100,6 +100,7 @@ class RECalculationPage(tk.Frame):
             'RE_Supply_Calculation': self.RE_Supply_Calculation_var.get(),
             'lat': self.lat_var.get(),
             'lon': self.lon_var.get(),
+            'time_zone': self.time_zone_var.get(),
             'turbine_type': self.turbine_type_var.get(),
             'turbine_model': self.turbine_model_var.get(),
             'drivetrain_efficiency': self.drivetrain_efficiency_var.get()
@@ -122,6 +123,8 @@ class RECalculationPage(tk.Frame):
         self.lat_entry.config(state=state)
         self.lon_label.config(state=state)
         self.lon_entry.config(state=state)
+        self.time_zone_label.config(state=state)
+        self.time_zone_entry.config(state=state)
         self.turbine_type_label.config(state=state)
         self.turbine_type_combobox.config(state=state)
         self.turbine_model_label.config(state=state)
@@ -319,13 +322,21 @@ class RECalculationPage(tk.Frame):
         self.lon_entry = ttk.Entry(self.inner_frame, textvariable=self.lon_var,state='disabled')
         self.lon_entry.grid(row=10, column=0,padx=20, sticky='e')
         create_tooltip(self.lon_entry, "Enter the location longitude in degrees, minutes, and seconds (DMS)")
+
+        # Define time zone
+        self.time_zone_var = tk.StringVar(value="+2")
+        self.time_zone_label = ttk.Label(self.inner_frame, text="time zone", state='disabled')
+        self.time_zone_label.grid(row=11, column=0, sticky='w')
+        self.time_zone_entry = ttk.Entry(self.inner_frame, textvariable=self.time_zone_var,state='disabled')
+        self.time_zone_entry.grid(row=11, column=0, padx=20,sticky='e')
+        create_tooltip(self.time_zone_entry, "Enter the time zone of the location relative to GMT (e.g., +5 or -3)")
         
         self.re_calc_params_entries = []
         
         self.solar_intro_label = ttk.Label(self.inner_frame, text="Solar PV panel parameters:", font=self.italic_font, wraplength=850, justify="left")
-        self.solar_intro_label.grid(row=11, column=0, columnspan=3, pady=10, sticky='w')
+        self.solar_intro_label.grid(row=12, column=0, columnspan=3, pady=10, sticky='w')
         
-        for i, (param, value) in enumerate(solar_pv_params.items(), start=12):  
+        for i, (param, value) in enumerate(solar_pv_params.items(), start=13):  
             label_text = param
             label = ttk.Label(self.inner_frame, text=label_text)
             label.grid(row=i, column=0, sticky='w')
@@ -344,31 +355,31 @@ class RECalculationPage(tk.Frame):
             self.re_calc_params_entries.append((var, label, entry))
             
         self.wind_intro_label = ttk.Label(self.inner_frame, text="Wind turbine parameters:", font=self.italic_font, wraplength=850, justify="left")
-        self.wind_intro_label.grid(row=20, column=0, columnspan=3, pady=10, sticky='w')
+        self.wind_intro_label.grid(row=21, column=0, columnspan=3, pady=10, sticky='w')
 
         self.wind_nom_power_var = tk.DoubleVar(value=1670)  # Default value, will change based on turbine model selected
         self.wind_nom_power_label = ttk.Label(self.inner_frame, text="Rated Power [W]:", state='disabled')
-        self.wind_nom_power_label.grid(row=23, column=0, sticky='w')
+        self.wind_nom_power_label.grid(row=24, column=0, sticky='w')
         self.wind_nom_power_entry = ttk.Entry(self.inner_frame, textvariable=self.wind_nom_power_var, state='disabled') 
-        self.wind_nom_power_entry.grid(row=23, column=0, padx=20, sticky='e')
+        self.wind_nom_power_entry.grid(row=24, column=0, padx=20, sticky='e')
         create_tooltip(self.wind_nom_power_entry, "Rated power of the selected wind turbine model [W]")
         
             
         # Turbine Type Dropdown
         self.turbine_type_var = tk.StringVar()
         self.turbine_type_label = ttk.Label(self.inner_frame, text="Turbine type:", state='disabled')
-        self.turbine_type_label.grid(row=21, column=0, sticky='w')
+        self.turbine_type_label.grid(row=23, column=0, sticky='w')
         self.turbine_type_combobox = ttk.Combobox(self.inner_frame, textvariable=self.turbine_type_var, state='disabled', values=turbine_types)
-        self.turbine_type_combobox.grid(row=21, column=0, padx=20, sticky='e')
+        self.turbine_type_combobox.grid(row=23, column=0, padx=20, sticky='e')
         self.turbine_type_combobox.set(turbine_types[0])  # Set default value
         self.turbine_type_combobox.bind('<<ComboboxSelected>>', self.update_turbine_model_options)
 
         # Turbine Model Dropdown
         self.turbine_model_var = tk.StringVar()
         self.turbine_model_label = ttk.Label(self.inner_frame, text="Turbine model:", state='disabled')
-        self.turbine_model_label.grid(row=22, column=0, sticky='w')
+        self.turbine_model_label.grid(row=23, column=0, sticky='w')
         self.turbine_model_combobox = ttk.Combobox(self.inner_frame, textvariable=self.turbine_model_var, state='disabled')
-        self.turbine_model_combobox.grid(row=22, column=0, padx=20, sticky='e')
+        self.turbine_model_combobox.grid(row=23, column=0, padx=20, sticky='e')
         self.turbine_model_combobox.bind('<<ComboboxSelected>>', self.update_wind_nom_power)
         self.update_turbine_model_options()
 
@@ -378,9 +389,9 @@ class RECalculationPage(tk.Frame):
         self.drivetrain_efficiency_var = tk.DoubleVar(value=0.9)
         # Latitude and Longitude Entry Fields
         self.drivetrain_efficiency_label = ttk.Label(self.inner_frame, text="Drivetrain efficiency:", state='disabled')
-        self.drivetrain_efficiency_label.grid(row=24, column=0, sticky='w')
+        self.drivetrain_efficiency_label.grid(row=25, column=0, sticky='w')
         self.drivetrain_efficiency_entry = ttk.Entry(self.inner_frame, textvariable=self.drivetrain_efficiency_var,state='disabled')
-        self.drivetrain_efficiency_entry.grid(row=24, column=0, padx=20,sticky='e')
+        self.drivetrain_efficiency_entry.grid(row=25, column=0, padx=20,sticky='e')
         create_tooltip(self.drivetrain_efficiency_entry, "Enter the drivetrain efficiency")
         # Create the warning label and grid it
         self.setup_warning()
