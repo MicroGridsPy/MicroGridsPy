@@ -3,7 +3,10 @@ import numpy as np
 
 from microgridspy.model.model import Model
 
-def get_sizing_results(model: Model) -> pd.DataFrame:
+import pandas as pd
+import numpy as np
+
+def get_sizing_results(model) -> pd.DataFrame:
     """
     Get and format the sizing results, including existing capacities for brownfield scenarios and the total sizing.
     
@@ -63,7 +66,13 @@ def get_sizing_results(model: Model) -> pd.DataFrame:
     for category, capacity, existing, unit in zip(categories, capacities, existing_capacities, capacity_units):
         row = [f"{category} ({unit})", int(existing)]
         row.extend([int(cap) for cap in capacity])  # Convert to integer
-        total_capacity = int(existing) + sum(int(cap) for cap in capacity)  # Calculate total capacity
+
+        # Calculate total capacity based on the presence of multiple steps
+        if len(capacity) > 1:
+            total_capacity = int(existing) + int(capacity[-1])  # Only add the last expansion step
+        else:
+            total_capacity = int(existing) + sum(int(cap) for cap in capacity)  # Sum existing and single step
+
         row.append(total_capacity)
         data.append(row)
 
