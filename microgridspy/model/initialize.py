@@ -60,7 +60,7 @@ def initialize_demand(sets: xr.Dataset) -> xr.DataArray:
     num_columns = demand_df.shape[1]
     if num_columns < num_years:
         raise RuntimeError(f"The number of years in the demand data file ({num_columns}) is less than the number of years in the time horizon ({num_years}). Please edit the demand data from the user interface.")
-    else:
+    elif num_columns > num_years:
         demand_df = demand_df.iloc[:, :num_years]
         st.warning(f"Number of years detected in the demand data file ({num_columns}) higher than the number of years in the time horizon ({num_years}). The data will be truncated to match the project settings.")
 
