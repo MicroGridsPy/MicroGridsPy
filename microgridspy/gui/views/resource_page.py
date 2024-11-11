@@ -119,36 +119,42 @@ def get_coordinates(address: str) -> Tuple[float, float]:
     except Exception as e:
         raise ValueError(f"Unexpected error: {e}")
     
-# Simplified function to get coordinates and UTC offset
-def get_location_and_utc_offset(address: str) -> Tuple[Optional[float], Optional[float], Optional[int]]:
-    """Get the latitude, longitude, and UTC offset for the given address."""
+def get_location(address: str) -> Tuple[Optional[float], Optional[float]]:
+    """Get the latitude and longitude for the given address."""
     try:
-        # Geocoding to get latitude and longitude
-        geolocator = Nominatim(user_agent="myGeocoder")
-        location = geolocator.geocode(address, timeout=10)
+        geolocator = Nominatim(user_agent="myGeocoder", timeout=10)
+        location = geolocator.geocode(address)
+        
         if not location:
             st.error(f"No location found for: {address}")
-            return None, None, None
+            return None, None
         
-        lat, lon = location.latitude, location.longitude
+        return location.latitude, location.longitude
+
+    except GeopyError as e:
+        st.error(f"Geocoding error: {e}")
+        return None, None
+    except Exception as e:
+        st.error(f"Unexpected error: {e}")
+        return None, None
+
+def get_utc_offset(lat: float, lon: float) -> Optional[int]:
+    """Get the UTC offset for the given latitude and longitude."""
+    try:
         tf = TimezoneFinder()
         timezone_str = tf.timezone_at(lat=lat, lng=lon)
         
         if not timezone_str:
             st.error("Timezone could not be determined for the given coordinates.")
-            return lat, lon, None
+            return None
 
-        # Calculate the UTC offset using pytz
         timezone = pytz.timezone(timezone_str)
         utc_offset = timezone.utcoffset(datetime.utcnow()).total_seconds() / 3600
-        return lat, lon, int(utc_offset)
+        return int(utc_offset)
 
-    except GeopyError as e:
-        st.error(f"Geocoding error: {e}")
-        return None, None, None
     except Exception as e:
         st.error(f"Unexpected error: {e}")
-        return None, None, None
+        return None
 
 def save_resource_data(resource_data: pd.DataFrame, resource_name: str, project_name: str) -> None:
     """Save the resource data to a CSV file."""
@@ -226,12 +232,14 @@ def resource_assessment():
     address = st.text_input("Enter location address:", help="Input a specific address or location name to set project coordinates.")
 
     if address:
-        lat, lon, utc_offset = get_location_and_utc_offset(address)
-        if lat and lon and utc_offset is not None:
+        lat, lon = get_location(address)
+        if lat and lon:
             st.session_state.lat = lat
             st.session_state.lon = lon
-            st.session_state.time_zone = utc_offset
-            st.success(f"Location found! Coordinates: {lat}, {lon} | UTC Offset: {utc_offset} hours")
+            utc_offset = get_utc_offset(lat, lon)
+            if utc_offset is not None:
+                st.session_state.time_zone = utc_offset
+                st.success(f"Location found! Coordinates: {lat}, {lon} | UTC Offset: {utc_offset} hours")
 
     # Map for selecting coordinates
     initial_coords = [st.session_state.get("lat", 0), st.session_state.get("lon", 0)]
@@ -246,10 +254,24 @@ def resource_assessment():
         st.session_state.lon = lon
 
         # Get UTC offset for the clicked location
-        _, _, utc_offset = get_location_and_utc_offset(f"{lat}, {lon}")
+        utc_offset = get_utc_offset(lat, lon)
         if utc_offset is not None:
             st.session_state.time_zone = utc_offset
             st.success(f"Updated location: {lat}, {lon} | UTC Offset: {utc_offset} hours")
+
+    # Manual Latitude and Longitude Input
+    st.write("Or enter coordinates manually if there are issues with the map or address lookup:")
+    manual_lat = st.number_input("Latitude", value=st.session_state.get("lat", 0.0))
+    manual_lon = st.number_input("Longitude", value=st.session_state.get("lon", 0.0))
+
+    # Update coordinates if manually entered
+    if manual_lat != st.session_state.get("lat") or manual_lon != st.session_state.get("lon"):
+        st.session_state.lat = manual_lat
+        st.session_state.lon = manual_lon
+        utc_offset = get_utc_offset(manual_lat, manual_lon)
+        if utc_offset is not None:
+            st.session_state.time_zone = utc_offset
+            st.success(f"Updated location: {manual_lat}, {manual_lon} | UTC Offset: {utc_offset} hours")
 
     # Display the selected coordinates and UTC offset
     st.write(f"Selected Coordinates: {st.session_state.get('lat', 'N/A')}, {st.session_state.get('lon', 'N/A')}")

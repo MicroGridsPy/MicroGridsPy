@@ -456,6 +456,7 @@ def demand_assessment() -> None:
         st.write("RAMP is an open-source software suite for the stochastic simulation of any user-driven energy demand time series based on few simple inputs. Learn more.")
         image_path = PathManager.IMAGES_PATH / "ramp.png"
         st.image(str(image_path), use_column_width=True)
+        st.write("Examples of RAMP input files can be found [here](https://github.com/SESAM-Polimi/JupyRAMP/tree/main/ramp/Jupyter%20Notebooks/Excel%20Input%20Files)")
     
         num_days = st.number_input("Enter the number of days to simulate:", value=365)
         if num_days < 365:
