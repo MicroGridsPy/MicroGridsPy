@@ -167,61 +167,26 @@ def run_model():
     else:
         log_path = None
 
-    st.write("---")
-    st.write("""
-    ### Choosing Between Single-Objective and Multi-Objective Optimization
-    
-    Selecting an optimization approach depends on your project goals:
-    
-    - **Single-Objective Optimization**: If the main priority is cost minimization, without specific trade-offs against other criteria, choose the single-objective option. This approach will optimize solely for total costs, making it ideal when budget constraints are the primary concern and emissions are either regulated separately or not a primary focus.
-
-    - **Multi-Objective Optimization**: If balancing multiple criteria, such as costs and emissions, is essential, select the multi-objective option. This approach generates a Pareto front, allowing you to evaluate trade-offs between objectives and select configurations that balance costs with environmental impact. Multi-objective optimization is useful for projects aiming to meet economic and sustainability targets simultaneously.
-    
-    """)
-
     # Check if the model has been solved already (avoid recomputation)
     if 'model' not in st.session_state:
         st.session_state.model = None
-    with st.expander("🎯 Single-Objective Optimization", expanded=False):
-        if st.button("Run Single-Objective Optimization"):
-            st.session_state.multiobjective_optimization = False
+
+    if 'multiobjective_optimization' in st.session_state and st.session_state.multiobjective_optimization:
+        if st.button("Run Multi-Objective Optimization"):
+            # Update and save the settings
             try:
                 updated_settings = update_nested_settings(current_settings)
                 updated_settings.save_to_yaml(str(yaml_filepath))
                 st.success(f"Settings successfully updated and saved to {yaml_filepath}")
             except Exception as e:
                 st.error(f"An error occurred while saving settings: {str(e)}")
+
+            # Initialize the model
             model = Model(current_settings)
-            with st.spinner(f"Optimizing for a single objective using {solver}..."):
-                solution = model.solve_single_objective(solver=solver, problem_fn=lp_path, log_path=log_path)
-            st.session_state.model = model
-            model.solution = solution
-            st.success("Single-objective optimization completed successfully!")
 
-    with st.expander("⚖️ Multi-Objective Optimization", expanded=False):
-        st.session_state.multiobjective_optimization = st.checkbox(
-            "Enable Multi-Objective Optimization", 
-            value=st.session_state.multiobjective_optimization,
-            help="Optimize for both cost and CO2 emissions. This provides a range of solutions with different trade-offs.")
-        
-        if st.session_state.multiobjective_optimization:
-            st.session_state.pareto_points = st.number_input(
-                "Number of Pareto Curve Points:", 
-                min_value=2, 
-                value=st.session_state.pareto_points,
-                help="Specify the number of solutions to generate along the Pareto front. More points provide a more detailed trade-off curve but increase computation time.")
-
-            if st.button("Run Multi-Objective Optimization"):
-                try:
-                    updated_settings = update_nested_settings(current_settings)
-                    updated_settings.save_to_yaml(str(yaml_filepath))
-                    st.success(f"Settings successfully updated and saved to {yaml_filepath}")
-                except Exception as e:
-                    st.error(f"An error occurred while saving settings: {str(e)}")
-                # Initialize the model
-                model = Model(current_settings)
-                with st.spinner("Generating Pareto front..."):
-                    pareto_front, multiobjective_solutions = model.solve_multi_objective(num_points=st.session_state.pareto_points, 
+            # Run the multi-objective optimization
+            with st.spinner("Generating Pareto front..."):
+                pareto_front, multiobjective_solutions = model.solve_multi_objective(num_points=st.session_state.pareto_points, 
                                                                                         solver=solver,
                                                                                         problem_fn=lp_path, 
                                                                                         log_path=log_path)
@@ -255,7 +220,26 @@ def run_model():
 
                 # Store the selected solution for later use
                 st.session_state.model.solution = st.session_state.multiobjective_solutions[selected_index]
-                model.solution = st.session_state.model.solution
+                model.solution = st.session_state.model.solution 
+    else:
+        if st.button("Run Single-Objective Optimization"):
+            # Update and save the settings
+            try:
+                updated_settings = update_nested_settings(current_settings)
+                updated_settings.save_to_yaml(str(yaml_filepath))
+                st.success(f"Settings successfully updated and saved to {yaml_filepath}")
+            except Exception as e:
+                st.error(f"An error occurred while saving settings: {str(e)}")
+
+            # Initialize the model
+            model = Model(current_settings)
+
+            # Run the single-objective optimization
+            with st.spinner(f"Optimizing for a single objective using {solver}..."):
+                solution = model.solve_single_objective(solver=solver, problem_fn=lp_path, log_path=log_path)
+            st.session_state.model = model
+            model.solution = solution
+            st.success("Single-objective optimization completed successfully!")
 
     st.write("---")
 

@@ -250,6 +250,7 @@ def plots_dashboard():
 
     # Dispatch Plot
     st.subheader("Dispatch Plot")
+    st.info("**Note:** The dispatch plot presented here shows an optimal use of energy based on perfect foresight. It represents an idealized scenario and does not reflect a realistic dispatch strategy with real-time constraints.")
     selected_year = st.slider("Select Year for Dispatch Plot", min_value=min_year, max_value=max_year, value=min_year)
     selected_year_index = years.index(selected_year)
     selected_day = st.slider("Select Day", 0, 364, 0, key="day_slider")

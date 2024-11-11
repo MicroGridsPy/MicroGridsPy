@@ -154,7 +154,24 @@ def advanced_settings():
             st.metric("Calculated WACC", f"{wacc:.2%}")
             st.session_state.calculated_wacc = wacc
 
+    with st.expander("🎯 Multi-Objective Optimization", expanded=False):
+        # TODO: Check multi-objective optimization results
+        st.warning("⚠️ This functionality is a work in progress and may produce inaccurate results.")
+        st.session_state.multiobjective_optimization = st.checkbox(
+            "Enable Multi-Objective Optimization", 
+            value=st.session_state.multiobjective_optimization,
+            help="Optimize for both cost and CO2 emissions. This provides a range of solutions with different trade-offs.")
+        
+        if st.session_state.multiobjective_optimization:
+            st.session_state.pareto_points = st.number_input(
+                "Number of Pareto Curve Points:", 
+                min_value=2, 
+                value=st.session_state.pareto_points,
+                help="Specify the number of solutions to generate along the Pareto front. More points provide a more detailed trade-off curve but increase computation time.")
+
     with st.expander("🔀 Multi-Scenario Optimization", expanded=False):
+        # TODO: Implement multi-scenario optimization
+        st.warning("⚠️ This functionality is a work in progress and not properly implemented yet.")
         st.session_state.multi_scenario_optimization = st.checkbox(
             "Enable Multi-Scenario Optimization", 
             value=st.session_state.multi_scenario_optimization,
