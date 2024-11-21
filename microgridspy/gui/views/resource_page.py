@@ -22,6 +22,7 @@ from typing import Tuple, Optional
 
 from config.path_manager import PathManager
 from microgridspy.utils.nasa_power import download_nasa_pv_data, download_nasa_wind_data
+from microgridspy.utils.pvgis import download_pvgis_pv_data, download_pvgis_wind_data
 from microgridspy.gui.utils import csv_upload_interface, initialize_session_state
 
 def load_csv_data(uploaded_file, delimiter: str, decimal: str, resource_name: Optional[str] = None) -> Optional[pd.DataFrame]:
@@ -156,6 +157,34 @@ def get_utc_offset(lat: float, lon: float) -> Optional[int]:
         st.error(f"Unexpected error: {e}")
         return None
 
+def shift_resource_data(resource_data, utc_offset, column_name):
+    # Shift the 'value' column by utc_offset
+    # Isolate the 'Periods' column to keep it unchanged
+    periods_column = resource_data.index.tolist()
+
+    data_column = resource_data[column_name].tolist()
+    
+    shifted_periods = []
+
+    for period in periods_column:
+        shifted_period = period + utc_offset
+        if shifted_period <= 0:
+            shifted_period = len(periods_column) + shifted_period
+        elif shifted_period > len(periods_column):
+            shifted_period = shifted_period - len(periods_column)
+        shifted_periods.append(shifted_period)
+
+    # Create the resulting DataFrame with the 'Periods' column unchanged
+    shifted_df = pd.DataFrame({
+        'Periods': shifted_periods,
+        column_name: data_column
+    })
+
+    shifted_df.sort_values(by='Periods', inplace=True)
+    shifted_df.set_index('Periods', inplace=True)
+
+    return shifted_df
+
 def save_resource_data(resource_data: pd.DataFrame, resource_name: str, project_name: str) -> None:
     """Save the resource data to a CSV file."""
     # Save the resource data to a CSV file into the Inputs folder
@@ -224,7 +253,9 @@ def resource_assessment():
     # Initialize session state variables
     initialize_session_state(st.session_state.default_values, 'resource_assessment')
     initialize_session_state(st.session_state.default_values, 'nasa_power_params')
+    initialize_session_state(st.session_state.default_values, 'pvgis_params')
     nasa_power_params = st.session_state.default_values.nasa_power_params
+    pvgis_params = st.session_state.default_values.pvgis_params
     project_name = st.session_state.get("project_name")
 
     # Location selection
@@ -250,6 +281,11 @@ def resource_assessment():
     if output and output.get('last_clicked'):
         lat = output['last_clicked']['lat']
         lon = output['last_clicked']['lng']
+        lon = lon % 360
+        if lon > 180:
+            lon = lon - 360
+        if lon < -180:
+            lon = lon + 360
         st.session_state.lat = lat
         st.session_state.lon = lon
 
@@ -340,76 +376,140 @@ def resource_assessment():
         st.write(f"### {res_name} Electricity Production")
 
         if res_type == "☀️ Solar Energy":
-            with st.expander("⬇️ Download Solar Resource Availability from NASA POWER", expanded=False):
-                st.image(str(PathManager.IMAGES_PATH / "nasa_power.png"), use_column_width=True)
-                st.session_state.res_nominal_capacity[i] = st.number_input(
-                    f"Nominal Power for {res_name} [W]:", 
-                    value=st.session_state.res_nominal_capacity[i], 
-                    key=f"nom_power_{i}",
-                    help="Enter the nominal power capacity of the solar installation in Watts.")
-                
-                solar_params = {
-                    'tilt': {
-                        'name': "Panel Tilt Angle",
-                        'description': "The angle between the solar panel surface and the horizontal plane, in degrees. Optimal tilt is typically close to the latitude of the location. Range: 0° (horizontal) to 90° (vertical). Example: 30° for mid-latitudes."},
-                    'azim': {
-                        'name': "Panel Azimuth Angle",
-                        'description': "The compass direction that the solar panels face, in degrees. 0° is North, 90° is East, 180° is South, 270° is West. For maximum annual energy in the Northern Hemisphere, panels typically face South (180°). Adjust based on local conditions and time-of-day demand."},
-                    'ro_ground': {
-                        'name': "Ground Reflectance (Albedo)",
-                        'description': "The fraction of solar radiation reflected by the ground surface. Affects the amount of indirect light reaching the panels. Typical values: 0.1 (dark surfaces) to 0.4 (light surfaces). Examples: Grass ≈ 0.25, Concrete ≈ 0.30, Fresh snow ≈ 0.80."},
-                    'k_T': {
-                        'name': "Temperature Coefficient of Power",
-                        'description': "The rate at which panel efficiency decreases as temperature increases, expressed as a percentage per degree Celsius. Typical values range from -0.2% to -0.5% per °C, with -0.4% per °C being common. A lower absolute value indicates better high-temperature performance."},
-                    'NMOT': {
-                        'name': "Nominal Module Operating Temperature",
-                        'description': "The expected temperature of the solar panel under specific test conditions, in degrees Celsius. This value is used to estimate real-world performance. Typical range: 40°C to 50°C. Lower NMOT generally indicates better performance in hot conditions."},
-                    'T_NMOT': {
-                        'name': "Ambient Temperature at NMOT",
-                        'description': "The ambient air temperature at which the Nominal Module Operating Temperature (NMOT) is defined, usually 20°C (68°F). This is part of the standard test conditions for determining NMOT."},
-                    'G_NMOT': {
-                        'name': "Solar Irradiance at NMOT",
-                        'description': "The solar irradiance level at which the Nominal Module Operating Temperature (NMOT) is defined, usually 800 W/m². This represents typical sunny conditions and is part of the standard test conditions for determining NMOT."}
-                }
+            with st.expander("⬇️ Download Solar Resource Availability from an API", expanded=False):
+                data_source = st.selectbox("Select Data Source", ["EU PVGIS", "NASA POWER"], key=f"data_source_{i}")
+                if data_source == "EU PVGIS":
+                    st.session_state.res_nominal_capacity[i] = st.number_input(
+                        f"Nominal Power for {res_name} [W]:", 
+                        value=st.session_state.res_nominal_capacity[i], 
+                        key=f"nom_power_{i}",
+                        help="Enter the nominal power capacity of the solar installation in Watts.")
+                    
+                    solar_params = {
+                        'tilt': {
+                            'name': "Panel Tilt Angle",
+                            'description': "The angle between the solar panel surface and the horizontal plane, in degrees. Optimal tilt is typically close to the latitude of the location. Range: 0° (horizontal) to 90° (vertical). Example: 30° for mid-latitudes."},
+                        'azim': {
+                            'name': "Panel Azimuth Angle",
+                            'description': "The compass direction that the solar panels face, in degrees. 0° is North, 90° is East, 180° is South, 270° is West. For maximum annual energy in the Northern Hemisphere, panels typically face South (180°). Adjust based on local conditions and time-of-day demand."},
+                        'ro_ground': {
+                            'name': "Ground Reflectance (Albedo)",
+                            'description': "The fraction of solar radiation reflected by the ground surface. Affects the amount of indirect light reaching the panels. Typical values: 0.1 (dark surfaces) to 0.4 (light surfaces). Examples: Grass ≈ 0.25, Concrete ≈ 0.30, Fresh snow ≈ 0.80."},
+                        'k_T': {
+                            'name': "Temperature Coefficient of Power",
+                            'description': "The rate at which panel efficiency decreases as temperature increases, expressed as a percentage per degree Celsius. Typical values range from -0.2% to -0.5% per °C, with -0.4% per °C being common. A lower absolute value indicates better high-temperature performance."},
+                        'NMOT': {
+                            'name': "Nominal Module Operating Temperature",
+                            'description': "The expected temperature of the solar panel under specific test conditions, in degrees Celsius. This value is used to estimate real-world performance. Typical range: 40°C to 50°C. Lower NMOT generally indicates better performance in hot conditions."},
+                        'T_NMOT': {
+                            'name': "Ambient Temperature at NMOT",
+                            'description': "The ambient air temperature at which the Nominal Module Operating Temperature (NMOT) is defined, usually 20°C (68°F). This is part of the standard test conditions for determining NMOT."},
+                        'G_NMOT': {
+                            'name': "Solar Irradiance at NMOT",
+                            'description': "The solar irradiance level at which the Nominal Module Operating Temperature (NMOT) is defined, usually 800 W/m². This represents typical sunny conditions and is part of the standard test conditions for determining NMOT."}
+                    }
 
-                for param, info in solar_params.items():
-                    setattr(st.session_state, param, st.number_input(
-                    f"{info['name']} for {res_name}:", 
-                    value=getattr(st.session_state, param), 
-                    key=f"{param}_{i}",
-                    help=info['description']))
+                    for param, info in solar_params.items():
+                        setattr(st.session_state, param, st.number_input(
+                        f"{info['name']} for {res_name}:", 
+                        value=getattr(st.session_state, param), 
+                        key=f"{param}_{i}",
+                        help=info['description']))
 
-                if st.button(f"Download Solar Data for {res_name}", key=f"download_solar_{i}"):
-                    with st.spinner('Downloading and processing data from NASA POWER...'):
-                        try:
-                            solar_resource_data = download_nasa_pv_data(
-                                res_name=res_name, 
-                                base_URL=nasa_power_params.base_url,
-                                loc_id=nasa_power_params.loc_id,
-                                parameters_1=nasa_power_params.parameters_1,
-                                parameters_2=nasa_power_params.parameters_2,
-                                parameters_3=nasa_power_params.parameters_3,
-                                date_start=nasa_power_params.date_start,
-                                date_end=nasa_power_params.date_end,
-                                community=nasa_power_params.community,
-                                temp_res_1=nasa_power_params.temp_res_1,
-                                temp_res_2=nasa_power_params.temp_res_2,
-                                output_format=nasa_power_params.output_format,
-                                lat=st.session_state.lat, 
-                                lon=st.session_state.lon, 
-                                time_zone=st.session_state.time_zone,
-                                nom_power=st.session_state.res_nominal_capacity[i],
-                                tilt=st.session_state.tilt, 
-                                azimuth=st.session_state.azim, 
-                                ro_ground=st.session_state.ro_ground,
-                                k_T=st.session_state.k_T, 
-                                NMOT=st.session_state.NMOT, 
-                                T_NMOT=st.session_state.T_NMOT, 
-                                G_NMOT=st.session_state.G_NMOT)
-                            
-                            save_resource_data(solar_resource_data, res_name, project_name)
-                        except Exception as e:
-                            st.error(f"Error downloading NASA POWER data: {e}")
+                    if st.button(f"Download Solar Data for {res_name}", key=f"download_solar_{i}"):
+                        with st.spinner('Downloading and processing data from PVGIS...'):
+                            try:
+                                solar_resource_data = download_pvgis_pv_data(
+                                    res_name=res_name, 
+                                    base_URL=pvgis_params.base_url,
+                                    output_format=pvgis_params.output_format,
+                                    lat=st.session_state.lat, 
+                                    lon=st.session_state.lon, 
+                                    nom_power=st.session_state.res_nominal_capacity[i],
+                                    tilt=st.session_state.tilt, 
+                                    azimuth=st.session_state.azim, 
+                                    ro_ground=st.session_state.ro_ground,
+                                    k_T=st.session_state.k_T, 
+                                    NMOT=st.session_state.NMOT, 
+                                    T_NMOT=st.session_state.T_NMOT, 
+                                    G_NMOT=st.session_state.G_NMOT)
+                                
+                                solar_resource_data = shift_resource_data(solar_resource_data, st.session_state.time_zone, res_name) 
+                                save_resource_data(solar_resource_data, res_name, project_name)
+                            except Exception as e:
+                                st.error(f"Error downloading PVGIS data: {e}")
+
+                elif data_source == "NASA POWER":
+                    st.image(str(PathManager.IMAGES_PATH / "nasa_power.png"), use_column_width=True)
+                    st.session_state.res_nominal_capacity[i] = st.number_input(
+                        f"Nominal Power for {res_name} [W]:", 
+                        value=st.session_state.res_nominal_capacity[i], 
+                        key=f"nom_power_{i}",
+                        help="Enter the nominal power capacity of the solar installation in Watts.")
+                    
+                    solar_params = {
+                        'tilt': {
+                            'name': "Panel Tilt Angle",
+                            'description': "The angle between the solar panel surface and the horizontal plane, in degrees. Optimal tilt is typically close to the latitude of the location. Range: 0° (horizontal) to 90° (vertical). Example: 30° for mid-latitudes."},
+                        'azim': {
+                            'name': "Panel Azimuth Angle",
+                            'description': "The compass direction that the solar panels face, in degrees. 0° is North, 90° is East, 180° is South, 270° is West. For maximum annual energy in the Northern Hemisphere, panels typically face South (180°). Adjust based on local conditions and time-of-day demand."},
+                        'ro_ground': {
+                            'name': "Ground Reflectance (Albedo)",
+                            'description': "The fraction of solar radiation reflected by the ground surface. Affects the amount of indirect light reaching the panels. Typical values: 0.1 (dark surfaces) to 0.4 (light surfaces). Examples: Grass ≈ 0.25, Concrete ≈ 0.30, Fresh snow ≈ 0.80."},
+                        'k_T': {
+                            'name': "Temperature Coefficient of Power",
+                            'description': "The rate at which panel efficiency decreases as temperature increases, expressed as a percentage per degree Celsius. Typical values range from -0.2% to -0.5% per °C, with -0.4% per °C being common. A lower absolute value indicates better high-temperature performance."},
+                        'NMOT': {
+                            'name': "Nominal Module Operating Temperature",
+                            'description': "The expected temperature of the solar panel under specific test conditions, in degrees Celsius. This value is used to estimate real-world performance. Typical range: 40°C to 50°C. Lower NMOT generally indicates better performance in hot conditions."},
+                        'T_NMOT': {
+                            'name': "Ambient Temperature at NMOT",
+                            'description': "The ambient air temperature at which the Nominal Module Operating Temperature (NMOT) is defined, usually 20°C (68°F). This is part of the standard test conditions for determining NMOT."},
+                        'G_NMOT': {
+                            'name': "Solar Irradiance at NMOT",
+                            'description': "The solar irradiance level at which the Nominal Module Operating Temperature (NMOT) is defined, usually 800 W/m². This represents typical sunny conditions and is part of the standard test conditions for determining NMOT."}
+                    }
+
+                    for param, info in solar_params.items():
+                        setattr(st.session_state, param, st.number_input(
+                        f"{info['name']} for {res_name}:", 
+                        value=getattr(st.session_state, param), 
+                        key=f"{param}_{i}",
+                        help=info['description']))
+
+                    if st.button(f"Download Solar Data for {res_name}", key=f"download_solar_{i}"):
+                        with st.spinner('Downloading and processing data from NASA POWER...'):
+                            try:
+                                solar_resource_data = download_nasa_pv_data(
+                                    res_name=res_name, 
+                                    base_URL=nasa_power_params.base_url,
+                                    loc_id=nasa_power_params.loc_id,
+                                    parameters_1=nasa_power_params.parameters_1,
+                                    parameters_2=nasa_power_params.parameters_2,
+                                    parameters_3=nasa_power_params.parameters_3,
+                                    date_start=nasa_power_params.date_start,
+                                    date_end=nasa_power_params.date_end,
+                                    community=nasa_power_params.community,
+                                    temp_res_1=nasa_power_params.temp_res_1,
+                                    temp_res_2=nasa_power_params.temp_res_2,
+                                    output_format=nasa_power_params.output_format,
+                                    lat=st.session_state.lat, 
+                                    lon=st.session_state.lon, 
+                                    time_zone=st.session_state.time_zone,
+                                    nom_power=st.session_state.res_nominal_capacity[i],
+                                    tilt=st.session_state.tilt, 
+                                    azimuth=st.session_state.azim, 
+                                    ro_ground=st.session_state.ro_ground,
+                                    k_T=st.session_state.k_T, 
+                                    NMOT=st.session_state.NMOT, 
+                                    T_NMOT=st.session_state.T_NMOT, 
+                                    G_NMOT=st.session_state.G_NMOT)
+                                
+                                solar_resource_data = shift_resource_data(solar_resource_data, st.session_state.time_zone, res_name) 
+                                save_resource_data(solar_resource_data, res_name, project_name)
+                            except Exception as e:
+                                st.error(f"Error downloading NASA POWER data: {e}")
 
             with st.expander(f"📂 Upload CSV for {res_name}", expanded=False):
                 st.session_state.res_nominal_capacity[i] = st.number_input(
@@ -427,102 +527,214 @@ def resource_assessment():
                             save_resource_data(solar_resource_data, res_name, project_name)
 
         elif res_type == "🌀 Wind Energy":
-            with st.expander("⬇️ Download Wind Resource Availability from NASA POWER", expanded=False):
-                st.image(str(PathManager.IMAGES_PATH / "nasa_power.png"), use_column_width=True)
+            with st.expander("⬇️ Download Wind Resource Availability from an API", expanded=False):
+                data_source = st.selectbox("Select Data Source", ["EU PVGIS", "NASA POWER"], key=f"data_source_{i}")
+                if data_source == "EU PVGIS":
+                    horizontal_models, vertical_models = get_turbine_models()
+                    custom_option = "Add custom wind turbine model"
+            
+                    st.session_state.turbine_type = st.selectbox(
+                        f"Turbine Type for {res_name}:", 
+                        options=["Horizontal Axis", "Vertical Axis"], 
+                        index=["Horizontal Axis", "Vertical Axis"].index(st.session_state.turbine_type), 
+                        key=f"turbine_type_{i}",
+                        help="Select the type of wind turbine. This affects the available turbine models and power characteristics.")
+            
+                    models = horizontal_models if st.session_state.turbine_type == "Horizontal Axis" else vertical_models
+                    models.append(custom_option)
+                    st.session_state.turbine_model = st.selectbox(
+                        f"Turbine Model for {res_name}:", 
+                        options=models, 
+                        index=models.index(st.session_state.turbine_model) if st.session_state.turbine_model in models else 0, 
+                        key=f"turbine_model_{i}",
+                        help="Choose a specific turbine model. This determines the power curve and other characteristics used in energy calculations.")
+
+                    if st.session_state.turbine_model == custom_option:
+                        st.write("### Custom Wind Turbine Model")
+                        custom_model_name = st.text_input("Model Name", key=f"custom_model_name_{i}")
+                        rated_power = st.number_input("Rated Power [kW]", min_value=0.0, value=100.0, key=f"rated_power_{i}")
+                        rotor_diameter = st.number_input("Rotor Diameter [m]", min_value=0.0, value=21.0, key=f"rotor_diameter_{i}")
+                        hub_height = st.number_input("Hub Height [m]", min_value=0.0, value=37.0, key=f"hub_height_{i}")
         
-                horizontal_models, vertical_models = get_turbine_models()
-                custom_option = "Add custom wind turbine model"
+                        wind_speeds = list(range(31))
+                        power_curve_data = pd.DataFrame({"Wind Speed [m/s]": wind_speeds, "Power [kW]": [0.0] * 30})
+                        edited_power_curve = st.data_editor(power_curve_data, num_rows="fixed", key=f"power_curve_{i}")
         
-                st.session_state.turbine_type = st.selectbox(
-                    f"Turbine Type for {res_name}:", 
-                    options=["Horizontal Axis", "Vertical Axis"], 
-                    index=["Horizontal Axis", "Vertical Axis"].index(st.session_state.turbine_type), 
-                    key=f"turbine_type_{i}",
-                    help="Select the type of wind turbine. This affects the available turbine models and power characteristics.")
+                        if st.button("Save Custom Turbine Model", key=f"save_custom_turbine_{i}"):
+                            try:
+                                new_sheet_name = save_custom_turbine_model(
+                                    custom_model_name, 
+                                    st.session_state.turbine_type, 
+                                    rated_power, 
+                                    rotor_diameter, 
+                                    hub_height, 
+                                    edited_power_curve)
+                                st.success(f"Custom turbine model '{new_sheet_name}' saved successfully!")
+                        
+                                # Update the turbine models list and select the new model
+                                if st.session_state.turbine_type == "Horizontal Axis":
+                                    horizontal_models.append(custom_model_name)
+                                else:
+                                    vertical_models.append(custom_model_name)
+                                st.session_state.turbine_model = custom_model_name
+                            except Exception as e:
+                                st.error(f"Error saving custom turbine model: {e}")
         
-                models = horizontal_models if st.session_state.turbine_type == "Horizontal Axis" else vertical_models
-                models.append(custom_option)
-                st.session_state.turbine_model = st.selectbox(
-                    f"Turbine Model for {res_name}:", 
-                    options=models, 
-                    index=models.index(st.session_state.turbine_model) if st.session_state.turbine_model in models else 0, 
-                    key=f"turbine_model_{i}",
-                    help="Choose a specific turbine model. This determines the power curve and other characteristics used in energy calculations.")
+                        st.session_state.res_nominal_capacity[i] = rated_power * 1000  # Convert kW to W
+                    else:
+                        # Read the nominal power from the Excel file for the selected model
+                        excel_path = PathManager.POWER_CURVE_FILE_PATH
+                        sheet_name = f"{st.session_state.turbine_model} - {st.session_state.turbine_type}"
+                        df = pd.read_excel(excel_path, sheet_name=sheet_name, header=None)
+                        rated_power = df.iloc[0, 1]  # Assuming rated power is always in cell B1
+                        st.session_state.res_nominal_capacity[i] = rated_power * 1000  # Convert kW to W
+            
+                    st.session_state.drivetrain_efficiency = st.number_input(
+                        f"Drivetrain Efficiency for {res_name}:", 
+                        min_value=0.0, 
+                        max_value=1.0, 
+                        value=st.session_state.drivetrain_efficiency, 
+                        key=f"drivetrain_efficiency_{i}",
+                        help="Enter the efficiency of the turbine's drivetrain (typically between 0.85 and 0.95).")
+            
+                    surface_options = ["Very smooth, ice or mud",
+                                       "Snow surface", 
+                                       "Lawn grass", 
+                                       "Rough pasture", 
+                                       "Fallow field",
+                                       "Crops",
+                                       "Few Trees",
+                                       "Many trees, hedges, few buildings",
+                                       "Forest and woodlands",
+                                       "Suburbs",
+                                       "Centers of cities with tall buildings"]
+                    surface_roughnesses = [0.00001, 0.003, 0.008, 0.01, 0.03, 0.05, 0.10, 0.25, 0.50, 1.50, 3.00]
+
+                    st.session_state.surface_type = st.selectbox(
+                        "Surface Type:",
+                        options=surface_options,
+                        index=surface_options.index(st.session_state.surface_type) if st.session_state.surface_type in surface_options else 0, 
+                        key=f"surface_type_{i}",
+                        help="Select the type of surface where the wind turbine is installed. This affects the wind speed profile.")
+
+                    surface_roughness = surface_roughnesses[surface_options.index(st.session_state.surface_type)]
+
+                    if st.button(f"Download Wind Data for {res_name}", key=f"download_wind_{i}"):
+                        with st.spinner('Downloading and processing data from PVGIS...'):
+                            try:
+                                wind_resource_data = download_pvgis_wind_data(
+                                    res_name=res_name, 
+                                    base_URL=pvgis_params.base_url,
+                                    output_format=pvgis_params.output_format,
+                                    lat=st.session_state.lat, 
+                                    lon=st.session_state.lon, 
+                                    turbine_model=st.session_state.turbine_model, 
+                                    turbine_type=st.session_state.turbine_type,
+                                    drivetrain_efficiency=st.session_state.drivetrain_efficiency,
+                                    surface_roughness=surface_roughness)
+
+                                wind_resource_data = shift_resource_data(wind_resource_data, st.session_state.time_zone, res_name)        
+                                save_resource_data(wind_resource_data, res_name, project_name)
+                            except Exception as e:
+                                st.error(f"Error downloading PVGIS POWER data: {e}")
+
+                elif data_source == "NASA POWER":
+                    st.image(str(PathManager.IMAGES_PATH / "nasa_power.png"), use_column_width=True)
+            
+                    horizontal_models, vertical_models = get_turbine_models()
+                    custom_option = "Add custom wind turbine model"
+            
+                    st.session_state.turbine_type = st.selectbox(
+                        f"Turbine Type for {res_name}:", 
+                        options=["Horizontal Axis", "Vertical Axis"], 
+                        index=["Horizontal Axis", "Vertical Axis"].index(st.session_state.turbine_type), 
+                        key=f"turbine_type_{i}",
+                        help="Select the type of wind turbine. This affects the available turbine models and power characteristics.")
+            
+                    models = horizontal_models if st.session_state.turbine_type == "Horizontal Axis" else vertical_models
+                    models.append(custom_option)
+                    st.session_state.turbine_model = st.selectbox(
+                        f"Turbine Model for {res_name}:", 
+                        options=models, 
+                        index=models.index(st.session_state.turbine_model) if st.session_state.turbine_model in models else 0, 
+                        key=f"turbine_model_{i}",
+                        help="Choose a specific turbine model. This determines the power curve and other characteristics used in energy calculations.")
+            
+                    if st.session_state.turbine_model == custom_option:
+                        st.write("### Custom Wind Turbine Model")
+                        custom_model_name = st.text_input("Model Name", key=f"custom_model_name_{i}")
+                        rated_power = st.number_input("Rated Power [kW]", min_value=0.0, value=100.0, key=f"rated_power_{i}")
+                        rotor_diameter = st.number_input("Rotor Diameter [m]", min_value=0.0, value=21.0, key=f"rotor_diameter_{i}")
+                        hub_height = st.number_input("Hub Height [m]", min_value=0.0, value=37.0, key=f"hub_height_{i}")
         
-                if st.session_state.turbine_model == custom_option:
-                    st.write("### Custom Wind Turbine Model")
-                    custom_model_name = st.text_input("Model Name", key=f"custom_model_name_{i}")
-                    rated_power = st.number_input("Rated Power [kW]", min_value=0.0, value=100.0, key=f"rated_power_{i}")
-                    rotor_diameter = st.number_input("Rotor Diameter [m]", min_value=0.0, value=21.0, key=f"rotor_diameter_{i}")
-                    hub_height = st.number_input("Hub Height [m]", min_value=0.0, value=37.0, key=f"hub_height_{i}")
-    
-                    wind_speeds = list(range(31))
-                    power_curve_data = pd.DataFrame({"Wind Speed [m/s]": wind_speeds, "Power [kW]": [0.0] * 30})
-                    edited_power_curve = st.data_editor(power_curve_data, num_rows="fixed", key=f"power_curve_{i}")
-    
-                    if st.button("Save Custom Turbine Model", key=f"save_custom_turbine_{i}"):
-                        try:
-                            new_sheet_name = save_custom_turbine_model(
-                                custom_model_name, 
-                                st.session_state.turbine_type, 
-                                rated_power, 
-                                rotor_diameter, 
-                                hub_height, 
-                                edited_power_curve)
-                            st.success(f"Custom turbine model '{new_sheet_name}' saved successfully!")
-                    
-                            # Update the turbine models list and select the new model
-                            if st.session_state.turbine_type == "Horizontal Axis":
-                                horizontal_models.append(custom_model_name)
-                            else:
-                                vertical_models.append(custom_model_name)
-                            st.session_state.turbine_model = custom_model_name
-                        except Exception as e:
-                            st.error(f"Error saving custom turbine model: {e}")
-    
-                    st.session_state.res_nominal_capacity[i] = rated_power * 1000  # Convert kW to W
-                else:
-                    # Read the nominal power from the Excel file for the selected model
-                    excel_path = PathManager.POWER_CURVE_FILE_PATH
-                    sheet_name = f"{st.session_state.turbine_model} - {st.session_state.turbine_type}"
-                    df = pd.read_excel(excel_path, sheet_name=sheet_name, header=None)
-                    rated_power = df.iloc[0, 1]  # Assuming rated power is always in cell B1
-                    st.session_state.res_nominal_capacity[i] = rated_power * 1000  # Convert kW to W
+                        wind_speeds = list(range(31))
+                        power_curve_data = pd.DataFrame({"Wind Speed [m/s]": wind_speeds, "Power [kW]": [0.0] * 30})
+                        edited_power_curve = st.data_editor(power_curve_data, num_rows="fixed", key=f"power_curve_{i}")
         
-                st.session_state.drivetrain_efficiency = st.number_input(
-                    f"Drivetrain Efficiency for {res_name}:", 
-                    min_value=0.0, 
-                    max_value=1.0, 
-                    value=st.session_state.drivetrain_efficiency, 
-                    key=f"drivetrain_efficiency_{i}",
-                    help="Enter the efficiency of the turbine's drivetrain (typically between 0.85 and 0.95).")
+                        if st.button("Save Custom Turbine Model", key=f"save_custom_turbine_{i}"):
+                            try:
+                                new_sheet_name = save_custom_turbine_model(
+                                    custom_model_name, 
+                                    st.session_state.turbine_type, 
+                                    rated_power, 
+                                    rotor_diameter, 
+                                    hub_height, 
+                                    edited_power_curve)
+                                st.success(f"Custom turbine model '{new_sheet_name}' saved successfully!")
+                        
+                                # Update the turbine models list and select the new model
+                                if st.session_state.turbine_type == "Horizontal Axis":
+                                    horizontal_models.append(custom_model_name)
+                                else:
+                                    vertical_models.append(custom_model_name)
+                                st.session_state.turbine_model = custom_model_name
+                            except Exception as e:
+                                st.error(f"Error saving custom turbine model: {e}")
         
-                if st.button(f"Download Wind Data for {res_name}", key=f"download_wind_{i}"):
-                    with st.spinner('Downloading and processing data from NASA POWER...'):
-                        try:
-                            wind_resource_data = download_nasa_wind_data(
-                                res_name=res_name, 
-                                base_URL=nasa_power_params.base_url,
-                                loc_id=nasa_power_params.loc_id,
-                                parameters_1=nasa_power_params.parameters_1,
-                                parameters_2=nasa_power_params.parameters_2,
-                                parameters_3=nasa_power_params.parameters_3,
-                                date_start=nasa_power_params.date_start,
-                                date_end=nasa_power_params.date_end,
-                                community=nasa_power_params.community,
-                                temp_res_1=nasa_power_params.temp_res_1,
-                                temp_res_2=nasa_power_params.temp_res_2,
-                                output_format=nasa_power_params.output_format,
-                                lat=st.session_state.lat, 
-                                lon=st.session_state.lon, 
-                                time_zone=st.session_state.time_zone,
-                                turbine_model=st.session_state.turbine_model, 
-                                turbine_type=st.session_state.turbine_type,
-                                drivetrain_efficiency=st.session_state.drivetrain_efficiency)
-                            
-                            save_resource_data(wind_resource_data, res_name, project_name)
-                        except Exception as e:
-                            st.error(f"Error downloading NASA POWER data: {e}")
+                        st.session_state.res_nominal_capacity[i] = rated_power * 1000  # Convert kW to W
+                    else:
+                        # Read the nominal power from the Excel file for the selected model
+                        excel_path = PathManager.POWER_CURVE_FILE_PATH
+                        sheet_name = f"{st.session_state.turbine_model} - {st.session_state.turbine_type}"
+                        df = pd.read_excel(excel_path, sheet_name=sheet_name, header=None)
+                        rated_power = df.iloc[0, 1]  # Assuming rated power is always in cell B1
+                        st.session_state.res_nominal_capacity[i] = rated_power * 1000  # Convert kW to W
+            
+                    st.session_state.drivetrain_efficiency = st.number_input(
+                        f"Drivetrain Efficiency for {res_name}:", 
+                        min_value=0.0, 
+                        max_value=1.0, 
+                        value=st.session_state.drivetrain_efficiency, 
+                        key=f"drivetrain_efficiency_{i}",
+                        help="Enter the efficiency of the turbine's drivetrain (typically between 0.85 and 0.95).")
+            
+                    if st.button(f"Download Wind Data for {res_name}", key=f"download_wind_{i}"):
+                        with st.spinner('Downloading and processing data from NASA POWER...'):
+                            try:
+                                wind_resource_data = download_nasa_wind_data(
+                                    res_name=res_name, 
+                                    base_URL=nasa_power_params.base_url,
+                                    loc_id=nasa_power_params.loc_id,
+                                    parameters_1=nasa_power_params.parameters_1,
+                                    parameters_2=nasa_power_params.parameters_2,
+                                    parameters_3=nasa_power_params.parameters_3,
+                                    date_start=nasa_power_params.date_start,
+                                    date_end=nasa_power_params.date_end,
+                                    community=nasa_power_params.community,
+                                    temp_res_1=nasa_power_params.temp_res_1,
+                                    temp_res_2=nasa_power_params.temp_res_2,
+                                    output_format=nasa_power_params.output_format,
+                                    lat=st.session_state.lat, 
+                                    lon=st.session_state.lon, 
+                                    time_zone=st.session_state.time_zone,
+                                    turbine_model=st.session_state.turbine_model, 
+                                    turbine_type=st.session_state.turbine_type,
+                                    drivetrain_efficiency=st.session_state.drivetrain_efficiency)
+                                
+                                wind_resource_data = shift_resource_data(wind_resource_data, st.session_state.time_zone, res_name) 
+                                save_resource_data(wind_resource_data, res_name, project_name)
+                            except Exception as e:
+                                st.error(f"Error downloading NASA POWER data: {e}")
 
             with st.expander(f"📂 Upload CSV for {res_name}", expanded=False):
                 st.session_state.res_nominal_capacity[i] = st.number_input(

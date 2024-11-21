@@ -13,3 +13,4 @@ rampdemand
 highspy
 gurobipy
 linopy==0.3.14
+requests

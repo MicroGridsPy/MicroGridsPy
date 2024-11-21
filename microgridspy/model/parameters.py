@@ -137,7 +137,20 @@ class NasaPowerParams(BaseModel):
     temp_res_2: str
     output_format: str
     user: str
-    
+
+class PVGISParams(BaseModel):
+    """
+    PVGISParams configuration model.
+
+    This class represents the PVGIS API parameters which are non-editable.
+
+    Attributes:
+        base_url (str): Base URL for the PVGIS API.
+        output_format (str): Output format.
+    """
+    base_url: str
+    output_format: str
+
 class ResourceAssessment(BaseModel):
     """
     ResourceAssessment configuration model.
@@ -175,6 +188,7 @@ class ResourceAssessment(BaseModel):
     turbine_type: str
     turbine_model: str
     drivetrain_efficiency: float
+    surface_type: str
     nom_power: int
     tilt: int
     azim: int
@@ -360,6 +374,7 @@ class ProjectParameters(BaseModel):
     project_settings: ProjectSettings
     advanced_settings: AdvancedSettings
     nasa_power_params: NasaPowerParams
+    pvgis_params: PVGISParams
     resource_assessment: ResourceAssessment
     archetypes_params: ArchetypesParams
     renewables_params: RenewablesParams

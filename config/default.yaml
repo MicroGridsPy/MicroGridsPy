@@ -50,6 +50,7 @@ resource_assessment:
   turbine_type: "Horizontal Axis"
   turbine_model: "NPS100c-21"
   drivetrain_efficiency: 0.9
+  surface_type: "Suburbs"
   nom_power: 1000
   tilt: 10
   azim: 180
@@ -73,6 +74,11 @@ nasa_power_params:
   temp_res_2: 'hourly'
   output_format: 'JSON'
   user: 'anonymous'
+
+# --- RES parameters (non-editable) ---
+pvgis_params:
+  base_url: 'https://re.jrc.ec.europa.eu/api/tmy?'
+  output_format: 'json'
 
 archetypes_params:
   demand_growth : 0.0
