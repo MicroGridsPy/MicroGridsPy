@@ -501,8 +501,8 @@ def hourly_solar(H_day,lat,lon, standard_lon, day_year,tilt, azimuth, albedo):
     omega_lst = []
     ro_g = albedo
     for hour_day in range(0,24):
-        clock_time = hour_day 
-        t_s = clock_time - 4*(standard_lon - lon)/60 + EoT/60
+        utc_time = hour_day
+        t_s = utc_time + 4*(lon)/60 + EoT/60
         t_s_lst.append(t_s)                                                                               #solar time in hours
         omega = (math.pi/180)* 15 * (t_s - 12)  
         omega_lst.append(omega)                                                                                                      #hour angle
