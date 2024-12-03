@@ -628,7 +628,7 @@ def P_turb(power_curve, WS_rotor_lst, ro_air_lst, surface_area, drivetrain_effic
 
         # Compute hourly energy production using interpolation
         interpolated_value = np.interp(WS_rotor_value, xp, fp) * 1000
-        En_WT.append(interpolated_value)
+        En_WT.append(interpolated_value * drivetrain_efficiency)
 
         # Compute hourly turbine power coefficient
         Cp.append(En_WT[ii]/(En_wind[ii])) if En_wind[ii] != 0 else Cp.append(0)
