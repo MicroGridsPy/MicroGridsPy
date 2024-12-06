@@ -54,6 +54,7 @@ def DispatchPlot(instance,Time_Series,PlotScenario,PlotDate,PlotTime,PlotResolut
     
     RES_Names       = instance.RES_Names.extract_values()
     Generator_Names = instance.Generator_Names.extract_values()
+    print(Generator_Names)
     if MILP_Formulation:
        BESSUnits = instance.Battery_Units.get_values()
        BESSNominalCapacitymilp = instance.Battery_Nominal_Capacity_milp.value
@@ -118,7 +119,6 @@ def DispatchPlot(instance,Time_Series,PlotScenario,PlotDate,PlotTime,PlotResolut
             y_Grid_in    = Series.loc[:,idx[:,'Electricity from grid',:,:]].values.flatten()/1e3  ####
         else:
             y_Grid_in    = Series.loc[:,idx[:,'Electricity from grid',:,:]].values.flatten()/1e3  ####
-            
 
 
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:
@@ -141,6 +141,7 @@ def DispatchPlot(instance,Time_Series,PlotScenario,PlotDate,PlotTime,PlotResolut
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 2:
         for g in range(1,G+1):
             y_Stacked_pos += [y_Genset[g]]
+            print(f"y_Genset[{g}]: {y_Genset[g]}")
     y_Stacked_pos += [y_LostLoad]  
     y_Stacked_pos += [y_Curtailment]  
 
@@ -164,6 +165,7 @@ def DispatchPlot(instance,Time_Series,PlotScenario,PlotDate,PlotTime,PlotResolut
     RES_Colors  = instance.RES_Colors.extract_values()
     BESS_Color  = instance.Battery_Color()
     Generator_Colors = instance.Generator_Colors.extract_values()
+    print(Generator_Colors)
     Lost_Load_Color = instance.Lost_Load_Color()
     Curtailment_Color = instance.Curtailment_Color()
     if instance.Grid_Connection.value == 1:
@@ -181,6 +183,7 @@ def DispatchPlot(instance,Time_Series,PlotScenario,PlotDate,PlotTime,PlotResolut
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 2:
         for g in range(1,G+1):
             Colors_pos += ['#'+Generator_Colors[g]]
+            print(f"Generator_Colors[{g}]: {Generator_Colors[g]}")
     Colors_pos += ['#'+Lost_Load_Color]  
     Colors_pos += ['#'+Curtailment_Color]  
     if instance.Grid_Connection.value == 1:
@@ -189,7 +192,6 @@ def DispatchPlot(instance,Time_Series,PlotScenario,PlotDate,PlotTime,PlotResolut
             Colors_pos += ['#'+Energy_from_grid_Color]
         else:
             Colors_pos += ['#'+Energy_from_grid_Color]
-
 
     Colors_neg = []
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:
@@ -211,7 +213,6 @@ def DispatchPlot(instance,Time_Series,PlotScenario,PlotDate,PlotTime,PlotResolut
             Labels_pos += ['Energy from grid'] 
         else:
             Labels_pos += ['Energy from grid']
-
 
     Labels_neg = []
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 1:

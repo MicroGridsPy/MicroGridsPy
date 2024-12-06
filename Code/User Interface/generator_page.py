@@ -151,92 +151,97 @@ class GeneratorPage(tk.Frame):
         return None
 
     def update_gen_configuration(self):
-     # First, clear all existing entries.
-     self.clear_gen_entries()
-     self.clear_fuel_entries()
+        # Step 1: Capture current states of all labels and entries
+        current_states = {}
+        for var, label, entry in self.gen_entries + self.fuel_entries:
+            if label:
+                current_states[label.cget('text')] = {
+                    'label_state': label.cget('state'),
+                    'entry_state': entry.cget('state'),
+                    'value': var.get()
+                }
 
-     # Get the number of generator sources to configure
-     try: 
-        gen_sources = int(self.Generator_Types_entry.get())
-     except: gen_sources = 1
+        # Step 2: Clear all existing entries
+        self.clear_gen_entries()
+        self.clear_fuel_entries()
 
-     # Reset the gen_entries list
-     self.gen_entries = []
-     self.fuel_entries = []
+        # Step 3: Get the number of generator sources to configure
+        try:
+            gen_sources = int(self.Generator_Types_entry.get())
+        except ValueError:
+            gen_sources = 1
 
-     text_parameters = ['Generator_Names', 'Fuel_Names']
+        # Step 4: Reset the gen_entries and fuel_entries lists
+        self.gen_entries = []
+        self.fuel_entries = []
 
-     # Start adding new entries from the fourth row
-     row_start_gen = 5
+        # Step 5: Add new entries for generator parameters
+        row_start_gen = 5
+        for param, default in self.gen_params_defaults.items():
+            for i in range(gen_sources):
+                # Calculate the row for the current parameter
+                row = row_start_gen + list(self.gen_params_defaults.keys()).index(param)
+                vcmd = self.get_validation_command(param, default)
 
-     for param, default in self.gen_params_defaults.items():
-        for i in range(gen_sources):
-            # Calculate the row for the current parameter
-            row = row_start_gen + list(self.gen_params_defaults.keys()).index(param)
-            vcmd = self.get_validation_command(param, default)
-            
-            initial_label_state = self.initial_states[param]['label']
-            initial_entry_state = self.initial_states[param]['entry']
+                # Retrieve the previous state if available, otherwise use initial_states
+                previous_state = current_states.get(param, self.initial_states.get(param, {}))
+                label_state = previous_state.get('label_state', 'normal')
+                entry_state = previous_state.get('entry_state', 'normal')
+                current_value = previous_state.get('value', default)
 
-            # Check if it's a text parameter and set the appropriate variable type
-            if param in text_parameters:
-                temp_var = tk.StringVar(value=default)
-            else:
-                temp_var = tk.DoubleVar(value=default)
+                # Create the label
+                if i == 0:
+                    label = ttk.Label(self.inner_frame, text=param)
+                    label.grid(row=row, column=0, sticky='w')
+                    label.config(state=label_state)
+                else:
+                    label = None
 
-            # Create the label only for the first column
-            if i == 0:
-                label = ttk.Label(self.inner_frame, text=param)
-                label.grid(row=row, column=0, sticky='w')
-                label.config(state=initial_label_state)
-            else:
-                label = None
+                # Create the entry
+                temp_var = tk.StringVar(value=current_value) if param in ['Generator_Names'] else tk.DoubleVar(value=current_value)
+                entry = ttk.Entry(self.inner_frame, textvariable=temp_var, validate='key', validatecommand=vcmd, state=entry_state)
+                entry.grid(row=row, column=1 + i, sticky='w')
 
-            # Create the entry
-            entry = ttk.Entry(self.inner_frame, textvariable=temp_var, validate='key', validatecommand=vcmd)
-            entry.grid(row=row, column=1 + i, sticky='w')
-            entry.config(state=initial_entry_state)
-            
-            # Add tooltip for the entry
-            tooltip_text = self.gen_params_tooltips.get(param, "Info not available")
-            create_tooltip(entry, tooltip_text)
+                # Add tooltip
+                tooltip_text = self.gen_params_tooltips.get(param, "Info not available")
+                create_tooltip(entry, tooltip_text)
 
-            # Append the new entry to gen_entries
-            self.gen_entries.append((temp_var, label, entry))
-            
-     row_start_fuel = 23
-            
-     for param, default in self.fuel_params_defaults.items():
-        for i in range(gen_sources):
-            # Calculate the row for the current parameter
-            row = row_start_fuel + list(self.fuel_params_defaults.keys()).index(param)
-            vcmd = self.get_validation_command(param, default)
-            
-            initial_label_state = self.initial_states[param]['label']
-            initial_entry_state = self.initial_states[param]['entry']
+                # Append the new entry to gen_entries
+                self.gen_entries.append((temp_var, label, entry))
 
-            # Check if it's a text parameter and set the appropriate variable type
-            if param in text_parameters:
-                temp_var = tk.StringVar(value=default)
-            else:
-                temp_var = tk.DoubleVar(value=default)
-                
-            label = ttk.Label(self.inner_frame, text=param)
+        # Step 6: Add new entries for fuel parameters
+        row_start_fuel = 23
+        for param, default in self.fuel_params_defaults.items():
+            for i in range(gen_sources):
+                # Calculate the row for the current parameter
+                row = row_start_fuel + list(self.fuel_params_defaults.keys()).index(param)
+                vcmd = self.get_validation_command(param, default)
 
-            # Place the label only for the first column
-            if i == 0:
-                label.grid(row=row, column=0, sticky='w')
-                label.config(state=initial_label_state)
-            else:
-                label = None
+                # Retrieve the previous state if available, otherwise use initial_states
+                previous_state = current_states.get(param, self.initial_states.get(param, {}))
+                label_state = previous_state.get('label_state', 'normal')
+                entry_state = previous_state.get('entry_state', 'normal')
+                current_value = previous_state.get('value', default)
 
-            # Create the entry
-            entry = ttk.Entry(self.inner_frame, textvariable=temp_var, validate='key', validatecommand=vcmd)
-            entry.grid(row=row, column=1 + i, sticky='w')
-            entry.config(state=initial_entry_state)
+                # Create the label
+                if i == 0:
+                    label = ttk.Label(self.inner_frame, text=param)
+                    label.grid(row=row, column=0, sticky='w')
+                    label.config(state=label_state)
+                else:
+                    label = None
 
-            # Append the new entry to gen_entries
-            self.fuel_entries.append((temp_var, label, entry))
+                # Create the entry
+                temp_var = tk.StringVar(value=current_value) if param in ['Fuel_Names'] else tk.DoubleVar(value=current_value)
+                entry = ttk.Entry(self.inner_frame, textvariable=temp_var, validate='key', validatecommand=vcmd, state=entry_state)
+                entry.grid(row=row, column=1 + i, sticky='w')
+
+                # Add tooltip
+                tooltip_text = self.fuel_params_tooltips.get(param, "Info not available")
+                create_tooltip(entry, tooltip_text)
+
+                # Append the new entry to fuel_entries
+                self.fuel_entries.append((temp_var, label, entry))
         
 
 
