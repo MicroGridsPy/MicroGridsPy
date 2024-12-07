@@ -270,7 +270,7 @@ class RunPage(tk.Frame):
         self.output_redirection = RedirectOutput(self.output_text)
         sys.stdout = self.output_redirection
         sys.stderr = self.output_redirection
-        
+
         self.parameters_frame = ttk.Frame(self)
         self.parameters_frame.pack(side='top', fill='x', padx=10, pady=5)
         self.setup_parameters_frame()

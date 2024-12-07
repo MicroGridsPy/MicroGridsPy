@@ -54,7 +54,6 @@ def DispatchPlot(instance,Time_Series,PlotScenario,PlotDate,PlotTime,PlotResolut
     
     RES_Names       = instance.RES_Names.extract_values()
     Generator_Names = instance.Generator_Names.extract_values()
-    print(Generator_Names)
     if MILP_Formulation:
        BESSUnits = instance.Battery_Units.get_values()
        BESSNominalCapacitymilp = instance.Battery_Nominal_Capacity_milp.value
@@ -141,7 +140,6 @@ def DispatchPlot(instance,Time_Series,PlotScenario,PlotDate,PlotTime,PlotResolut
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 2:
         for g in range(1,G+1):
             y_Stacked_pos += [y_Genset[g]]
-            print(f"y_Genset[{g}]: {y_Genset[g]}")
     y_Stacked_pos += [y_LostLoad]  
     y_Stacked_pos += [y_Curtailment]  
 
@@ -165,7 +163,6 @@ def DispatchPlot(instance,Time_Series,PlotScenario,PlotDate,PlotTime,PlotResolut
     RES_Colors  = instance.RES_Colors.extract_values()
     BESS_Color  = instance.Battery_Color()
     Generator_Colors = instance.Generator_Colors.extract_values()
-    print(Generator_Colors)
     Lost_Load_Color = instance.Lost_Load_Color()
     Curtailment_Color = instance.Curtailment_Color()
     if instance.Grid_Connection.value == 1:
@@ -183,7 +180,6 @@ def DispatchPlot(instance,Time_Series,PlotScenario,PlotDate,PlotTime,PlotResolut
     if instance.Model_Components.value == 0 or instance.Model_Components.value == 2:
         for g in range(1,G+1):
             Colors_pos += ['#'+Generator_Colors[g]]
-            print(f"Generator_Colors[{g}]: {Generator_Colors[g]}")
     Colors_pos += ['#'+Lost_Load_Color]  
     Colors_pos += ['#'+Curtailment_Color]  
     if instance.Grid_Connection.value == 1:

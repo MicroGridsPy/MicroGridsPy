@@ -1,9 +1,5 @@
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import matplotlib.lines as mlines
 from pandas import ExcelWriter
-import re
 import os
 import warnings; warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -585,11 +581,17 @@ def EnergySystemCost(instance, Optimization_Goal):
         Grid_Fixed_Cost = Grid_Fixed_Cost.groupby(level=[0], axis=1, sort=False).sum()
         
     "Total"
-    if instance.Grid_Connection.value == 1:
-        Fixed_Costs_Act = pd.DataFrame(['Total fixed O&M cost', 'System', '-', 'kUSD', (instance.Operation_Maintenance_Cost_Act.value + Grid_Fixed_Cost.iloc[0]['Total']*1000)/1e3]).T.set_index([0,1,2,3])
-    if instance.Grid_Connection.value == 0:
-        Fixed_Costs_Act = pd.DataFrame(['Total fixed O&M cost', 'System', '-', 'kUSD', (instance.Operation_Maintenance_Cost_Act.value)/1e3]).T.set_index([0,1,2,3])
-    Fixed_Costs_Act.columns = ['Total']     
+    if instance.Optimization_Goal.value == 0:
+        if instance.Grid_Connection.value == 1:
+            Fixed_Costs_Act = pd.DataFrame(['Total fixed O&M cost', 'System', '-', 'kUSD', (instance.Operation_Maintenance_Cost_Act.value + Grid_Fixed_Cost.iloc[0]['Total']*1000)/1e3]).T.set_index([0,1,2,3])
+        if instance.Grid_Connection.value == 0:
+            Fixed_Costs_Act = pd.DataFrame(['Total fixed O&M cost', 'System', '-', 'kUSD', (instance.Operation_Maintenance_Cost_Act.value)/1e3]).T.set_index([0,1,2,3])
+    else:
+        if instance.Grid_Connection.value == 1:
+            Fixed_Costs_NonAct = pd.DataFrame(['Total fixed O&M cost (Not Actualized)', 'System', '-', 'kUSD', (instance.Operation_Maintenance_Cost_NonAct.value + Grid_Fixed_Cost.iloc[0]['Total']*1000)/1e3]).T.set_index([0,1,2,3])
+        if instance.Grid_Connection.value == 0:
+            Fixed_Costs_NonAct = pd.DataFrame(['Total fixed O&M cost (Not Actualized)', 'System', '-', 'kUSD', (instance.Operation_Maintenance_Cost_NonAct.value)/1e3]).T.set_index([0,1,2,3])
+        Fixed_Costs_NonAct.columns = ['Total']     
     #%% Variable costs
 
     "Grid electricity cost and revenue"  
@@ -638,12 +640,20 @@ def EnergySystemCost(instance, Optimization_Goal):
         Fuel_Cost.columns = ['Total']
     
     "Lost load cost"
-    LostLoad_Cost = pd.DataFrame()        
-    for s in range(1,S+1):
-        LostLoad = pd.DataFrame(['Lost load cost', 'System', s, 'kUSD', instance.Scenario_Lost_Load_Cost_Act.get_values()[s]/1e3]).T
-        LostLoad_Cost = pd.concat([LostLoad_Cost, LostLoad], axis=0)
-    LostLoad_Cost = LostLoad_Cost.set_index([0,1,2,3])
-    LostLoad_Cost.columns = ['Total']
+    if instance.Optimization_Goal.value == 0:
+        LostLoad_Cost = pd.DataFrame()        
+        for s in range(1,S+1):
+            LostLoad = pd.DataFrame(['Lost load cost', 'System', s, 'kUSD', instance.Scenario_Lost_Load_Cost_Act.get_values()[s]/1e3]).T
+            LostLoad_Cost = pd.concat([LostLoad_Cost, LostLoad], axis=0)
+        LostLoad_Cost = LostLoad_Cost.set_index([0,1,2,3])
+        LostLoad_Cost.columns = ['Total']
+    else:
+        LostLoad_Cost = pd.DataFrame()        
+        for s in range(1,S+1):
+            LostLoad = pd.DataFrame(['Lost load cost (Not Actualized)', 'System', s, 'kUSD', instance.Scenario_Lost_Load_Cost_NonAct.get_values()[s]/1e3]).T
+            LostLoad_Cost = pd.concat([LostLoad_Cost, LostLoad], axis=0)
+        LostLoad_Cost = LostLoad_Cost.set_index([0,1,2,3])
+        LostLoad_Cost.columns = ['Total']
 
 
     #%% Salvage value
@@ -688,194 +698,88 @@ def EnergySystemCost(instance, Optimization_Goal):
         CO2_grid = CO2_grid.set_index([0,1,2,3])
         CO2_grid.columns = ['Total']   
      #%% Net present cost
-    if Optimization_Goal == 1:              
+    if instance.Optimization_Goal.value == 0:              
         if instance.Grid_Connection.value == 1:
             Net_Present_Cost = pd.DataFrame(['Weighted Net present cost', 'System', '-', 'kUSD', (instance.ObjectiveFuntion.expr() + Grid_Investment + Grid_Fixed_Cost.iloc[0]['Total']*1000)/1e3]).T.set_index([0,1,2,3])
         if instance.Grid_Connection.value == 0:
             Net_Present_Cost = pd.DataFrame(['Weighted Net present cost', 'System', '-', 'kUSD', (instance.ObjectiveFuntion.expr())/1e3]).T.set_index([0,1,2,3])
         Net_Present_Cost.columns = ['Total']
         Net_Present_Cost.index.names = ['Cost item', 'Component', 'Scenario', 'Unit']
-                                    
-    elif Optimization_Goal == 2:
+        NPC = pd.DataFrame()
+        for s in range (1,S+1):
+            if instance.Grid_Connection.value == 1:
+                Net_Present_Cost_sc = pd.DataFrame(['Net present cost ', 'System',s, 'kUSD', (instance.Scenario_Net_Present_Cost.get_values()[s] + Grid_Investment + Grid_Fixed_Cost.iloc[0]['Total']*1000)/1e3]).T
+            if instance.Grid_Connection.value == 0:
+                Net_Present_Cost_sc = pd.DataFrame(['Net present cost ', 'System',s, 'kUSD', (instance.Scenario_Net_Present_Cost.get_values()[s])/1e3]).T
+            NPC = pd.concat([NPC,Net_Present_Cost_sc], axis=0)
+        NPC = NPC.set_index([0,1,2,3])
+        NPC.columns = ['Total']
+        #%%LCOE
+        Electric_Demand = pd.DataFrame.from_dict(instance.Energy_Demand.extract_values(), orient='index') #[Wh]
+        Electric_Demand.index = pd.MultiIndex.from_tuples(list(Electric_Demand.index))
+        Electric_Demand = Electric_Demand.groupby(level=[1], axis=0, sort=False).sum()
+        Energy_Demand = instance.Energy_Demand.extract_values()
+        
+        LCOE_scenarios = pd.DataFrame()
+        for s in range(1,S+1):
+            LC = pd.DataFrame(['Levelized Cost of Energy scenarios','System',s,'USD/kWh',(instance.Scenario_Net_Present_Cost.get_values()[s]/sum(sum(Energy_Demand[s,i,t] for t in range(1,P+1))/(1+Discount_Rate)**i for i in range(1,(Y+1))))*1e3 ]).T
+            LCOE_scenarios = pd.concat([LCOE_scenarios, LC], axis=0)
+        LCOE_scenarios = LCOE_scenarios.set_index([0,1,2,3])
+        LCOE_scenarios.columns = ['Total']
+        
+        Net_Present_Demand = sum(Electric_Demand.iloc[i-1,0]/(1+Discount_Rate)**i for i in range(1,(Y+1)))    #[Wh]
         if instance.Grid_Connection.value == 1:
-            Net_Present_Cost = pd.DataFrame(['Weighted Net present cost', 'System', '-', 'kUSD', (instance.ObjectiveFuntion.expr() + Grid_Investment + Grid_Fixed_Cost.iloc[0]['Total']*1000)/1e3]).T.set_index([0,1,2,3])
+            LCOE = pd.DataFrame([(Net_Present_Cost.iloc[0,0] + Grid_El_Rev.iloc[0]['Total']*1000/1e3)/Net_Present_Demand])*1e6    #[USD/KWh]
         if instance.Grid_Connection.value == 0:
-            Net_Present_Cost = pd.DataFrame(['Weighted Net present cost', 'System', '-', 'kUSD', (instance.ObjectiveFuntion.expr())/1e3]).T.set_index([0,1,2,3])
-        Net_Present_Cost.columns = ['Total']
-        Net_Present_Cost.index.names = ['Cost item', 'Component', 'Scenario', 'Unit']
-    
-    NPC = pd.DataFrame()
-    for s in range (1,S+1):
+            LCOE = pd.DataFrame([(Net_Present_Cost.iloc[0,0])/Net_Present_Demand])*1e6    #[USD/KWh]
+        LCOE.index = pd.MultiIndex.from_arrays([['Levelized Cost of Energy '],['System'],['-'],['USD/kWh']])
+        LCOE.index.names = ['Cost item', 'Component', 'Scenario', 'Unit']
+        LCOE.columns = ['Total']
+
+    # Total Variable Cost                                
+    elif instance.Optimization_Goal.value == 1:
         if instance.Grid_Connection.value == 1:
-            Net_Present_Cost_sc = pd.DataFrame(['Net present cost ', 'System',s, 'kUSD', (instance.Scenario_Net_Present_Cost.get_values()[s] + Grid_Investment + Grid_Fixed_Cost.iloc[0]['Total']*1000)/1e3]).T
+            Total_Variable_Cost = pd.DataFrame(['Total Variable Cost (Not Actualized)', 'System', '-', 'kUSD', (instance.ObjectiveFuntion.expr() + Grid_Fixed_Cost.iloc[0]['Total']*1000)/1e3]).T.set_index([0,1,2,3])
         if instance.Grid_Connection.value == 0:
-            Net_Present_Cost_sc = pd.DataFrame(['Net present cost ', 'System',s, 'kUSD', (instance.Scenario_Net_Present_Cost.get_values()[s])/1e3]).T
-        NPC = pd.concat([NPC,Net_Present_Cost_sc], axis=0)
-    NPC = NPC.set_index([0,1,2,3])
-    NPC.columns = ['Total']
-    #%%LCOE
-    Electric_Demand = pd.DataFrame.from_dict(instance.Energy_Demand.extract_values(), orient='index') #[Wh]
-    Electric_Demand.index = pd.MultiIndex.from_tuples(list(Electric_Demand.index))
-    Electric_Demand = Electric_Demand.groupby(level=[1], axis=0, sort=False).sum()
-    Energy_Demand = instance.Energy_Demand.extract_values()
-    
-    LCOE_scenarios = pd.DataFrame()
-    for s in range(1,S+1):
-        LC = pd.DataFrame(['Levelized Cost of Energy scenarios','System',s,'USD/kWh',(instance.Scenario_Net_Present_Cost.get_values()[s]/sum(sum(Energy_Demand[s,i,t] for t in range(1,P+1))/(1+Discount_Rate)**i for i in range(1,(Y+1))))*1e3 ]).T
-        LCOE_scenarios = pd.concat([LCOE_scenarios, LC], axis=0)
-    LCOE_scenarios = LCOE_scenarios.set_index([0,1,2,3])
-    LCOE_scenarios.columns = ['Total']
-    
-    Net_Present_Demand = sum(Electric_Demand.iloc[i-1,0]/(1+Discount_Rate)**i for i in range(1,(Y+1)))    #[Wh]
-    if instance.Grid_Connection.value == 1:
-        LCOE = pd.DataFrame([(Net_Present_Cost.iloc[0,0] + Grid_El_Rev.iloc[0]['Total']*1000/1e3)/Net_Present_Demand])*1e6    #[USD/KWh]
-    if instance.Grid_Connection.value == 0:
-        LCOE = pd.DataFrame([(Net_Present_Cost.iloc[0,0])/Net_Present_Demand])*1e6    #[USD/KWh]
-    LCOE.index = pd.MultiIndex.from_arrays([['Levelized Cost of Energy '],['System'],['-'],['USD/kWh']])
-    LCOE.index.names = ['Cost item', 'Component', 'Scenario', 'Unit']
-    LCOE.columns = ['Total']
+            Total_Variable_Cost = pd.DataFrame(['Total Variable Cost (Not Actualized)', 'System', '-', 'kUSD', (instance.ObjectiveFuntion.expr())/1e3]).T.set_index([0,1,2,3])
+        Total_Variable_Cost.columns = ['Total']
+        Total_Variable_Cost.index.names = ['Cost item', 'Component', 'Scenario', 'Unit']
+        TVC = pd.DataFrame()
+        for s in range (1,S+1):
+            if instance.Grid_Connection.value == 1:
+                Total_Variable_Cost_sc = pd.DataFrame(['Total Variable Cost (Not Actualized)', 'System',s, 'kUSD', (instance.STotal_Scenario_Variable_Cost_NonAct.get_values()[s] + Grid_Fixed_Cost.iloc[0]['Total']*1000)/1e3]).T
+            if instance.Grid_Connection.value == 0:
+                Total_Variable_Cost_sc = pd.DataFrame(['Total Variable Cost (Not Actualized)', 'System',s, 'kUSD', (instance.Total_Scenario_Variable_Cost_NonAct.get_values()[s])/1e3]).T
+            TVC = pd.concat([TVC,Total_Variable_Cost_sc], axis=0)
+        TVC = TVC.set_index([0,1,2,3])
+        TVC.columns = ['Total'] 
+
     #%% Concatenating
-    if instance.Model_Components.value == 0:
-        if instance.Grid_Connection.value == 1:
-            SystemCost = pd.concat([round(Net_Present_Cost.astype(float),3),
-                                    round(NPC.astype(float),3),
-                                    round(Total_Investment_Cost.astype(float),3),
-                                    round(Fixed_Costs_Act.astype(float),3),
-                                    round(Variable_Costs_Act.astype(float),3),
-                                    round(Salvage_Value.astype(float),3),                           
-                                    round(LCOE.astype(float),4),
-                                    round(LCOE_scenarios.astype(float),4),
-                                    round(RES_Investment_Cost.astype(float),3),
-                                    round(BESS_Investment_Cost.astype(float),3),
-                                    round(Generator_Investment_Cost.astype(float),3),
-                                    round(Grid_Investment_Cost.astype(float),3),
-                                    round(RES_Fixed_Cost.astype(float),3),
-                                    round(BESS_Fixed_Cost.astype(float),3),
-                                    round(Generator_Fixed_Cost.astype(float),3),
-                                    round(Grid_Fixed_Cost.astype(float),3),
-                                    round(LostLoad_Cost.astype(float),3),
-                                    round(BESS_Replacement_Cost.astype(float),3),
-                                    round(Fuel_Cost.astype(float),3),
-                                    round(Grid_El_Cost.astype(float),3),
-                                    round(Grid_El_Rev.astype(float),3),
-                                    round(CO2_fuel.astype(float),3),
-                                    round(CO2_grid.astype(float),3),
-                                    round(RES_emission.astype(float),3),
-                                    round(GEN_emission.astype(float),3),
-                                    round(BESS_emission.astype(float),3),
-                                    round(CO2_out.astype(float),3)], axis=0).fillna('-')
-        if instance.Grid_Connection.value == 0:
-            SystemCost = pd.concat([round(Net_Present_Cost.astype(float),3),
-                                    round(NPC.astype(float),3),
-                                    round(Total_Investment_Cost.astype(float),3),
-                                    round(Fixed_Costs_Act.astype(float),3),
-                                    round(Variable_Costs_Act.astype(float),3),
-                                    round(Salvage_Value.astype(float),3),                           
-                                    round(LCOE.astype(float),4),
-                                    round(LCOE_scenarios.astype(float),4),
-                                    round(RES_Investment_Cost.astype(float),3),
-                                    round(BESS_Investment_Cost.astype(float),3),
-                                    round(Generator_Investment_Cost.astype(float),3),
-                                    round(RES_Fixed_Cost.astype(float),3),
-                                    round(BESS_Fixed_Cost.astype(float),3),
-                                    round(Generator_Fixed_Cost.astype(float),3),
-                                    round(LostLoad_Cost.astype(float),3),
-                                    round(BESS_Replacement_Cost.astype(float),3),
-                                    round(Fuel_Cost.astype(float),3),
-                                    round(CO2_fuel.astype(float),3),
-                                    round(RES_emission.astype(float),3),
-                                    round(GEN_emission.astype(float),3),
-                                    round(BESS_emission.astype(float),3),
-                                    round(CO2_out.astype(float),3)], axis=0).fillna('-')
-    
-    if instance.Model_Components.value == 1:
-        if instance.Grid_Connection.value == 1:
-            SystemCost = pd.concat([round(Net_Present_Cost.astype(float),3),
-                                    round(NPC.astype(float),3),
-                                    round(Total_Investment_Cost.astype(float),3),
-                                    round(Fixed_Costs_Act.astype(float),3),
-                                    round(Variable_Costs_Act.astype(float),3),
-                                    round(Salvage_Value.astype(float),3),                           
-                                    round(LCOE.astype(float),4),
-                                    round(LCOE_scenarios.astype(float),4),
-                                    round(RES_Investment_Cost.astype(float),3),
-                                    round(BESS_Investment_Cost.astype(float),3),                      
-                                    round(Grid_Investment_Cost.astype(float),3),
-                                    round(RES_Fixed_Cost.astype(float),3),
-                                    round(BESS_Fixed_Cost.astype(float),3),
-                                    round(Grid_Fixed_Cost.astype(float),3),
-                                    round(LostLoad_Cost.astype(float),3),
-                                    round(BESS_Replacement_Cost.astype(float),3),
-                                    round(Grid_El_Cost.astype(float),3),
-                                    round(Grid_El_Rev.astype(float),3),
-                                    round(CO2_grid.astype(float),3),
-                                    round(RES_emission.astype(float),3),
-                                    round(BESS_emission.astype(float),3),
-                                    round(CO2_out.astype(float),3)], axis=0).fillna('-')
-        if instance.Grid_Connection.value == 0:
-            SystemCost = pd.concat([round(Net_Present_Cost.astype(float),3),
-                                    round(NPC.astype(float),3),
-                                    round(Total_Investment_Cost.astype(float),3),
-                                    round(Fixed_Costs_Act.astype(float),3),
-                                    round(Variable_Costs_Act.astype(float),3),
-                                    round(Salvage_Value.astype(float),3),                           
-                                    round(LCOE.astype(float),4),
-                                    round(LCOE_scenarios.astype(float),4),
-                                    round(RES_Investment_Cost.astype(float),3),
-                                    round(BESS_Investment_Cost.astype(float),3),                                                        
-                                    round(RES_Fixed_Cost.astype(float),3),
-                                    round(BESS_Fixed_Cost.astype(float),3),
-                                    round(LostLoad_Cost.astype(float),3),
-                                    round(BESS_Replacement_Cost.astype(float),3),
-                                    round(RES_emission.astype(float),3),
-                                    round(BESS_emission.astype(float),3),
-                                    round(CO2_out.astype(float),3)], axis=0).fillna('-')
-    
-    if instance.Model_Components.value == 2:
-        if instance.Grid_Connection.value == 1:
-            SystemCost = pd.concat([round(Net_Present_Cost.astype(float),3),
-                                    round(NPC.astype(float),3),
-                                    round(Total_Investment_Cost.astype(float),3),
-                                    round(Fixed_Costs_Act.astype(float),3),
-                                    round(Variable_Costs_Act.astype(float),3),
-                                    round(Salvage_Value.astype(float),3),                           
-                                    round(LCOE.astype(float),4),
-                                    round(LCOE_scenarios.astype(float),4),
-                                    round(RES_Investment_Cost.astype(float),3),
-                                    round(Generator_Investment_Cost.astype(float),3),
-                                    round(Grid_Investment_Cost.astype(float),3),
-                                    round(RES_Fixed_Cost.astype(float),3),
-                                    round(Generator_Fixed_Cost.astype(float),3),
-                                    round(Grid_Fixed_Cost.astype(float),3),
-                                    round(LostLoad_Cost.astype(float),3),
-                                    round(Fuel_Cost.astype(float),3),
-                                    round(Grid_El_Cost.astype(float),3),
-                                    round(Grid_El_Rev.astype(float),3),
-                                    round(CO2_fuel.astype(float),3),
-                                    round(CO2_grid.astype(float),3),
-                                    round(RES_emission.astype(float),3),
-                                    round(GEN_emission.astype(float),3),
-                                    round(CO2_out.astype(float),3)], axis=0).fillna('-')
-        if instance.Grid_Connection.value == 0:
-            SystemCost = pd.concat([round(Net_Present_Cost.astype(float),3),
-                                    round(NPC.astype(float),3),
-                                    round(Total_Investment_Cost.astype(float),3),
-                                    round(Fixed_Costs_Act.astype(float),3),
-                                    round(Variable_Costs_Act.astype(float),3),
-                                    round(Salvage_Value.astype(float),3),                           
-                                    round(LCOE.astype(float),4),
-                                    round(LCOE_scenarios.astype(float),4),
-                                    round(RES_Investment_Cost.astype(float),3),
-                                    round(Generator_Investment_Cost.astype(float),3),
-                                    round(RES_Fixed_Cost.astype(float),3),
-                                    round(Generator_Fixed_Cost.astype(float),3),
-                                    round(LostLoad_Cost.astype(float),3),
-                                    round(Fuel_Cost.astype(float),3),
-                                    round(CO2_fuel.astype(float),3),
-                                    round(RES_emission.astype(float),3),
-                                    round(GEN_emission.astype(float),3),
-                                    round(CO2_out.astype(float),3)], axis=0).fillna('-')
-            
+    # Determine the base costs columns based on the optimization goal
+    if instance.Optimization_Goal.value == 0:
+        base_columns = [Net_Present_Cost, NPC, Total_Investment_Cost, Fixed_Costs_Act, Variable_Costs_Act, LCOE, LCOE_scenarios, Salvage_Value]
+    elif instance.Optimization_Goal.value == 1:
+        base_columns = [Total_Variable_Cost, TVC, Fixed_Costs_NonAct]
+
+    res_columns = [RES_Investment_Cost, RES_Fixed_Cost, RES_emission]
+    bess_columns = [BESS_Investment_Cost, BESS_Fixed_Cost, BESS_Replacement_Cost, BESS_emission]
+    gen_columns = [Generator_Investment_Cost, Generator_Fixed_Cost, GEN_emission, Fuel_Cost, CO2_fuel]
+    extra_columns = [LostLoad_Cost, CO2_out]
+
+    # Build the list of columns to concatenate based on model components and grid connection
+    columns = base_columns + res_columns + extra_columns
+    if instance.Model_Components.value in [0, 2]:
+        columns += gen_columns
+    if instance.Model_Components.value in [0, 1]:
+        columns += bess_columns
+    if instance.Grid_Connection.value == 1:
+        grid_columns = [Grid_Investment_Cost, Grid_Fixed_Cost, Grid_El_Cost, Grid_El_Rev, CO2_grid]
+        columns += grid_columns
+
+    # Concatenate and round all numeric values to 4 decimals
+    SystemCost = pd.concat([col.round(4) for col in columns],axis=0).fillna('-')
+    print(SystemCost)
+
     return  SystemCost   
 
 
@@ -1884,24 +1788,29 @@ def PrintResults(instance, Results, callback=None):
         wacc_value = float(instance.Discount_Rate.extract_values()[None])
         print(f'\n\nWACC = {wacc_value:.4f} [-]')
 
-    npc = float(Results['Costs'].iloc[0, 0])
-    print(f'\nNPC = {round(npc, 2)} kUSD')
+    if instance.Optimization_Goal.value == 0:
+        npc = float(Results['Costs'].iloc[0, 0])
+        print(f'\nNPC = {round(npc, 2)} kUSD')
 
-    total_investment_cost = float(Results['Costs'].iloc[2, 0])
-    print(f'Total actualized Investment Cost = {round(total_investment_cost, 2)} kUSD')
+        total_investment_cost = float(Results['Costs'].iloc[2, 0])
+        print(f'Total actualized Investment Cost = {round(total_investment_cost, 2)} kUSD')
 
-    operation_cost = float(Results['Costs'].iloc[3, 0]) + float(Results['Costs'].iloc[4, 0])
-    print(f'Total actualized Operation Cost = {round(operation_cost, 2)} kUSD')
+        operation_cost = float(Results['Costs'].iloc[3, 0]) + float(Results['Costs'].iloc[4, 0])
+        print(f'Total actualized Operation Cost = {round(operation_cost, 2)} kUSD')
 
-    if instance.Grid_Connection.value == 1:
-        electricity_revenues = float(Results['Costs'].iloc[20, 0])
-        print(f'Total actualized Electricity Selling Revenues = {round(electricity_revenues, 2)} kUSD')
+        if instance.Grid_Connection.value == 1:
+            electricity_revenues = float(Results['Costs'].iloc[20, 0])
+            print(f'Total actualized Electricity Selling Revenues = {round(electricity_revenues, 2)} kUSD')
 
-    salvage_value = float(Results['Costs'].iloc[5, 0])
-    print(f'Salvage Value = {round(salvage_value, 2)} kUSD')
+        salvage_value = float(Results['Costs'].iloc[5, 0])
+        print(f'Salvage Value = {round(salvage_value, 2)} kUSD')
 
-    lcoe = float(Results['Costs'].iloc[6, 0])
-    print(f'LCOE = {lcoe} USD/kWh')
+        lcoe = float(Results['Costs'].iloc[6, 0])
+        print(f'LCOE = {lcoe} USD/kWh')
+
+    else:
+        tvc = float(Results['Costs'].iloc[0, 0])
+        print(f'\nTotal Variable Cost (Not Actualized) = {round(tvc, 2)} kUSD')
     
     print("\n------------------------------------------------------------------------------------")
 

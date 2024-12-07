@@ -335,14 +335,14 @@ class StartPage(tk.Frame):
 
 
         # Optimization Goal
-        self.Optimization_Goal_var = tk.IntVar(value=1)
+        self.Optimization_Goal_var = tk.IntVar(value=0)
         ttk.Label(self.inner_frame, text="Optimization Goal:",anchor='w').grid(row=11, column=0,sticky='w',ipady=10)
-        self.Optimization_Goal_radio1 = ttk.Radiobutton(self.inner_frame, text="NPC", variable=self.Optimization_Goal_var, value=1)
+        self.Optimization_Goal_radio1 = ttk.Radiobutton(self.inner_frame, text="NPC", variable=self.Optimization_Goal_var, value=0)
         self.Optimization_Goal_radio1.grid(row=11, column=1, sticky='w')
-        self.Optimization_Goal_radio0 = ttk.Radiobutton(self.inner_frame, text="Operation cost", variable=self.Optimization_Goal_var, value=0)
-        self.Optimization_Goal_radio0.grid(row=11, column=1, sticky='e')
+        self.Optimization_Goal_radio2 = ttk.Radiobutton(self.inner_frame, text="Operation cost", variable=self.Optimization_Goal_var, value=1)
+        self.Optimization_Goal_radio2.grid(row=11, column=1, sticky='e')
         create_tooltip(self.Optimization_Goal_radio1, "Net Present Cost oriented optimization")
-        create_tooltip(self.Optimization_Goal_radio0, "Non-Actualized Operation Cost-oriented optimization")
+        create_tooltip(self.Optimization_Goal_radio2, "Non-Actualized Operation Cost-oriented optimization")
         self.Optimization_Goal_var.trace('w', self.toggle_investment_limit)
         
         # Investment_Cost_Limit
