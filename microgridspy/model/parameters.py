@@ -320,6 +320,7 @@ class GeneratorParams(BaseModel):
   partial_load: bool
   gen_min_output: Optional[List[float]]
   gen_cost_increase: Optional[List[float]]
+  fuel_cost_option: List[str]
 
 class GridParams(BaseModel):
     """
