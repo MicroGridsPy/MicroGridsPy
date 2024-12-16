@@ -142,6 +142,7 @@ generator_params:
   partial_load: false
   gen_min_output: [0.3] #fraction
   gen_cost_increase: [0.01] #fraction
+  fuel_cost_option: ["Fixed price"]
 
 grid_params:
   year_grid_connection : 1

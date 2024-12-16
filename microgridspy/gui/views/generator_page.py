@@ -184,15 +184,16 @@ def generator_technology() -> None:
             # Variable Fuel Cost
             st.subheader(f"Variable Fuel Cost for {gen_name}")
         
-            fuel_cost_option = st.radio(
+            st.session_state.fuel_cost_option[i] = st.radio(
                 f"Select fuel cost type for {gen_name}:",
                 ["Fixed price", "Variable prices"],
+                index=["Fixed price", "Variable prices"].index(st.session_state.fuel_cost_option[i]),
                 key=f"fuel_cost_option_{i}")
 
             fuel_cost_file_path = PathManager.FUEL_SPECIFIC_COST_FILE_PATH.parent / "Fuel Specific Cost.csv"
             existing_fuel_cost_data = load_fuel_cost_data(fuel_cost_file_path)
 
-            if fuel_cost_option == "Fixed price":
+            if st.session_state.fuel_cost_option[i] == "Fixed price":
                 fixed_price = st.number_input(
                     f"Fixed fuel price for {gen_name} [{currency}/l]",
                     min_value=0.0,
