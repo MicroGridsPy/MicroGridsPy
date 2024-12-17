@@ -44,12 +44,12 @@ def add_renewable_energy_production_constraints(model: Model, settings: ProjectP
                 total_age = param['RES_EXISTING_YEARS'].sel(renewable_sources=res) + (year - years[0])
 
                 # Calculate lifetime_exceeded over 'res_types' and 'years'
-                lifetime_exceeded = total_age > param['RES_LIFETIME'].sel(renewable_sources=res)
+                lifetime_exceeded = bool(total_age > param['RES_LIFETIME'].sel(renewable_sources=res))
 
                 # Calculate total_production considering just the new capacity
                 total_production = (var['res_units'].sel(steps=step) * param['RESOURCE'] * param['RES_INVERTER_EFFICIENCY']).sel(renewable_sources=res)
 
-                if lifetime_exceeded is False:
+                if not lifetime_exceeded:
                     total_production += ((param['RES_EXISTING_CAPACITY'] / param['RES_NOMINAL_CAPACITY']) * param['RESOURCE'] * param['RES_INVERTER_EFFICIENCY']).sel(renewable_sources=res)
 
                 # Add constraints over 'res_types'

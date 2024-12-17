@@ -71,9 +71,9 @@ def add_battery_state_of_charge_constraints(model: Model, settings: ProjectParam
             total_age = param['BATTERY_EXISTING_YEARS'] + (year - sets.years[0])
         
             # Create a boolean mask for renewable sources that have exceeded their lifetime
-            lifetime_exceeded = total_age > param['BATTERY_LIFETIME']
+            lifetime_exceeded = bool(total_age > param['BATTERY_LIFETIME'])
 
-            if lifetime_exceeded is False:
+            if not lifetime_exceeded:
                 model.add_constraints(
                     var['battery_soc'].sel(years=year) <= (var['battery_units'].sel(steps=step) * param['BATTERY_NOMINAL_CAPACITY']) + param['BATTERY_EXISTING_CAPACITY'],
                     name=f"Battery Maximum Charge Constraint - Year {year}")
@@ -113,9 +113,9 @@ def add_battery_flow_constraints(model: Model, settings: ProjectParameters, sets
             total_age = param['BATTERY_EXISTING_YEARS'] + (year - sets.years[0])
         
             # Create a boolean mask for renewable sources that have exceeded their lifetime
-            lifetime_exceeded = total_age > param['BATTERY_LIFETIME']
+            lifetime_exceeded = bool(total_age > param['BATTERY_LIFETIME'])
 
-            if lifetime_exceeded is False:
+            if not lifetime_exceeded:
                 model.add_constraints(
                     var['battery_max_charge_power'].sel(steps=step) == (var['battery_units'].sel(steps=step) * param['BATTERY_NOMINAL_CAPACITY'] + param['BATTERY_EXISTING_CAPACITY']) / param['MAXIMUM_BATTERY_CHARGE_TIME'],
                     name=f"Battery Maximum Charge Power Constraint - Year {year}")
@@ -176,9 +176,9 @@ def add_min_battery_independence_constraints(model: Model, settings: ProjectPara
             total_age = param['BATTERY_EXISTING_YEARS'] + (year - sets.years[0])
         
             # Create a boolean mask for renewable sources that have exceeded their lifetime
-            lifetime_exceeded = total_age > param['BATTERY_LIFETIME']
+            lifetime_exceeded = bool(total_age > param['BATTERY_LIFETIME'])
 
-            if lifetime_exceeded is False:
+            if not lifetime_exceeded:
                 model.add_constraints((var['battery_units'].sel(steps=step) * param['BATTERY_NOMINAL_CAPACITY']) + param['BATTERY_EXISTING_CAPACITY']  >= param['BATTERY_MIN_CAPACITY'],
                 name=f"Battery Minimum Capacity Constraint - Year {year}")
             else:
@@ -203,9 +203,9 @@ def add_battery_single_flow_constraints(model: Model, settings: ProjectParameter
             total_age = param['BATTERY_EXISTING_YEARS'] + (year - sets.years[0])
         
             # Create a boolean mask for renewable sources that have exceeded their lifetime
-            lifetime_exceeded = total_age > param['BATTERY_LIFETIME']
+            lifetime_exceeded = bool(total_age > param['BATTERY_LIFETIME'])
 
-            if lifetime_exceeded is False:
+            if not lifetime_exceeded:
                 model.add_constraints(
                     var['battery_max_charge_power'].sel(steps=step) == (var['battery_units'].sel(steps=step) * param['BATTERY_NOMINAL_CAPACITY'] + param['BATTERY_EXISTING_CAPACITY']) / param['MAXIMUM_BATTERY_CHARGE_TIME'],
                     name=f"Battery Maximum Charge Power Constraint - Year {year}")

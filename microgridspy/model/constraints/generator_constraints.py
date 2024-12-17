@@ -40,27 +40,21 @@ def add_generator_max_energy_production_constraint(model: Model, settings: Proje
                 total_age = param['GENERATOR_EXISTING_YEARS'].sel(generator_types=gen) + (year - years[0])
 
                 # Calculate lifetime_exceeded over 'generator_types' and 'years'
-                lifetime_exceeded = total_age > param['GENERATOR_LIFETIME'].sel(generator_types=gen)
+                lifetime_exceeded = bool(total_age > param['GENERATOR_LIFETIME'].sel(generator_types=gen))
 
                 # Calculate total_production considering just the new capacity
                 max_production = (var['generator_units'].sel(steps=step) * param['GENERATOR_NOMINAL_CAPACITY']).sel(generator_types=gen)
 
-                if lifetime_exceeded is False:
+                if not lifetime_exceeded:
                     # Calculate total_production considering also the existing capacity
                     max_production += (param['GENERATOR_EXISTING_CAPACITY']).sel(generator_types=gen)
 
-                # Add constraints for all generator types at once
+                # Add constraints for all generator types
                 model.add_constraints(var['generator_energy_production'].sel(years=year, generator_types=gen) <= max_production, name=f"Generator Energy Production Constraint - Year {year}, Type {gen}")
     else:
         # Non-brownfield scenario
         max_production = var['generator_units'] * param['GENERATOR_NOMINAL_CAPACITY']
         model.add_constraints(var['generator_energy_production'] <= max_production, name="Generator Energy Production Constraint")
-"""
-    # Ensure that production does not exceed demand (assuming 'DEMAND' is over 'years' and 'generator_types')
-    model.add_constraints(
-        var['generator_energy_production'] <= param['DEMAND'],
-        name="Maximum Energy Production Constraint for Generator")
-"""
 
 def add_generator_capacity_expansion_constraints(model: Model, settings: ProjectParameters, sets: xr.Dataset, param: xr.Dataset, var: Dict[str, linopy.Variable]) -> None:
     """Add constraints for generator capacity expansion."""
