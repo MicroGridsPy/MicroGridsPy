@@ -1,0 +1,612 @@
+
+Gurobi 12.0.0 (win64) logging started Fri Jan 10 09:35:23 2025
+
+Set parameter LogFile to value "C:\Users\abirb\Documents\ETH\Master\Master Thesis\MicroGridsPy\tes.log"
+Gurobi Optimizer version 12.0.0 build v12.0.0rc1 (win64 - Windows 11.0 (22631.2))
+
+CPU model: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz, instruction set [SSE2|AVX|AVX2]
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+
+Non-default parameters:
+IterationLimit  10000
+FeasibilityTol  0.0001
+OptimalityTol  0.0001
+Method  2
+BarConvTol  0.0001
+BarHomogeneous  0
+Crossover  0
+
+Academic license 2588596 - for non-commercial use only - registered to ab___@student.ethz.ch
+Optimize a model with 78847 rows, 78850 columns and 188259 nonzeros
+Model fingerprint: 0x2a6b9e1e
+Coefficient statistics:
+  Matrix range     [5e-04, 1e+03]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [3e+03, 2e+04]
+Presolve removed 53167 rows and 61728 columns
+Presolve time: 0.08s
+Presolved: 25680 rows, 17122 columns, 59920 nonzeros
+Ordering time: 0.00s
+
+Barrier statistics:
+ Dense cols : 2
+ AA' NZ     : 4.280e+04
+ Factor NZ  : 1.027e+05 (roughly 18 MB of memory)
+ Factor Ops : 4.280e+05 (less than 1 second per iteration)
+ Threads    : 1
+
+                  Objective                Residual
+Iter       Primal          Dual         Primal    Dual     Compl     Time
+   0   1.76728047e+06  5.03415175e+04  7.02e+03 0.00e+00  3.89e+03     0s
+   1   1.53509235e+06 -5.63875233e+04  5.00e+03 1.07e-01  1.46e+03     0s
+   2   1.03247319e+06 -3.03683931e+05  5.89e+02 1.92e-03  1.10e+02     0s
+   3   2.27643776e+05 -1.42036792e+05  2.45e+01 6.49e-06  1.27e+01     0s
+   4   1.13949610e+05  2.50492104e+04  3.66e+00 0.00e+00  2.66e+00     0s
+   5   8.60589187e+04  4.48561873e+04  5.74e-01 0.00e+00  1.21e+00     0s
+   6   7.59575674e+04  5.41483374e+04  3.18e-01 1.17e-13  6.40e-01     0s
+   7   7.27300594e+04  5.55923203e+04  2.22e-01 0.00e+00  5.03e-01     0s
+   8   6.94015025e+04  5.76245709e+04  1.17e-01 0.00e+00  3.45e-01     0s
+   9   6.65117995e+04  5.93879570e+04  1.19e-02 4.36e-14  2.08e-01     0s
+  10   6.61418142e+04  6.18950669e+04  6.05e-03 1.94e-13  1.24e-01     0s
+  11   6.56462169e+04  6.45738885e+04  1.41e-03 6.66e-16  3.13e-02     0s
+  12   6.55263435e+04  6.49870601e+04  5.37e-04 0.00e+00  1.58e-02     0s
+  13   6.54852565e+04  6.51453193e+04  2.70e-04 1.39e-13  9.94e-03     0s
+  14   6.54547973e+04  6.52887428e+04  8.13e-05 0.00e+00  4.86e-03     0s
+  15   6.54478751e+04  6.53444526e+04  3.70e-05 1.58e-14  3.02e-03     0s
+  16   6.54417586e+04  6.53652664e+04  7.25e-06 1.11e-15  2.24e-03     0s
+  17   6.54400073e+04  6.53844918e+04  1.37e-07 1.11e-16  1.62e-03     0s
+  18   6.54399170e+04  6.54146968e+04  7.54e-08 1.39e-13  7.37e-04     0s
+  19   6.54398823e+04  6.54227599e+04  3.67e-08 2.22e-13  5.01e-04     0s
+  20   6.54396251e+04  6.54278615e+04  1.74e-08 8.42e-14  3.44e-04     0s
+  21   6.54394326e+04  6.54336764e+04  1.43e-09 3.16e-14  1.68e-04     0s
+  22   6.54394033e+04  6.54355244e+04  1.27e-11 7.22e-15  1.13e-04     0s
+  23   6.54393668e+04  6.54392696e+04  9.09e-12 2.57e-13  2.84e-06     0s
+
+Barrier solved model in 23 iterations and 0.38 seconds (0.25 work units)
+Optimal objective 6.54393668e+04
+
+
+Gurobi 12.0.0 (win64) logging started Fri Jan 10 09:35:57 2025
+
+Set parameter LogFile to value "C:\Users\abirb\Documents\ETH\Master\Master Thesis\MicroGridsPy\tes.log"
+Gurobi Optimizer version 12.0.0 build v12.0.0rc1 (win64 - Windows 11.0 (22631.2))
+
+CPU model: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz, instruction set [SSE2|AVX|AVX2]
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+
+Non-default parameters:
+IterationLimit  10000
+FeasibilityTol  0.0001
+OptimalityTol  0.0001
+Method  2
+BarConvTol  0.0001
+BarHomogeneous  0
+Crossover  0
+
+Academic license 2588596 - for non-commercial use only - registered to ab___@student.ethz.ch
+Optimize a model with 78847 rows, 78850 columns and 188259 nonzeros
+Model fingerprint: 0x2a6b9e1e
+Coefficient statistics:
+  Matrix range     [5e-04, 1e+03]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [3e+03, 2e+04]
+Presolve removed 53167 rows and 61728 columns
+Presolve time: 0.08s
+Presolved: 25680 rows, 17122 columns, 59920 nonzeros
+Ordering time: 0.00s
+
+Barrier statistics:
+ Dense cols : 2
+ AA' NZ     : 4.280e+04
+ Factor NZ  : 1.027e+05 (roughly 18 MB of memory)
+ Factor Ops : 4.280e+05 (less than 1 second per iteration)
+ Threads    : 1
+
+                  Objective                Residual
+Iter       Primal          Dual         Primal    Dual     Compl     Time
+   0   1.76728047e+06  5.03415175e+04  7.02e+03 0.00e+00  3.89e+03     0s
+   1   1.53509235e+06 -5.63875233e+04  5.00e+03 1.07e-01  1.46e+03     0s
+   2   1.03247319e+06 -3.03683931e+05  5.89e+02 1.92e-03  1.10e+02     0s
+   3   2.27643776e+05 -1.42036792e+05  2.45e+01 6.49e-06  1.27e+01     0s
+   4   1.13949610e+05  2.50492104e+04  3.66e+00 0.00e+00  2.66e+00     0s
+   5   8.60589187e+04  4.48561873e+04  5.74e-01 0.00e+00  1.21e+00     0s
+   6   7.59575674e+04  5.41483374e+04  3.18e-01 1.17e-13  6.40e-01     0s
+   7   7.27300594e+04  5.55923203e+04  2.22e-01 0.00e+00  5.03e-01     0s
+   8   6.94015025e+04  5.76245709e+04  1.17e-01 0.00e+00  3.45e-01     0s
+   9   6.65117995e+04  5.93879570e+04  1.19e-02 4.36e-14  2.08e-01     0s
+  10   6.61418142e+04  6.18950669e+04  6.05e-03 1.94e-13  1.24e-01     0s
+  11   6.56462169e+04  6.45738885e+04  1.41e-03 6.66e-16  3.13e-02     0s
+  12   6.55263435e+04  6.49870601e+04  5.37e-04 0.00e+00  1.58e-02     0s
+  13   6.54852565e+04  6.51453193e+04  2.70e-04 1.39e-13  9.94e-03     0s
+  14   6.54547973e+04  6.52887428e+04  8.13e-05 0.00e+00  4.86e-03     0s
+  15   6.54478751e+04  6.53444526e+04  3.70e-05 1.58e-14  3.02e-03     0s
+  16   6.54417586e+04  6.53652664e+04  7.25e-06 1.11e-15  2.24e-03     0s
+  17   6.54400073e+04  6.53844918e+04  1.37e-07 1.11e-16  1.62e-03     0s
+  18   6.54399170e+04  6.54146968e+04  7.54e-08 1.39e-13  7.37e-04     0s
+  19   6.54398823e+04  6.54227599e+04  3.67e-08 2.22e-13  5.01e-04     0s
+  20   6.54396251e+04  6.54278615e+04  1.74e-08 8.42e-14  3.44e-04     0s
+  21   6.54394326e+04  6.54336764e+04  1.43e-09 3.16e-14  1.68e-04     0s
+  22   6.54394033e+04  6.54355244e+04  1.27e-11 7.22e-15  1.13e-04     0s
+  23   6.54393668e+04  6.54392696e+04  9.09e-12 2.57e-13  2.84e-06     0s
+
+Barrier solved model in 23 iterations and 0.40 seconds (0.25 work units)
+Optimal objective 6.54393668e+04
+
+
+Gurobi 12.0.0 (win64) logging started Fri Jan 10 09:38:48 2025
+
+Set parameter LogFile to value "C:\Users\abirb\Documents\ETH\Master\Master Thesis\MicroGridsPy\tes.log"
+Gurobi Optimizer version 12.0.0 build v12.0.0rc1 (win64 - Windows 11.0 (22631.2))
+
+CPU model: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz, instruction set [SSE2|AVX|AVX2]
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+
+Non-default parameters:
+IterationLimit  10000
+FeasibilityTol  0.0001
+OptimalityTol  0.0001
+Method  2
+BarConvTol  0.0001
+BarHomogeneous  0
+Crossover  0
+
+Academic license 2588596 - for non-commercial use only - registered to ab___@student.ethz.ch
+Optimize a model with 78847 rows, 78850 columns and 188259 nonzeros
+Model fingerprint: 0x2a6b9e1e
+Coefficient statistics:
+  Matrix range     [5e-04, 1e+03]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [3e+03, 2e+04]
+Presolve removed 53167 rows and 61728 columns
+Presolve time: 0.08s
+Presolved: 25680 rows, 17122 columns, 59920 nonzeros
+Ordering time: 0.00s
+
+Barrier statistics:
+ Dense cols : 2
+ AA' NZ     : 4.280e+04
+ Factor NZ  : 1.027e+05 (roughly 18 MB of memory)
+ Factor Ops : 4.280e+05 (less than 1 second per iteration)
+ Threads    : 1
+
+                  Objective                Residual
+Iter       Primal          Dual         Primal    Dual     Compl     Time
+   0   1.76728047e+06  5.03415175e+04  7.02e+03 0.00e+00  3.89e+03     0s
+   1   1.53509235e+06 -5.63875233e+04  5.00e+03 1.07e-01  1.46e+03     0s
+   2   1.03247319e+06 -3.03683931e+05  5.89e+02 1.92e-03  1.10e+02     0s
+   3   2.27643776e+05 -1.42036792e+05  2.45e+01 6.49e-06  1.27e+01     0s
+   4   1.13949610e+05  2.50492104e+04  3.66e+00 0.00e+00  2.66e+00     0s
+   5   8.60589187e+04  4.48561873e+04  5.74e-01 0.00e+00  1.21e+00     0s
+   6   7.59575674e+04  5.41483374e+04  3.18e-01 1.17e-13  6.40e-01     0s
+   7   7.27300594e+04  5.55923203e+04  2.22e-01 0.00e+00  5.03e-01     0s
+   8   6.94015025e+04  5.76245709e+04  1.17e-01 0.00e+00  3.45e-01     0s
+   9   6.65117995e+04  5.93879570e+04  1.19e-02 4.36e-14  2.08e-01     0s
+  10   6.61418142e+04  6.18950669e+04  6.05e-03 1.94e-13  1.24e-01     0s
+  11   6.56462169e+04  6.45738885e+04  1.41e-03 6.66e-16  3.13e-02     0s
+  12   6.55263435e+04  6.49870601e+04  5.37e-04 0.00e+00  1.58e-02     0s
+  13   6.54852565e+04  6.51453193e+04  2.70e-04 1.39e-13  9.94e-03     0s
+  14   6.54547973e+04  6.52887428e+04  8.13e-05 0.00e+00  4.86e-03     0s
+  15   6.54478751e+04  6.53444526e+04  3.70e-05 1.58e-14  3.02e-03     0s
+  16   6.54417586e+04  6.53652664e+04  7.25e-06 1.11e-15  2.24e-03     0s
+  17   6.54400073e+04  6.53844918e+04  1.37e-07 1.11e-16  1.62e-03     0s
+  18   6.54399170e+04  6.54146968e+04  7.54e-08 1.39e-13  7.37e-04     0s
+  19   6.54398823e+04  6.54227599e+04  3.67e-08 2.22e-13  5.01e-04     0s
+  20   6.54396251e+04  6.54278615e+04  1.74e-08 8.42e-14  3.44e-04     0s
+  21   6.54394326e+04  6.54336764e+04  1.43e-09 3.16e-14  1.68e-04     0s
+  22   6.54394033e+04  6.54355244e+04  1.27e-11 7.22e-15  1.13e-04     0s
+  23   6.54393668e+04  6.54392696e+04  9.09e-12 2.57e-13  2.84e-06     0s
+
+Barrier solved model in 23 iterations and 0.37 seconds (0.25 work units)
+Optimal objective 6.54393668e+04
+
+
+Gurobi 12.0.0 (win64) logging started Fri Jan 10 09:39:47 2025
+
+Set parameter LogFile to value "C:\Users\abirb\Documents\ETH\Master\Master Thesis\MicroGridsPy\tes.log"
+Gurobi Optimizer version 12.0.0 build v12.0.0rc1 (win64 - Windows 11.0 (22631.2))
+
+CPU model: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz, instruction set [SSE2|AVX|AVX2]
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+
+Non-default parameters:
+IterationLimit  10000
+FeasibilityTol  0.0001
+OptimalityTol  0.0001
+Method  2
+BarConvTol  0.0001
+BarHomogeneous  0
+Crossover  0
+
+Academic license 2588596 - for non-commercial use only - registered to ab___@student.ethz.ch
+Optimize a model with 78847 rows, 78850 columns and 188259 nonzeros
+Model fingerprint: 0x2a6b9e1e
+Coefficient statistics:
+  Matrix range     [5e-04, 1e+03]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [3e+03, 2e+04]
+Presolve removed 53167 rows and 61728 columns
+Presolve time: 0.08s
+Presolved: 25680 rows, 17122 columns, 59920 nonzeros
+Ordering time: 0.00s
+
+Barrier statistics:
+ Dense cols : 2
+ AA' NZ     : 4.280e+04
+ Factor NZ  : 1.027e+05 (roughly 18 MB of memory)
+ Factor Ops : 4.280e+05 (less than 1 second per iteration)
+ Threads    : 1
+
+                  Objective                Residual
+Iter       Primal          Dual         Primal    Dual     Compl     Time
+   0   1.76728047e+06  5.03415175e+04  7.02e+03 0.00e+00  3.89e+03     0s
+   1   1.53509235e+06 -5.63875233e+04  5.00e+03 1.07e-01  1.46e+03     0s
+   2   1.03247319e+06 -3.03683931e+05  5.89e+02 1.92e-03  1.10e+02     0s
+   3   2.27643776e+05 -1.42036792e+05  2.45e+01 6.49e-06  1.27e+01     0s
+   4   1.13949610e+05  2.50492104e+04  3.66e+00 0.00e+00  2.66e+00     0s
+   5   8.60589187e+04  4.48561873e+04  5.74e-01 0.00e+00  1.21e+00     0s
+   6   7.59575674e+04  5.41483374e+04  3.18e-01 1.17e-13  6.40e-01     0s
+   7   7.27300594e+04  5.55923203e+04  2.22e-01 0.00e+00  5.03e-01     0s
+   8   6.94015025e+04  5.76245709e+04  1.17e-01 0.00e+00  3.45e-01     0s
+   9   6.65117995e+04  5.93879570e+04  1.19e-02 4.36e-14  2.08e-01     0s
+  10   6.61418142e+04  6.18950669e+04  6.05e-03 1.94e-13  1.24e-01     0s
+  11   6.56462169e+04  6.45738885e+04  1.41e-03 6.66e-16  3.13e-02     0s
+  12   6.55263435e+04  6.49870601e+04  5.37e-04 0.00e+00  1.58e-02     0s
+  13   6.54852565e+04  6.51453193e+04  2.70e-04 1.39e-13  9.94e-03     0s
+  14   6.54547973e+04  6.52887428e+04  8.13e-05 0.00e+00  4.86e-03     0s
+  15   6.54478751e+04  6.53444526e+04  3.70e-05 1.58e-14  3.02e-03     0s
+  16   6.54417586e+04  6.53652664e+04  7.25e-06 1.11e-15  2.24e-03     0s
+  17   6.54400073e+04  6.53844918e+04  1.37e-07 1.11e-16  1.62e-03     0s
+  18   6.54399170e+04  6.54146968e+04  7.54e-08 1.39e-13  7.37e-04     0s
+  19   6.54398823e+04  6.54227599e+04  3.67e-08 2.22e-13  5.01e-04     0s
+  20   6.54396251e+04  6.54278615e+04  1.74e-08 8.42e-14  3.44e-04     0s
+  21   6.54394326e+04  6.54336764e+04  1.43e-09 3.16e-14  1.68e-04     0s
+  22   6.54394033e+04  6.54355244e+04  1.27e-11 7.22e-15  1.13e-04     0s
+  23   6.54393668e+04  6.54392696e+04  9.09e-12 2.57e-13  2.84e-06     0s
+
+Barrier solved model in 23 iterations and 0.39 seconds (0.25 work units)
+Optimal objective 6.54393668e+04
+
+
+Gurobi 12.0.0 (win64) logging started Fri Jan 10 09:40:02 2025
+
+Set parameter LogFile to value "C:\Users\abirb\Documents\ETH\Master\Master Thesis\MicroGridsPy\tes.log"
+Gurobi Optimizer version 12.0.0 build v12.0.0rc1 (win64 - Windows 11.0 (22631.2))
+
+CPU model: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz, instruction set [SSE2|AVX|AVX2]
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+
+Non-default parameters:
+IterationLimit  10000
+FeasibilityTol  0.0001
+OptimalityTol  0.0001
+Method  2
+BarConvTol  0.0001
+BarHomogeneous  0
+Crossover  0
+
+Academic license 2588596 - for non-commercial use only - registered to ab___@student.ethz.ch
+Optimize a model with 78847 rows, 78850 columns and 188259 nonzeros
+Model fingerprint: 0x2a6b9e1e
+Coefficient statistics:
+  Matrix range     [5e-04, 1e+03]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [3e+03, 2e+04]
+Presolve removed 53167 rows and 61728 columns
+Presolve time: 0.08s
+Presolved: 25680 rows, 17122 columns, 59920 nonzeros
+Ordering time: 0.00s
+
+Barrier statistics:
+ Dense cols : 2
+ AA' NZ     : 4.280e+04
+ Factor NZ  : 1.027e+05 (roughly 18 MB of memory)
+ Factor Ops : 4.280e+05 (less than 1 second per iteration)
+ Threads    : 1
+
+                  Objective                Residual
+Iter       Primal          Dual         Primal    Dual     Compl     Time
+   0   1.76728047e+06  5.03415175e+04  7.02e+03 0.00e+00  3.89e+03     0s
+   1   1.53509235e+06 -5.63875233e+04  5.00e+03 1.07e-01  1.46e+03     0s
+   2   1.03247319e+06 -3.03683931e+05  5.89e+02 1.92e-03  1.10e+02     0s
+   3   2.27643776e+05 -1.42036792e+05  2.45e+01 6.49e-06  1.27e+01     0s
+   4   1.13949610e+05  2.50492104e+04  3.66e+00 0.00e+00  2.66e+00     0s
+   5   8.60589187e+04  4.48561873e+04  5.74e-01 0.00e+00  1.21e+00     0s
+   6   7.59575674e+04  5.41483374e+04  3.18e-01 1.17e-13  6.40e-01     0s
+   7   7.27300594e+04  5.55923203e+04  2.22e-01 0.00e+00  5.03e-01     0s
+   8   6.94015025e+04  5.76245709e+04  1.17e-01 0.00e+00  3.45e-01     0s
+   9   6.65117995e+04  5.93879570e+04  1.19e-02 4.36e-14  2.08e-01     0s
+  10   6.61418142e+04  6.18950669e+04  6.05e-03 1.94e-13  1.24e-01     0s
+  11   6.56462169e+04  6.45738885e+04  1.41e-03 6.66e-16  3.13e-02     0s
+  12   6.55263435e+04  6.49870601e+04  5.37e-04 0.00e+00  1.58e-02     0s
+  13   6.54852565e+04  6.51453193e+04  2.70e-04 1.39e-13  9.94e-03     0s
+  14   6.54547973e+04  6.52887428e+04  8.13e-05 0.00e+00  4.86e-03     0s
+  15   6.54478751e+04  6.53444526e+04  3.70e-05 1.58e-14  3.02e-03     0s
+  16   6.54417586e+04  6.53652664e+04  7.25e-06 1.11e-15  2.24e-03     0s
+  17   6.54400073e+04  6.53844918e+04  1.37e-07 1.11e-16  1.62e-03     0s
+  18   6.54399170e+04  6.54146968e+04  7.54e-08 1.39e-13  7.37e-04     0s
+  19   6.54398823e+04  6.54227599e+04  3.67e-08 2.22e-13  5.01e-04     0s
+  20   6.54396251e+04  6.54278615e+04  1.74e-08 8.42e-14  3.44e-04     0s
+  21   6.54394326e+04  6.54336764e+04  1.43e-09 3.16e-14  1.68e-04     0s
+  22   6.54394033e+04  6.54355244e+04  1.27e-11 7.22e-15  1.13e-04     0s
+  23   6.54393668e+04  6.54392696e+04  9.09e-12 2.57e-13  2.84e-06     0s
+
+Barrier solved model in 23 iterations and 0.36 seconds (0.25 work units)
+Optimal objective 6.54393668e+04
+
+
+Gurobi 12.0.0 (win64) logging started Fri Jan 10 09:40:33 2025
+
+Set parameter LogFile to value "C:\Users\abirb\Documents\ETH\Master\Master Thesis\MicroGridsPy\tes.log"
+Gurobi Optimizer version 12.0.0 build v12.0.0rc1 (win64 - Windows 11.0 (22631.2))
+
+CPU model: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz, instruction set [SSE2|AVX|AVX2]
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+
+Non-default parameters:
+IterationLimit  10000
+FeasibilityTol  0.0001
+OptimalityTol  0.0001
+Method  2
+BarConvTol  0.0001
+BarHomogeneous  0
+Crossover  0
+
+Academic license 2588596 - for non-commercial use only - registered to ab___@student.ethz.ch
+Optimize a model with 78847 rows, 78850 columns and 188259 nonzeros
+Model fingerprint: 0x2a6b9e1e
+Coefficient statistics:
+  Matrix range     [5e-04, 1e+03]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [3e+03, 2e+04]
+Presolve removed 53167 rows and 61728 columns
+Presolve time: 0.07s
+Presolved: 25680 rows, 17122 columns, 59920 nonzeros
+Ordering time: 0.00s
+
+Barrier statistics:
+ Dense cols : 2
+ AA' NZ     : 4.280e+04
+ Factor NZ  : 1.027e+05 (roughly 18 MB of memory)
+ Factor Ops : 4.280e+05 (less than 1 second per iteration)
+ Threads    : 1
+
+                  Objective                Residual
+Iter       Primal          Dual         Primal    Dual     Compl     Time
+   0   1.76728047e+06  5.03415175e+04  7.02e+03 0.00e+00  3.89e+03     0s
+   1   1.53509235e+06 -5.63875233e+04  5.00e+03 1.07e-01  1.46e+03     0s
+   2   1.03247319e+06 -3.03683931e+05  5.89e+02 1.92e-03  1.10e+02     0s
+   3   2.27643776e+05 -1.42036792e+05  2.45e+01 6.49e-06  1.27e+01     0s
+   4   1.13949610e+05  2.50492104e+04  3.66e+00 0.00e+00  2.66e+00     0s
+   5   8.60589187e+04  4.48561873e+04  5.74e-01 0.00e+00  1.21e+00     0s
+   6   7.59575674e+04  5.41483374e+04  3.18e-01 1.17e-13  6.40e-01     0s
+   7   7.27300594e+04  5.55923203e+04  2.22e-01 0.00e+00  5.03e-01     0s
+   8   6.94015025e+04  5.76245709e+04  1.17e-01 0.00e+00  3.45e-01     0s
+   9   6.65117995e+04  5.93879570e+04  1.19e-02 4.36e-14  2.08e-01     0s
+  10   6.61418142e+04  6.18950669e+04  6.05e-03 1.94e-13  1.24e-01     0s
+  11   6.56462169e+04  6.45738885e+04  1.41e-03 6.66e-16  3.13e-02     0s
+  12   6.55263435e+04  6.49870601e+04  5.37e-04 0.00e+00  1.58e-02     0s
+  13   6.54852565e+04  6.51453193e+04  2.70e-04 1.39e-13  9.94e-03     0s
+  14   6.54547973e+04  6.52887428e+04  8.13e-05 0.00e+00  4.86e-03     0s
+  15   6.54478751e+04  6.53444526e+04  3.70e-05 1.58e-14  3.02e-03     0s
+  16   6.54417586e+04  6.53652664e+04  7.25e-06 1.11e-15  2.24e-03     0s
+  17   6.54400073e+04  6.53844918e+04  1.37e-07 1.11e-16  1.62e-03     0s
+  18   6.54399170e+04  6.54146968e+04  7.54e-08 1.39e-13  7.37e-04     0s
+  19   6.54398823e+04  6.54227599e+04  3.67e-08 2.22e-13  5.01e-04     0s
+  20   6.54396251e+04  6.54278615e+04  1.74e-08 8.42e-14  3.44e-04     0s
+  21   6.54394326e+04  6.54336764e+04  1.43e-09 3.16e-14  1.68e-04     0s
+  22   6.54394033e+04  6.54355244e+04  1.27e-11 7.22e-15  1.13e-04     0s
+  23   6.54393668e+04  6.54392696e+04  9.09e-12 2.57e-13  2.84e-06     0s
+
+Barrier solved model in 23 iterations and 0.40 seconds (0.25 work units)
+Optimal objective 6.54393668e+04
+
+
+Gurobi 12.0.0 (win64) logging started Fri Jan 10 09:41:11 2025
+
+Set parameter LogFile to value "C:\Users\abirb\Documents\ETH\Master\Master Thesis\MicroGridsPy\tes.log"
+Gurobi Optimizer version 12.0.0 build v12.0.0rc1 (win64 - Windows 11.0 (22631.2))
+
+CPU model: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz, instruction set [SSE2|AVX|AVX2]
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+
+Non-default parameters:
+IterationLimit  10000
+FeasibilityTol  0.0001
+OptimalityTol  0.0001
+Method  2
+BarConvTol  0.0001
+BarHomogeneous  0
+Crossover  0
+
+Academic license 2588596 - for non-commercial use only - registered to ab___@student.ethz.ch
+Optimize a model with 78847 rows, 78850 columns and 188259 nonzeros
+Model fingerprint: 0x2a6b9e1e
+Coefficient statistics:
+  Matrix range     [5e-04, 1e+03]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [3e+03, 2e+04]
+Presolve removed 53167 rows and 61728 columns
+Presolve time: 0.07s
+Presolved: 25680 rows, 17122 columns, 59920 nonzeros
+Ordering time: 0.00s
+
+Barrier statistics:
+ Dense cols : 2
+ AA' NZ     : 4.280e+04
+ Factor NZ  : 1.027e+05 (roughly 18 MB of memory)
+ Factor Ops : 4.280e+05 (less than 1 second per iteration)
+ Threads    : 1
+
+                  Objective                Residual
+Iter       Primal          Dual         Primal    Dual     Compl     Time
+   0   1.76728047e+06  5.03415175e+04  7.02e+03 0.00e+00  3.89e+03     0s
+   1   1.53509235e+06 -5.63875233e+04  5.00e+03 1.07e-01  1.46e+03     0s
+   2   1.03247319e+06 -3.03683931e+05  5.89e+02 1.92e-03  1.10e+02     0s
+   3   2.27643776e+05 -1.42036792e+05  2.45e+01 6.49e-06  1.27e+01     0s
+   4   1.13949610e+05  2.50492104e+04  3.66e+00 0.00e+00  2.66e+00     0s
+   5   8.60589187e+04  4.48561873e+04  5.74e-01 0.00e+00  1.21e+00     0s
+   6   7.59575674e+04  5.41483374e+04  3.18e-01 1.17e-13  6.40e-01     0s
+   7   7.27300594e+04  5.55923203e+04  2.22e-01 0.00e+00  5.03e-01     0s
+   8   6.94015025e+04  5.76245709e+04  1.17e-01 0.00e+00  3.45e-01     0s
+   9   6.65117995e+04  5.93879570e+04  1.19e-02 4.36e-14  2.08e-01     0s
+  10   6.61418142e+04  6.18950669e+04  6.05e-03 1.94e-13  1.24e-01     0s
+  11   6.56462169e+04  6.45738885e+04  1.41e-03 6.66e-16  3.13e-02     0s
+  12   6.55263435e+04  6.49870601e+04  5.37e-04 0.00e+00  1.58e-02     0s
+  13   6.54852565e+04  6.51453193e+04  2.70e-04 1.39e-13  9.94e-03     0s
+  14   6.54547973e+04  6.52887428e+04  8.13e-05 0.00e+00  4.86e-03     0s
+  15   6.54478751e+04  6.53444526e+04  3.70e-05 1.58e-14  3.02e-03     0s
+  16   6.54417586e+04  6.53652664e+04  7.25e-06 1.11e-15  2.24e-03     0s
+  17   6.54400073e+04  6.53844918e+04  1.37e-07 1.11e-16  1.62e-03     0s
+  18   6.54399170e+04  6.54146968e+04  7.54e-08 1.39e-13  7.37e-04     0s
+  19   6.54398823e+04  6.54227599e+04  3.67e-08 2.22e-13  5.01e-04     0s
+  20   6.54396251e+04  6.54278615e+04  1.74e-08 8.42e-14  3.44e-04     0s
+  21   6.54394326e+04  6.54336764e+04  1.43e-09 3.16e-14  1.68e-04     0s
+  22   6.54394033e+04  6.54355244e+04  1.27e-11 7.22e-15  1.13e-04     0s
+  23   6.54393668e+04  6.54392696e+04  9.09e-12 2.57e-13  2.84e-06     0s
+
+Barrier solved model in 23 iterations and 0.35 seconds (0.25 work units)
+Optimal objective 6.54393668e+04
+
+
+Gurobi 12.0.0 (win64) logging started Fri Jan 10 09:41:45 2025
+
+Set parameter LogFile to value "C:\Users\abirb\Documents\ETH\Master\Master Thesis\MicroGridsPy\tes.log"
+Gurobi Optimizer version 12.0.0 build v12.0.0rc1 (win64 - Windows 11.0 (22631.2))
+
+CPU model: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz, instruction set [SSE2|AVX|AVX2]
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+
+Non-default parameters:
+IterationLimit  10000
+FeasibilityTol  0.0001
+OptimalityTol  0.0001
+Method  2
+BarConvTol  0.0001
+BarHomogeneous  0
+Crossover  0
+
+Academic license 2588596 - for non-commercial use only - registered to ab___@student.ethz.ch
+Optimize a model with 78847 rows, 78850 columns and 188259 nonzeros
+Model fingerprint: 0x2a6b9e1e
+Coefficient statistics:
+  Matrix range     [5e-04, 1e+03]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [3e+03, 2e+04]
+Presolve removed 53167 rows and 61728 columns
+Presolve time: 0.15s
+Presolved: 25680 rows, 17122 columns, 59920 nonzeros
+Ordering time: 0.00s
+
+Barrier statistics:
+ Dense cols : 2
+ AA' NZ     : 4.280e+04
+ Factor NZ  : 1.027e+05 (roughly 18 MB of memory)
+ Factor Ops : 4.280e+05 (less than 1 second per iteration)
+ Threads    : 1
+
+                  Objective                Residual
+Iter       Primal          Dual         Primal    Dual     Compl     Time
+   0   1.76728047e+06  5.03415175e+04  7.02e+03 0.00e+00  3.89e+03     0s
+   1   1.53509235e+06 -5.63875233e+04  5.00e+03 1.07e-01  1.46e+03     0s
+   2   1.03247319e+06 -3.03683931e+05  5.89e+02 1.92e-03  1.10e+02     0s
+   3   2.27643776e+05 -1.42036792e+05  2.45e+01 6.49e-06  1.27e+01     0s
+   4   1.13949610e+05  2.50492104e+04  3.66e+00 0.00e+00  2.66e+00     0s
+   5   8.60589187e+04  4.48561873e+04  5.74e-01 0.00e+00  1.21e+00     0s
+   6   7.59575674e+04  5.41483374e+04  3.18e-01 1.17e-13  6.40e-01     0s
+   7   7.27300594e+04  5.55923203e+04  2.22e-01 0.00e+00  5.03e-01     0s
+   8   6.94015025e+04  5.76245709e+04  1.17e-01 0.00e+00  3.45e-01     0s
+   9   6.65117995e+04  5.93879570e+04  1.19e-02 4.36e-14  2.08e-01     0s
+  10   6.61418142e+04  6.18950669e+04  6.05e-03 1.94e-13  1.24e-01     0s
+  11   6.56462169e+04  6.45738885e+04  1.41e-03 6.66e-16  3.13e-02     0s
+  12   6.55263435e+04  6.49870601e+04  5.37e-04 0.00e+00  1.58e-02     0s
+  13   6.54852565e+04  6.51453193e+04  2.70e-04 1.39e-13  9.94e-03     0s
+  14   6.54547973e+04  6.52887428e+04  8.13e-05 0.00e+00  4.86e-03     0s
+  15   6.54478751e+04  6.53444526e+04  3.70e-05 1.58e-14  3.02e-03     0s
+  16   6.54417586e+04  6.53652664e+04  7.25e-06 1.11e-15  2.24e-03     0s
+  17   6.54400073e+04  6.53844918e+04  1.37e-07 1.11e-16  1.62e-03     0s
+  18   6.54399170e+04  6.54146968e+04  7.54e-08 1.39e-13  7.37e-04     0s
+  19   6.54398823e+04  6.54227599e+04  3.67e-08 2.22e-13  5.01e-04     0s
+  20   6.54396251e+04  6.54278615e+04  1.74e-08 8.42e-14  3.44e-04     0s
+  21   6.54394326e+04  6.54336764e+04  1.43e-09 3.16e-14  1.68e-04     0s
+  22   6.54394033e+04  6.54355244e+04  1.27e-11 7.22e-15  1.13e-04     0s
+  23   6.54393668e+04  6.54392696e+04  9.09e-12 2.57e-13  2.84e-06     0s
+
+Barrier solved model in 23 iterations and 0.44 seconds (0.25 work units)
+Optimal objective 6.54393668e+04
+
+
+Gurobi 12.0.0 (win64) logging started Fri Jan 10 09:42:26 2025
+
+Set parameter LogFile to value "C:\Users\abirb\Documents\ETH\Master\Master Thesis\MicroGridsPy\tes.log"
+Gurobi Optimizer version 12.0.0 build v12.0.0rc1 (win64 - Windows 11.0 (22631.2))
+
+CPU model: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz, instruction set [SSE2|AVX|AVX2]
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+
+Non-default parameters:
+IterationLimit  10000
+FeasibilityTol  0.0001
+OptimalityTol  0.0001
+Method  2
+BarConvTol  0.0001
+BarHomogeneous  0
+Crossover  0
+
+Academic license 2588596 - for non-commercial use only - registered to ab___@student.ethz.ch
+Optimize a model with 78847 rows, 78850 columns and 188259 nonzeros
+Model fingerprint: 0x2a6b9e1e
+Coefficient statistics:
+  Matrix range     [5e-04, 1e+03]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [3e+03, 2e+04]
+Presolve removed 53167 rows and 61728 columns
+Presolve time: 0.07s
+Presolved: 25680 rows, 17122 columns, 59920 nonzeros
+Ordering time: 0.00s
+
+Barrier statistics:
+ Dense cols : 2
+ AA' NZ     : 4.280e+04
+ Factor NZ  : 1.027e+05 (roughly 18 MB of memory)
+ Factor Ops : 4.280e+05 (less than 1 second per iteration)
+ Threads    : 1
+
+                  Objective                Residual
+Iter       Primal          Dual         Primal    Dual     Compl     Time
+   0   1.76728047e+06  5.03415175e+04  7.02e+03 0.00e+00  3.89e+03     0s
+   1   1.53509235e+06 -5.63875233e+04  5.00e+03 1.07e-01  1.46e+03     0s
+   2   1.03247319e+06 -3.03683931e+05  5.89e+02 1.92e-03  1.10e+02     0s
+   3   2.27643776e+05 -1.42036792e+05  2.45e+01 6.49e-06  1.27e+01     0s
+   4   1.13949610e+05  2.50492104e+04  3.66e+00 0.00e+00  2.66e+00     0s
+   5   8.60589187e+04  4.48561873e+04  5.74e-01 0.00e+00  1.21e+00     0s
+   6   7.59575674e+04  5.41483374e+04  3.18e-01 1.17e-13  6.40e-01     0s
+   7   7.27300594e+04  5.55923203e+04  2.22e-01 0.00e+00  5.03e-01     0s
+   8   6.94015025e+04  5.76245709e+04  1.17e-01 0.00e+00  3.45e-01     0s
+   9   6.65117995e+04  5.93879570e+04  1.19e-02 4.36e-14  2.08e-01     0s
+  10   6.61418142e+04  6.18950669e+04  6.05e-03 1.94e-13  1.24e-01     0s
+  11   6.56462169e+04  6.45738885e+04  1.41e-03 6.66e-16  3.13e-02     0s
+  12   6.55263435e+04  6.49870601e+04  5.37e-04 0.00e+00  1.58e-02     0s
+  13   6.54852565e+04  6.51453193e+04  2.70e-04 1.39e-13  9.94e-03     0s
+  14   6.54547973e+04  6.52887428e+04  8.13e-05 0.00e+00  4.86e-03     0s
+  15   6.54478751e+04  6.53444526e+04  3.70e-05 1.58e-14  3.02e-03     0s
+  16   6.54417586e+04  6.53652664e+04  7.25e-06 1.11e-15  2.24e-03     0s
+  17   6.54400073e+04  6.53844918e+04  1.37e-07 1.11e-16  1.62e-03     0s
+  18   6.54399170e+04  6.54146968e+04  7.54e-08 1.39e-13  7.37e-04     0s
+  19   6.54398823e+04  6.54227599e+04  3.67e-08 2.22e-13  5.01e-04     0s
+  20   6.54396251e+04  6.54278615e+04  1.74e-08 8.42e-14  3.44e-04     0s
+  21   6.54394326e+04  6.54336764e+04  1.43e-09 3.16e-14  1.68e-04     0s
+  22   6.54394033e+04  6.54355244e+04  1.27e-11 7.22e-15  1.13e-04     0s
+  23   6.54393668e+04  6.54392696e+04  9.09e-12 2.57e-13  2.84e-06     0s
+
+Barrier solved model in 23 iterations and 0.36 seconds (0.25 work units)
+Optimal objective 6.54393668e+04
+

@@ -47,16 +47,16 @@ def add_renewable_energy_production_constraints(model: Model, settings: ProjectP
                 lifetime_exceeded = total_age > param['RES_LIFETIME'].sel(renewable_sources=res)
 
                 # Calculate total_production considering just the new capacity
-                total_production = (var['res_units'].sel(steps=step) * param['RESOURCE'] * param['RES_INVERTER_EFFICIENCY']).sel(renewable_sources=res)
+                total_production = (var['res_units'].sel(steps=step) * param['RESOURCE']).sel(renewable_sources=res)
 
                 if lifetime_exceeded is False:
-                    total_production += ((param['RES_EXISTING_CAPACITY'] / param['RES_NOMINAL_CAPACITY']) * param['RESOURCE'] * param['RES_INVERTER_EFFICIENCY']).sel(renewable_sources=res)
+                    total_production += ((param['RES_EXISTING_CAPACITY'] / param['RES_NOMINAL_CAPACITY']) * param['RESOURCE']).sel(renewable_sources=res)
 
                 # Add constraints over 'res_types'
                 model.add_constraints(var['res_energy_production'].sel(steps=step, renewable_sources=res) == total_production, name=f"Renewable Energy Production Constraint - Year {year}, Source {res}")
     else:
         # Non-brownfield scenario
-        res_energy_production = (var['res_units'] * param['RESOURCE'] * param['RES_INVERTER_EFFICIENCY'])
+        res_energy_production = (var['res_units'] * param['RESOURCE'])
 
         model.add_constraints(var['res_energy_production'] == res_energy_production, name="Renewable Energy Production Constraint")
 

@@ -1,5 +1,5 @@
 advanced_settings:
-  brownfield: false
+  brownfield: true
   capacity_expansion: false
   cost_of_debt: 0.11
   cost_of_equity: 0.12
@@ -7,6 +7,7 @@ advanced_settings:
   equity_share: 0.1
   grid_connection: false
   grid_connection_type: 0
+  grid_type: Alternating Current
   milp_formulation: false
   min_step_duration: 1
   multi_scenario_optimization: false
@@ -16,7 +17,7 @@ advanced_settings:
   pareto_points: 2
   scenario_weights:
   - 1.0
-  step_duration: 20
+  step_duration: 2
   tax: 0.02
   unit_commitment: false
   wacc_calculation: false
@@ -40,10 +41,17 @@ battery_params:
   battery_cycles: 6000
   battery_depth_of_discharge: 0.8
   battery_discharge_battery_efficiency: 1.0
-  battery_existing_capacity: 0.0
-  battery_existing_years: 0
+  battery_existing_capacity: 10000.0
+  battery_existing_inverter_capacity: 10000.0
+  battery_existing_years: 1
   battery_expected_lifetime: 20
   battery_initial_soc: 1.0
+  battery_inverter_cost: 0.4
+  battery_inverter_efficiency_ac_dc: 1.0
+  battery_inverter_efficiency_dc_ac: 1.0
+  battery_inverter_existing_years: 1
+  battery_inverter_lifetime: 20
+  battery_inverter_nominal_capacity: 1000.0
   battery_nominal_capacity: 1000.0
   battery_specific_electronic_investment_cost: 0.05
   battery_specific_investment_cost: 0.15
@@ -54,6 +62,8 @@ battery_params:
 generator_params:
   fuel_co2_emission:
   - 2.68
+  fuel_cost_option:
+  - Variable prices
   fuel_lhv:
   - 10140.0
   fuel_names:
@@ -62,6 +72,10 @@ generator_params:
   - 0.01
   gen_existing_capacity:
   - 0.0
+  gen_existing_rectifier_capacity:
+  - 0.0
+  gen_existing_rectifier_years:
+  - 0
   gen_existing_years:
   - 0
   gen_lifetime:
@@ -75,6 +89,14 @@ generator_params:
   gen_nominal_efficiency:
   - 0.3
   gen_partial_load: false
+  gen_rectifier_cost:
+  - 0.4
+  gen_rectifier_efficiency:
+  - 1.0
+  gen_rectifier_lifetime:
+  - 20
+  gen_rectifier_nominal_capacity:
+  - 1000.0
   gen_specific_investment_cost:
   - 0.4
   gen_specific_om_cost:
@@ -92,16 +114,20 @@ grid_params:
   grid_connection_cost: 14000.0
   grid_distance: 0.5
   grid_maintenance_cost: 0.025
+  grid_to_microgrid_efficiency: 1.0
+  grid_transformer_cost: 0.4
+  grid_transformer_nominal_capacity: 100000.0
   maximum_grid_power: 80000.0
+  microgrid_to_grid_efficiency: 1.0
   national_grid_specific_co2_emissions: 0.1495
   year_grid_connection: 1
 nasa_power_params:
-  base_url: https://power.larc.nasa.gov/api/temporal/
   community: RE
   date_end: '20201231'
   date_start: '20150101'
   loc_id: point
-  output_format: JSON
+  nasa_base_url: https://power.larc.nasa.gov/api/temporal/
+  nasa_output_format: JSON
   parameters_1: ALLSKY_SFC_SW_DWN
   parameters_2: T2MWET,T2M,WS50M
   parameters_3: WS50M,WS2M,WD50M,T2M
@@ -110,7 +136,7 @@ nasa_power_params:
   user: anonymous
 project_info:
   project_description: ''
-  project_name: test
+  project_name: testbrownfield
 project_settings:
   battery_independence: 0
   currency: USD
@@ -122,18 +148,33 @@ project_settings:
   optimization_goal: 0
   renewable_penetration: 0.0
   start_date: 2023-01-01
-  system_configuration: 0
-  time_horizon: 20
+  system_configuration: 1
+  time_horizon: 2
   time_resolution: 8760
+pvgis_params:
+  pvgis_base_url: https://re.jrc.ec.europa.eu/api/tmy?
+  pvgis_output_format: json
 renewables_params:
+  res_connection_types:
+  - Connected with a seperate Inverter to the Microgrid
   res_existing_area:
   - 0.0
   res_existing_capacity:
-  - 0.0
+  - 10000.0
   res_existing_years:
-  - 0
+  - 2.0
+  res_inverter_cost:
+  - 0.4
   res_inverter_efficiency:
   - 0.98
+  res_inverter_existing_capacity:
+  - 0.0
+  res_inverter_existing_years:
+  - 0
+  res_inverter_lifetime:
+  - 20
+  res_inverter_nominal_capacity:
+  - 1000.0
   res_lifetime:
   - 20.0
   res_specific_area:
@@ -161,6 +202,7 @@ resource_assessment:
   - 1000.0
   res_sources: 1
   ro_ground: 0.2
+  surface_type: Suburbs
   tilt: 10
   time_zone: 2
   turbine_model: NPS100c-21

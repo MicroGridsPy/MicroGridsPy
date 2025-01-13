@@ -9,10 +9,10 @@ def add_battery_constraints(model: Model, settings: ProjectParameters, sets: xr.
     """Add constraints for battery energy storage."""
     add_battery_state_of_charge_constraints(model, settings, sets, param, var)
 
-    if settings.advanced_settings.milp_formulation:
+    '''if settings.advanced_settings.milp_formulation:
         add_battery_single_flow_constraints(model, settings, sets, param, var)
-    else:
-        add_battery_flow_constraints(model, settings, sets, param, var)
+    else:'''
+    add_battery_flow_constraints(model, settings, sets, param, var)
 
     if settings.advanced_settings.capacity_expansion:
         add_battery_capacity_expansion_constraints(model, settings, sets, param, var)
@@ -143,11 +143,11 @@ def add_battery_flow_constraints(model: Model, settings: ProjectParameters, sets
     for year in sets.years.values:
         step = years_steps_tuples[year - years[0]][1]
         model.add_constraints(
-            var['battery_inflow'].sel(years=year) <= var['battery_max_charge_power'].sel(steps=step) * param['DELTA_TIME'],
+            var['battery_inflow'].sel(years=year) <= var['battery_max_charge_power'].sel(steps=step) * param['DELTA_TIME'], # / param['BATTERY_CHARGE_EFFICIENCY'],
             name=f"Battery Upper Inflow Constraint - Year {year}")
 
         model.add_constraints(
-            var['battery_outflow'].sel(years=year) <= var['battery_max_discharge_power'].sel(steps=step) * param['DELTA_TIME'],
+            var['battery_outflow'].sel(years=year) <= var['battery_max_discharge_power'].sel(steps=step) * param['DELTA_TIME'], # * param['BATTERY_DISCHARGE_EFFICIENCY'],
             name=f"Battery Upper Outflow Constraint - Year {year}")
 
     model.add_constraints(var['battery_outflow'] <= param['DEMAND'], name="Battery Maximum Outflow Constraint")
@@ -235,7 +235,6 @@ def add_battery_single_flow_constraints(model: Model, settings: ProjectParameter
         model.add_constraints(
             var['battery_outflow'].sel(years=year) <= var['single_flow_bess'] * var['battery_max_discharge_power'].sel(steps=step) * param['DELTA_TIME'],
             name=f"Battery Single Flow Discharge Constraint - Year {year}")
-
         model.add_constraints(
             var['battery_inflow'].sel(years=year) <= (var['battery_max_charge_power'].sel(steps=step) * param['DELTA_TIME']) - (var['single_flow_bess'] * var['battery_max_charge_power'].sel(steps=step) * param['DELTA_TIME']),
             name=f"Battery Single Flow Charge Constraint - Year {year}")

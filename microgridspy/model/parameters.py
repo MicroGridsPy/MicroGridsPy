@@ -67,7 +67,7 @@ class AdvancedSettings(BaseModel):
         num_steps (Optional[int]): The number of steps for the project.
         min_step_duration (Optional[int]): The minimum step duration for the project.
         milp_formulation (bool): The MILP formulation used in the project allowing for binary variables (more realistic)
-        unit_committment (bool): Allows for unit committment approach on the sizing variables (integers)
+        unit_commitment (bool): Allows for unit committment approach on the sizing variables (integers)
         brownfield (bool): Indicates if brownfield is enabled.
         grid_connection (bool): Indicates if grid connection is enabled.
         grid_connection_type (Optional[int]): The type of grid connection.
@@ -104,6 +104,7 @@ class AdvancedSettings(BaseModel):
     multi_scenario_optimization: bool
     num_scenarios: Optional[int]
     scenario_weights: Optional[List[float]]
+    grid_type: str
     
 class NasaPowerParams(BaseModel):
     """
@@ -125,7 +126,7 @@ class NasaPowerParams(BaseModel):
         output_format (str): Output format.
         user (str): User key.
     """
-    base_url: str
+    nasa_base_url: str
     loc_id: str
     parameters_1: str
     parameters_2: str
@@ -135,7 +136,7 @@ class NasaPowerParams(BaseModel):
     community: str
     temp_res_1: str
     temp_res_2: str
-    output_format: str
+    nasa_output_format: str
     user: str
 
 class PVGISParams(BaseModel):
@@ -148,8 +149,8 @@ class PVGISParams(BaseModel):
         base_url (str): Base URL for the PVGIS API.
         output_format (str): Output format.
     """
-    base_url: str
-    output_format: str
+    pvgis_base_url: str
+    pvgis_output_format: str
 
 class ResourceAssessment(BaseModel):
     """
@@ -251,7 +252,7 @@ class RenewablesParams(BaseModel):
         res_existing_years (Optional[List[int]]): The existing years of the renewable energy sources.
     """
 
-    res_inverter_efficiency: List[float]
+    res_connection_types: List[str]
     res_specific_area: Optional[List[float]]
     res_specific_investment_cost: List[float]
     res_specific_om_cost: List[float]
@@ -260,6 +261,12 @@ class RenewablesParams(BaseModel):
     res_existing_capacity: Optional[List[float]]
     res_existing_area: Optional[List[float]]
     res_existing_years: Optional[List[int]]
+    res_inverter_efficiency: List[float]
+    res_inverter_lifetime: List[int]
+    res_inverter_nominal_capacity: List[float]
+    res_inverter_existing_capacity: List[float]
+    res_inverter_existing_years: List[int]
+    res_inverter_cost: List[float]
 
 class BatteryParams(BaseModel):
     """
@@ -273,6 +280,8 @@ class BatteryParams(BaseModel):
         battery_specific_investment_cost (float): Specific investment cost of the battery bank (USD/Wh).
         battery_specific_electronic_investment_cost (float): Specific investment cost of non-replaceable parts (electronics) of the battery bank (USD/Wh).
         battery_specific_om_cost (float): Percentage of the total investment spent in operation and management of batteries in each period (%).
+        battery_inverter_efficiency_dc_ac (float): Efficiency of the inverter between battery and the AC-Microgrid (%).
+        battery_inverter_efficiency_ac_dc (float): Efficiency of the inverter between AC-Microgrid and the battery (%).    
         battery_discharge_battery_efficiency (float): Efficiency of the discharge of the battery (%).
         battery_charge_battery_efficiency (float): Efficiency of the charge of the battery (%).
         battery_initial_soc (float): Initial state of charge of the battery.
@@ -289,6 +298,11 @@ class BatteryParams(BaseModel):
     battery_specific_investment_cost: float
     battery_specific_electronic_investment_cost: float
     battery_specific_om_cost: float
+    battery_inverter_efficiency_dc_ac: float
+    battery_inverter_efficiency_ac_dc: float
+    battery_inverter_lifetime: int
+    battery_inverter_nominal_capacity: float
+    battery_inverter_cost: float
     battery_discharge_battery_efficiency: float
     battery_charge_battery_efficiency: float
     battery_initial_soc: float
@@ -300,6 +314,8 @@ class BatteryParams(BaseModel):
     bess_unit_co2_emission: float
     battery_existing_capacity: Optional[float]
     battery_existing_years: Optional[int]
+    battery_existing_inverter_capacity: Optional[float]
+    battery_inverter_existing_years: Optional[int]
 
 class GeneratorParams(BaseModel):
   """GeneratorParams configuration model."""
@@ -307,6 +323,10 @@ class GeneratorParams(BaseModel):
   gen_names: List[str]
   gen_nominal_capacity: List[float] 
   gen_nominal_efficiency: List[float]
+  gen_rectifier_efficiency: List[float]
+  gen_rectifier_nominal_capacity: List[float]
+  gen_rectifier_lifetime: List[int]
+  gen_rectifier_cost: List[float]
   gen_partial_load: bool
   gen_specific_investment_cost: List[float]
   gen_specific_om_cost: List[float]
@@ -321,6 +341,8 @@ class GeneratorParams(BaseModel):
   gen_min_output: Optional[List[float]]
   gen_cost_increase: Optional[List[float]]
   fuel_cost_option: List[str]
+  gen_existing_rectifier_capacity: Optional[List[float]]
+  gen_existing_rectifier_years: Optional[List[int]]
 
 class GridParams(BaseModel):
     """
@@ -347,6 +369,10 @@ class GridParams(BaseModel):
     grid_distance: float
     grid_connection_cost: float
     grid_maintenance_cost: float
+    grid_to_microgrid_efficiency: float
+    microgrid_to_grid_efficiency: float
+    grid_transformer_nominal_capacity: float
+    grid_transformer_cost: float
     maximum_grid_power: float
     national_grid_specific_co2_emissions: float
     grid_availability_simulation: Optional[bool]

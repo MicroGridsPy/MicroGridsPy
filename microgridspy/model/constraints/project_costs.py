@@ -1,6 +1,8 @@
+import streamlit as st
 from typing import Dict, List
 
 import xarray as xr
+from xarray import where
 import linopy
 from linopy import Model
 
@@ -72,13 +74,18 @@ def add_investment_cost(
             # Initial Investment Cost
             investment_cost += (var['res_units'].sel(steps=step) * param['RES_NOMINAL_CAPACITY'] * 
                                 param['RES_SPECIFIC_INVESTMENT_COST']).sum('renewable_sources')
-
+            investment_cost += (var['res_inverter_units'].sel(steps=step) * param['RES_INVERTER_NOMINAL_CAPACITY'] * 
+                                param['RES_INVERTER_COST']).sum('renewable_sources')
             if has_battery:
                 investment_cost += (var['battery_units'].sel(steps=step) * param['BATTERY_NOMINAL_CAPACITY'] * 
                                     param['BATTERY_SPECIFIC_INVESTMENT_COST'])
+                investment_cost += (var['battery_inverter_units'].sel(steps=step) * param['BATTERY_INVERTER_NOMINAL_CAPACITY'] *
+                                    param['BATTERY_INVERTER_COST'])
             if has_generator:
                 investment_cost += (var['generator_units'].sel(steps=step) * 
                                     param['GENERATOR_NOMINAL_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST']).sum('generator_types')
+                investment_cost += (var['generator_rectifier_units'].sel(steps=step) * param['GENERATOR_RECTIFIER_NOMINAL_CAPACITY'] *
+                                    param['GENERATOR_RECTIFIER_COST']).sum('generator_types')
         else:
             # Subsequent Investment Cost
             investment_cost += ((var['res_units'].sel(steps=step) - var['res_units'].sel(steps=step - 1)) * 
@@ -99,6 +106,7 @@ def add_investment_cost(
         start_year: int = years[0]
         grid_connection_discount = 1 / ((1 + param['DISCOUNT_RATE']) ** (year_grid_connection - start_year))
         investment_cost += (param['GRID_DISTANCE'] * param['GRID_CONNECTION_COST'] * grid_connection_discount)
+        investment_cost += (var['grid_transformer_size'] * param['GRID_TRANSFORMER_COST'])
     
     try:
         # Add constraint
@@ -373,6 +381,7 @@ def add_electricity_cost(
     :param var: Dictionary of variables
     :param actualized: Boolean indicating whether to use actualized costs
     """
+
     start_year = sets.years.values[0]
     energy_from_grid_cost = (var['energy_from_grid'] * param['ELECTRICTY_PURCHASED_COST']).sum('periods')
 
@@ -466,12 +475,21 @@ def add_salvage_value(
     for step in sets.steps.values:
         # Initial investment step (including existing capacity for brownfield)
         if step == 1:
-            
-            # RES salvage
-            salvage_value += (var['res_units'].sel(steps=step) * 
-                              param['RES_NOMINAL_CAPACITY'] * param['RES_SPECIFIC_INVESTMENT_COST'] *
-                              (max(0, param['RES_LIFETIME'] - project_duration) / param['RES_LIFETIME']) *
-                              discount_factor).sum('renewable_sources')
+            # RES salvage value calculation
+            salvage_value += (
+                var['res_units'].sel(steps=step)
+                * param['RES_NOMINAL_CAPACITY']
+                * param['RES_SPECIFIC_INVESTMENT_COST']
+                * (
+                    where(
+                        param['RES_LIFETIME'] - project_duration > 0,
+                        param['RES_LIFETIME'] - project_duration,
+                        0
+                    )
+                    / param['RES_LIFETIME']
+                )
+                * discount_factor
+            ).sum('renewable_sources')
             
             if is_brownfield:
                 for res in renewable_sources:
@@ -493,10 +511,21 @@ def add_salvage_value(
                                      discount_factor)
 
             if has_generator:
-                salvage_value += (var['generator_units'].sel(steps=step) * 
-                                  param['GENERATOR_NOMINAL_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] *
-                                  (max(0, param['GENERATOR_LIFETIME'] - project_duration) / param['GENERATOR_LIFETIME']) *
-                                  discount_factor).sum('generator_types')
+                salvage_value += (
+                    var['generator_units'].sel(steps=step)
+                    * param['GENERATOR_NOMINAL_CAPACITY']
+                    * param['GENERATOR_SPECIFIC_INVESTMENT_COST']
+                    * (
+                        where(
+                            param['GENERATOR_LIFETIME'] - project_duration > 0,
+                            param['GENERATOR_LIFETIME'] - project_duration,
+                            0
+                        )
+                        / param['GENERATOR_LIFETIME']
+                    ) 
+                    * discount_factor
+                ).sum('generator_types')
+                    
                 
                 if is_brownfield:
                     for gen in generators:

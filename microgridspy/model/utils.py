@@ -1,5 +1,5 @@
 from typing import Optional, List
-
+import streamlit as st
 import xarray as xr
 import numpy as np
 import pandas as pd
@@ -150,9 +150,10 @@ def initialize_fuel_specific_cost(gen_names: List[str], time_horizon: int) -> np
         raise RuntimeError(f"Failed to initialize fuel cost data: {str(e)}")
     
     num_gen_types: int = len(gen_names)
-
+    st.write(fuel_specific_cost_df)
     # Reshape the data to match other variables' dimension order
     fuel_specific_cost_data: np.ndarray = fuel_specific_cost_df.values.reshape(num_gen_types, time_horizon)
+    st.write(fuel_specific_cost_data)
 
     return fuel_specific_cost_data
 

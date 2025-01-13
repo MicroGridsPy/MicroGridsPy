@@ -50,8 +50,21 @@ def battery_technology() -> None:
             st.session_state.battery_expected_lifetime = st.number_input("Expected Lifetime [years]", min_value=1, value=st.session_state.battery_expected_lifetime)
         st.session_state.bess_unit_co2_emission = st.number_input("Unit CO2 Emission [kgCO2/kWh]", value=st.session_state.bess_unit_co2_emission)
     
+
+        if st.session_state.grid_type == "Alternating Current":
+            st.write("##### Inverter parameters:")    
+            st.session_state.battery_inverter_efficiency_dc_ac = st.number_input("Inverter Efficiency from DC to AC [%]", min_value=0.0, max_value=100.0, value=st.session_state.battery_inverter_efficiency_dc_ac * 100) / 100
+            st.session_state.battery_inverter_efficiency_ac_dc = st.number_input("Inverter Efficiency from AC to DC [%]", min_value=0.0, max_value=100.0, value=st.session_state.battery_inverter_efficiency_ac_dc * 100) / 100
+            st.session_state.battery_inverter_nominal_capacity = st.number_input("Inverter Nominal Capacity [W]", min_value=0.0, value=st.session_state.battery_inverter_nominal_capacity)
+            st.session_state.battery_inverter_lifetime = st.number_input("Inverter Lifetime [years]", min_value=1, value=st.session_state.battery_inverter_lifetime)
+            st.session_state.battery_inverter_cost = st.number_input(f"Inverter Cost [{currency}/W]", min_value=0.0, value=st.session_state.battery_inverter_cost)
+        else:
+            st.session_state.battery_inverter_efficiency_dc_ac = 1.0
+            st.session_state.battery_inverter_efficiency_ac_dc = 1.0
+            st.session_state.battery_inverter_cost = 0.0
+
         if brownfield:
-            st.write(f"### Brownfield project:")
+            st.write(f"### Brownfield project parameters:")
     
             # Get user input in kW, but the stored value should be in W
             battery_capacity = st.number_input(
@@ -63,6 +76,17 @@ def battery_technology() -> None:
             st.session_state.battery_existing_capacity = battery_capacity
             if battery_capacity > 0:
                 st.session_state.battery_existing_years = st.number_input("Existing Years [years]", min_value=0, max_value=(st.session_state.battery_expected_lifetime - 1), value=st.session_state.battery_existing_years)
+            
+            if st.session_state.grid_type == "Alternating Current":
+                st.session_state.battery_existing_inverter_capacity = st.number_input("Existing Inverter Capacity [W]", 
+                                                                                      min_value=0.0, 
+                                                                                      value=st.session_state.battery_existing_inverter_capacity)
+                if st.session_state.battery_existing_inverter_capacity > 0:
+                    st.session_state.battery_inverter_existing_years = st.number_input(f"Existing Inverter Cost [{currency}/W]", 
+                                                                                    min_value=0, 
+                                                                                    max_value=(st.session_state.battery_inverter_lifetime - 1),
+                                                                                    value=st.session_state.battery_inverter_existing_years)
+
     else:
         st.warning("Battery technology is not included in the system configuration. If you want to include a battery, please edit the project settings page.")
 

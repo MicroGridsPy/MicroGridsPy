@@ -44,14 +44,14 @@ def add_maximum_power_to_grid_constraint(model: Model, settings: ProjectParamete
 
     for year in sets.years.values:
         if year >= year_grid_connection:
-            if settings.advanced_settings.milp_formulation:
+            '''if settings.advanced_settings.milp_formulation:
                 model.add_constraints(
                     var['energy_to_grid'].sel(years=year) <= (1 - var['single_flow_grid'].sel(years=year)) * param['GRID_AVAILABILITY'].sel(years=year) * max_grid_power,
                     name=f"Maximum Power To Grid - Year {year}")
-            else:
-                model.add_constraints(
-                    var['energy_to_grid'].sel(years=year) <= param['GRID_AVAILABILITY'].sel(years=year) * max_grid_power,
-                    name=f"Maximum Power To Grid - Year {year}")
+            else:'''
+            model.add_constraints(
+                var['energy_to_grid'].sel(years=year) <= param['GRID_AVAILABILITY'].sel(years=year) * max_grid_power,
+                name=f"Maximum Power To Grid - Year {year}")
         else:
             model.add_constraints(
                 var['energy_to_grid'].sel(years=year) == 0,

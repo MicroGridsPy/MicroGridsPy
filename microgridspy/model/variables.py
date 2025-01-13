@@ -56,16 +56,20 @@ def add_res_variables(model: Model, settings: ProjectParameters, sets: xr.Datase
     if settings.advanced_settings.unit_commitment:
         # MILP Formulation: integer units 
         res_variables['res_units'] = model.add_variables(lower=0, integer=True, coords=[sets.steps, sets.renewable_sources], name='Unit of Nominal Capacity for Renewables')
+        res_variables['res_inverter_units'] = model.add_variables(lower=0, integer=True, coords=[sets.steps, sets.renewable_sources], name='Units of Inverters for Renewables')
     else:
         # LP Formulation: continuous units
         res_variables['res_units'] = model.add_variables(lower=0, coords=[sets.steps, sets.renewable_sources], name='Unit of Nominal Capacity for Renewables')
-    
+        res_variables['res_inverter_units'] = model.add_variables(lower=0, coords=[sets.steps, sets.renewable_sources], name='Units of Inverters for Renewables')
+
     # Total energy production [W*period] by each renewable source
     res_variables['res_energy_production'] = model.add_variables(lower=0,coords=[sets.scenarios, sets.steps, sets.periods, sets.renewable_sources],name='Energy Production by Renewables')
 
     # Curtailment [W*period] by each renewable source
     res_variables['curtailment'] = model.add_variables(lower=0,coords=[sets.scenarios, sets.years, sets.periods, sets.renewable_sources],name='Curtailment by Renewables')
     
+    res_variables['res_transformation_losses'] = model.add_variables(lower=0,coords=[sets.scenarios, sets.years, sets.periods, sets.renewable_sources], name="Transformation Losses - Renewable Sources")
+
     if settings.advanced_settings.multiobjective_optimization:
         # Indirect emissions [kgCO2] of each renewable source associated with installed capacity (LCA)
         res_variables['res_emission'] = model.add_variables(lower=0, coords=[sets.steps, sets.renewable_sources], name='CO2 Emissions for Unit of Renewables Installed Capacity')
@@ -85,15 +89,22 @@ def add_battery_variables(model: Model, settings: ProjectParameters, sets: xr.Da
 
     # Installed capacity [W*period] for battery bank in each investment step
     if settings.advanced_settings.milp_formulation:
+        
+        # Introduce a binary variable to determine the sign of battery system energy
+        battery_variables['single_flow_dc_system'] = model.add_variables(binary=True, coords=[sets.scenarios, sets.years, sets.periods], name='Binary for DC System Single Flow')
+        # Introduce a binary variable to determine the sign of battery system energy
+        battery_variables['ones'] = model.add_variables(binary=True, coords=[sets.scenarios, sets.years, sets.periods], name='Ones')
         # Boolean variable to determine single flow (inflow or outflow)
-        battery_variables['single_flow_bess'] = model.add_variables(binary=True, coords=[sets.scenarios, sets.years, sets.periods], name='Binary for BESS Single Flow')
+        #battery_variables['single_flow_bess'] = model.add_variables(binary=True, coords=[sets.scenarios, sets.years, sets.periods], name='Binary for BESS Single Flow')
     
     if settings.advanced_settings.unit_commitment:
         # MILP Formulation: integer units
         battery_variables['battery_units'] = model.add_variables(lower=0, integer=True, coords=[sets.steps], name='Unit of Nominal Capacity for Batteries')
+        battery_variables['battery_inverter_units'] = model.add_variables(lower=0, integer=True, coords=[sets.steps], name='Units of Inverters for Battery')
     else:
         # LP Formulation: continuous units
         battery_variables['battery_units'] = model.add_variables(lower=0, coords=[sets.steps], name='Unit of Nominal Capacity for Batteries')
+        battery_variables['battery_inverter_units'] = model.add_variables(lower=0, coords=[sets.steps], name='Units of Inverters for Battery')
     
     # Energy stored [W*period] in the battery bank 
     battery_variables['battery_outflow'] = model.add_variables(lower=0, coords=[sets.scenarios, sets.years, sets.periods], name='Battery Outflow')
@@ -101,6 +112,14 @@ def add_battery_variables(model: Model, settings: ProjectParameters, sets: xr.Da
     # Energy provided [W*period] by the battery bank
     battery_variables['battery_inflow'] = model.add_variables(lower=0, coords=[sets.scenarios, sets.years, sets.periods], name='Battery Inflow')
     
+    if any(conn_type == 'Connected with the same Inverter as the Battery to the Microgrid' for conn_type in settings.renewables_params.res_connection_types):
+        battery_variables['battery_system_feed_in_losses'] = model.add_variables(lower=0, coords=[sets.scenarios, sets.years, sets.periods], name="Feed In Losses - Battery")
+        battery_variables['battery_system_charge_losses'] = model.add_variables(lower=0, coords=[sets.scenarios, sets.years, sets.periods], name="Charge Losses - Battery")
+        battery_variables['dc_system_energy'] = model.add_variables(coords=[sets.scenarios, sets.years, sets.periods], name='DC System Energy')
+
+    else:
+        battery_variables['battery_system_transformation_losses'] = model.add_variables(lower=0, coords=[sets.scenarios, sets.years, sets.periods], name="Transformation Losses - Battery")
+
     # State of charge [W*period] of the battery bank
     battery_variables['battery_soc'] = model.add_variables(lower=0, coords=[sets.scenarios, sets.years, sets.periods], name='Battery State of Charge')
 
@@ -129,6 +148,7 @@ def add_generator_variables(model: Model, settings: ProjectParameters, sets: xr.
     if settings.advanced_settings.unit_commitment:
         # MILP Formulation: integer units
         generator_variables['generator_units'] = model.add_variables(lower=0, integer=True, coords=[sets.steps, sets.generator_types], name='Unit of Nominal Capacity for Generators')
+        generator_variables['generator_rectifier_units'] = model.add_variables(lower=0, integer=True, coords=[sets.steps, sets.generator_types] , name='Units of Rectifiers for Generators')
         if settings.generator_params.partial_load:
             # Binary that controls if there will be a generator in part load
             generator_variables['generator_partial_load'] = model.add_variables(binary=True, coords=[sets.scenarios, sets.years, sets.generator_types, sets.periods], name='Generator in Partial Load')
@@ -136,6 +156,7 @@ def add_generator_variables(model: Model, settings: ProjectParameters, sets: xr.
     else:
         # LP Formulation: continuous units
         generator_variables['generator_units'] = model.add_variables(lower=0, coords=[sets.steps, sets.generator_types], name='Unit of Nominal Capacity for Generators')
+        generator_variables['generator_rectifier_units'] = model.add_variables(lower=0, coords=[sets.steps, sets.generator_types], name='Units of Rectifiers for Generators')
  
     # Energy produced [W*period] by each generator type
     generator_variables['generator_energy_production'] = model.add_variables(lower=0, coords=[sets.scenarios, sets.years, sets.generator_types, sets.periods], name='Generator Energy Production')
@@ -143,6 +164,8 @@ def add_generator_variables(model: Model, settings: ProjectParameters, sets: xr.
         # Energy produced by the generator in partial load
         generator_variables['generator_energy_partial_load'] = model.add_variables(lower=0, coords=[sets.scenarios, sets.years, sets.generator_types, sets.periods], name='Generator Energy Production in Partial Load')
     
+    generator_variables['generator_transformation_losses'] = model.add_variables(lower=0, coords=[sets.scenarios, sets.years, sets.generator_types, sets.periods], name="Transformation Losses - Generator")
+
     generator_variables['total_fuel_cost_act'] = model.add_variables(lower=0, coords=[sets.scenarios, sets.generator_types], name='Total Fuel Cost (Actualized)')
     generator_variables['total_fuel_cost_nonact'] = model.add_variables(lower=0, coords=[sets.scenarios, sets.generator_types], name='Total Fuel Cost (Non-Actualized)')
     
@@ -174,6 +197,15 @@ def add_grid_variables(model: Model, settings: ProjectParameters, data: xr.Datas
         # Energy provided to the grid [W*period]
         grid_variables['energy_to_grid'] = model.add_variables(lower=0, coords=[data.scenarios, data.years, data.periods], name='Energy to Grid')
     
+    grid_variables['grid_transformation_losses'] = model.add_variables(lower=0, coords=[data.scenarios, data.years, data.periods], name="Transformation Losses - Grid")
+
+    if settings.advanced_settings.unit_commitment:
+        # MILP Formulation: integer units
+        grid_variables['grid_transformer_units'] = model.add_variables(lower=0, integer=True, coords=[data.steps], name='Units of Transformers for Grid')
+    else:
+        # LP Formulation: continuous units
+        grid_variables['grid_transformer_units'] = model.add_variables(lower=0, coords=[data.steps], name='Units of Transformers for Grid')
+
     if settings.advanced_settings.milp_formulation == 1:
         # Boolean variable allowing single flow (inflow or outflow)
         grid_variables['single_flow_grid'] = model.add_variables(binary=True, coords=[data.scenarios, data.years, data.periods], name='Binary for Grid Single Flow')

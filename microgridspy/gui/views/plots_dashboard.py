@@ -13,7 +13,7 @@ from microgridspy.post_process.cost_calculations import (
 from microgridspy.post_process.energy_calculations import (
     calculate_energy_usage,
     calculate_renewable_penetration)
-from microgridspy.post_process.data_retrieval import get_sizing_results
+from microgridspy.post_process.data_retrieval import get_sizing_results, get_transformer_sizing_results
 from microgridspy.post_process.plots import (
     costs_pie_chart,
     create_energy_usage_pie_chart,
@@ -96,6 +96,16 @@ def costs_breakdown(model: Model, optimization_goal: str):
 
     if model.has_generator:
         fuel_cost_label = f" - Total Fuel Cost ({'Actualized' if actualized else 'Not Actualized'})"
+        fuel_cost = model.get_solution_variable(f"Total Fuel Cost {'(Actualized)' if actualized else '(Not Actualized)'}")
+        st.write(f"Fuel Cost: {fuel_cost}")
+        for gen_name in model.sets['generator_types'].values:
+            # Extract the fuel cost values for the generator type
+            gen_fuel_cost = fuel_cost.sel(generator_types=gen_name).values.flatten()
+
+            # Display in Streamlit
+            st.write(f"Fuel Cost for {gen_name}: {gen_fuel_cost}")
+            st.write('gen_name:', gen_name)
+        st.write(f"Fuel Cost: {model.get_solution_variable(f"Total Fuel Cost {'(Actualized)' if actualized else '(Not Actualized)'}")}")
         fuel_cost = model.get_solution_variable(f"Total Fuel Cost {'(Actualized)' if actualized else '(Not Actualized)'}").values.item()
         add_cost_item(fuel_cost_label, fuel_cost)
 
@@ -240,6 +250,10 @@ def plots_dashboard():
     fig['System Sizing'] = sizing_fig
     st.pyplot(sizing_fig)
     st.table(sizing_df)
+
+    transformer_sizing_df = get_transformer_sizing_results(model)
+    st.write("Transformer Sizing Results")
+    st.table(transformer_sizing_df)
     
     # Energy Balance Visualization
     # --------------------------------

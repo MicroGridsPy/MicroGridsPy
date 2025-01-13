@@ -38,6 +38,7 @@ advanced_settings:
   multi_scenario_optimization: false
   num_scenarios: 1
   scenario_weights: [1]
+  grid_type: "Alternating Current"
 
 resource_assessment:
   res_sources: 1
@@ -62,7 +63,7 @@ resource_assessment:
 
 # --- RES parameters (non-editable) ---
 nasa_power_params:
-  base_url: 'https://power.larc.nasa.gov/api/temporal/'
+  nasa_base_url: 'https://power.larc.nasa.gov/api/temporal/'
   loc_id: 'point'
   parameters_1: 'ALLSKY_SFC_SW_DWN'
   parameters_2: 'T2MWET,T2M,WS50M'
@@ -72,13 +73,13 @@ nasa_power_params:
   community: 'RE'
   temp_res_1: 'daily'
   temp_res_2: 'hourly'
-  output_format: 'JSON'
+  nasa_output_format: 'JSON'
   user: 'anonymous'
 
 # --- RES parameters (non-editable) ---
 pvgis_params:
-  base_url: 'https://re.jrc.ec.europa.eu/api/tmy?'
-  output_format: 'json'
+  pvgis_base_url: 'https://re.jrc.ec.europa.eu/api/tmy?'
+  pvgis_output_format: 'json'
 
 archetypes_params:
   demand_growth : 0.0
@@ -96,7 +97,7 @@ archetypes_params:
   hospital_5 : 0
 
 renewables_params:
-  res_inverter_efficiency: [0.98] #fraction
+  res_connection_types: ["Connected with the same Inverter as the Battery to the Microgrid"]
   res_specific_area: [11.49] #m2/kW
   res_specific_investment_cost: [0.95] #USD/W
   res_specific_om_cost: [0.018] #% of investment cost
@@ -105,6 +106,12 @@ renewables_params:
   res_existing_capacity: [0] #W
   res_existing_area: [0] #m2
   res_existing_years: [0] #years
+  res_inverter_efficiency: [0.98] #fraction
+  res_inverter_nominal_capacity: [1000] #W
+  res_inverter_lifetime: [20] #years
+  res_inverter_existing_capacity: [0] #W
+  res_inverter_existing_years: [0] #years
+  res_inverter_cost: [0.4] #USD/W
 
 battery_params:
   battery_chemistry: "LFP"
@@ -112,6 +119,11 @@ battery_params:
   battery_specific_investment_cost: 0.15 #USD/Wh
   battery_specific_electronic_investment_cost: 0.05 #USD/Wh
   battery_specific_om_cost: 0.06 #% of investment cost
+  battery_inverter_efficiency_dc_ac: 1.0 #fraction
+  battery_inverter_efficiency_ac_dc: 1.0 #fraction
+  battery_inverter_lifetime: 20 #years
+  battery_inverter_nominal_capacity: 1000 #W
+  battery_inverter_cost: 0.4 #USD/W
   battery_discharge_battery_efficiency: 1 #fraction
   battery_charge_battery_efficiency: 1 #fraction
   battery_initial_soc: 1.0 #fraction
@@ -123,12 +135,18 @@ battery_params:
   bess_unit_co2_emission: 0.0 #kgCO2/kWh
   battery_existing_capacity: 0.0 #Wh
   battery_existing_years: 0 #years
+  battery_existing_inverter_capacity: 0.0 #W
+  battery_inverter_existing_years: 0 #years
 
 generator_params:
   gen_types: 1
   gen_names: ["Diesel Generator"]
   gen_nominal_capacity: [1000] #W
   gen_nominal_efficiency: [0.3] #fraction
+  gen_rectifier_efficiency: [1.0] #fraction
+  gen_rectifier_nominal_capacity: [1000] #W
+  gen_rectifier_lifetime: [20] #years
+  gen_rectifier_cost: [0.4] #USD/W
   gen_partial_load: false
   gen_specific_investment_cost: [0.4] #USD/W
   gen_specific_om_cost: [0.08] #% of investment cost
@@ -143,6 +161,8 @@ generator_params:
   gen_min_output: [0.3] #fraction
   gen_cost_increase: [0.01] #fraction
   fuel_cost_option: ["Fixed price"]
+  gen_existing_rectifier_capacity: [0.0]
+  gen_existing_rectifier_years: [0]
 
 grid_params:
   year_grid_connection : 1
@@ -151,10 +171,12 @@ grid_params:
   grid_distance : 0.5 #km
   grid_connection_cost : 14000 #USD
   grid_maintenance_cost : 0.025 #fraction
+  grid_to_microgrid_efficiency: 1.0 #fraction
+  microgrid_to_grid_efficiency: 1.0 #fraction
+  grid_transformer_nominal_capacity: 100000 #kVA
+  grid_transformer_cost: 0.4 #USD/kVA
   maximum_grid_power : 80000 #W
   national_grid_specific_co2_emissions : 0.1495 #kgCO2/kWh
   grid_availability_simulation: false
   grid_average_number_outages : 43.48 #outages/year
   grid_average_outage_duration : 455 #hours
-  
-  

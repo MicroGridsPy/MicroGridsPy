@@ -15,9 +15,9 @@ from microgridspy.gui.utils import initialize_session_state
 def ensure_list_length(key: str, length: int) -> None:
     """Ensure the list in session state has the required length."""
     if key not in st.session_state:
-        st.session_state[key] = [0] * length
+        st.session_state[key] = [0.0] * length
     else:
-        st.session_state[key].extend([0] * (length - len(st.session_state[key])))
+        st.session_state[key].extend([0.0] * (length - len(st.session_state[key])))
 
 def manual_fuel_cost_input(time_horizon: int, gen_names: list, currency: str):
     """Create a data editor for manual input of fuel specific costs."""
@@ -82,13 +82,15 @@ def generator_technology() -> None:
 
         # Number of generator types
         st.session_state.gen_types = st.number_input("Number of Generator Types", min_value=1, value=st.session_state.gen_types)
+        st.write(st.session_state.gen_types)
 
         # Ensure session state lists have the correct length
         keys = [
         'gen_names', 'gen_nominal_capacity', 'gen_nominal_efficiency',
         'gen_specific_investment_cost', 'gen_specific_om_cost', 'gen_lifetime',
-        'gen_unit_co2_emission', 'gen_existing_capacity', 'gen_existing_years',
-        'fuel_names', 'fuel_lhv', 'fuel_co2_emission', 'gen_min_output', 'gen_cost_increase']
+        'gen_unit_co2_emission', 'gen_existing_capacity', 'gen_existing_years', 
+        'fuel_names', 'fuel_lhv', 'fuel_co2_emission', 'gen_min_output', 'gen_cost_increase',
+        'fuel_cost_option','gen_rectifier_efficiency']
         for key in keys:
             ensure_list_length(key, st.session_state.gen_types)
 
@@ -115,9 +117,36 @@ def generator_technology() -> None:
                 format="%.1f",
                 help="The efficiency of the generator at its nominal capacity. Input as a percentage.") / 100  # Convert percentage to fraction
 
+            if st.session_state.grid_type == "Direct Current":
+                st.session_state.gen_rectifier_efficiency[i] = st.number_input(
+                    f"Rectifier Efficiency of {gen_name} [%]", 
+                    min_value=0.0, 
+                    max_value=100.0, 
+                    value=float(st.session_state.gen_rectifier_efficiency[i] * 100),
+                    format="%.1f",
+                    help="The efficiency of the AC to DC conversion by the rectifier. Input as a percentage.") / 100  # Convert percentage to fraction
+                st.session_state.gen_rectifier_nominal_capacity[i] = st.number_input(
+                    f"Rectifier Nominal Capacity of {gen_name} [W]", 
+                    value=st.session_state.gen_rectifier_nominal_capacity[i],
+                    help="The rated power output of the rectifier.")
+                st.session_state.gen_rectifier_lifetime[i] = st.number_input(
+                    f"Rectifier Lifetime of {gen_name} [years]", 
+                    value=st.session_state.gen_rectifier_lifetime[i],
+                    help="Expected operational lifetime of the rectifier.")
+                st.session_state.gen_rectifier_cost[i] = st.number_input(
+                    f"Rectifier Cost of {gen_name} [{currency}/W]", 
+                    value=st.session_state.gen_rectifier_cost[i],
+                    step=0.01,
+                    help="The cost of the rectifier per watt of installed capacity.")
+            else:
+                st.session_state.gen_rectifier_efficiency[i] = 1.0
+                st.session_state.gen_rectifier_nominal_capacity[i] = 1.0 # does not matter
+                st.session_state.gen_rectifier_cost[i] = 0.0
+
             st.session_state.gen_specific_investment_cost[i] = st.number_input(
                 f"Specific Investment Cost of {gen_name} [{currency}/W]", 
                 value=st.session_state.gen_specific_investment_cost[i],
+                step=0.01,
                 help="The initial investment cost per watt of installed capacity.")
 
             st.session_state.gen_specific_om_cost[i] = st.number_input(
@@ -180,41 +209,65 @@ def generator_technology() -> None:
                         max_value=(st.session_state.gen_lifetime[i] - 1),
                         value=st.session_state.gen_existing_years[i],
                         help="The number of years the existing generators have been in operation.")
+                    
+                if st.session_state.grid_type == "Direct Current":
+                    st.session_state.gen_existing_rectifier_capacity[i] = st.number_input(
+                        f"Existing Rectifier Capacity of {gen_name} [W]", 
+                        min_value=0.0,
+                        value=float(st.session_state.gen_existing_rectifier_capacity[i]),
+                        help="The capacity of existing rectifiers of this type.")
+                    if st.session_state.gen_existing_rectifier_capacity[i] > 0:
+                        st.session_state.gen_existing_rectifier_years[i] = st.number_input(
+                            f"Existing Rectifier Years of {gen_name} [years]", 
+                            min_value=0,
+                            max_value=(st.session_state.gen_rectifier_lifetime[i] - 1),
+                            value=st.session_state.gen_existing_rectifier_years[i],
+                            help="The number of years the existing rectifiers have been in operation.")
 
+        # Initialize a consolidated DataFrame for all generators
+        fuel_cost_file_path = PathManager.FUEL_SPECIFIC_COST_FILE_PATH.parent / f"Fuel Specific Cost.csv"
+
+        if not fuel_cost_file_path.exists():
+            fuel_costs_combined = pd.DataFrame({"Year": list(range(1, time_horizon + 1))})
+        else:
+            fuel_costs_combined = pd.read_csv(fuel_cost_file_path)
+            # Ensure only defined columns are present
+            fuel_costs_combined = fuel_costs_combined[["Year"] + [col for col in st.session_state.gen_names if col in fuel_costs_combined.columns]]
+
+        existing_fuel_cost_data = load_fuel_cost_data(fuel_cost_file_path)
+
+        for i in range(st.session_state.gen_types):            
             # Variable Fuel Cost
+            gen_name = st.session_state.gen_names[i]
             st.subheader(f"Variable Fuel Cost for {gen_name}")
-        
+
+            if st.session_state.fuel_cost_option[i] not in ["Fixed price", "Variable prices"]:
+                st.session_state.fuel_cost_option[i] = "Fixed price"
+
             st.session_state.fuel_cost_option[i] = st.radio(
                 f"Select fuel cost type for {gen_name}:",
                 ["Fixed price", "Variable prices"],
                 index=["Fixed price", "Variable prices"].index(st.session_state.fuel_cost_option[i]),
                 key=f"fuel_cost_option_{i}")
 
-            fuel_cost_file_path = PathManager.FUEL_SPECIFIC_COST_FILE_PATH.parent / "Fuel Specific Cost.csv"
-            existing_fuel_cost_data = load_fuel_cost_data(fuel_cost_file_path)
-
             if st.session_state.fuel_cost_option[i] == "Fixed price":
                 fixed_price = st.number_input(
                     f"Fixed fuel price for {gen_name} [{currency}/l]",
                     min_value=0.0,
-                    value=existing_fuel_cost_data[gen_name].iloc[0],
+                    value=existing_fuel_cost_data[gen_name].iloc[0] if existing_fuel_cost_data is not None and gen_name in existing_fuel_cost_data.columns else 2.0,
                     step=0.01,
                     format="%.2f",
                     key=f"fixed_price_{i}")
-            
-                fuel_cost_df = pd.DataFrame({
-                    'Year': list(range(1, time_horizon + 1)),
-                    gen_name: [fixed_price] * time_horizon})
-                
-                # Save the data to CSV file
-                fuel_cost_df.to_csv(fuel_cost_file_path, index=False)
-        
+
+                # Add fixed price to the consolidated DataFrame
+                fuel_costs_combined[gen_name] = [fixed_price] * time_horizon
+
             else:  # Variable prices
                 st.write(f"Please input the fuel specific cost for {gen_name} over the project timeline:")
-            
-                if existing_fuel_cost_data is not None:
+
+                if existing_fuel_cost_data is not None and gen_name in existing_fuel_cost_data.columns:
                     fuel_cost_df = st.data_editor(
-                        existing_fuel_cost_data,
+                        existing_fuel_cost_data[["Year", gen_name]],
                         num_rows="dynamic",
                         column_config={
                             "Year": st.column_config.NumberColumn(
@@ -231,9 +284,10 @@ def generator_technology() -> None:
                 else:
                     fuel_cost_df = manual_fuel_cost_input(time_horizon, [gen_name], currency)
 
+                fuel_costs_combined[gen_name] = fuel_cost_df[gen_name].values
+
                 if st.button(f"Save and Export Fuel Cost Data for {gen_name}"):
-                    # Save the data to CSV file
-                    fuel_cost_df.to_csv(fuel_cost_file_path, index=False)
+                    fuel_costs_combined.to_csv(fuel_cost_file_path, index=False)
                     st.success(f"Fuel Specific Cost data saved and exported successfully to {fuel_cost_file_path}")
 
                 # Create line plot
@@ -248,6 +302,11 @@ def generator_technology() -> None:
 
             st.markdown("---")  # Add a horizontal line for visual separation between generator types
 
+        # Save the consolidated DataFrame at the end of the loop
+        columns =st.session_state.gen_names[:st.session_state.gen_types]
+        columns.insert(0, "Year")
+        fuel_costs_combined = fuel_costs_combined[columns]
+        fuel_costs_combined.to_csv(fuel_cost_file_path, index=False)
 
         # Partial Load Parameters
         if milp_formulation and unit_commitment:

@@ -67,6 +67,7 @@ def initialize_session_state(default_values: Any, settings_type: str) -> None:
     """Initialize session state variables from default values."""
     for key, value in vars(getattr(default_values, settings_type)).items():
         if key not in st.session_state:
+            st.write("Setting", key, "to", value)
             st.session_state[key] = value
 
 
