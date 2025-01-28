@@ -149,7 +149,7 @@ def P_turb(
 
         # Compute hourly energy production using interpolation
         interpolated_value = np.interp(WS_rotor_value, xp, fp) * 1000
-        En_WT.append(interpolated_value)
+        En_WT.append(interpolated_value * drivetrain_efficiency)
 
         # Compute hourly turbine power coefficient
         Cp.append(En_WT[ii]/(En_wind[ii])) if En_wind[ii] != 0 else Cp.append(0)
@@ -198,11 +198,10 @@ def download_pvgis_pv_data(
     tmy_df = pd.DataFrame(tmy_hourly_data)
 
     I_tilt = [[] for _ in range(len(tmy_df) // 24)]
-    day = 1
     for day_year in range(len(tmy_df) // 24):
         H_lst = [value / 1000 for value in tmy_df['G(h)'][day_year * 24:(day_year + 1) * 24].tolist()]
         I_diff_lst = [value / 1000 for value in tmy_df['Gd(h)'][day_year * 24:(day_year + 1) * 24].tolist()]
-        I_tilt[day_year] = hourly_solar(H_lst, I_diff_lst, lat, lon, day, tilt, azimuth, ro_ground)
+        I_tilt[day_year] = hourly_solar(H_lst, I_diff_lst, lat, lon, day_year+1, tilt, azimuth, ro_ground)       
              
     T_amb = [tmy_df['T2m'][i*24:(i+1)*24].tolist() for i in range(len(tmy_df) // 24)]
     T_cell = [[] for ii in range(len(T_amb))]    

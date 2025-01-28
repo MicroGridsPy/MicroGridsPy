@@ -421,8 +421,8 @@ def resource_assessment():
                             try:
                                 solar_resource_data = download_pvgis_pv_data(
                                     res_name=res_name, 
-                                    base_URL=pvgis_params.base_url,
-                                    output_format=pvgis_params.output_format,
+                                    base_URL=pvgis_params.pvgis_base_url,
+                                    output_format=pvgis_params.pvgis_output_format,
                                     lat=st.session_state.lat, 
                                     lon=st.session_state.lon, 
                                     nom_power=st.session_state.res_nominal_capacity[i],
@@ -483,7 +483,7 @@ def resource_assessment():
                             try:
                                 solar_resource_data = download_nasa_pv_data(
                                     res_name=res_name, 
-                                    base_URL=nasa_power_params.base_url,
+                                    base_URL=nasa_power_params.nasa_base_url,
                                     loc_id=nasa_power_params.loc_id,
                                     parameters_1=nasa_power_params.parameters_1,
                                     parameters_2=nasa_power_params.parameters_2,
@@ -493,7 +493,7 @@ def resource_assessment():
                                     community=nasa_power_params.community,
                                     temp_res_1=nasa_power_params.temp_res_1,
                                     temp_res_2=nasa_power_params.temp_res_2,
-                                    output_format=nasa_power_params.output_format,
+                                    output_format=nasa_power_params.nasa_output_format,
                                     lat=st.session_state.lat, 
                                     lon=st.session_state.lon, 
                                     time_zone=st.session_state.time_zone,
@@ -624,8 +624,8 @@ def resource_assessment():
                             try:
                                 wind_resource_data = download_pvgis_wind_data(
                                     res_name=res_name, 
-                                    base_URL=pvgis_params.base_url,
-                                    output_format=pvgis_params.output_format,
+                                    base_URL=pvgis_params.pvgis_base_url,
+                                    output_format=pvgis_params.pvgis_output_format,
                                     lat=st.session_state.lat, 
                                     lon=st.session_state.lon, 
                                     turbine_model=st.session_state.turbine_model, 
@@ -713,7 +713,7 @@ def resource_assessment():
                             try:
                                 wind_resource_data = download_nasa_wind_data(
                                     res_name=res_name, 
-                                    base_URL=nasa_power_params.base_url,
+                                    base_URL=nasa_power_params.nasa_base_url,
                                     loc_id=nasa_power_params.loc_id,
                                     parameters_1=nasa_power_params.parameters_1,
                                     parameters_2=nasa_power_params.parameters_2,
@@ -723,7 +723,7 @@ def resource_assessment():
                                     community=nasa_power_params.community,
                                     temp_res_1=nasa_power_params.temp_res_1,
                                     temp_res_2=nasa_power_params.temp_res_2,
-                                    output_format=nasa_power_params.output_format,
+                                    output_format=nasa_power_params.nasa_output_format,
                                     lat=st.session_state.lat, 
                                     lon=st.session_state.lon, 
                                     time_zone=st.session_state.time_zone,

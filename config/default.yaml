@@ -62,7 +62,7 @@ resource_assessment:
 
 # --- RES parameters (non-editable) ---
 nasa_power_params:
-  base_url: 'https://power.larc.nasa.gov/api/temporal/'
+  nasa_base_url: 'https://power.larc.nasa.gov/api/temporal/'
   loc_id: 'point'
   parameters_1: 'ALLSKY_SFC_SW_DWN'
   parameters_2: 'T2MWET,T2M,WS50M'
@@ -72,13 +72,13 @@ nasa_power_params:
   community: 'RE'
   temp_res_1: 'daily'
   temp_res_2: 'hourly'
-  output_format: 'JSON'
+  nasa_output_format: 'JSON'
   user: 'anonymous'
 
 # --- RES parameters (non-editable) ---
 pvgis_params:
-  base_url: 'https://re.jrc.ec.europa.eu/api/tmy?'
-  output_format: 'json'
+  pvgis_base_url: 'https://re.jrc.ec.europa.eu/api/tmy?'
+  pvgis_output_format: 'json'
 
 archetypes_params:
   demand_growth : 0.0

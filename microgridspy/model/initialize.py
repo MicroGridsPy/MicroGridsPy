@@ -95,7 +95,7 @@ def initialize_resource(sets: xr.Dataset) -> xr.DataArray:
     num_periods = len(sets.periods)
 
     # Reshape the data to match other variables' dimension order
-    resource_data = resource_df.values.reshape(num_scenarios, num_res_sources, num_periods)
+    resource_data = resource_df.values.flatten(order='F').reshape(num_scenarios, num_res_sources, num_periods)
 
     # Create xarray DataArray with consistent dimension order
     return xr.DataArray(

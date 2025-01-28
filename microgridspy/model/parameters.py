@@ -125,7 +125,7 @@ class NasaPowerParams(BaseModel):
         output_format (str): Output format.
         user (str): User key.
     """
-    base_url: str
+    nasa_base_url: str
     loc_id: str
     parameters_1: str
     parameters_2: str
@@ -135,7 +135,7 @@ class NasaPowerParams(BaseModel):
     community: str
     temp_res_1: str
     temp_res_2: str
-    output_format: str
+    nasa_output_format: str
     user: str
 
 class PVGISParams(BaseModel):
@@ -148,8 +148,8 @@ class PVGISParams(BaseModel):
         base_url (str): Base URL for the PVGIS API.
         output_format (str): Output format.
     """
-    base_url: str
-    output_format: str
+    pvgis_base_url: str
+    pvgis_output_format: str
 
 class ResourceAssessment(BaseModel):
     """
