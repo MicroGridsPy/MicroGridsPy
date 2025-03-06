@@ -329,6 +329,8 @@ def resource_assessment():
         st.session_state.res_names = []
     if 'res_types' not in st.session_state:
         st.session_state.res_types = []
+    if 'res_current_types' not in st.session_state:
+        st.session_state.res_current_types = []
     if 'res_nominal_capacity' not in st.session_state:
         st.session_state.res_nominal_capacity = []
 
@@ -344,17 +346,20 @@ def resource_assessment():
         st.session_state.res_names.append(f"Renewable Source {len(st.session_state.res_names) + 1}")
     while len(st.session_state.res_types) < st.session_state.res_sources:
         st.session_state.res_types.append("☀️ Solar Energy")
+    while len(st.session_state.res_current_types) < st.session_state.res_sources:
+        st.session_state.res_current_types.append("Direct Current")
     while len(st.session_state.res_nominal_capacity) < st.session_state.res_sources:
         st.session_state.res_nominal_capacity.append(0)
 
     # Truncate lists if necessary
     st.session_state.res_names = st.session_state.res_names[:st.session_state.res_sources]
     st.session_state.res_types = st.session_state.res_types[:st.session_state.res_sources]
+    st.session_state.res_current_types = st.session_state.res_current_types[:st.session_state.res_sources]
     st.session_state.res_nominal_capacity = st.session_state.res_nominal_capacity[:st.session_state.res_sources]
 
     # Input for resource names and types
     for i in range(st.session_state.res_sources):
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         with col1:
             st.session_state.res_names[i] = st.text_input(
                 f"Name for Renewable Technology {i+1}", 
@@ -368,7 +373,14 @@ def resource_assessment():
                 index=["☀️ Solar Energy", "🌀 Wind Energy", "📝 Other"].index(st.session_state.res_types[i]),
                 key=f"res_type_{i}",
                 help="Select the type of renewable energy source. This determines the configuration options and data processing.")
-
+        with col3:
+            st.session_state.res_current_types[i] = st.selectbox(
+                f"Current Type of Resource {i+1}", 
+                ["Alternating Current", "Direct Current"], 
+                index=["Alternating Current", "Direct Current"].index(st.session_state.res_current_types[i]),
+                key=f"res_current_type_{i}",
+                help="Select the current type of renewable energy source. This determines the configuration options and data processing.")
+            
     # Configuration sections for each resource
     for i in range(st.session_state.res_sources):
         res_name = st.session_state.res_names[i]

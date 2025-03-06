@@ -13,7 +13,7 @@ from microgridspy.post_process.cost_calculations import (
 from microgridspy.post_process.energy_calculations import (
     calculate_energy_usage,
     calculate_renewable_penetration)
-from microgridspy.post_process.data_retrieval import get_sizing_results
+from microgridspy.post_process.data_retrieval import get_sizing_results, get_conversion_sizing_results
 from microgridspy.post_process.plots import (
     costs_pie_chart,
     create_energy_usage_pie_chart,
@@ -133,7 +133,7 @@ def define_all_elements(model: Model) -> List[str]:
         elements.append("Lost Load")
     return elements
 
-def export_results(project_name: str, model: Model, costs_df: pd.DataFrame, sizing_df: pd.DataFrame, fig: dict) -> None:
+def export_results(project_name: str, model: Model, costs_df: pd.DataFrame, sizing_df: pd.DataFrame, conversion_sizing_df: pd.DataFrame, fig: dict) -> None:
     """Setup the export results section."""
 
     # Retrieve results folder path
@@ -156,6 +156,9 @@ def export_results(project_name: str, model: Model, costs_df: pd.DataFrame, sizi
             # Sizing results
             sizing_df.to_excel(results_folder / "Sizing Results.xlsx", index=False)
             sizing_df.to_excel(project_folder / "Sizing Results.xlsx", index=False)
+            if conversion_sizing_df is not None:
+                conversion_sizing_df.to_excel(results_folder / "Conversion Sizing Results.xlsx", index=False)
+                conversion_sizing_df.to_excel(project_folder / "Conversion Sizing Results.xlsx", index=False)
             
             # Energy balance
             save_energy_balance_to_excel(model, results_folder)
@@ -240,6 +243,14 @@ def plots_dashboard():
     fig['System Sizing'] = sizing_fig
     st.pyplot(sizing_fig)
     st.table(sizing_df)
+
+    try:
+        conversion_sizing_df = get_conversion_sizing_results(model)
+        st.write("Conversion Sizing Results")
+        st.table(conversion_sizing_df)
+    except:
+        conversion_sizing_df = None
+        st.write("No conversion sizing results available.")
     
     # Energy Balance Visualization
     # --------------------------------
@@ -279,7 +290,7 @@ def plots_dashboard():
     # Export results
     st.header("Export Results")
     st.write("Click the buttons below to export the full results to Excel or save the current plots.")
-    export_results(project_name, model, costs_df, sizing_df, fig)
+    export_results(project_name, model, costs_df, sizing_df, conversion_sizing_df, fig)
 
     st.write("---")  # Add a separator
 

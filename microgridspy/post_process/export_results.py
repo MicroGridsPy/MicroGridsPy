@@ -11,7 +11,8 @@ def save_energy_balance_to_excel(model: Model, base_filepath: Path) -> None:
     demand = model.parameters['DEMAND']
     res_production = model.get_solution_variable('Energy Production by Renewables')
     curtailment = model.get_solution_variable('Curtailment by Renewables')
-    
+    res_conversion_losses = model.get_solution_variable('Conversion Losses - Renewable Sources')    
+
     # Mapping steps to years
     steps = res_production.coords['steps'].values
     years = demand.coords['years'].values
@@ -31,9 +32,13 @@ def save_energy_balance_to_excel(model: Model, base_filepath: Path) -> None:
                 for source in res_production.coords['renewable_sources'].values:
                     source_production = res_production.isel(scenarios=scenario).sel(steps=step, renewable_sources=source).values / 1000
                     source_curtailment = curtailment.isel(scenarios=scenario).sel(years=year + start_year, renewable_sources=source).values / 1000 if curtailment is not None else 0
+                    res_losses = res_conversion_losses.isel(scenarios=scenario).sel(years=year + start_year, renewable_sources=source).values / 1000
+                    res_losses = res_losses.flatten() 
                     data[f'{source} Total Production (kWh)'] = source_production
                     data[f'{source} Curtailment (kWh)'] = source_curtailment
                     data[f'{source} Actual Production (kWh)'] = source_production - source_curtailment
+                    data[f'{source} Conversion Losses (kWh)'] = res_losses
+
 
                 # Battery data
                 if model.has_battery:
@@ -47,12 +52,31 @@ def save_energy_balance_to_excel(model: Model, base_filepath: Path) -> None:
                     data['Battery Inflow (kWh)'] = (battery_inflow.isel(scenarios=scenario).sel(years=year + start_year).values) / 1000
                     data['Battery State of Charge (%)'] = ((state_of_charge.isel(scenarios=scenario).sel(years=year + start_year).values) / 
                                                            (battery_units.sel(steps=step).values * battery_nominal_capacity.values) * 100)
+                    if any(model.parameters['RES_CONNECTED_TO_BATTERY'].sel(renewable_sources=res).item() for res in model.sets.renewable_sources.values):
+                        feed_in_losses = model.get_solution_variable('Feed In Losses - DC System')
+                        charge_losses = model.get_solution_variable('Charge Losses - DC System')
+                        battery_conversion_losses = model.get_solution_variable("Feed In Losses - DC System") - model.get_solution_variable("Charge Losses - DC System")
+                        battery_losses = (battery_conversion_losses.isel(scenarios=scenario).sel(years=year + start_year).values) / 1000   
+                        battery_losses = battery_losses.flatten() 
+                        data['DC System Conversion Losses (kWh)'] = battery_losses
+                        data['DC System Charge Losses (kWh)'] = - (charge_losses.isel(scenarios=scenario).sel(years=year + start_year).values) / 1000
+                        data['DC System Feed In Losses (kWh)'] = (feed_in_losses.isel(scenarios=scenario).sel(years=year + start_year).values) / 1000           
+                    else:
+                        battery_losses = model.get_solution_variable("Conversion Losses - Battery")
+                        battery_losses = (battery_losses.isel(scenarios=scenario).sel(years=year + start_year).values) / 1000
+                        battery_losses = battery_losses.flatten()
+                        data['Battery Conversion Losses (kWh)'] = battery_losses 
 
                 # Generator data
                 if model.has_generator:
                     generator_production = model.get_solution_variable('Generator Energy Production')
+                    generator_conversion_losses = model.get_solution_variable('Conversion Losses - Generator')
                     for gen_type in generator_production.coords['generator_types'].values:
-                        data[f'{gen_type} Production (kWh)'] = generator_production.isel(scenarios=scenario).sel(years=year + start_year, generator_types=gen_type).values / 1000
+                        data[f'{gen_type} Production (kWh)'] = (generator_production.isel(scenarios=scenario).sel(years=year + start_year, generator_types=gen_type).values) / 1000
+                        generator_losses = (generator_conversion_losses.isel(scenarios=scenario).sel(years=year + start_year, generator_types=gen_type).values) / 1000
+                        generator_losses = generator_losses.flatten() 
+                        data[f'{gen_type} Conversion Losses (kWh)'] = generator_losses
+
                 
                 # Grid connection data
                 if model.has_grid_connection:
@@ -61,6 +85,10 @@ def save_energy_balance_to_excel(model: Model, base_filepath: Path) -> None:
                     if model.settings.advanced_settings.grid_connection_type == 1:
                         energy_to_grid = model.get_solution_variable('Energy to Grid')
                         data['Energy to Grid (kWh)'] = (energy_to_grid.isel(scenarios=scenario).sel(years=year + start_year).values) / 1000
+                    grid_conversion_losses = model.get_solution_variable('Conversion Losses - Grid')
+                    grid_losses = (grid_conversion_losses.isel(scenarios=scenario).sel(years=year + start_year).values) / 1000
+                    grid_losses = grid_losses.flatten() 
+                    data['Grid Conversion Losses (kWh)'] = grid_losses
 
                 # Lost load data
                 if model.get_settings('lost_load_fraction') > 0.0:

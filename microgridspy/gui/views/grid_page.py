@@ -170,6 +170,11 @@ def grid_technology() -> None:
         st.session_state.grid_distance = st.number_input("Distance to Grid [km]", min_value=0.0, value=st.session_state.grid_distance)
         st.session_state.grid_connection_cost = st.number_input(f"Grid Connection Cost [{currency}]", min_value=0.0, value=st.session_state.grid_connection_cost)
         st.session_state.grid_maintenance_cost = st.number_input(f"Grid Maintenance Cost as % of connection cost [%]", min_value=0.0, value=st.session_state.grid_maintenance_cost * 100) / 100
+        st.session_state.grid_to_microgrid_efficiency = st.number_input("Grid to Microgrid Efficiency [%]", min_value=0.0, max_value=100.0, value=st.session_state.grid_to_microgrid_efficiency * 100) / 100
+        if grid_connection_type == 1:
+            st.session_state.microgrid_to_grid_efficiency = st.number_input("Microgrid to Grid Efficiency [%]", min_value=0.0, max_value=100.0, value=st.session_state.microgrid_to_grid_efficiency * 100) / 100
+        st.session_state.grid_transformer_nominal_capacity = st.number_input("Grid Transformer Nominal Capacity [kVA]", min_value=0.0, value=st.session_state.grid_transformer_nominal_capacity)
+        st.session_state.grid_transformer_cost = st.number_input(f"Grid Transformer Cost [{currency}/kVA]", min_value=0.0, value=st.session_state.grid_transformer_cost)
         st.session_state.maximum_grid_power = st.number_input("Maximum Grid Power [W]", min_value=0.0, value=st.session_state.maximum_grid_power)
         st.session_state.national_grid_specific_co2_emissions = st.number_input("National Grid Specific CO2 Emissions [kgCO2/kWh]", min_value=0.0, value=st.session_state.national_grid_specific_co2_emissions)
 
