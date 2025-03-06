@@ -137,7 +137,7 @@ def update_parameters(i: int, res_name: str, time_horizon: int, brownfield: bool
                 st.session_state.res_connection_types[i] = options[1]
             if st.session_state.milp_formulation:
                 st.session_state.res_connection_types[i] = st.selectbox(
-                        f"Connection to the Microgrid for Resource {i+1}", 
+                        f"Connection to the Microgrid for Resource {i+1} (Refer to the Visualization at the End of this Page)", 
                         options, 
                         index=options.index(st.session_state.res_connection_types[i]),
                         key=f"res_connenction_types_{i}",
@@ -177,7 +177,7 @@ def update_parameters(i: int, res_name: str, time_horizon: int, brownfield: bool
             if st.session_state.res_connection_types[i] not in options:
                 st.session_state.res_connection_types[i] = options[1]
             st.session_state.res_connection_types[i] = st.selectbox(
-                    f"Connection to the Microgrid for Resource {i+1}", 
+                    f"Connection to the Microgrid for Resource {i+1} (Refer to the Visualization at the End of this Page)", 
                     options, 
                     index=options.index(st.session_state.res_connection_types[i]),
                     key=f"res_connenction_type_{i}",
