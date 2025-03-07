@@ -27,6 +27,7 @@ from microgridspy.model.variables import (
     add_grid_variables)
 from microgridspy.model.constraints.project_costs import add_cost_calculation_constraints
 from microgridspy.model.constraints.energy_balance import add_energy_balance_constraints
+from microgridspy.model.constraints.conversion_constraints import add_minimum_conversion_size_constraints
 from microgridspy.model.constraints.res_constraints import add_res_constraints
 from microgridspy.model.constraints.battery_constraints import add_battery_constraints
 from microgridspy.model.constraints.generator_constraints import add_generator_constraints
@@ -126,6 +127,7 @@ class Model:
         add_res_constraints(self.model, self.settings, self.sets, self.parameters, self.variables)
         add_cost_calculation_constraints(self.model, self.settings, self.sets, self.parameters, self.variables, self.has_battery, self.has_generator, self.has_grid_connection)
         add_energy_balance_constraints(self.model, self.settings, self.sets, self.parameters, self.variables, self.has_battery, self.has_generator, self.has_grid_connection)
+        add_minimum_conversion_size_constraints(self.model, self.settings, self.sets, self.parameters, self.variables, self.has_battery, self.has_generator, self.has_grid_connection)
         
         if self.has_battery:
             add_battery_constraints(self.model, self.settings, self.sets, self.parameters, self.variables)

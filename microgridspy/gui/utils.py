@@ -98,3 +98,99 @@ def csv_upload_interface(key_prefix: str) -> Tuple[st.file_uploader, str, str]:
     uploaded_file = st.file_uploader(f"Choose a CSV file", type=["csv"], key=f"{key_prefix}_uploader")
     
     return uploaded_file, delimiter_value, decimal_value
+
+def generate_flow_chart(res_names: list) -> None:
+    has_battery: bool = st.session_state.system_configuration in [0, 1]
+    has_generator: bool = st.session_state.system_configuration in [0, 2]
+    has_grid_connection: bool = st.session_state.grid_connection
+
+    mermaid_code = "flowchart TB\n"
+    if st.session_state.grid_type == "Alternating Current":
+        idx_connected_to_battery = [idx for idx, connection_type in enumerate(st.session_state.res_connection_types) if connection_type == "Connected with the same Inverter as the Battery to the Microgrid"]
+        idx_not_connected_to_battery = [idx for idx, connection_type in enumerate(st.session_state.res_connection_types) if connection_type != "Connected with the same Inverter as the Battery to the Microgrid"]
+        if idx_connected_to_battery:
+            mermaid_code += "subgraph Shared_System [DC Subystem]\n"
+            for idx in idx_connected_to_battery:
+                mermaid_code += f"{res_names[idx].replace(' ', '_')} --> DC_System\n"
+            mermaid_code += "Battery <--> DC_System\n"
+            mermaid_code += "DC_System <--> Inverter_DC_System\n"
+            mermaid_code += "end\n"
+            mermaid_code += "Inverter_DC_System <--> Microgrid\n"
+            for idx in idx_not_connected_to_battery:
+                if st.session_state.res_connection_types[idx] == "Connected with a AC-AC Converter to the Microgrid":
+                    mermaid_code += f"{res_names[idx].replace(' ', '_')} --> AC-AC_Converter_{res_names[idx].replace(' ', '_')}\n"
+                    mermaid_code += f"AC-AC_Converter_{res_names[idx].replace(' ', '_')} --> Microgrid\n"
+                else:
+                    mermaid_code += f"{res_names[idx].replace(' ', '_')} --> Microgrid\n"
+            if has_generator:
+                mermaid_code += "Generator --> Microgrid\n"
+            if has_grid_connection:
+                if st.session_state.grid_connection_type == 0:
+                    mermaid_code += "Grid --> Transformer\n"
+                    mermaid_code += "Transformer --> Microgrid\n"
+                elif st.session_state.grid_connection_type == 1:
+                    mermaid_code += "Grid <--> Transformer\n"
+                    mermaid_code += "Transformer <--> Microgrid\n"
+
+        else:
+            for idx in range(len(res_names)):
+                if st.session_state.res_connection_types[idx] == "Connected with a seperate Inverter to the Microgrid":
+                    mermaid_code += f"{res_names[idx].replace(' ', '_')} --> Inverter_{res_names[idx].replace(' ', '_')}\n"
+                    mermaid_code += f"Inverter_{res_names[idx].replace(' ', '_')} --> Microgrid\n"
+                elif st.session_state.res_connection_types[idx] == "Connected with a AC-AC Converter to the Microgrid":
+                    mermaid_code += f"{res_names[idx].replace(' ', '_')} --> AC-AC_Converter_{res_names[idx].replace(' ', '_')}\n"
+                    mermaid_code += f"AC-AC_Converter_{res_names[idx].replace(' ', '_')} --> Microgrid\n"
+                else:
+                    mermaid_code += f"{res_names[idx].replace(' ', '_')} --> Microgrid\n"
+            if has_battery:
+                mermaid_code += "Battery <--> Inverter_Battery\n"
+                mermaid_code += "Inverter_Battery <--> Microgrid\n"
+            if has_generator:
+                mermaid_code += "Generator --> Microgrid\n"
+            if has_grid_connection:
+                if st.session_state.grid_connection_type == 0:
+                    mermaid_code += "Grid --> Transformer\n"
+                    mermaid_code += "Transformer --> Microgrid\n"
+                elif st.session_state.grid_connection_type == 1:
+                    mermaid_code += "Grid <--> Transformer\n"
+                    mermaid_code += "Transformer <--> Microgrid\n"
+    
+    else:
+        for idx in range(len(res_names)):
+            if st.session_state.res_current_types[idx] == "Direct Current":
+                mermaid_code += f"{res_names[idx].replace(' ', '_')} --> Microgrid\n"
+            elif st.session_state.res_current_types[idx] == "Alternating Current":
+                mermaid_code += f"{res_names[idx].replace(' ', '_')} --> Rectifier_{res_names[idx].replace(' ', '_')}\n"
+                mermaid_code += f"Rectifier_{res_names[idx].replace(' ', '_')} --> Microgrid\n"
+        if has_battery:
+            mermaid_code += "Battery <--> Microgrid\n"
+        if has_generator:
+            mermaid_code += "Generator --> Rectifier_Generator\n"
+            mermaid_code += "Rectifier_Generator --> Microgrid\n"
+        if has_grid_connection:
+            if st.session_state.grid_connection_type == 0:
+                mermaid_code += "Grid --> Transformer\n"
+                mermaid_code += "Transformer --> Microgrid\n"
+            elif st.session_state.grid_connection_type == 1:
+                mermaid_code += "Grid <--> Transformer\n"
+                mermaid_code += "Transformer <--> Microgrid\n"
+
+    # Add final connection to Load
+    mermaid_code += "Microgrid --> Load\n"
+
+    # Wrap Mermaid code in the HTML template
+    mermaid_html = f"""
+    <div class="mermaid">
+    {mermaid_code}
+    </div>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({{
+            startOnLoad: true,
+            theme: 'dark',
+        }});
+    </script>
+    """
+
+    # Display the generated Mermaid flowchart
+    st.components.v1.html(mermaid_html, height=700)

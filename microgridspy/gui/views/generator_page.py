@@ -15,9 +15,9 @@ from microgridspy.gui.utils import initialize_session_state
 def ensure_list_length(key: str, length: int) -> None:
     """Ensure the list in session state has the required length."""
     if key not in st.session_state:
-        st.session_state[key] = [0] * length
+        st.session_state[key] = [0.0] * length
     else:
-        st.session_state[key].extend([0] * (length - len(st.session_state[key])))
+        st.session_state[key].extend([0.0] * (length - len(st.session_state[key])))
 
 def manual_fuel_cost_input(time_horizon: int, gen_names: list, currency: str):
     """Create a data editor for manual input of fuel specific costs."""
@@ -77,7 +77,7 @@ def generator_technology() -> None:
         time_horizon = st.session_state.get('time_horizon', 0)
         brownfield = st.session_state.get('brownfield', False)
         unit_commitment = st.session_state.get('unit_commitment', False)
-        milp_formulation = st.session_state.get('advanced_settings', {}).get('milp_formulation', False)
+        milp_formulation = st.session_state.get('milp_formulation', False)
         fuel_cost_df = None
 
         # Number of generator types
@@ -87,8 +87,9 @@ def generator_technology() -> None:
         keys = [
         'gen_names', 'gen_nominal_capacity', 'gen_nominal_efficiency',
         'gen_specific_investment_cost', 'gen_specific_om_cost', 'gen_lifetime',
-        'gen_unit_co2_emission', 'gen_existing_capacity', 'gen_existing_years',
-        'fuel_names', 'fuel_lhv', 'fuel_co2_emission', 'gen_min_output', 'gen_cost_increase']
+        'gen_unit_co2_emission', 'gen_existing_capacity', 'gen_existing_years', 
+        'fuel_names', 'fuel_lhv', 'fuel_co2_emission', 'gen_min_output', 'gen_cost_increase',
+        'gen_rectifier_efficiency']
         for key in keys:
             ensure_list_length(key, st.session_state.gen_types)
 
@@ -114,10 +115,38 @@ def generator_technology() -> None:
                 step=0.1,
                 format="%.1f",
                 help="The efficiency of the generator at its nominal capacity. Input as a percentage.") / 100  # Convert percentage to fraction
+            
+            if st.session_state.grid_type == "Direct Current":
+                st.session_state.gen_rectifier_efficiency[i] = st.number_input(
+                    f"Rectifier Efficiency of {gen_name} [%]", 
+                    min_value=0.0, 
+                    max_value=100.0, 
+                    value=float(st.session_state.gen_rectifier_efficiency[i] * 100),
+                    format="%.1f",
+                    help="The efficiency of the AC to DC conversion by the rectifier. Input as a percentage.") / 100  # Convert percentage to fraction
+                st.session_state.gen_rectifier_nominal_capacity[i] = st.number_input(
+                    f"Rectifier Nominal Capacity of {gen_name} [W]", 
+                    value=st.session_state.gen_rectifier_nominal_capacity[i],
+                    help="The rated power output of the rectifier.")
+                st.session_state.gen_rectifier_lifetime[i] = st.number_input(
+                    f"Rectifier Lifetime of {gen_name} [years]", 
+                    value=st.session_state.gen_rectifier_lifetime[i],
+                    help="Expected operational lifetime of the rectifier.")
+                st.session_state.gen_rectifier_cost[i] = st.number_input(
+                    f"Rectifier Cost of {gen_name} [{currency}/W]", 
+                    value=st.session_state.gen_rectifier_cost[i],
+                    step=0.01,
+                    help="The cost of the rectifier per watt of installed capacity.")
+            else:
+                st.session_state.gen_rectifier_efficiency[i] = 1.0
+                st.session_state.gen_rectifier_nominal_capacity[i] = 1.0 # does not matter
+                st.session_state.gen_rectifier_cost[i] = 0.0
+
 
             st.session_state.gen_specific_investment_cost[i] = st.number_input(
                 f"Specific Investment Cost of {gen_name} [{currency}/W]", 
                 value=st.session_state.gen_specific_investment_cost[i],
+                step=0.01,
                 help="The initial investment cost per watt of installed capacity.")
 
             st.session_state.gen_specific_om_cost[i] = st.number_input(
@@ -180,6 +209,23 @@ def generator_technology() -> None:
                         max_value=(st.session_state.gen_lifetime[i] - 1),
                         value=st.session_state.gen_existing_years[i],
                         help="The number of years the existing generators have been in operation.")
+
+                if st.session_state.grid_type == "Direct Current":
+                    st.session_state.gen_existing_rectifier_capacity[i] = st.number_input(
+                        f"Existing Rectifier Capacity of {gen_name} [W]", 
+                        min_value=0.0,
+                        value=float(st.session_state.gen_existing_rectifier_capacity[i]),
+                        help="The capacity of existing rectifiers of this type.")
+                    if st.session_state.gen_existing_rectifier_capacity[i] > 0:
+                        st.session_state.gen_existing_rectifier_years[i] = st.number_input(
+                            f"Existing Rectifier Years of {gen_name} [years]", 
+                            min_value=0,
+                            max_value=(st.session_state.gen_rectifier_lifetime[i] - 1),
+                            value=st.session_state.gen_existing_rectifier_years[i],
+                            help="The number of years the existing rectifiers have been in operation.")
+                else:
+                    st.session_state.gen_existing_rectifier_capacity[i] = gen_capacity
+                    st.session_state.gen_existing_rectifier_years[i] = 0
 
             # Variable Fuel Cost
             st.subheader(f"Variable Fuel Cost for {gen_name}")

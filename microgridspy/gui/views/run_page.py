@@ -49,9 +49,10 @@ def update_nested_settings(settings):
 
 def update_renewable_params(renewables_params, res_sources):
     renewable_fields = [
-        'res_existing_area', 'res_existing_capacity', 'res_existing_years',
-        'res_inverter_efficiency', 'res_lifetime', 'res_specific_area',
-        'res_specific_investment_cost', 'res_specific_om_cost', 'res_unit_co2_emission']
+        'res_existing_area', 'res_existing_capacity', 'res_existing_years', 'res_connection_types',
+        'res_inverter_nominal_capacity','res_inverter_efficiency', 'res_lifetime', 'res_specific_area',
+        'res_specific_investment_cost', 'res_specific_om_cost', 'res_inverter_cost', 'res_inverter_lifetime', 
+        'res_inverter_existing_capacity', 'res_inverter_existing_years', 'res_unit_co2_emission']
     
     for field in renewable_fields:
         if hasattr(renewables_params, field):
@@ -74,7 +75,9 @@ def update_generator_params(generator_params, gen_types):
         'gen_existing_capacity', 'gen_existing_years', 'gen_lifetime',
         'gen_min_output', 'gen_names', 'gen_nominal_capacity',
         'gen_nominal_efficiency', 'gen_specific_investment_cost',
-        'gen_specific_om_cost', 'gen_unit_co2_emission']
+        'gen_specific_om_cost', 'gen_unit_co2_emission', 'gen_rectifier_efficiency',
+        'gen_rectifier_nominal_capacity', 'gen_rectifier_cost', 'gen_rectifier_lifetime', 
+        'gen_existing_rectifier_capacity','gen_existing_rectifier_years','partial_load']
     
     for field in generator_fields:
         if hasattr(generator_params, field):

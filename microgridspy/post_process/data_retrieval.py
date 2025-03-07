@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import streamlit as st
 
 from microgridspy.model.model import Model
 
@@ -56,10 +57,99 @@ def get_sizing_results(model) -> pd.DataFrame:
         if bat_units is not None:
             battery_nominal_capacity = model.parameters['BATTERY_NOMINAL_CAPACITY']
             battery_existing_capacity = model.parameters.get('BATTERY_EXISTING_CAPACITY', 0)
-            categories.append("Battery Bank")
+            categories.append("Battery")
             capacities.append(np.round((bat_units.values * battery_nominal_capacity.values) / 1000))  # kWh, rounded
             existing_capacities.append(np.round(battery_existing_capacity / 1000))  # Rounded
             capacity_units.append('kWh')
+
+    # Format sizing results into a table
+    data = []
+    for category, capacity, existing, unit in zip(categories, capacities, existing_capacities, capacity_units):
+        row = [f"{category} ({unit})", int(existing)]
+        row.extend([cap for cap in capacity])  # Convert to integer
+        # Calculate total capacity based on the presence of multiple steps
+        if len(capacity) > 1:
+            total_capacity = int(existing) + int(capacity[-1])  # Only add the last expansion step
+        else:
+            total_capacity = int(existing) + sum(int(cap) for cap in capacity)  # Sum existing and single step
+        row.append(total_capacity)
+        data.append(row)
+    # Define columns, including the new "Total" column
+    columns = ['Component', 'Existing'] + [f'Step {i+1}' for i in range(len(capacities[0]))] + ['Total']
+    return pd.DataFrame(data, columns=columns)
+
+def get_conversion_sizing_results(model) -> pd.DataFrame:
+    """
+    Get and format the sizing results for inverters, rectifiers, and transformers, including existing capacities for brownfield scenarios and the total sizing.
+
+    Args:
+        model (Model): The optimization model object.
+
+    Returns:
+        pd.DataFrame: A DataFrame with the formatted sizing results, including a "Total" column.
+    """
+    categories = []
+    capacities = []
+    existing_capacities = []
+    capacity_units = []
+
+    # Check for brownfield scenario
+    is_brownfield = model.get_settings('brownfield', advanced=True)
+
+    # Renewable inverters (kW)
+    inverter_units_res = model.get_solution_variable('Units of Inverters for Renewables')
+    if inverter_units_res is not None:
+        res_nominal_inverter_capacity = model.parameters['RES_INVERTER_NOMINAL_CAPACITY']
+        res_existing_inverter_capacity = model.parameters.get('RES_EXISTING_INVERTER_CAPACITY')
+        connected_to_battery = model.parameters.get('RES_CONNECTED_TO_BATTERY')
+        for source in inverter_units_res.renewable_sources.values:
+            if connected_to_battery.sel(renewable_sources=source).values:
+                continue
+            categories.append(f"Renewable Inverter ({source})")
+            capacities.append((res_nominal_inverter_capacity.sel(renewable_sources=source).values * inverter_units_res.sel(renewable_sources=source).values) / 1000)  # kW
+            existing_capacities.append(
+                res_existing_inverter_capacity.sel(renewable_sources=source).values / 1000 if is_brownfield and res_existing_inverter_capacity else 0
+            )
+            capacity_units.append('kW')
+
+    # Battery inverters (kW)
+    if model.has_battery:
+        inverter_units_bat = model.get_solution_variable('Units of Inverters for Battery')
+        if inverter_units_bat is not None:
+            bat_nominal_inverter_capacity = model.parameters['BATTERY_INVERTER_NOMINAL_CAPACITY']
+            bat_existing_inverter_capacity = model.parameters.get('BATTERY_EXISTING_INVERTER_CAPACITY', 0)
+            if any(model.parameters['RES_CONNECTED_TO_BATTERY'].sel(renewable_sources=res).item() for res in model.sets.renewable_sources.values):
+                categories.append("DC System Inverter")
+            else:
+                categories.append("Battery Inverter")
+            capacities.append(bat_nominal_inverter_capacity.values * (inverter_units_bat.values) / 1000)  # kW
+            existing_capacities.append(bat_existing_inverter_capacity / 1000 if is_brownfield else 0)  # kW
+            capacity_units.append('kW')
+
+    # Generator rectifiers (kW)
+    if model.has_generator:
+        rectifier_units_gen = model.get_solution_variable('Units of Rectifiers for Generators')
+        if st.session_state.grid_type == 'Direct Current':
+            gen_nominal_rectifier_capacity = model.parameters['GENERATOR_RECTIFIER_NOMINAL_CAPACITY']
+            gen_existing_rectifier_capacity = model.parameters.get('GENERATOR_EXISTING_RECTIFIER_CAPACITY')
+            for gen_type in rectifier_units_gen.generator_types.values:
+                categories.append(f"Generator Rectifier ({gen_type})")
+                capacities.append(gen_nominal_rectifier_capacity.sel(generator_types=gen_type).values * (rectifier_units_gen.sel(generator_types=gen_type).values) / 1000)  # kW
+                existing_capacities.append(
+                    gen_existing_rectifier_capacity.sel(generator_types=gen_type).values / 1000 if is_brownfield else 0
+                )
+                capacity_units.append('kW')
+
+    # Grid transformers (kVA)
+    if model.has_grid_connection:
+        transformer_units_grid = model.get_solution_variable('Units of Rectifiers for Grid')
+        if transformer_units_grid is not None:
+            grid_nominal_transformer_capacity = model.parameters['GRID_NOMINAL_TRANSFORMER_CAPACITY']
+            grid_existing_transformer_capacity = model.parameters.get('GRID_EXISTING_TRANSFORMER_CAPACITY', 0)
+            categories.append("Grid Transformer")
+            capacities.append(grid_nominal_transformer_capacity * (transformer_units_grid.values) / 1000)  # kVA
+            existing_capacities.append(grid_existing_transformer_capacity / 1000 if is_brownfield else 0)  # kVA
+            capacity_units.append('kVA')
 
     # Format sizing results into a table
     data = []

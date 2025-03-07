@@ -98,6 +98,16 @@ def advanced_settings():
             
             st.session_state.grid_connection_type = 0 if grid_connection_type == "Purchase Only" else 1
 
+    # Expander for grid connection
+    with st.expander("🔀 Micro Grid Load Type: AC or DC", expanded=False):  # Title with selection symbol
+        acdc_options = ["Alternating Current", "Direct Current"]  # Options for microgrid type
+        st.session_state.grid_type = st.selectbox(
+            "Select the microgrid configuration:",
+            options=acdc_options,  # Sinusoidal and straight line symbols
+            index=acdc_options.index(st.session_state.grid_type),  # Default selection is AC
+            help="Choose the correct type to ensure compatibility with your microgrid's power distribution."
+        )
+
     with st.expander("📈 Weighted Average Cost of Capital Calculation", expanded=False):
         st.session_state.wacc_calculation = st.checkbox(
             "Enable WACC Calculation", 

@@ -68,7 +68,7 @@ def operate_discount_rate(data: ProjectParameters) -> float:
     return discount_rate
 
 
-def operate_unitary_battery_replacement_cost(data: ProjectParameters) -> float:
+def operate_unitary_battery_replacement_cost(data: ProjectParameters, investment_steps: int) -> float:
     """
     Initializes the unit replacement cost of the battery based on the model parameters.
 
@@ -78,16 +78,21 @@ def operate_unitary_battery_replacement_cost(data: ProjectParameters) -> float:
     Returns:
     float: The calculated unit replacement cost of the battery.
     """
+    try:
+        battery_cost_df: pd.DataFrame = read_csv_data(PathManager.BATTERY_COST_FILE_PATH)
+    except (FileNotFoundError, pd.errors.EmptyDataError, pd.errors.ParserError) as e:
+        raise RuntimeError(f"Failed to initialize Battery cost data: {str(e)}")
+
+    # Reshape the data to match other variables' dimension order
+    battery_cost_data: np.ndarray = battery_cost_df.values.flatten(order='F').reshape(investment_steps)
     # Extract battery parameters
-    Battery_Specific_Investment_Cost = data.battery_params.battery_specific_investment_cost
     Battery_Specific_Electronic_Investment_Cost = data.battery_params.battery_specific_electronic_investment_cost
     Battery_Cycles = data.battery_params.battery_cycles
     Battery_Depth_of_Discharge = data.battery_params.battery_depth_of_discharge
 
     # Calculate the unitary battery replacement cost
-    Unitary_Battery_Cost = Battery_Specific_Investment_Cost - Battery_Specific_Electronic_Investment_Cost
+    Unitary_Battery_Cost = battery_cost_data * (1 - Battery_Specific_Electronic_Investment_Cost)
     Unitary_Battery_Replacement_Cost = Unitary_Battery_Cost / (Battery_Cycles * 2 * Battery_Depth_of_Discharge)
-
     return Unitary_Battery_Replacement_Cost
 
 def operate_delta_time(time_resolution: int) -> float:
@@ -141,6 +146,32 @@ def operate_min_capacity(battery_independence: int, time_resolution: int, scenar
     min_capacity = available_energy / DOD.item()
     
     return min_capacity
+
+def initialize_res_investment_cost(res_names: List[str], investment_steps: int) -> np.ndarray:
+    """Initialize the RES investment cost array based on the user input."""
+    try:
+        res_cost_df: pd.DataFrame = read_csv_data(PathManager.RES_COST_FILE_PATH)
+    except (FileNotFoundError, pd.errors.EmptyDataError, pd.errors.ParserError) as e:
+        raise RuntimeError(f"Failed to initialize RES cost data: {str(e)}")
+    
+    num_res_types: int = len(res_names)
+
+    # Reshape the data to match other variables' dimension order
+    res_cost_data: np.ndarray = res_cost_df.values.flatten(order='F').reshape(num_res_types, investment_steps)
+
+    return res_cost_data
+
+def initialize_battery_investment_cost(investment_steps: int) -> np.ndarray:
+    """Initialize the RES investment cost array based on the user input."""
+    try:
+        battery_cost_df: pd.DataFrame = read_csv_data(PathManager.BATTERY_COST_FILE_PATH)
+    except (FileNotFoundError, pd.errors.EmptyDataError, pd.errors.ParserError) as e:
+        raise RuntimeError(f"Failed to initialize Battery cost data: {str(e)}")
+
+    # Reshape the data to match other variables' dimension order
+    battery_cost_data: np.ndarray = battery_cost_df.values.flatten(order='F').reshape(investment_steps)
+
+    return battery_cost_data
 
 def initialize_fuel_specific_cost(gen_names: List[str], time_horizon: int) -> np.ndarray:
     """Initialize the fuel-specific cost array based on the user input."""

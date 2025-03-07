@@ -24,7 +24,12 @@ def add_battery_constraints(model: Model, settings: ProjectParameters, sets: xr.
         add_battery_emissions_constraints(model, settings, sets, param, var)
 
 def add_battery_state_of_charge_constraints(model: Model, settings: ProjectParameters, sets: xr.Dataset, param: xr.Dataset, var: Dict[str, linopy.Variable]) -> None:
+    years = sets.years.values
+    steps = sets.steps.values
+    step_duration = settings.advanced_settings.step_duration
+    first_year_of_step = years[::step_duration]
     is_first_year = xr.DataArray(sets.years == sets.years[0], dims='years')
+    is_first_year_of_step = xr.DataArray(np.isin(sets.years, first_year_of_step), dims='years')
     is_first_period = xr.DataArray(sets.periods == sets.periods[0], dims='periods')
     is_brownfield = settings.advanced_settings.brownfield
 
@@ -35,17 +40,30 @@ def add_battery_state_of_charge_constraints(model: Model, settings: ProjectParam
     if is_brownfield: battery_capacity += param['BATTERY_EXISTING_CAPACITY']
 
     # Contribution from battery units (without existing capacity)
-    first_year_first_period = (
+    first_step_first_year_first_period = (
         (battery_capacity * param['BATTERY_INITIAL_SOC']) -
         (var['battery_outflow'] / param['BATTERY_DISCHARGE_EFFICIENCY']) +
         (var['battery_inflow'] * param['BATTERY_CHARGE_EFFICIENCY'])
     ).where(is_first_year & is_first_period, 0)
-
+    # For subsequent steps, iterate over the step values starting from the second step
+    other_step_first_year_first_period = 0
+    for i in range(1, len(steps)):
+        current_step = steps[i]
+        previous_step = steps[i - 1]
+        first_year_of_this_step = first_year_of_step[i]
+        is_first_year_of_this_step = xr.DataArray(np.isin(sets.years, first_year_of_this_step), dims='years')
+        other_step_first_year_first_period += (
+            (var['battery_soc'].shift(years=1, fill_value=0).sel(periods=sets.periods[-1])
+            + (var['battery_units'].sel(steps=current_step) - var['battery_units'].sel(steps=previous_step)) * param['BATTERY_NOMINAL_CAPACITY']) * param['BATTERY_INITIAL_SOC']
+            - var['battery_outflow'] / param['BATTERY_DISCHARGE_EFFICIENCY']
+            + var['battery_inflow'] * param['BATTERY_CHARGE_EFFICIENCY']
+        ).where(~is_first_year & is_first_year_of_this_step & is_first_period, 0)
+    
     other_years_first_period = (
         var['battery_soc'].shift(years=1, fill_value=0).sel(periods=sets.periods[-1]) -
         var['battery_outflow'] / param['BATTERY_DISCHARGE_EFFICIENCY'] +
         var['battery_inflow'] * param['BATTERY_CHARGE_EFFICIENCY']
-    ).where(~is_first_year & is_first_period, 0)
+    ).where(~is_first_year & ~is_first_year_of_step & is_first_period, 0)
 
     other_periods = (
         var['battery_soc'].shift(periods=1, fill_value=0) -
@@ -53,7 +71,7 @@ def add_battery_state_of_charge_constraints(model: Model, settings: ProjectParam
         var['battery_inflow'] * param['BATTERY_CHARGE_EFFICIENCY']
     ).where(~is_first_period, 0)
 
-    battery_state_of_charge = first_year_first_period + other_years_first_period + other_periods
+    battery_state_of_charge = first_step_first_year_first_period + other_step_first_year_first_period + other_years_first_period + other_periods
 
     model.add_constraints(
         var['battery_soc'] == battery_state_of_charge, name="Battery State of Charge Constraint")
@@ -233,15 +251,23 @@ def add_battery_single_flow_constraints(model: Model, settings: ProjectParameter
     for year in sets.years.values:
         step = years_steps_tuples[year - years[0]][1]
         model.add_constraints(
-            var['battery_outflow'].sel(years=year) <= var['single_flow_bess'] * var['battery_max_discharge_power'].sel(steps=step) * param['DELTA_TIME'],
-            name=f"Battery Single Flow Discharge Constraint - Year {year}")
+            var['battery_inflow'].sel(years=year) <= var['single_flow_bess'].sel(years=year) * param['M'].sel(years=year),
+            name=f"Battery Single Flow Inflow Constraint - Year {year}")
 
         model.add_constraints(
-            var['battery_inflow'].sel(years=year) <= (var['battery_max_charge_power'].sel(steps=step) * param['DELTA_TIME']) - (var['single_flow_bess'] * var['battery_max_charge_power'].sel(steps=step) * param['DELTA_TIME']),
-            name=f"Battery Single Flow Charge Constraint - Year {year}")
+            var['battery_outflow'].sel(years=year) <= (var['ones'].sel(years=year) - var['single_flow_bess'].sel(years=year)) * param['M'].sel(years=year),
+            name=f"Battery Single Flow Outflow Constraint - Year {year}")
+        
+        model.add_constraints(
+            var['battery_inflow'].sel(years=year) <= var['battery_max_charge_power'].sel(steps=step) * param['DELTA_TIME'],
+            name=f"Battery Upper Inflow Constraint - Year {year}")
+
+        model.add_constraints(
+            var['battery_outflow'].sel(years=year) <= var['battery_max_discharge_power'].sel(steps=step) * param['DELTA_TIME'],
+            name=f"Battery Upper Outflow Constraint - Year {year}")
     
-    model.add_constraints(
-        var['battery_outflow'] <= param['DEMAND'], name="Battery Maximum Outflow Constraint")
+    #model.add_constraints(
+    #    var['battery_outflow'] <= param['DEMAND'], name="Battery Maximum Outflow Constraint")
     
 def add_battery_emissions_constraints(model: Model, settings: ProjectParameters, sets: xr.Dataset, param: xr.Dataset, var: Dict[str, linopy.Variable]) -> None:
     """Calculate the emissions for battery."""
