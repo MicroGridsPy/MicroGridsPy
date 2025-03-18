@@ -197,20 +197,8 @@ def save_resource_data(resource_data: pd.DataFrame, resource_name: str, project_
         existing_data = pd.read_csv(inputs_folder_path, index_col='Periods')
         existing_data[resource_name] = resource_data[resource_name]
         existing_data.to_csv(inputs_folder_path, index=True)
-    
 
-    # Save the resource data to a CSV file into the related project folder
-    project_folder_path = PathManager.PROJECTS_FOLDER_PATH / str(project_name) / "resource" / 'Resources Availability.csv'
-
-    if not project_folder_path.exists():
-        resource_data.columns = [resource_name]
-        resource_data.to_csv(project_folder_path, index=True)
-    else:
-        existing_data = pd.read_csv(project_folder_path, index_col='Periods')
-        existing_data[resource_name] = resource_data[resource_name]
-        existing_data.to_csv(project_folder_path, index=True)
-
-    st.success(f"Resource data saved successfully for {resource_name} at {inputs_folder_path} for current use as well as at {project_folder_path} for future use.")
+    st.success(f"Resource data saved successfully for {resource_name} at {inputs_folder_path}.")
 
 def plot_resource_data(resource_data: pd.DataFrame, resource_name: str, selected_month: str) -> None:
     """Plot the resource data for the selected resource and month."""

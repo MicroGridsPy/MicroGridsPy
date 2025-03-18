@@ -37,6 +37,7 @@ class ProjectSettings(BaseModel):
         optimization_goal (int): The optimization goal for the project.
         investment_cost_limit (Optional[float]): The investment cost limit for the project.
         system_configuration (int): The system configuration for the project.
+        distribution_type (str): The distribution type of the minigrid (AC or DC).
         renewable_penetration (float): The renewable penetration percentage.
         land_availability (float): The land availability for renewables in m2.
         battery_independence (int): The battery independence (number of days).
@@ -51,6 +52,7 @@ class ProjectSettings(BaseModel):
     optimization_goal: int
     investment_cost_limit: Optional[float]
     system_configuration: int
+    distribution_type: str 
     renewable_penetration: float
     land_availability: float
     battery_independence: int
@@ -104,7 +106,7 @@ class AdvancedSettings(BaseModel):
     multi_scenario_optimization: bool
     num_scenarios: Optional[int]
     scenario_weights: Optional[List[float]]
-    grid_type: str    
+       
     
 class NasaPowerParams(BaseModel):
     """
@@ -275,7 +277,6 @@ class BatteryParams(BaseModel):
     This class represents the battery parameters for a project.
 
     Attributes:
-        battery_chemistry (str): Chemistry of the battery (LFP, NMC)
         battery_nominal_capacity (float): Nominal capacity of the battery (Wh).
         battery_specific_investment_cost (float): Specific investment cost of the battery bank (USD/Wh).
         battery_specific_electronic_investment_cost (float): Specific investment cost of non-replaceable parts (electronics) of the battery bank (USD/Wh).
@@ -293,7 +294,6 @@ class BatteryParams(BaseModel):
         bess_unit_co2_emission (float): CO2 emissions per unit of the battery (kgCO2/Wh).
         battery_existing_capacity (float): Existing capacity of the battery (Wh).
     """
-    battery_chemistry: str
     battery_nominal_capacity: float
     battery_specific_investment_cost: float
     battery_specific_electronic_investment_cost: float

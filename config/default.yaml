@@ -4,13 +4,14 @@ project_info:
 
 project_settings:
   time_horizon: 20
-  start_date: "2022-01-01 00:00:00"
-  discount_rate: 0.115
+  start_date: "2025-01-01 00:00:00"
+  discount_rate: 0.10
   currency: "USD"
   time_resolution: 8760
   optimization_goal: 0
   investment_cost_limit: 500000.0
   system_configuration: 0
+  distribution_type: "Alternating Current"
   renewable_penetration: 0.0
   land_availability: 0.0
   battery_independence: 0
@@ -18,13 +19,13 @@ project_settings:
   lost_load_specific_cost: 0.0
 
 advanced_settings:
-  capacity_expansion: true
+  capacity_expansion: false
   step_duration: 5
   num_steps: 4
   min_step_duration: 5
-  milp_formulation: true
-  unit_commitment: true
-  brownfield: true
+  milp_formulation: false
+  unit_commitment: false
+  brownfield: false
   grid_connection: false
   grid_connection_type: 0
   wacc_calculation: false
@@ -38,12 +39,11 @@ advanced_settings:
   multi_scenario_optimization: false
   num_scenarios: 1
   scenario_weights: [1]
-  grid_type: "Alternating Current"
 
 resource_assessment:
-  res_sources: 2
-  res_names: ["Solar PV", "Wind"]
-  res_nominal_capacity: [450, 100000] #W
+  res_sources: 1
+  res_names: ["Solar PV"]
+  res_nominal_capacity: [1000] #W
   location: "Faza, Kenya"
   lat: 2.06
   lon: 41.11
@@ -97,32 +97,31 @@ archetypes_params:
   hospital_5 : 0
 
 renewables_params:
-  res_connection_types: ["Connected with the same Inverter as the Battery to the Microgrid", "Connected directly to the Microgrid"]
-  res_specific_area: [11.49, 20] #m2/kW
-  res_specific_investment_cost: [0.95, 0.95] #USD/W
-  res_specific_om_cost: [0.01, 0.01] #% of investment cost
-  res_lifetime: [20, 20] #years
-  res_unit_co2_emission: [0, 0] #kgCO2/kWh
-  res_existing_capacity: [0, 0] #W
-  res_existing_area: [0, 0] #m2
-  res_existing_years: [0, 0] #years
-  res_inverter_efficiency: [0.95, 1] #fraction
-  res_inverter_nominal_capacity: [8000, 1000] #W
-  res_inverter_lifetime: [20, 20] #years
-  res_inverter_existing_capacity: [0, 0] #W
-  res_inverter_existing_years: [0, 0] #years
-  res_inverter_cost: [0.2, 0] #USD/W
+  res_connection_types: ["Connected with the same Inverter as the Battery to the Microgrid"]
+  res_specific_area: [11.49] #m2/kW
+  res_specific_investment_cost: [0.95] #USD/W
+  res_specific_om_cost: [0.01] #% of investment cost
+  res_lifetime: [20] #years
+  res_unit_co2_emission: [0] #kgCO2/kWh
+  res_existing_capacity: [0] #W
+  res_existing_area: [0] #m2
+  res_existing_years: [0] #years
+  res_inverter_efficiency: [0.95] #fraction
+  res_inverter_nominal_capacity: [1000] #W
+  res_inverter_lifetime: [20] #years
+  res_inverter_existing_capacity: [0] #W
+  res_inverter_existing_years: [0] #years
+  res_inverter_cost: [0.2] #USD/W
 
 battery_params:
-  battery_chemistry: "LFP"
   battery_nominal_capacity: 1000.0 #Wh
-  battery_specific_investment_cost: 0.15 #USD/Wh
+  battery_specific_investment_cost: 0.4 #USD/Wh
   battery_specific_electronic_investment_cost: 0.30 #fraction
   battery_specific_om_cost: 0.025 #% of investment cost
   battery_inverter_efficiency_dc_ac: 0.95 #fraction
   battery_inverter_efficiency_ac_dc: 0.95 #fraction
   battery_inverter_lifetime: 20 #years
-  battery_inverter_nominal_capacity: 8000 #W
+  battery_inverter_nominal_capacity: 1000 #W
   battery_inverter_cost: 0.2 #USD/W
   battery_discharge_battery_efficiency: 0.9 #fraction
   battery_charge_battery_efficiency: 0.9 #fraction
@@ -144,7 +143,7 @@ generator_params:
   gen_nominal_capacity: [450000] #W
   gen_nominal_efficiency: [0.3] #fraction
   gen_rectifier_efficiency: [1.0] #fraction
-  gen_rectifier_nominal_capacity: [2500] #W
+  gen_rectifier_nominal_capacity: [1000] #W
   gen_rectifier_lifetime: [20] #years
   gen_rectifier_cost: [0.4] #USD/W
   gen_specific_investment_cost: [0.45] #USD/W

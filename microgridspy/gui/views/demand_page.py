@@ -101,12 +101,7 @@ def save_demand_data(demand_data: pd.DataFrame, filename: str, project_name: str
     inputs_folder_path = os.path.join(PathManager.DEMAND_FOLDER_PATH, filename)
     demand_data.to_csv(inputs_folder_path, index=True)
 
-    # Save the demand data to a CSV file into the related project folder
-    path_manager = PathManager(project_name)
-    project_folder_path = os.path.join(path_manager.PROJECTS_FOLDER_PATH / project_name / "demand" , filename)
-    demand_data.to_csv(project_folder_path, index=True)
-
-    st.success(f"{filename}.csv successfully saved at {inputs_folder_path} for current use as well as at {project_folder_path} for future use.")
+    st.success(f"{filename}.csv successfully saved at {inputs_folder_path}.")
 
 
 def load_ramp_data(file_content: BytesIO, num_days: int, force_reinitialize: bool) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:

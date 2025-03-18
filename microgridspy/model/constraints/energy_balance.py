@@ -168,6 +168,7 @@ def add_energy_balance_constraints(
     if settings.project_settings.lost_load_fraction > 0:
         add_lost_load_constraint(model, settings, sets, param, var, has_battery, has_generator, has_grid_connection)
 
+# TODO: Consider to AVERAGE on the scenario weights for multi-scenario optimization
 def add_renewable_penetration_constraint(
     model: Model,
     settings: ProjectParameters,
@@ -178,44 +179,43 @@ def add_renewable_penetration_constraint(
     has_generator: bool,
     has_grid_connection: bool
 ) -> None:
-    """Add renewable penetration constraint."""
+    """Add renewable penetration constraint with debug logging."""
     years = sets.years.values
     steps = sets.steps.values
     step_duration = settings.advanced_settings.step_duration
     years_steps_tuples = [(years[i] - years[0], steps[i // step_duration]) for i in range(len(years))]
-    
-    # Calculate total renewable energy production
-    total_res_energy_production = var['res_energy_production'].sum('renewable_sources')
-    total_curtailment = var['curtailment'].sum('renewable_sources')
-    
-    total_production: linopy.LinearExpression = 0
-    total_res_production: linopy.LinearExpression = 0
-    
-    for year in sets.years.values:
-        step = years_steps_tuples[year - years[0]][1]
-        
-        # Calculate renewable energy production for each year
-        yearly_res_production = total_res_energy_production.sel(steps=step) - total_curtailment.sel(years=year)
-        total_res_production += yearly_res_production
-        
-        # Calculate total energy production/consumption
-        yearly_total_production = yearly_res_production
-        
-        if has_generator:
-            yearly_generator_production = var['generator_energy_production'].sum('generator_types').sel(years=year)
-            yearly_total_production += yearly_generator_production
-        
-        if has_grid_connection:
-            yearly_grid_import = var['energy_from_grid'].sel(years=year)
-            yearly_total_production += yearly_grid_import
-        
-        total_production += yearly_total_production
 
-    # Add the constraint
-    model.add_constraints(
-        (1 - param['MINIMUM_RENEWABLE_PENETRATION']) * total_res_production >= 
-        param['MINIMUM_RENEWABLE_PENETRATION'] * (total_production - total_res_production),
-        name="Renewable Penetration Constraint")
+    # Get renewable energy production and curtailment
+    total_res_energy_production = var['res_energy_production'].sum(dim=['renewable_sources', 'periods'])
+    total_curtailment = var['curtailment'].sum(dim=['renewable_sources', 'periods'])
+    
+    for year in years:
+        step = years_steps_tuples[year - years[0]][1]
+
+        # Renewable energy after curtailment
+        yearly_res_production = (total_res_energy_production.sel(steps=step) - total_curtailment.sel(years=year))
+
+        # Initialize total energy production
+        yearly_total_production = yearly_res_production
+
+        # Include generator energy if applicable
+        if has_generator:
+            yearly_generator_production = var['generator_energy_production'].sum(dim=['generator_types', 'periods']).sel(years=year)
+            yearly_total_production += yearly_generator_production
+
+        # Include grid imports if applicable
+        if has_grid_connection:
+            yearly_grid_import = var['energy_from_grid'].sum('periods').sel(years=year)
+            yearly_total_production += yearly_grid_import
+
+        # Calculate expected renewable penetration threshold
+        min_required_res_production = param['MINIMUM_RENEWABLE_PENETRATION'] * yearly_total_production
+
+        # Add the constraint
+        model.add_constraints(
+            yearly_res_production >= min_required_res_production,
+            name=f"Renewable Penetration Constraint - Year {year}")
+
     
 def add_lost_load_constraint(
     model: Model, 

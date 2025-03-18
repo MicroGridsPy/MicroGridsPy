@@ -70,7 +70,7 @@ def initialize_session_state(default_values: Any, settings_type: str) -> None:
             st.session_state[key] = value
 
 
-def csv_upload_interface(key_prefix: str) -> Tuple[st.file_uploader, str, str]:
+def csv_upload_interface(key_prefix: str) -> Tuple[Any, str, str]:
     """
     Create an interface for CSV file upload with delimiter and decimal selection.
     
@@ -105,7 +105,7 @@ def generate_flow_chart(res_names: list) -> None:
     has_grid_connection: bool = st.session_state.grid_connection
 
     mermaid_code = "flowchart TB\n"
-    if st.session_state.grid_type == "Alternating Current":
+    if st.session_state.distribution_type == "Alternating Current":
         idx_connected_to_battery = [idx for idx, connection_type in enumerate(st.session_state.res_connection_types) if connection_type == "Connected with the same Inverter as the Battery to the Microgrid"]
         idx_not_connected_to_battery = [idx for idx, connection_type in enumerate(st.session_state.res_connection_types) if connection_type != "Connected with the same Inverter as the Battery to the Microgrid"]
         if idx_connected_to_battery:
@@ -180,17 +180,60 @@ def generate_flow_chart(res_names: list) -> None:
 
     # Wrap Mermaid code in the HTML template
     mermaid_html = f"""
-    <div class="mermaid">
-    {mermaid_code}
-    </div>
-    <script type="module">
-        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({{
-            startOnLoad: true,
-            theme: 'dark',
-        }});
-    </script>
+        <style>
+            .mermaid {{
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+            }}
+            svg {{
+                font-family: 'Arial', sans-serif;
+                background-color: #ffffff;
+                border-radius: 10px;
+                padding: 10px;
+            }}
+            text {{
+                fill: #000000 !important; /* Black text */
+                font-size: 14px;
+                font-weight: 500;
+            }}
+            rect {{
+                fill: #ffffff !important;  /* White background for boxes */
+                stroke: #dd9d72 !important; /* Orange border */
+                stroke-width: 2;
+                rx: 8;
+                ry: 8;
+            }}
+            path {{
+                stroke: #000000 !important; /* Black arrows */
+            }}
+            .edgeLabelBackground {{
+                fill: #ffffff !important; /* White background for edge labels */
+            }}
+        </style>
+
+        <div class="mermaid">
+        {mermaid_code}
+        </div>
+
+        <script type="module">
+            import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+            mermaid.initialize({{
+                startOnLoad: true,
+                themeVariables: {{
+                    background: "#ffffff",
+                    primaryColor: "#dd9d72",
+                    edgeLabelBackground: "#ffffff",
+                    fontSize: "14px",
+                    fontFamily: "Arial",
+                    nodeBorder: "#dd9d72",
+                    clusterBkg: "#ffffff",
+                    nodeTextColor: "#000000",
+                }},
+            }});
+        </script>
     """
 
-    # Display the generated Mermaid flowchart
-    st.components.v1.html(mermaid_html, height=700)
+    # Display the updated flowchart with styles
+    st.components.v1.html(mermaid_html, height=500)

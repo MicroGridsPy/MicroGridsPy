@@ -76,39 +76,50 @@ def costs_breakdown(model: Model, optimization_goal: str):
                 "Cost Item": label,
                 f"Value (k{currency})": f"{value / 1000:.2f}"})
 
-    # Add cost items
-    investment_cost = (
-        model.get_solution_variable("Total Investment Cost").values.item() if actualized else
-        calculate_actualized_investment_cost(model))
-    
+    # Function to check if a variable exists in the solution
+    def get_variable_value(var_name: str, default=0):
+        try:
+            return model.get_solution_variable(var_name).values.item()
+        except ValueError:
+            return default
+
+    # Investment Cost
+    investment_cost = (get_variable_value("Total Investment Cost") if actualized else calculate_actualized_investment_cost(model))
     add_cost_item("Total Investment Cost (Actualized)", investment_cost)
+
+    # Variable Cost
     variable_cost_label = f"Total Variable Cost ({'Actualized' if actualized else 'Not Actualized'})"
-    variable_cost = model.get_solution_variable(f"Scenario Total Variable Cost {'(Actualized)' if actualized else '(Not Actualized)'}").values.item()
+    variable_cost = get_variable_value(f"Scenario Total Variable Cost {'(Actualized)' if actualized else '(Not Actualized)'}")
     add_cost_item(variable_cost_label, variable_cost)
+
+    # Fixed O&M Cost
     om_cost_label = f" - Total Fixed O&M Cost ({'Actualized' if actualized else 'Not Actualized'})"
-    om_cost = model.get_solution_variable(f"Operation and Maintenance Cost {'(Actualized)' if actualized else '(Not Actualized)'}").values.item()
+    om_cost = get_variable_value(f"Operation and Maintenance Cost {'(Actualized)' if actualized else '(Not Actualized)'}")
     add_cost_item(om_cost_label, om_cost)
 
+    # Battery Cost
     if model.has_battery:
         battery_cost_label = f" - Total Battery Replacement Cost ({'Actualized' if actualized else 'Not Actualized'})"
-        battery_cost = model.get_solution_variable(f"Battery Replacement Cost {'(Actualized)' if actualized else '(Not Actualized)'}").values.item()
+        battery_cost = get_variable_value(f"Battery Replacement Cost {'(Actualized)' if actualized else '(Not Actualized)'}")
         add_cost_item(battery_cost_label, battery_cost)
 
+    # Generator Cost (only if the variable exists)
     if model.has_generator:
         fuel_cost_label = f" - Total Fuel Cost ({'Actualized' if actualized else 'Not Actualized'})"
-        fuel_cost = model.get_solution_variable(f"Total Fuel Cost {'(Actualized)' if actualized else '(Not Actualized)'}").values.item()
-        add_cost_item(fuel_cost_label, fuel_cost)
+        fuel_cost = get_variable_value(f"Total Fuel Cost {'(Actualized)' if actualized else '(Not Actualized)'}")
+        add_cost_item(fuel_cost_label, fuel_cost, fuel_cost > 0)  # Avoid adding if it's zero
 
-    salvage_value = (
-        model.get_solution_variable("Salvage Value").values.item() if actualized else
-        calculate_actualized_salvage_value(model))
+    # Salvage Value
+    salvage_value = (get_variable_value("Salvage Value") if actualized else calculate_actualized_salvage_value(model))
     add_cost_item("Total Salvage Value (Actualized)", salvage_value)
 
+    # Grid Costs
     if model.has_grid_connection:
         grid_costs = calculate_grid_costs(model, actualized)
         add_cost_item("Grid Investment Cost (Actualized)", grid_costs[0])
         add_cost_item(f"Grid Fixed O&M Cost ({'Actualized' if actualized else 'Not Actualized'})", grid_costs[1])
         add_cost_item(f"Total Electricity Purchased Cost ({'Actualized' if actualized else 'Not Actualized'})", grid_costs[2])
+
         if model.get_settings('grid_connection_type', advanced=True) == 1:
             add_cost_item(f"Total Electricity Sold Revenue ({'Actualized' if actualized else 'Not Actualized'})", grid_costs[3])
 
@@ -262,9 +273,13 @@ def plots_dashboard():
     # Dispatch Plot
     st.subheader("Dispatch Plot")
     st.info("**Note:** The dispatch plot presented here shows an optimal use of energy based on perfect foresight. It represents an idealized scenario and does not reflect a realistic dispatch strategy with real-time constraints.")
-    selected_year = st.slider("Select Year for Dispatch Plot", min_value=min_year, max_value=max_year, value=min_year)
-    selected_year_index = years.index(selected_year)
-    selected_day = st.slider("Select Day", 0, 364, 0, key="day_slider")
+    if len(years) > 1:
+        selected_year = st.slider("Select Year for Dispatch Plot", min_value=min_year, max_value=max_year, value=min_year)
+        selected_year_index = years.index(selected_year)
+        selected_day = st.slider("Select Day", 0, 364, 0, key="day_slider")
+    else:
+        selected_year_index = 0
+        selected_day = st.slider("Select Day", 0, 364, 0, key="day_slider")
 
     dispatch_fig = dispatch_plot(model, scenario=0, year=selected_year_index, day=selected_day, color_dict=color_dict)
     fig['Dispatch Plot'] = dispatch_fig
@@ -276,9 +291,9 @@ def plots_dashboard():
     st.subheader("Average Energy Usage")
     col1, col2 = st.columns(2)
     with col1:
-        st.metric("Average Curtailment", f"{energy_usage['Curtailment']:.2f}%")
+        st.metric("Average Yearly Curtailment", f"{energy_usage['Curtailment']:.2f}%")
     with col2:
-        st.metric("Renewable Penetration", f"{renewable_penetration:.2f}%")
+        st.metric("Average Yearly Renewable Penetration", f"{renewable_penetration:.2f}%")
 
     if model.has_generator:
         energy_usage_fig = create_energy_usage_pie_chart(energy_usage, model, st.session_state.res_names, color_dict, st.session_state.gen_names)

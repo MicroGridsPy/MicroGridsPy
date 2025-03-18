@@ -111,41 +111,51 @@ def operate_delta_time(time_resolution: int) -> float:
 
     return round(delta_time, 6)
 
-def operate_min_capacity(battery_independence: int, time_resolution: int, scenario_weights: List[float], DOD: float, sets: xr.Dataset, demand: xr.DataArray) -> float:
+def operate_min_capacity(
+    battery_independence: int,
+    time_resolution: int,
+    scenario_weights: List[float],
+    DOD: float,
+    sets: xr.Dataset,
+    demand: xr.DataArray
+) -> float:
     """
-    Calculate the minimum capacity required for the battery bank based on the model's demand profile and battery independence criteria.
+    Calculate the minimum battery capacity required to meet a certain number of consecutive days of energy demand.
     
     Parameters:
-    battery_independence (int): The desired level of battery independence (days)
-    sets (xr.Dataset): The model sets
-    param (xr.Dataset): The model parameters
-    demand (xr.DataArray): The demand profile
-    
+        battery_independence (int): Number of days the battery should be independent.
+        time_resolution (int): Time resolution in hours.
+        scenario_weights (List[float]): Weights for each scenario.
+        DOD (float): Depth of Discharge (0 to 1 range).
+        sets (xr.Dataset): Contains years, periods, scenarios.
+        demand (xr.DataArray): Energy demand profile (scenarios, years, periods).
+
     Returns:
-    float: The minimum required battery capacity to ensure the desired level of battery independence
+        float: Minimum required battery capacity.
     """
-    delta_time: float = operate_delta_time(time_resolution)
+
+    # Compute time step duration (in hours)
+    delta_time: float = operate_delta_time(time_resolution)  # Ensure this function returns time step duration correctly
+
+    # Number of periods per day
     periods_per_day = int(24 / delta_time)
+
+    # Number of periods for required independence
     independence_periods = battery_independence * periods_per_day
-    total_periods = len(sets.periods) * len(sets.years)
-    group_count = int(total_periods / independence_periods)
-    
-    # Flatten the demand data
-    demand_data = demand.values.reshape(-1)
-    demand_df = pd.DataFrame({'demand': demand_data})
-    demand_df['grouper'] = np.repeat(np.arange(1, group_count + 1), independence_periods)[:total_periods]
-    
-    # Calculate period energy
-    period_energy = demand_df.groupby('grouper')['demand'].sum()
-    period_average_energy = period_energy.mean()
-    
-    # Calculate available energy considering scenario weights
-    available_energy = period_average_energy * scenario_weights.sum()
-    
-    # Calculate minimum capacity
-    min_capacity = available_energy / DOD.item()
-    
-    return min_capacity
+
+    # Reshape demand to 1D while keeping year-period structure
+    demand_stacked = demand.stack(index=("years", "periods"))
+
+    # Compute rolling sum over `independence_periods` to find worst-case demand period
+    rolling_energy = demand_stacked.rolling(index=independence_periods, min_periods=independence_periods).sum()
+
+    # Find the maximum rolling sum (worst-case battery requirement)
+    max_demand = rolling_energy.max(dim="index")
+
+    # Adjust for Depth of Discharge
+    min_required_capacity = max_demand / DOD
+
+    return min_required_capacity
 
 def initialize_res_investment_cost(res_names: List[str], investment_steps: int) -> np.ndarray:
     """Initialize the RES investment cost array based on the user input."""

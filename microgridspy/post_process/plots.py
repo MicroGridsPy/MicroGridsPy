@@ -6,17 +6,22 @@ from typing import Dict
 
 from microgridspy.model.model import Model
 from microgridspy.post_process.cost_calculations import get_cost_details
-from microgridspy.post_process.data_retrieval import get_sizing_results
 
 
 def costs_pie_chart(model: Model, optimization_goal: str, color_dict: Dict[str, str]):
     cost_details = get_cost_details(model, optimization_goal)
     actualized = optimization_goal == "NPC"
-    suffix = "(Actualized)" if actualized else "(Non-Actualized)"
+    suffix = "(Actualized)" if actualized else "(Not Actualized)"
 
-    total_investment_cost = cost_details[f"Total Investment Cost {suffix}"]
-    scenario_total_variable_cost = cost_details[f"Total Variable Cost {suffix}"]
-    total_salvage_value = cost_details[f"Total Salvage Value {suffix}"]
+    if actualized:
+        total_investment_cost = cost_details[f"Total Investment Cost (Actualized)"] 
+        scenario_total_variable_cost = cost_details[f"Total Variable Cost {suffix}"]
+        total_salvage_value = cost_details[f"Total Salvage Value (Actualized)"]
+    else:
+        total_investment_cost = cost_details[f"Total Investment Cost (Actualized)"] / 1000 # Convert to kUSD
+        scenario_total_variable_cost = cost_details[f"Total Variable Cost {suffix}"]
+        total_salvage_value = cost_details[f"Total Salvage Value (Actualized)"] / 1000 # Convert to kUSD
+    
 
     total_cost = total_investment_cost + scenario_total_variable_cost
 

@@ -64,26 +64,6 @@ def upload_cost_data(cost_df, currency) -> None:
 
     return edited_df
 
-def show_battery_cost(cost_df, currency="USD") -> None:
-    """
-    Display renewable energy cost data as a line plot.
-    """
-    st.write("### Battery Cost Data")
-    
-    # Create a line plot using Matplotlib
-    fig, ax = plt.subplots(figsize=(10, 6))
-    
-    ax.plot(cost_df.index, cost_df[f"Battery Investment Cost [{currency}/W]"], marker='o')
-    
-    ax.set_ylabel(f'Battery Cost [{currency}/W]')
-    ax.set_title('Cost Variation Over Investment Steps')
-    ax.legend()
-    ax.grid(True)
-    ax.set_ylim(bottom=0)  # Ensure y-axis starts at 0
-    
-    # Display the plot in Streamlit
-    st.pyplot(fig)
-
 def battery_technology() -> None:
     """Streamlit page for configuring battery technology parameters."""
     st.title("Battery Parameters")
@@ -97,16 +77,15 @@ def battery_technology() -> None:
     st.image(str(image_path), use_column_width=True, caption="Overview of the main equations for battery")
 
     has_battery = st.session_state.get('system_configuration', 0) in [0, 1]
+    res_names = st.session_state.get('res_names', [])
 
     if has_battery:
         # Initialize session state variables
         initialize_session_state(st.session_state.default_values, 'battery_params')
         currency = st.session_state.get('currency', 'USD')
         unit_committment = st.session_state.get('unit_commitment', False)
-        time_horizon = st.session_state.get('time_horizon', 0)
         brownfield = st.session_state.get('brownfield')
-    
-        st.session_state.battery_chemistry = st.text_input("Battery Chemistry", value=st.session_state.battery_chemistry)
+
         if unit_committment:
             st.session_state.battery_nominal_capacity = st.number_input("Nominal Capacity [Wh]", min_value=0.0, value=st.session_state.battery_nominal_capacity)
         cost_df = load_cost_df(currency)
@@ -115,7 +94,8 @@ def battery_technology() -> None:
             battery_cost_file_path = PathManager.BATTERY_COST_FILE_PATH
             cost_df[f'Battery Investment Cost [{currency}/W]'] = edited_df[f'Battery Investment Cost [{currency}/W]']
             cost_df.to_csv(battery_cost_file_path, index=True)
-            st.rerun()
+            st.success(f"Data saved to {battery_cost_file_path}")
+
         st.session_state.battery_specific_electronic_investment_cost = st.number_input(f"Specific Electronic Investment Cost as % of investment cost [%]", min_value=0.0, max_value=100.0, value=st.session_state.battery_specific_electronic_investment_cost * 100) / 100
         st.session_state.battery_specific_om_cost = st.number_input(f"Specific O&M Cost as % of investment cost [%]", min_value=0.0, value=st.session_state.battery_specific_om_cost * 100) / 100
         st.session_state.battery_discharge_battery_efficiency = st.number_input("Discharge Efficiency [%]", min_value=0.0, max_value=100.0, value=st.session_state.battery_discharge_battery_efficiency * 100) / 100
@@ -131,7 +111,7 @@ def battery_technology() -> None:
             st.session_state.battery_expected_lifetime = st.number_input("Expected Lifetime [years]", min_value=1, value=st.session_state.battery_expected_lifetime)
         st.session_state.bess_unit_co2_emission = st.number_input("Unit CO2 Emission [kgCO2/kWh]", value=st.session_state.bess_unit_co2_emission)
 
-        if st.session_state.grid_type == "Alternating Current":
+        if st.session_state.distribution_type == "Alternating Current":
             st.write("##### Inverter parameters:")    
             st.session_state.battery_inverter_efficiency_dc_ac = st.number_input("Inverter Efficiency from DC to AC [%]", min_value=0.0, max_value=100.0, value=st.session_state.battery_inverter_efficiency_dc_ac * 100) / 100
             st.session_state.battery_inverter_efficiency_ac_dc = st.number_input("Inverter Efficiency from AC to DC [%]", min_value=0.0, max_value=100.0, value=st.session_state.battery_inverter_efficiency_ac_dc * 100) / 100
@@ -139,6 +119,7 @@ def battery_technology() -> None:
             st.session_state.battery_inverter_lifetime = st.number_input("Inverter Lifetime [years]", min_value=1, value=st.session_state.battery_inverter_lifetime)
             st.session_state.battery_inverter_cost = st.number_input(f"Inverter Cost [{currency}/W]", min_value=0.0, value=st.session_state.battery_inverter_cost)
         else:
+            # Set default values for DC distribution
             st.session_state.battery_inverter_efficiency_dc_ac = 1.0
             st.session_state.battery_inverter_efficiency_ac_dc = 1.0
             st.session_state.battery_inverter_cost = 0.0
@@ -156,7 +137,7 @@ def battery_technology() -> None:
             st.session_state.battery_existing_capacity = battery_capacity
             if battery_capacity > 0:
                 st.session_state.battery_existing_years = st.number_input("Existing Years [years]", min_value=0, max_value=(st.session_state.battery_expected_lifetime - 1), value=st.session_state.battery_existing_years)
-            if st.session_state.grid_type == "Alternating Current":
+            if st.session_state.distribution_type == "Alternating Current":
                 st.session_state.battery_existing_inverter_capacity = st.number_input("Existing Inverter Capacity [W]", 
                                                                                       min_value=0.0, 
                                                                                       value=st.session_state.battery_existing_inverter_capacity)
@@ -165,7 +146,6 @@ def battery_technology() -> None:
                                                                                     min_value=0, 
                                                                                     max_value=(st.session_state.battery_inverter_lifetime - 1),
                                                                                     value=st.session_state.battery_inverter_existing_years)
-        show_battery_cost(cost_df)
 
     else:
         st.warning("Battery technology is not included in the system configuration. If you want to include a battery, please edit the project settings page.")

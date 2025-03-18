@@ -104,7 +104,7 @@ def calculate_energy_usage(model):
     return results
 
 def calculate_renewable_penetration(model: Model):
-    """Calculate the total renewable penetration based on the model's constraint logic."""
+    """Calculate the average yearly renewable penetration based on the model's constraint logic."""
     sets = model.sets
     years = sets['years'].values
     steps = sets['steps'].values
@@ -113,23 +113,32 @@ def calculate_renewable_penetration(model: Model):
     
     total_res_energy_production = model.get_solution_variable('Energy Production by Renewables').sum('renewable_sources')
     total_curtailment = model.get_solution_variable('Curtailment by Renewables').sum('renewable_sources')
-    
-    total_production = 0
-    total_res_production = 0
-    
+
+    yearly_penetrations = []
+
     for year in years:
         step = years_steps_tuples[year - years[0]][1]
         
-        yearly_energy_production = (total_res_energy_production.sel(steps=step) - 
-                                    total_curtailment.sel(years=year))
+        # Renewable energy production for the year
+        yearly_res_production = (total_res_energy_production.sel(steps=step) - 
+                                 total_curtailment.sel(years=year)).sum().values.item()
         
-        total_res_production += yearly_energy_production.sum().values.item()
-        total_production += yearly_energy_production.sum().values.item()
+        # Total energy production (starting with renewables)
+        total_production = yearly_res_production
         
         if model.has_generator:
             total_generator_energy_production = model.get_solution_variable('Generator Energy Production').sum('generator_types')
-            total_production += total_generator_energy_production.sel(years=year).sum().values.item()
-    
-    renewable_penetration = (total_res_production / total_production) * 100 if total_production > 0 else 0
-    
-    return renewable_penetration
+            yearly_gen_production = total_generator_energy_production.sel(years=year).sum().values.item()
+            total_production += yearly_gen_production
+        
+        if model.has_grid_connection:
+            total_grid_import = model.get_solution_variable('Energy From Grid')
+            yearly_grid_import = total_grid_import.sel(years=year).sum().values.item()
+            total_production += yearly_grid_import
+
+        # Compute yearly renewable penetration
+        yearly_renewable_penetration = (yearly_res_production / total_production) * 100 if total_production > 0 else 0
+        yearly_penetrations.append(yearly_renewable_penetration)
+
+    # Return the average renewable penetration across all years
+    return sum(yearly_penetrations) / len(yearly_penetrations) if yearly_penetrations else 0

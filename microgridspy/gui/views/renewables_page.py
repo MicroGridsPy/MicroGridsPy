@@ -2,7 +2,6 @@ import streamlit as st
 from config.path_manager import PathManager
 import pandas as pd
 import os
-import matplotlib.pyplot as plt
 from microgridspy.gui.utils import initialize_session_state, generate_flow_chart
 
 def ensure_list_length(key: str, length: int) -> None:
@@ -67,29 +66,6 @@ def upload_cost_data(cost_df, res_name, currency) -> None:
 
     return edited_df
 
-def show_res_cost(cost_df, res_names, currency="USD") -> None:
-    """
-    Display renewable energy cost data as a line plot.
-    """
-    st.write("### Renewable Energy Cost Data")
-    
-    # Create a line plot using Matplotlib
-    fig, ax = plt.subplots(figsize=(10, 6))
-    
-    for res_name in res_names:
-        column_name = f"{res_name} Investment Cost [{currency}/W]"
-        if column_name in cost_df.columns:
-            ax.plot(cost_df.index, cost_df[column_name], marker='o', label=res_name)
-    
-    ax.set_ylabel(f'Cost [{currency}/W]')
-    ax.set_title('Cost Variation Over Investment Steps')
-    ax.legend()
-    ax.grid(True)
-    ax.set_ylim(bottom=0)  # Ensure y-axis starts at 0
-    
-    # Display the plot in Streamlit
-    st.pyplot(fig)
-
 def update_parameters(i: int, res_name: str, time_horizon: int, brownfield: bool, land_availability: float, currency: str) -> None:
     """Update renewable parameters for the given index."""
     
@@ -129,7 +105,7 @@ def update_parameters(i: int, res_name: str, time_horizon: int, brownfield: bool
     else:
         st.session_state.res_connection_types.extend([''] * (len(st.session_state.res_current_types) - len(st.session_state.res_connection_types)))
 
-    if st.session_state.grid_type == "Alternating Current":
+    if st.session_state.distribution_type == "Alternating Current":
         if st.session_state.res_current_types[i] == "Direct Current":
             st.write("##### Inverter parameters:")    
             options = ["Connected with a seperate Inverter to the Microgrid", "Connected with the same Inverter as the Battery to the Microgrid"]
@@ -271,7 +247,7 @@ def update_parameters(i: int, res_name: str, time_horizon: int, brownfield: bool
                     value=int(st.session_state.res_inverter_existing_years[i]), 
                     key=f"inverter_exist_years_{i}")
                 
-        elif st.session_state.grid_type == "Alternating Current" and st.session_state.res_connection_types[i] == "Connected with a AC-AC Converter to the Microgrid":
+        elif st.session_state.distribution_type == "Alternating Current" and st.session_state.res_connection_types[i] == "Connected with a AC-AC Converter to the Microgrid":
             # Get user input in kW, but store the value in W
             inverter_capacity = st.number_input(
                 f"Existing Converter Capacity [W]", 
@@ -289,7 +265,7 @@ def update_parameters(i: int, res_name: str, time_horizon: int, brownfield: bool
                     value=int(st.session_state.res_inverter_existing_years[i]), 
                     key=f"inverter_exist_years_{i}")
                 
-        elif st.session_state.grid_type == "Direct Current" and st.session_state.res_current_types[i] == "Alternating Current":
+        elif st.session_state.distribution_type == "Direct Current" and st.session_state.res_current_types[i] == "Alternating Current":
             # Get user input in kW, but store the value in W
             inverter_capacity = st.number_input(
                 f"Existing Rectifier Capacity [W]", 
@@ -353,13 +329,23 @@ def renewables_technology() -> None:
             res_cost_file_path = PathManager.RES_COST_FILE_PATH
             cost_df[f'{res_names[i]} Investment Cost [{currency}/W]'] = edited_df[f'{res_names[i]} Investment Cost [{currency}/W]']
             cost_df.to_csv(res_cost_file_path, index=True)
-            st.rerun()
+            st.success(f"Successfully saved investment cost data for {res_names[i]}")
         update_parameters(i, res_names[i], time_horizon, brownfield, land_availability, currency)
         st.markdown("---")  # Add a separator between renewable sources
     
-    show_res_cost(cost_df, res_names)
+    # Visualization of the connection types
+    st.markdown(""" ### Mini-Grid Connection Flowchart
 
+    This diagram visually represents the energy flow in the mini-grid based on the selected configuration. 
+    Connections dynamically adjust based on your system setup. 
+    - **Energy sources** (Solar PV, Generator, Battery) are shown as input nodes.  
+    - **Power conversion elements** (Inverters, Rectifiers, Transformers) adjust AC/DC flow where necessary.  
+    - **The Power Distribution** acts as the central hub, distributing energy to the final load.   
+    """)
+    # Generate the flow chart
     generate_flow_chart(res_names)
+
+    st.markdown("---") 
 
     col1, col2 = st.columns([1, 8])
     with col1:

@@ -224,9 +224,14 @@ def calculate_lcoe(model: Model, optimization_goal: str) -> float:
     
 def get_cost_details(model: Model, optimization_goal: int) -> dict:
     """Get detailed cost breakdown."""
+    
     def get_cost(var_name: str) -> float:
-        value = model.get_solution_variable(var_name)
-        return value.values.item() / 1000 if value is not None else 0
+        """Retrieve cost variable safely. Returns 0 if not found."""
+        try:
+            value = model.get_solution_variable(var_name)
+            return value.values.item() / 1000
+        except ValueError:  # Handle missing variables
+            return 0
 
     actualized = optimization_goal == "NPC"
     suffix = "(Actualized)" if actualized else "(Not Actualized)"
@@ -237,8 +242,7 @@ def get_cost_details(model: Model, optimization_goal: int) -> dict:
         f"Total Fixed O&M Cost {suffix}": get_cost(f"Operation and Maintenance Cost {suffix}"),
         f"Total Battery Replacement Cost {suffix}": get_cost(f"Battery Replacement Cost {suffix}") if model.has_battery else 0,
         f"Total Fuel Cost {suffix}": get_cost(f"Total Fuel Cost {suffix}") if model.has_generator else 0,
-        f"Total Salvage Value (Actualized)": get_cost("Salvage Value") if actualized else calculate_actualized_salvage_value(model)
-    }
+        f"Total Salvage Value (Actualized)": get_cost("Salvage Value") if actualized else calculate_actualized_salvage_value(model)}
     
     if model.has_grid_connection:
         grid_investment_cost, grid_fixed_om_cost, cost_electricity_purchased, cost_electricity_sold = calculate_grid_costs(model, actualized)
@@ -246,8 +250,7 @@ def get_cost_details(model: Model, optimization_goal: int) -> dict:
             f"Total Grid Connection Cost (Actualized)": get_cost("Total Grid Connection Cost (Actualized)"),
             f"Grid Investment Cost (Actualized)": grid_investment_cost / 1000,
             f"Grid Fixed O&M Cost {suffix}": grid_fixed_om_cost / 1000,
-            f"Total Electricity Purchased Cost {suffix}": cost_electricity_purchased / 1000
-        })
+            f"Total Electricity Purchased Cost {suffix}": cost_electricity_purchased / 1000})
         if model.get_settings('grid_connection_type', advanced=True) == 1:
             cost_details[f"Total Electricity Sold Revenue {suffix}"] = cost_electricity_sold / 1000
     

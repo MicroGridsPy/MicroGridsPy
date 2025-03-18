@@ -116,7 +116,7 @@ def generator_technology() -> None:
                 format="%.1f",
                 help="The efficiency of the generator at its nominal capacity. Input as a percentage.") / 100  # Convert percentage to fraction
             
-            if st.session_state.grid_type == "Direct Current":
+            if st.session_state.distribution_type == "Direct Current":
                 st.session_state.gen_rectifier_efficiency[i] = st.number_input(
                     f"Rectifier Efficiency of {gen_name} [%]", 
                     min_value=0.0, 
@@ -210,7 +210,7 @@ def generator_technology() -> None:
                         value=st.session_state.gen_existing_years[i],
                         help="The number of years the existing generators have been in operation.")
 
-                if st.session_state.grid_type == "Direct Current":
+                if st.session_state.distribution_type == "Direct Current":
                     st.session_state.gen_existing_rectifier_capacity[i] = st.number_input(
                         f"Existing Rectifier Capacity of {gen_name} [W]", 
                         min_value=0.0,

@@ -168,8 +168,6 @@ def add_battery_flow_constraints(model: Model, settings: ProjectParameters, sets
             var['battery_outflow'].sel(years=year) <= var['battery_max_discharge_power'].sel(steps=step) * param['DELTA_TIME'],
             name=f"Battery Upper Outflow Constraint - Year {year}")
 
-    model.add_constraints(var['battery_outflow'] <= param['DEMAND'], name="Battery Maximum Outflow Constraint")
-
 def add_battery_capacity_expansion_constraints(model: Model, settings: ProjectParameters, sets: xr.Dataset, param: xr.Dataset, var: Dict[str, linopy.Variable]) -> None:
     """Add constraints for battery capacity expansion."""
 

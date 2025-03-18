@@ -71,6 +71,15 @@ def settings_page():
         
         st.session_state.system_configuration = system_configuration_options.index(selected_system_config)
 
+        # Distribution type
+        acdc_options = ["Alternating Current", "Direct Current"]
+        st.session_state.distribution_type = st.selectbox(
+            "Choose how electricity is distributed within the mini-grid::",
+            options=acdc_options,
+            index=acdc_options.index(st.session_state.distribution_type),
+            help=("AC Distribution supports standard appliances, but requires an inverter for solar and battery systems. "
+                  "DC Distribution is more efficient for small systems, but only compatible with DC-powered devices."))
+
     with st.expander("🔒 Optimization Constraints", expanded=False):
         renewable_penetration_percent = st.number_input(
             "Minimum Renewable Penetration [%]:", 

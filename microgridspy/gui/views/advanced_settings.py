@@ -98,16 +98,6 @@ def advanced_settings():
             
             st.session_state.grid_connection_type = 0 if grid_connection_type == "Purchase Only" else 1
 
-    # Expander for grid connection
-    with st.expander("🔀 Micro Grid Load Type: AC or DC", expanded=False):  # Title with selection symbol
-        acdc_options = ["Alternating Current", "Direct Current"]  # Options for microgrid type
-        st.session_state.grid_type = st.selectbox(
-            "Select the microgrid configuration:",
-            options=acdc_options,  # Sinusoidal and straight line symbols
-            index=acdc_options.index(st.session_state.grid_type),  # Default selection is AC
-            help="Choose the correct type to ensure compatibility with your microgrid's power distribution."
-        )
-
     with st.expander("📈 Weighted Average Cost of Capital Calculation", expanded=False):
         st.session_state.wacc_calculation = st.checkbox(
             "Enable WACC Calculation", 
@@ -150,19 +140,19 @@ def advanced_settings():
                 help="Percentage of project financed through debt. Must sum to 100% with equity share.")
             st.session_state.debt_share = debt_share / 100  
 
-        # Calculate and display WACC
-        if st.session_state.equity_share + st.session_state.debt_share != 1.0:
-            st.warning("Equity Share and Debt Share must sum to 100%.")
-        else:
-            if st.session_state.equity_share == 0:
-                wacc = st.session_state.cost_of_debt * (1 - st.session_state.tax)
+            # Calculate and display WACC
+            if st.session_state.equity_share + st.session_state.debt_share != 1.0:
+                st.warning("Equity Share and Debt Share must sum to 100%.")
             else:
-                leverage = st.session_state.debt_share / st.session_state.equity_share
-                wacc = (st.session_state.cost_of_debt * (1 - st.session_state.tax) * leverage / (1 + leverage) + 
-                        st.session_state.cost_of_equity / (1 + leverage))
-            
-            st.metric("Calculated WACC", f"{wacc:.2%}")
-            st.session_state.calculated_wacc = wacc
+                if st.session_state.equity_share == 0:
+                    wacc = st.session_state.cost_of_debt * (1 - st.session_state.tax)
+                else:
+                    leverage = st.session_state.debt_share / st.session_state.equity_share
+                    wacc = (st.session_state.cost_of_debt * (1 - st.session_state.tax) * leverage / (1 + leverage) + 
+                            st.session_state.cost_of_equity / (1 + leverage))
+                
+                st.metric("Calculated WACC", f"{wacc:.2%}")
+                st.session_state.calculated_wacc = wacc
 
     with st.expander("🎯 Multi-Objective Optimization", expanded=False):
         # TODO: Check multi-objective optimization results
