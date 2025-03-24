@@ -32,7 +32,7 @@ MicroGridsPy is under continuous development and the latest version includes:
 - **Mixed-Integer Linear Programming (MILP)**: Ensures optimal generation scheduling while accounting for complex system behavior.
 - **Partial Load Generator Modeling**: Considers generator efficiency under varied loads.
 - **Endogenous Load Curve Estimation**: Creates load curves based on local rural village data or estimate load demand profiles using excel inputs file with [RAMP](https://github.com/RAMP-project/RAMP), an open-source bottom-up stochastic model for generating multi-energy load profiles
-- **Endogenous RES Production Time Series**: Utilizes NASA POWER API for solar and wind predictions.
+- **Endogenous RES Production Time Series**: Utilizes PVGIS and NASA POWER API for solar and wind predictions.
 - **Brownfield Feature**: Takes into account existing technologies in the field.
 - **Main Grid Connectivity Simulation**: Models interactions with an existing main grid, including outages.
 
