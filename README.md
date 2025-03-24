@@ -142,7 +142,7 @@ Happy modeling!
 
 ## Contributors
 
-MicroGridsPy has been developed within the SESAM group in the Department of Energy Engineering at Politecnico di Milano. The research activity of SESAM focuses on the use of mathematical models for the study of systems, components, and processes in the energy field and industrial ecology.
+MicroGridsPy is mantained by the SESAM group in the Department of Energy Engineering at Politecnico di Milano. The research activity of SESAM focuses on the use of mathematical models for the study of systems, components, and processes in the energy field and industrial ecology.
 
 The current version of **MicroGridsPy** in linopy has been developed by **Alessandro Onori**, based on the original model created in Pyomo with contributions from other developers and the previous version listed here below:
 
