@@ -52,7 +52,7 @@ battery_params:
   battery_inverter_nominal_capacity: 1000.0
   battery_nominal_capacity: 1000.0
   battery_specific_electronic_investment_cost: 0.3
-  battery_specific_investment_cost: 0.15
+  battery_specific_investment_cost: 0.65
   battery_specific_om_cost: 0.025
   bess_unit_co2_emission: 0.0
   maximum_battery_charge_time: 5.0
@@ -67,13 +67,13 @@ generator_params:
   gen_cost_increase:
   - 0.01
   gen_existing_capacity:
-  - 900000.0
+  - 0.0
   gen_existing_rectifier_capacity:
   - 0.0
   gen_existing_rectifier_years:
   - 0
   gen_existing_years:
-  - 5
+  - 0
   gen_lifetime:
   - 20
   gen_min_output:
@@ -93,9 +93,9 @@ generator_params:
   gen_rectifier_nominal_capacity:
   - 1.0
   gen_specific_investment_cost:
-  - 0.45
+  - 0.5
   gen_specific_om_cost:
-  - 0.02
+  - 0.07
   gen_types: 1
   gen_unit_co2_emission:
   - 0.0
@@ -131,9 +131,9 @@ nasa_power_params:
   user: anonymous
 project_info:
   project_description: ''
-  project_name: dai
+  project_name: eccolo
 project_settings:
-  battery_independence: 1
+  battery_independence: 0
   currency: USD
   discount_rate: 0.1
   distribution_type: Alternating Current
@@ -188,9 +188,9 @@ resource_assessment:
   azim: 180
   drivetrain_efficiency: 0.9
   k_T: -0.37
-  lat: 2.06
+  lat: -2.0565762
   location: Faza, Kenya
-  lon: 41.11
+  lon: 41.108649
   nom_power: 1000
   res_names:
   - Solar PV

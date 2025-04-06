@@ -1,3 +1,7 @@
+
+import shutil
+import os
+
 import streamlit as st
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -46,6 +50,51 @@ def update_nested_settings(settings):
                 else:
                     setattr(settings, field, update_nested_settings(value))
     return settings
+
+def copy_missing_files(src_folder: str, dst_folder: str) -> None:
+    """
+    Copy missing files from src_folder to dst_folder without overwriting existing files.
+
+    Args:
+        src_folder (str): Path to the source folder.
+        dst_folder (str): Path to the destination folder.
+
+    Raises:
+        FileNotFoundError: If the source folder does not exist.
+        ValueError: If the source and destination folders are the same.
+        Exception: For other unexpected errors.
+    """
+    try:
+        src = Path(src_folder)
+        dst = Path(dst_folder)
+
+        if not src.exists() or not src.is_dir():
+            raise FileNotFoundError(f"Source folder does not exist: {src}")
+        if src.resolve() == dst.resolve():
+            raise ValueError("Source and destination folders must be different.")
+
+        dst.mkdir(parents=True, exist_ok=True)  # Create destination if it doesn't exist
+
+        files_copied = 0
+        for item in src.iterdir():
+            dst_file = dst / item.name
+            if item.is_file():
+                if not dst_file.exists():
+                    shutil.copy2(item, dst_file)
+                    files_copied += 1
+            elif item.is_dir():
+                # If the item is a directory, recurse
+                copy_missing_files(item, dst_file)
+
+        if files_copied > 0:
+            print(f"Copied {files_copied} missing files from '{src}' to '{dst}'.")
+        else:
+            print(f"No new files needed to be copied from '{src}' to '{dst}'.")
+
+    except Exception as e:
+        raise Exception(f"An error occurred during copying: {e}")
+
+
 
 def update_renewable_params(renewables_params, res_sources):
     renewable_fields = [
@@ -116,19 +165,6 @@ def run_model():
 
     # Load current project parameters
     current_settings = ProjectParameters.instantiate_from_yaml(yaml_filepath)
-    
-    # UI for updating and saving settings
-    st.subheader("Update and Save Current Settings")
-    st.write("Save project parameter for later use. This helps to keep updated project settings in the parameter YAML file within the project folder.")
-    if st.button("Update and Save Current Settings"):
-        try:
-            updated_settings = update_nested_settings(current_settings)
-            updated_settings.save_to_yaml(str(yaml_filepath))
-            st.success(f"Settings successfully updated and saved to {yaml_filepath}")
-        except Exception as e:
-            st.error(f"An error occurred while saving settings: {str(e)}")
-
-    st.write("---")
 
     st.subheader("Optimize the System and Find a Solution")
     st.write("""
@@ -180,9 +216,12 @@ def run_model():
             try:
                 updated_settings = update_nested_settings(current_settings)
                 updated_settings.save_to_yaml(str(yaml_filepath))
-                st.success(f"Settings successfully updated and saved to {yaml_filepath}")
+                # Copy the inputs folder to the project folder
+                inputs_folder = PathManager.INPUTS_FOLDER_PATH  
+                project_inputs_folder = path_manager.PROJECTS_FOLDER_PATH / project_name / "inputs"
+                copy_missing_files(inputs_folder, project_inputs_folder)
             except Exception as e:
-                st.error(f"An error occurred while saving settings: {str(e)}")
+                st.error(f"An error occurred while saving settings and inputs: {str(e)}")
 
             # Initialize the model
             model = Model(current_settings)
@@ -230,7 +269,10 @@ def run_model():
             try:
                 updated_settings = update_nested_settings(current_settings)
                 updated_settings.save_to_yaml(str(yaml_filepath))
-                st.success(f"Settings successfully updated and saved to {yaml_filepath}")
+                # Copy the inputs folder to the project folder
+                inputs_folder = PathManager.INPUTS_FOLDER_PATH  
+                project_inputs_folder = path_manager.PROJECTS_FOLDER_PATH / project_name / "inputs"
+                copy_missing_files(inputs_folder, project_inputs_folder)
             except Exception as e:
                 st.error(f"An error occurred while saving settings: {str(e)}")
 

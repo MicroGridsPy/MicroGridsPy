@@ -44,12 +44,10 @@ def add_project_variables(model: Model, settings: ProjectParameters, sets: xr.Da
         # CO2 Emission [kgCO2] of the system for each scenario
         project_variables['scenario_co2_emission'] = model.add_variables(lower=0, coords=[sets.scenarios], name='Scenario Total CO2 Emissions')
 
+    # TODO: Check if this is needed
     if settings.advanced_settings.milp_formulation:
         project_variables['ones'] = model.add_variables(binary=True, coords=[sets.scenarios, sets.years, sets.periods], name='Ones')
-        model.add_constraints(
-            project_variables['ones'] == 1,
-            name=f"Fix ones to 1"
-        )
+        model.add_constraints(project_variables['ones'] == 1, name=f"Fix ones to 1")
 
     return project_variables
 
@@ -75,6 +73,7 @@ def add_res_variables(model: Model, settings: ProjectParameters, sets: xr.Datase
     # Curtailment [W*period] by each renewable source
     res_variables['curtailment'] = model.add_variables(lower=0,coords=[sets.scenarios, sets.years, sets.periods, sets.renewable_sources],name='Curtailment by Renewables')
 
+    # Conversion losses [W*period] due to inverter by each renewable source
     res_variables['res_conversion_losses'] = model.add_variables(lower=0,coords=[sets.scenarios, sets.years, sets.periods, sets.renewable_sources], name="Conversion Losses - Renewable Sources")
 
     if settings.advanced_settings.multiobjective_optimization:

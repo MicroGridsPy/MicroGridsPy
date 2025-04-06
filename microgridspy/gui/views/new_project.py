@@ -20,10 +20,8 @@ def create_new_project(project_name):
     
     # Create subfolders for inputs
     project_folder.mkdir(exist_ok=True)
-    (project_folder / "demand").mkdir(exist_ok=True)
-    (project_folder / "resource").mkdir(exist_ok=True)
-    (project_folder / "technology characterization").mkdir(exist_ok=True)
-    (project_folder / "grid").mkdir(exist_ok=True)
+    (project_folder / "inputs").mkdir(exist_ok=True)
+    (project_folder / "results").mkdir(exist_ok=True)
     
     # Instantiate the default values and save in session state
     st.session_state.path_manager = path_manager
