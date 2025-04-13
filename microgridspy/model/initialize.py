@@ -243,16 +243,17 @@ def initialize_project_parameters(data: ProjectParameters, sets: xr.Dataset) -> 
         demand_df = read_csv_data(PathManager.AGGREGATED_DEMAND_FILE_PATH)
         M_values = demand_df.max().values
         st.write(M_values)
-        #M_values = [592000, 697849.907, 812679.5425, 935953.0315, 1066410.604, 1201804.747, 1339085.814, 1474887.162, 1606064.252, 1730093.791, 1845254.055, 1950610.781, 2045884.017, 2131272.228, 2207285.106, 2274609.089, 2334010.389, 2386270.692, 2432147.659, 2472352.726]
         M_values = 1.25 * np.array(M_values)
 
-        # Scenario Weights for multi-scenario optimization
+        # Check if M_values is longer than the time horizon (years)
+        if len(M_values) > len(sets.years):
+            print(f"Truncating M_values from {len(M_values)} to {len(sets.years)} to match project time horizon.")
+            M_values = M_values[:len(sets.years)]
+
         project_parameters['M'] = xr.DataArray(
             M_values,
             dims=["years"],
-            coords={
-                "years": sets.years.values
-            },
+            coords={"years": sets.years.values},
             name='M')
 
     return xr.Dataset(project_parameters)

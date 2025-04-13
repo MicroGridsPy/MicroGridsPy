@@ -111,6 +111,7 @@ def operate_delta_time(time_resolution: int) -> float:
 
     return round(delta_time, 6)
 
+# TODO: Check if this is correct
 def operate_min_capacity(
     battery_independence: int,
     time_resolution: int,
