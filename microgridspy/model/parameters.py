@@ -318,29 +318,57 @@ class BatteryParams(BaseModel):
     battery_inverter_existing_years: Optional[int]
 
 class GeneratorParams(BaseModel):
-  """GeneratorParams configuration model."""
-  gen_types: int
-  gen_names: List[str]
-  gen_nominal_capacity: List[float] 
-  gen_nominal_efficiency: List[float]
-  gen_rectifier_efficiency: List[float]
-  gen_rectifier_nominal_capacity: List[float]
-  gen_rectifier_lifetime: List[int]
-  gen_rectifier_cost: List[float]
-  gen_specific_investment_cost: List[float]
-  gen_specific_om_cost: List[float]
-  gen_lifetime: List[int]
-  gen_unit_co2_emission: List[float]
-  gen_existing_capacity: List[float]
-  gen_existing_years: List[int]
-  fuel_names: List[str]
-  fuel_lhv: List[float]
-  fuel_co2_emission: List[float]
-  partial_load: bool
-  gen_min_output: Optional[List[float]]
-  gen_cost_increase: Optional[List[float]]
-  gen_existing_rectifier_capacity: Optional[List[float]]
-  gen_existing_rectifier_years: Optional[List[int]]
+    """
+    GeneratorParams configuration model.
+    
+    This class represents the generator parameters for a project.
+    
+    Attributes:
+        gen_types (int): The number of generator types.
+        gen_names (List[str]): The names of the generator types.
+        gen_nominal_capacity (List[float]): The nominal capacity of the generator types.
+        gen_nominal_efficiency (List[float]): The nominal efficiency of the generator types.
+        gen_rectifier_efficiency (List[float]): The rectifier efficiency of the generator types.
+        gen_rectifier_nominal_capacity (List[float]): The nominal capacity of the rectifier for the generator types.
+        gen_rectifier_lifetime (List[int]): The lifetime of the rectifier for the generator types.
+        gen_rectifier_cost (List[float]): The cost of the rectifier for the generator types.
+        gen_specific_investment_cost (List[float]): The specific investment cost of the generator types.
+        gen_specific_om_cost (List[float]): The specific operation and maintenance cost of the generator types.
+        gen_lifetime (List[int]): The lifetime of the generator types.
+        gen_unit_co2_emission (List[float]): The unit CO2 emission of the generator types.
+        gen_existing_capacity (List[float]): The existing capacity of the generator types.
+        gen_existing_years (List[int]): The existing years of the generator types.
+        fuel_names (List[str]): The names of the fuels used by the generator types.
+        fuel_lhv (List[float]): The lower heating value of the fuels used by the generator types.
+        fuel_co2_emission (List[float]): The CO2 emission of the fuels used by the generator types.
+        partial_load (bool): Indicates if partial load is allowed for the generator types.
+        gen_sampled_relative_output (Optional[List[List[float]]]): Sampled relative output of the generator types.
+        gen_sampled_efficiency (Optional[List[List[float]]]): Sampled efficiency of the generator types.
+        gen_existing_rectifier_capacity (Optional[List[float]]): Existing rectifier capacity of the generator types.
+        gen_existing_rectifier_years (Optional[List[int]]): Existing rectifier years of the generator types.
+    """
+    gen_types: int
+    gen_names: List[str]
+    gen_nominal_capacity: List[float]
+    gen_nominal_efficiency: List[float]
+    gen_rectifier_efficiency: List[float]
+    gen_rectifier_nominal_capacity: List[float]
+    gen_rectifier_lifetime: List[int]
+    gen_rectifier_cost: List[float]
+    gen_specific_investment_cost: List[float]
+    gen_specific_om_cost: List[float]
+    gen_lifetime: List[int]
+    gen_unit_co2_emission: List[float]
+    gen_existing_capacity: List[float]
+    gen_existing_years: List[int]
+    fuel_names: List[str]
+    fuel_lhv: List[float]
+    fuel_co2_emission: List[float]
+    partial_load: bool
+    gen_sampled_relative_output: Optional[List[List[float]]] = None 
+    gen_sampled_efficiency: Optional[List[List[float]]] = None       
+    gen_existing_rectifier_capacity: Optional[List[float]] = None
+    gen_existing_rectifier_years: Optional[List[int]] = None
 
 class GridParams(BaseModel):
     """

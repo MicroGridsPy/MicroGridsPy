@@ -12,7 +12,8 @@ from microgridspy.post_process.cost_calculations import (
     calculate_grid_costs)
 from microgridspy.post_process.energy_calculations import (
     calculate_energy_usage,
-    calculate_renewable_penetration)
+    calculate_renewable_penetration,
+    calculate_partial_load_indicators)
 from microgridspy.post_process.data_retrieval import get_sizing_results, get_conversion_sizing_results
 from microgridspy.post_process.plots import (
     costs_pie_chart,
@@ -198,6 +199,7 @@ def plots_dashboard():
     model: Model = st.session_state.model
     currency = st.session_state.get('currency', 'USD')
     project_name = st.session_state.get('project_name')
+    partial_load = st.session_state.get('partial_load')
 
     # Initialize colors
     color_dict = initialize_colors(model)
@@ -301,6 +303,19 @@ def plots_dashboard():
         energy_usage_fig = create_energy_usage_pie_chart(energy_usage, model, st.session_state.res_names, color_dict)
     fig['Energy Usage Pie Chart'] = energy_usage_fig
     st.pyplot(energy_usage_fig)
+
+    if model.has_generator:
+        if partial_load: 
+            # Compute and display the Partial Load Indicators
+            avg_load_factor, avg_efficiency = calculate_partial_load_indicators(model)
+
+            st.markdown("**Generator Partial Load Indicators**")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Average Generator Load Factor", f"{avg_load_factor:.2f} %")
+            with col2:
+                st.metric("Average Generator Efficiency", f"{avg_efficiency:.2f} kWh/liter")
+
 
     # Export results
     st.header("Export Results")

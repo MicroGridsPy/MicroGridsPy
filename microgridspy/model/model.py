@@ -12,6 +12,7 @@ from microgridspy.model.initialize import (
     initialize_demand, 
     initialize_resource, 
     initialize_temperature,
+    initialize_fuel_cost,
     initialize_grid_availability,
     initialize_project_parameters, 
     initialize_res_parameters, 
@@ -91,6 +92,9 @@ class Model:
         if self.has_generator:
             self.generator_parameters: xr.Dataset = initialize_generator_parameters(self.settings, self.sets)
             self.parameters = xr.merge([self.parameters, self.generator_parameters])
+
+            self.fuel_cost: xr.DataArray = initialize_fuel_cost(self.sets)
+            self.parameters = xr.merge([self.parameters, self.fuel_cost.to_dataset(name='FUEL_SPECIFIC_COST')])
 
         if self.has_grid_connection:
             self.grid_parameters: xr.Dataset = initialize_grid_parameters(self.settings, self.sets)

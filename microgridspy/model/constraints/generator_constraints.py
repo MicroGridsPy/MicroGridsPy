@@ -8,12 +8,10 @@ def add_generator_constraints(model: Model, settings: ProjectParameters, sets: x
     """Add constraints for generator."""
 
     add_generator_max_energy_production_constraint(model, settings, sets, param, var)
+    add_generator_fuel_consumption_constraints(model, settings, sets, param, var)
 
     if settings.advanced_settings.capacity_expansion:
         add_generator_capacity_expansion_constraints(model, settings, sets, param, var)
-
-    if settings.generator_params.partial_load:
-        add_generator_partial_load_constraints(model, settings, sets, param, var)
 
     if settings.advanced_settings.multiobjective_optimization:
         add_generator_emissions_constraints(model, settings, sets, param, var)
@@ -56,22 +54,10 @@ def add_generator_max_energy_production_constraint(model: Model, settings: Proje
         max_production = var['generator_units'] * param['GENERATOR_NOMINAL_CAPACITY']
         model.add_constraints(var['generator_energy_production'] <= max_production, name="Generator Energy Production Constraint")
 
-def add_generator_capacity_expansion_constraints(model: Model, settings: ProjectParameters, sets: xr.Dataset, param: xr.Dataset, var: Dict[str, linopy.Variable]) -> None:
-    """Add constraints for generator capacity expansion."""
-
-    for step in sets.steps.values[1:]:
-        model.add_constraints(
-            var['generator_units'].sel(steps=step) >= var['generator_units'].sel(steps=step - 1),
-            name=f"Generator Min Step Units Constraint - Step {step}")
-        
-def add_generator_partial_load_constraints(model: Model, settings: ProjectParameters, sets: xr.Dataset, param: xr.Dataset, var: Dict[str, linopy.Variable]) -> None:
-    
-    model.add_constraints(var['generator_energy_partial_load'] >= var['generator_partial_load'] * (param['GENERATOR_NOMINAL_CAPACITY'] * param['GENERATOR_MIN_LOAD']), 
-                          name=f"Minimum Generator Partial Load Energy Production Constraint")
-    
-    model.add_constraints(var['generator_energy_partial_load'] <= var['generator_partial_load'] * param['GENERATOR_NOMINAL_CAPACITY'], 
-                          name=f"Maximum Generator Partial Load Energy Production Constraint")
-    
+def add_generator_fuel_consumption_constraints(model: Model, settings: ProjectParameters, sets: xr.Dataset, param: xr.Dataset, var: Dict[str, linopy.Variable]) -> None:
+    """
+    Add constraints linking generator fuel consumption and energy production using nominal efficiency and fuel LHV.
+    """
     years = sets.years.values
     steps = sets.steps.values
     step_duration = settings.advanced_settings.step_duration
@@ -81,15 +67,55 @@ def add_generator_partial_load_constraints(model: Model, settings: ProjectParame
     for year in years:
         # Retrieve the step for the current year
         step = years_steps_tuples[year - years[0]][1]
+        for gen in sets.generator_types.values:
+            # Define variables
+            gen_energy = var['generator_energy_production'].sel(years=year, generator_types=gen)
+            gen_fuel_consumption = var['generator_fuel_consumption'].sel(years=year, generator_types=gen)
+
+            if settings.generator_params.partial_load == False:
+                # Define parameters
+                nominal_efficiency = param['GENERATOR_NOMINAL_EFFICIENCY'].sel(generator_types=gen)
+                fuel_lhv = param['FUEL_LHV'].sel(generator_types=gen)
+
+                model.add_constraints(
+                    gen_fuel_consumption == gen_energy / (nominal_efficiency * fuel_lhv),
+                    name=f"Fuel Consumption Constraint - Year {year}, Type {gen}")
+            else:
+                # Loop over all segments (piecewise parts)
+                n_segments = param['GENERATOR_SAMPLED_RELATIVE_OUTPUT'].shape[1] - 1  # number of segments = number of points - 1
+
+                for seg in range(n_segments):
+                    # Fuel power points at current and next sampling point
+                    p0 = param['GENERATOR_SAMPLED_RELATIVE_OUTPUT'].sel(sample_points=seg) * param['GENERATOR_NOMINAL_CAPACITY'].sel(generator_types=gen)
+                    p1 = param['GENERATOR_SAMPLED_RELATIVE_OUTPUT'].sel(sample_points=seg+1) * param['GENERATOR_NOMINAL_CAPACITY'].sel(generator_types=gen)
+
+                    # Fuel consumption samples at current and next sampling point
+                    fc0 = p0 / (param['GENERATOR_SAMPLED_EFFICIENCY'].sel(sample_points=seg, generator_types=gen) * param['FUEL_LHV'].sel(generator_types=gen))
+                    fc1 = p1 / (param['GENERATOR_SAMPLED_EFFICIENCY'].sel(sample_points=seg+1, generator_types=gen) * param['FUEL_LHV'].sel(generator_types=gen))
+
+                    # Slope between the two sampled points
+                    if (p1 - p0) != 0:
+                        slope = (fc1 - fc0) / (p1 - p0)
+                    else:
+                        slope = 0.0  # flat segment
+
+                    # Broadcasting to all dims: scenarios × years × periods × generator_types
+                    gen_energy = var['generator_energy_production'].sel(years=year, generator_types=gen)
+                    gen_fuel_consumption = var['generator_fuel_consumption'].sel(years=year, generator_types=gen)
+                    gen_units = var['generator_units'].sel(steps=step, generator_types=gen)
+
+                    # Add constraints vectorized
+                    model.add_constraints(gen_fuel_consumption >= slope * (gen_energy - p0 * gen_units) + fc0 * gen_units, name=f"Partial Load Constraint - Segment {seg}, Year {year}, Type {gen}")
+
+def add_generator_capacity_expansion_constraints(model: Model, settings: ProjectParameters, sets: xr.Dataset, param: xr.Dataset, var: Dict[str, linopy.Variable]) -> None:
+    """Add constraints for generator capacity expansion."""
+
+    for step in sets.steps.values[1:]:
         model.add_constraints(
-            var['generator_energy_production'].sel(years=year) >= (var['generator_full_load'].sel(steps=step) * param['GENERATOR_NOMINAL_CAPACITY']) + var['generator_energy_partial_load'].sel(years=year), 
-            name=f"Generator Partial Load Energy Production Constraint - Year {year}") 
-        
-    for step in steps:
-        model.add_constraints(
-            var['generator_units'].sel(steps=step) <= var['generator_full_load'].sel(steps=step) + 1, 
-            name=f"Generator Partial Load Units Constraint - Step {step}")
-        
+            var['generator_units'].sel(steps=step) >= var['generator_units'].sel(steps=step - 1),
+            name=f"Generator Min Step Units Constraint - Step {step}")
+
+
 def add_generator_emissions_constraints(model: Model, settings: ProjectParameters, sets: xr.Dataset, param: xr.Dataset, var: Dict[str, linopy.Variable]) -> None:
     """Calculate the emissions for generator types."""
     

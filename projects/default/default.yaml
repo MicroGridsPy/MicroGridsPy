@@ -36,7 +36,7 @@ archetypes_params:
   schools: 1
 battery_params:
   battery_charge_battery_efficiency: 0.9
-  battery_cycles: 3000
+  battery_cycles: 4000
   battery_depth_of_discharge: 0.8
   battery_discharge_battery_efficiency: 0.9
   battery_existing_capacity: 0.0
@@ -44,19 +44,19 @@ battery_params:
   battery_existing_years: 0
   battery_expected_lifetime: 20
   battery_initial_soc: 1.0
-  battery_inverter_cost: 0.2
+  battery_inverter_cost: 0.25
   battery_inverter_efficiency_ac_dc: 0.95
   battery_inverter_efficiency_dc_ac: 0.95
   battery_inverter_existing_years: 0
   battery_inverter_lifetime: 20
   battery_inverter_nominal_capacity: 1000.0
   battery_nominal_capacity: 1000.0
-  battery_specific_electronic_investment_cost: 0.3
-  battery_specific_investment_cost: 0.65
+  battery_specific_electronic_investment_cost: 0.2
+  battery_specific_investment_cost: 0.5
   battery_specific_om_cost: 0.025
   bess_unit_co2_emission: 0.0
   maximum_battery_charge_time: 5.0
-  maximum_battery_discharge_time: 4.0
+  maximum_battery_discharge_time: 5.0
 generator_params:
   fuel_co2_emission:
   - 2.68
@@ -64,8 +64,6 @@ generator_params:
   - 10140.0
   fuel_names:
   - Diesel
-  gen_cost_increase:
-  - 0.01
   gen_existing_capacity:
   - 0.0
   gen_existing_rectifier_capacity:
@@ -76,14 +74,12 @@ generator_params:
   - 0
   gen_lifetime:
   - 20
-  gen_min_output:
-  - 0.3
   gen_names:
   - Diesel Generator
   gen_nominal_capacity:
   - 450000.0
   gen_nominal_efficiency:
-  - 0.3
+  - 0.35
   gen_rectifier_cost:
   - 0.0
   gen_rectifier_efficiency:
@@ -92,8 +88,10 @@ generator_params:
   - 20
   gen_rectifier_nominal_capacity:
   - 1.0
+  gen_sampled_efficiency: []
+  gen_sampled_relative_output: []
   gen_specific_investment_cost:
-  - 0.5
+  - 0.6
   gen_specific_om_cost:
   - 0.07
   gen_types: 1
@@ -131,7 +129,7 @@ nasa_power_params:
   user: anonymous
 project_info:
   project_description: ''
-  project_name: eccolo
+  project_name: default
 project_settings:
   battery_independence: 0
   currency: USD
@@ -160,7 +158,7 @@ renewables_params:
   res_existing_years:
   - 0
   res_inverter_cost:
-  - 0.2
+  - 0.25
   res_inverter_efficiency:
   - 0.95
   res_inverter_existing_capacity:

@@ -351,32 +351,16 @@ def add_generator_fuel_cost(
     Add generator fuel cost constraint to the model.
     """
     years = sets.years.values
-    steps = sets.steps.values
-    step_duration = settings.advanced_settings.step_duration
-    # Create a list of tuples with years and steps
-    years_steps_tuples = [((years[i] - years[0]) + 1, steps[i // step_duration]) for i in range(len(years))]
 
     yearly_cost: linopy.LinearExpression = 0
     generator_fuel_cost: linopy.LinearExpression = 0
 
-    if partial_load == False:
-        for year in years:
-            yearly_cost = (var['generator_energy_production'].sel(years=year) * param['GENERATOR_MARGINAL_COST'].sel(years=year)).sum('periods')
-            if actualized:
-                generator_fuel_cost += yearly_cost / ((1 + param['DISCOUNT_RATE'])**(year - years[0] + 1))
-            else:
-                generator_fuel_cost += yearly_cost
-    else:
-        for year in years:
-            # Retrieve the step for the current year
-            step = years_steps_tuples[year - years[0]][1]
-            yearly_cost = (var['generator_full_load'].sel(steps=step) * param['GENERATOR_NOMINAL_CAPACITY'] * param['GENERATOR_MARGINAL_COST'].sel(years=year) +
-                            var['generator_energy_partial_load'].sel(years=year) * param['GENERATOR_MARGINAL_COST_MILP'].sel(years=year) +
-                            var['generator_partial_load'].sel(years=year) * param['GENERATOR_START_COST'].sel(years=year))
-            if actualized:
-                generator_fuel_cost += yearly_cost / ((1 + param['DISCOUNT_RATE'])**(year - years[0] + 1))
-            else:
-                generator_fuel_cost += yearly_cost
+    for year in years:
+        yearly_cost = (var['generator_fuel_consumption'].sel(years=year) * param['FUEL_SPECIFIC_COST'].sel(years=year)).sum('periods')
+        if actualized:
+            generator_fuel_cost += yearly_cost / ((1 + param['DISCOUNT_RATE'])**(year - years[0] + 1))
+        else:
+            generator_fuel_cost += yearly_cost
 
     try:
         # Add constraint

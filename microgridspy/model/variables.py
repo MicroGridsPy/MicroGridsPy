@@ -154,10 +154,6 @@ def add_generator_variables(model: Model, settings: ProjectParameters, sets: xr.
         # MILP Formulation: integer units
         generator_variables['generator_units'] = model.add_variables(lower=0, integer=True, coords=[sets.steps, sets.generator_types], name='Unit of Nominal Capacity for Generators')
         generator_variables['generator_rectifier_units'] = model.add_variables(lower=0, integer=True, coords=[sets.steps, sets.generator_types] , name='Units of Rectifiers for Generators')        
-        if settings.generator_params.partial_load:
-            # Binary that controls if there will be a generator in part load
-            generator_variables['generator_partial_load'] = model.add_variables(binary=True, coords=[sets.scenarios, sets.years, sets.generator_types, sets.periods], name='Generator in Partial Load')
-            generator_variables['generator_full_load'] = model.add_variables(lower=0, integer=True, coords=[sets.steps, sets.generator_types], name='Generators in Full Load')
     else:
         # LP Formulation: continuous units
         generator_variables['generator_units'] = model.add_variables(lower=0, coords=[sets.steps, sets.generator_types], name='Unit of Nominal Capacity for Generators')
@@ -165,9 +161,8 @@ def add_generator_variables(model: Model, settings: ProjectParameters, sets: xr.
 
     # Energy produced [W*period] by each generator type
     generator_variables['generator_energy_production'] = model.add_variables(lower=0, coords=[sets.scenarios, sets.years, sets.generator_types, sets.periods], name='Generator Energy Production')
-    if settings.generator_params.partial_load:
-        # Energy produced by the generator in partial load
-        generator_variables['generator_energy_partial_load'] = model.add_variables(lower=0, coords=[sets.scenarios, sets.years, sets.generator_types, sets.periods], name='Generator Energy Production in Partial Load')
+    # Fuel consumption [W*period] by each generator type
+    generator_variables['generator_fuel_consumption'] = model.add_variables(lower=0, coords=[sets.scenarios, sets.years, sets.generator_types, sets.periods], name='Generator Fuel Consumption')
 
     generator_variables['generator_conversion_losses'] = model.add_variables(lower=0, coords=[sets.scenarios, sets.years, sets.generator_types, sets.periods], name="Conversion Losses - Generator")
 

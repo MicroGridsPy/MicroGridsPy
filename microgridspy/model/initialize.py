@@ -13,9 +13,6 @@ from microgridspy.model.utils import (
     operate_min_capacity,
     initialize_res_investment_cost,
     initialize_battery_investment_cost,
-    initialize_fuel_specific_cost,
-    operate_marginal_cost,
-    operate_start_cost
 )
 
 def initialize_sets(data: ProjectParameters, has_generator: bool) -> xr.Dataset:
@@ -110,6 +107,34 @@ def initialize_resource(sets: xr.Dataset) -> xr.DataArray:
             "periods": sets.periods.values
         },
         name="Resource Availability - Unit of electricity production")
+
+def initialize_fuel_cost(sets: xr.Dataset) -> xr.DataArray:
+    """
+    Load the fuel cost time series data into an xarray DataArray.
+    """
+    try:
+        fuel_cost_df = read_csv_data(PathManager.FUEL_SPECIFIC_COST_FILE_PATH)
+        # Rest of the function remains the same
+    except (FileNotFoundError, pd.errors.EmptyDataError, pd.errors.ParserError) as e:
+        raise RuntimeError(f"Failed to load fuel cost data: {str(e)}")
+    
+    print(fuel_cost_df.columns)
+
+    num_gen_types = len(sets.generator_types)
+    num_years = len(sets.years)
+
+    # Reshape the data to match other variables' dimension order
+    fuel_cost_data = fuel_cost_df.values.flatten(order='F').reshape(num_gen_types, num_years)
+
+    # Create xarray DataArray with consistent dimension order
+    return xr.DataArray(
+        data=fuel_cost_data,
+        dims=["generator_types", "years"],
+        coords={
+            "generator_types": sets.generator_types.values,
+            "years": sets.years.values
+        },
+        name="Fuel Specific Cost")
 
 def initialize_temperature(sets: xr.Dataset) -> xr.DataArray:
     """
@@ -499,7 +524,8 @@ def initialize_battery_parameters(data: ProjectParameters, time_series: xr.Datas
                                  data.advanced_settings.scenario_weights, 
                                  data.battery_params.battery_depth_of_discharge, 
                                  sets, time_series['DEMAND']),
-            dims=[],
+            dims=['scenarios'],
+            coords={'scenarios': sets.scenarios.values},
             name='Battery Minimum Capacity (W*period)')
 
     return xr.Dataset(battery_parameters)
@@ -516,6 +542,12 @@ def initialize_generator_parameters(data: ProjectParameters, sets: xr.Dataset) -
             dims=['generator_types'],
             coords={'generator_types': generator_types},
             name='Generators Nominal Capacity'),
+
+        'GENERATOR_NOMINAL_EFFICIENCY': xr.DataArray(
+            data.generator_params.gen_nominal_efficiency,
+            dims=['generator_types'],
+            coords={'generator_types': generator_types},
+            name='Generators Nominal Efficiency'),
 
         'GENERATOR_RECTIFIER_EFFICIENCY': xr.DataArray(
             data.generator_params.gen_rectifier_efficiency,
@@ -559,23 +591,12 @@ def initialize_generator_parameters(data: ProjectParameters, sets: xr.Dataset) -
             coords={'generator_types': generator_types},
             name='Generators Lifetime'),
 
-        'FUEL_SPECIFIC_COST': xr.DataArray(
-            initialize_fuel_specific_cost(data.generator_params.gen_names, data.project_settings.time_horizon),
-            dims=['generator_types', 'years'],
-            coords={'generator_types': generator_types, 'years': sets.years.values},
-            name='Fuel Specific Cost'),
-
-        'GENERATOR_MARGINAL_COST': xr.DataArray(
-            operate_marginal_cost(data.generator_params.gen_names, 
-                                  data.project_settings.time_horizon,
-                                  data.generator_params.gen_nominal_efficiency,
-                                  data.generator_params.fuel_lhv,
-                                  data.generator_params.gen_nominal_capacity,
-                                  data.generator_params.gen_cost_increase,
-                                  partial_load=False),
-            dims=['generator_types', 'years'],
-            coords={'generator_types': generator_types, 'years': sets.years.values},
-            name='Marginal Cost of operation at nominal efficiency')}
+        'FUEL_LHV': xr.DataArray(
+            data.generator_params.fuel_lhv,
+            dims=['generator_types'],
+            coords={'generator_types': generator_types},
+            name='Fuel Lower Heating Value (LHV)'),
+    }
     
     # Brownfield Investment scenario
     if data.advanced_settings.brownfield:
@@ -607,35 +628,24 @@ def initialize_generator_parameters(data: ProjectParameters, sets: xr.Dataset) -
             coords={'generator_types': generator_types},
             name='Unit CO2 Emission of the Generators')
         
-    if data.advanced_settings.unit_commitment and data.generator_params.partial_load:
-        generator_parameters['GENERATOR_MIN_LOAD'] = xr.DataArray(
-            data.generator_params.gen_min_output,
-            dims=['generator_types'],
-            coords={'generator_types': generator_types},
-            name='Minimum Output of the generators in partial load')
-        
-        generator_parameters['GENERATOR_START_COST'] = xr.DataArray(
-            operate_start_cost(data.generator_params.gen_names, 
-                                  data.project_settings.time_horizon,
-                                  data.generator_params.gen_nominal_efficiency,
-                                  data.generator_params.fuel_lhv,
-                                  data.generator_params.gen_nominal_capacity,
-                                  data.generator_params.gen_cost_increase),
-            dims=['generator_types', 'years'],
-            coords={'generator_types': generator_types, 'years': sets.years.values},
-            name='Start-up cost of a generator in partial load')
-        
-        generator_parameters['GENERATOR_MARGINAL_COST_MILP'] = xr.DataArray(
-            operate_marginal_cost(data.generator_params.gen_names, 
-                                  data.project_settings.time_horizon,
-                                  data.generator_params.gen_nominal_efficiency,
-                                  data.generator_params.fuel_lhv,
-                                  data.generator_params.gen_nominal_capacity,
-                                  data.generator_params.gen_cost_increase,
-                                  partial_load=True),
-            dims=['generator_types', 'years'],
-            coords={'generator_types': generator_types, 'years': sets.years.values},
-            name='Marginal Cost of operation in partial load')
+    if data.generator_params.partial_load:
+        generator_parameters['GENERATOR_SAMPLED_RELATIVE_OUTPUT'] = xr.DataArray(
+            data.generator_params.gen_sampled_relative_output,
+            dims=['generator_types', 'sample_points'],
+            coords={
+                'generator_types': generator_types,
+                'sample_points': np.arange(len(data.generator_params.gen_sampled_relative_output[0]))
+            },
+            name='Sampled Relative Output for Piecewise Approximation')
+
+        generator_parameters['GENERATOR_SAMPLED_EFFICIENCY'] = xr.DataArray(
+            data.generator_params.gen_sampled_efficiency,
+            dims=['generator_types', 'sample_points'],
+            coords={
+                'generator_types': generator_types,
+                'sample_points': np.arange(len(data.generator_params.gen_sampled_efficiency[0]))
+            },
+            name='Sampled Efficiency for Piecewise Approximation')
         
     return xr.Dataset(generator_parameters)
 

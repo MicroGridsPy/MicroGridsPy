@@ -92,7 +92,7 @@ def battery_technology() -> None:
         edited_df = upload_cost_data(cost_df, currency)
         if st.button(f"Save investment cost data for Battery"):
             battery_cost_file_path = PathManager.BATTERY_COST_FILE_PATH
-            cost_df[f'Battery Investment Cost [{currency}/W]'] = edited_df[f'Battery Investment Cost [{currency}/W]']
+            cost_df[f'Battery Investment Cost [{currency}/W]'] = edited_df[f'Battery Investment Cost [{currency}/Wh]']
             cost_df.to_csv(battery_cost_file_path, index=True)
             st.success(f"Data saved to {battery_cost_file_path}")
 

@@ -142,3 +142,49 @@ def calculate_renewable_penetration(model: Model):
 
     # Return the average renewable penetration across all years
     return sum(yearly_penetrations) / len(yearly_penetrations) if yearly_penetrations else 0
+
+def calculate_partial_load_indicators(model: Model):
+    """
+    Calculate partial load indicators:
+    - Average Generator Load Factor (%)
+    - Average Generator Efficiency (kWh/liter)
+    """
+    sets = model.sets
+    years = sets['years'].values
+    steps = sets['steps'].values
+    step_duration = model.settings.advanced_settings.step_duration
+    years_steps_tuples = [(years[i] - years[0], steps[i // step_duration]) for i in range(len(years))]
+
+    # Get variables
+    total_generator_energy_production = model.get_solution_variable('Generator Energy Production').sum('generator_types')
+    total_generator_fuel_consumption = model.get_solution_variable('Generator Fuel Consumption').sum('generator_types')
+
+    avg_load_factors = []
+    avg_efficiencies = []
+
+    for year in years:
+        step = years_steps_tuples[year - years[0]][1]
+
+        # Sum generator production and fuel consumption for the year
+        yearly_gen_production = total_generator_energy_production.sel(years=year).sum().values.item()  # [Wh]
+        yearly_fuel_consumption = total_generator_fuel_consumption.sel(years=year).sum().values.item()  # [l] or [kg]
+
+        # Generator installed capacity (step-dependent)
+        installed_gen_capacity = model.get_solution_variable('Unit of Nominal Capacity for Generators').sel(steps=step) * model.parameters['GENERATOR_NOMINAL_CAPACITY']
+        total_installed_gen_capacity = installed_gen_capacity.sum('generator_types').values.item()  # [W]
+
+        # Calculate average load factor if capacity > 0
+        if total_installed_gen_capacity > 0:
+            avg_load_factor = yearly_gen_production / (total_installed_gen_capacity * 8760)  # [Wh] / ([W] × [h])
+            avg_load_factors.append(avg_load_factor * 100)  # Convert to %
+        
+        # Calculate average generator efficiency if fuel consumed > 0
+        if yearly_fuel_consumption > 0:
+            avg_efficiency = yearly_gen_production / 1000 / yearly_fuel_consumption  # [kWh/l] (because prod is in Wh)
+            avg_efficiencies.append(avg_efficiency)
+
+    # Return averages across all years
+    avg_load_factor_overall = sum(avg_load_factors) / len(avg_load_factors) if avg_load_factors else 0
+    avg_efficiency_overall = sum(avg_efficiencies) / len(avg_efficiencies) if avg_efficiencies else 0
+
+    return avg_load_factor_overall, avg_efficiency_overall

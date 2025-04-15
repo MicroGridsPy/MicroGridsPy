@@ -186,23 +186,25 @@ def add_min_battery_independence_constraints(model: Model, settings: ProjectPara
     years_steps_tuples = [(years[i] - years[0], steps[i // step_duration]) for i in range(len(years))]
 
     if is_brownfield:
-        for year in sets.years.values:
-            step = years_steps_tuples[year - years[0]][1]
-            # Calculate the total age of the existing capacity at each year
-            total_age = param['BATTERY_EXISTING_YEARS'] + (year - sets.years[0])
-        
-            # Create a boolean mask for renewable sources that have exceeded their lifetime
-            lifetime_exceeded = bool(total_age > param['BATTERY_LIFETIME'])
+        for scenario in sets.scenarios.values:
+            for year in sets.years.values:
+                step = years_steps_tuples[year - years[0]][1]
+                # Calculate the total age of the existing capacity at each year
+                total_age = param['BATTERY_EXISTING_YEARS'] + (year - sets.years[0])
+            
+                # Create a boolean mask for renewable sources that have exceeded their lifetime
+                lifetime_exceeded = bool(total_age > param['BATTERY_LIFETIME'])
 
-            if not lifetime_exceeded:
-                model.add_constraints((var['battery_units'].sel(steps=step) * param['BATTERY_NOMINAL_CAPACITY']) + param['BATTERY_EXISTING_CAPACITY']  >= param['BATTERY_MIN_CAPACITY'],
-                name=f"Battery Minimum Capacity Constraint - Year {year}")
-            else:
-                model.add_constraints((var['battery_units'].sel(steps=step) * param['BATTERY_NOMINAL_CAPACITY']) >= param['BATTERY_MIN_CAPACITY'],
-                name=f"Battery Minimum Capacity Constraint - Year {year}")
+                if not lifetime_exceeded:
+                    model.add_constraints((var['battery_units'].sel(steps=step) * param['BATTERY_NOMINAL_CAPACITY']) + param['BATTERY_EXISTING_CAPACITY']  >= param['BATTERY_MIN_CAPACITY'].sel(scenarios=scenario),
+                    name=f"Battery Minimum Capacity Constraint - Year {year}, Scenario {scenario}")
+                else:
+                    model.add_constraints((var['battery_units'].sel(steps=step) * param['BATTERY_NOMINAL_CAPACITY']) >= param['BATTERY_MIN_CAPACITY'].sel(scenarios=scenario),
+                    name=f"Battery Minimum Capacity Constraint - Year {year}, Scenario {scenario}")
     else:
-        model.add_constraints((var['battery_units'] * param['BATTERY_NOMINAL_CAPACITY']) >= param['BATTERY_MIN_CAPACITY'],
-        name=f"Battery Minimum Capacity Constraint")
+        for scenario in sets.scenarios.values:
+            model.add_constraints((var['battery_units'] * param['BATTERY_NOMINAL_CAPACITY']) >= param['BATTERY_MIN_CAPACITY'].sel(scenarios=scenario),
+            name=f"Battery Minimum Capacity Constraint - Scenario {scenario}")
 
 def add_battery_single_flow_constraints(model: Model, settings: ProjectParameters, sets: xr.Dataset, param: xr.Dataset, var: Dict[str, linopy.Variable]) -> None:
     """Add single flow constraints for battery charge and discharge."""

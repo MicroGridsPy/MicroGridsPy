@@ -1,7 +1,4 @@
-
 import shutil
-import os
-
 import streamlit as st
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -126,8 +123,10 @@ def update_generator_params(generator_params, gen_types):
         'gen_nominal_efficiency', 'gen_specific_investment_cost',
         'gen_specific_om_cost', 'gen_unit_co2_emission', 'gen_rectifier_efficiency',
         'gen_rectifier_nominal_capacity', 'gen_rectifier_cost', 'gen_rectifier_lifetime', 
-        'gen_existing_rectifier_capacity','gen_existing_rectifier_years','partial_load']
-    
+        'gen_existing_rectifier_capacity','gen_existing_rectifier_years',
+        'gen_sampled_relative_output', 'gen_sampled_efficiency'  # No 'partial_load' here
+    ]
+
     for field in generator_fields:
         if hasattr(generator_params, field):
             current_value = getattr(generator_params, field)
@@ -141,6 +140,11 @@ def update_generator_params(generator_params, gen_types):
                 else:
                     setattr(generator_params, field, current_value[:gen_types])
 
+    # ⚡ Handle partial_load separately (because it's a bool)
+    if hasattr(generator_params, 'partial_load'):
+        if 'partial_load' in st.session_state:
+            generator_params.partial_load = st.session_state['partial_load']
+            
     return generator_params
 
 
