@@ -117,14 +117,32 @@ def initialize_fuel_cost(sets: xr.Dataset) -> xr.DataArray:
         # Rest of the function remains the same
     except (FileNotFoundError, pd.errors.EmptyDataError, pd.errors.ParserError) as e:
         raise RuntimeError(f"Failed to load fuel cost data: {str(e)}")
-    
-    print(fuel_cost_df.columns)
 
     num_gen_types = len(sets.generator_types)
     num_years = len(sets.years)
 
+    # Check if the number of years in the fuel cost data file is less than the number of years in the project settings
+    num_rows = fuel_cost_df.shape[0]
+    if num_rows >= num_years:
+        # Truncate the data to match the project settings
+        fuel_cost_data = fuel_cost_df.iloc[:num_years, :]
+        st.warning(f"Number of years detected in the fuel cost data file ({num_rows}) is higher than the number of years in the time horizon ({num_years}). The data will be truncated to match the project settings.")
+    elif num_rows < num_years:
+        st.error(f"The number of years in the fuel cost data file ({num_rows}) is less than the number of years in the time horizon ({num_years}). Please edit the fuel cost data from the user interface.")
+    
+    # Select only the columns corresponding to generator types
+    fuel_cost_data = fuel_cost_data[sets.generator_types.values]
+    # Check if the number of generator types in the fuel cost data file is less than the number of generator types in the project settings
+    num_columns = fuel_cost_data.shape[1]
+    if num_columns > num_gen_types:
+        # Truncate the data to match the project settings
+        fuel_cost_data = fuel_cost_data.iloc[:, :num_gen_types]
+        st.warning(f"Number of generator types detected in the fuel cost data file ({num_columns}) is higher than the number of generator types in the project settings ({num_gen_types}). The data will be truncated to match the project settings.")
+    elif num_columns < num_gen_types:
+        st.error(f"The number of generator types in the fuel cost data file ({num_columns}) is less than the number of generator types in the project settings ({num_gen_types}). Please edit the fuel cost data from the user interface.")
+
     # Reshape the data to match other variables' dimension order
-    fuel_cost_data = fuel_cost_df.values.flatten(order='F').reshape(num_gen_types, num_years)
+    fuel_cost_data = fuel_cost_data.values.flatten(order='F').reshape(num_gen_types, num_years)
 
     # Create xarray DataArray with consistent dimension order
     return xr.DataArray(

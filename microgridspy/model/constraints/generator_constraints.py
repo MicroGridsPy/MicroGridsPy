@@ -99,13 +99,10 @@ def add_generator_fuel_consumption_constraints(model: Model, settings: ProjectPa
                     else:
                         slope = 0.0  # flat segment
 
-                    # Broadcasting to all dims: scenarios × years × periods × generator_types
-                    gen_energy = var['generator_energy_production'].sel(years=year, generator_types=gen)
-                    gen_fuel_consumption = var['generator_fuel_consumption'].sel(years=year, generator_types=gen)
-                    gen_units = var['generator_units'].sel(steps=step, generator_types=gen)
-
                     # Add constraints vectorized
-                    model.add_constraints(gen_fuel_consumption >= slope * (gen_energy - p0 * gen_units) + fc0 * gen_units, name=f"Partial Load Constraint - Segment {seg}, Year {year}, Type {gen}")
+                    model.add_constraints(var['generator_fuel_consumption'].sel(years=year, generator_types=gen) >= 
+                                          slope * (var['generator_energy_production'].sel(years=year, generator_types=gen) - p0 * var['generator_units'].sel(steps=step, generator_types=gen)) + fc0 * var['generator_units'].sel(steps=step, generator_types=gen), 
+                                          name=f"Partial Load Constraint - Segment {seg}, Year {year}, Type {gen}")
 
 def add_generator_capacity_expansion_constraints(model: Model, settings: ProjectParameters, sets: xr.Dataset, param: xr.Dataset, var: Dict[str, linopy.Variable]) -> None:
     """Add constraints for generator capacity expansion."""

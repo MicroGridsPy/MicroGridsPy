@@ -71,8 +71,13 @@ def save_energy_balance_to_excel(model: Model, base_filepath: Path) -> None:
                 if model.has_generator:
                     generator_production = model.get_solution_variable('Generator Energy Production')
                     generator_conversion_losses = model.get_solution_variable('Conversion Losses - Generator')
+                    if model.settings.generator_params.partial_load == True:
+                        fuel_consumption = model.get_solution_variable('Generator Fuel Consumption')
+                    else:
+                        fuel_consumption = generator_production / (model.parameters['GENERATOR_NOMINAL_EFFICIENCY'] * model.parameters['FUEL_LHV'])
                     for gen_type in generator_production.coords['generator_types'].values:
                         data[f'{gen_type} Production (kWh)'] = (generator_production.isel(scenarios=scenario).sel(years=year + start_year, generator_types=gen_type).values) / 1000
+                        data[f'{gen_type} Fuel Consumption (liter)'] = (fuel_consumption.isel(scenarios=scenario).sel(years=year + start_year, generator_types=gen_type).values)
                         generator_losses = (generator_conversion_losses.isel(scenarios=scenario).sel(years=year + start_year, generator_types=gen_type).values) / 1000
                         generator_losses = generator_losses.flatten() 
                         data[f'{gen_type} Conversion Losses (kWh)'] = generator_losses
