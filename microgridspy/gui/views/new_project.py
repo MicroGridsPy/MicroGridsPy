@@ -82,7 +82,7 @@ def new_project():
         """,
         unsafe_allow_html=True)
     
-    st.image(load_image("model_overview.png"), use_column_width=True, caption="Model Overview")
+    st.image(load_image("model_overview.png"), use_container_width=True, caption="Model Overview")
     
     # Create a new project
     st.subheader("Create a New Project")
