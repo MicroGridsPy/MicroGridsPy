@@ -123,7 +123,7 @@ def initialize_fuel_cost(sets: xr.Dataset) -> xr.DataArray:
 
     # Check if the number of years in the fuel cost data file is less than the number of years in the project settings
     num_rows = fuel_cost_df.shape[0]
-    if num_rows >= num_years:
+    if num_rows > num_years:
         # Truncate the data to match the project settings
         fuel_cost_data = fuel_cost_df.iloc[:num_years, :]
         st.warning(f"Number of years detected in the fuel cost data file ({num_rows}) is higher than the number of years in the time horizon ({num_years}). The data will be truncated to match the project settings.")
