@@ -1,0 +1,16 @@
+streamlit
+xarray==2024.3.0
+pydantic
+pyyaml
+folium
+streamlit-folium
+geopy
+timezonefinder
+openpyxl
+matplotlib
+seaborn
+rampdemand
+highspy
+gurobipy
+linopy==0.3.14
+requests

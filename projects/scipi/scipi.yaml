@@ -1,0 +1,203 @@
+advanced_settings:
+  brownfield: false
+  capacity_expansion: false
+  cost_of_debt: 0.11
+  cost_of_equity: 0.12
+  debt_share: 0.9
+  equity_share: 0.1
+  grid_connection: false
+  grid_connection_type: 0
+  milp_formulation: false
+  min_step_duration: 5
+  multi_scenario_optimization: false
+  multiobjective_optimization: false
+  num_scenarios: 1
+  num_steps: 1
+  pareto_points: 2
+  scenario_weights:
+  - 1.0
+  step_duration: 1
+  tax: 0.02
+  unit_commitment: false
+  wacc_calculation: false
+archetypes_params:
+  cooling_period: NC
+  demand_growth: 0.0
+  h_tier1: 252
+  h_tier2: 160
+  h_tier3: 50
+  h_tier4: 36
+  h_tier5: 5
+  hospital_1: 0
+  hospital_2: 1
+  hospital_3: 0
+  hospital_4: 0
+  hospital_5: 0
+  schools: 1
+battery_params:
+  battery_charge_battery_efficiency: 0.9
+  battery_cycles: 4000
+  battery_depth_of_discharge: 0.8
+  battery_discharge_battery_efficiency: 0.9
+  battery_existing_capacity: 0.0
+  battery_existing_inverter_capacity: 0.0
+  battery_existing_years: 0
+  battery_expected_lifetime: 20
+  battery_initial_soc: 1.0
+  battery_inverter_cost: 0.25
+  battery_inverter_efficiency_ac_dc: 0.95
+  battery_inverter_efficiency_dc_ac: 0.95
+  battery_inverter_existing_years: 0
+  battery_inverter_lifetime: 20
+  battery_inverter_nominal_capacity: 1000.0
+  battery_nominal_capacity: 1000.0
+  battery_specific_electronic_investment_cost: 0.2
+  battery_specific_investment_cost: 0.5
+  battery_specific_om_cost: 0.025
+  bess_unit_co2_emission: 0.0
+  maximum_battery_charge_time: 5.0
+  maximum_battery_discharge_time: 5.0
+generator_params:
+  fuel_co2_emission:
+  - 2.68
+  fuel_lhv:
+  - 10140.0
+  fuel_names:
+  - Diesel
+  gen_existing_capacity:
+  - 0.0
+  gen_existing_rectifier_capacity:
+  - 0.0
+  gen_existing_rectifier_years:
+  - 0
+  gen_existing_years:
+  - 0
+  gen_lifetime:
+  - 20
+  gen_names:
+  - Diesel Generator
+  gen_nominal_capacity:
+  - 450000.0
+  gen_nominal_efficiency:
+  - 0.35
+  gen_rectifier_cost:
+  - 0.0
+  gen_rectifier_efficiency:
+  - 1.0
+  gen_rectifier_lifetime:
+  - 20
+  gen_rectifier_nominal_capacity:
+  - 1.0
+  gen_sampled_efficiency: []
+  gen_sampled_relative_output: []
+  gen_specific_investment_cost:
+  - 0.6
+  gen_specific_om_cost:
+  - 0.07
+  gen_types: 1
+  gen_unit_co2_emission:
+  - 0.0
+  partial_load: false
+grid_params:
+  electricity_purchased_cost: 0.00014
+  electricity_sold_price: 0.0
+  grid_availability_simulation: false
+  grid_average_number_outages: 43.48
+  grid_average_outage_duration: 455.0
+  grid_connection_cost: 14000.0
+  grid_distance: 0.5
+  grid_maintenance_cost: 0.025
+  grid_to_microgrid_efficiency: 1.0
+  grid_transformer_cost: 0.4
+  grid_transformer_nominal_capacity: 100000.0
+  maximum_grid_power: 80000.0
+  microgrid_to_grid_efficiency: 1.0
+  national_grid_specific_co2_emissions: 0.1495
+  year_grid_connection: 1
+nasa_power_params:
+  community: RE
+  date_end: '20201231'
+  date_start: '20150101'
+  loc_id: point
+  nasa_base_url: https://power.larc.nasa.gov/api/temporal/
+  nasa_output_format: JSON
+  parameters_1: ALLSKY_SFC_SW_DWN
+  parameters_2: T2MWET,T2M,WS50M
+  parameters_3: WS50M,WS2M,WD50M,T2M
+  temp_res_1: daily
+  temp_res_2: hourly
+  user: anonymous
+project_info:
+  project_description: ''
+  project_name: scipi
+project_settings:
+  battery_independence: 0
+  currency: USD
+  discount_rate: 0.1
+  distribution_type: Alternating Current
+  investment_cost_limit: 500000.0
+  land_availability: 0.0
+  lost_load_fraction: 0.0
+  lost_load_specific_cost: 0.0
+  optimization_goal: 0
+  renewable_penetration: 0.0
+  start_date: 2025-01-01
+  system_configuration: 0
+  time_horizon: 1
+  time_resolution: 8760
+pvgis_params:
+  pvgis_base_url: https://re.jrc.ec.europa.eu/api/tmy?
+  pvgis_output_format: json
+renewables_params:
+  res_connection_types:
+  - Connected with a seperate Inverter to the Microgrid
+  res_existing_area:
+  - 0.0
+  res_existing_capacity:
+  - 0.0
+  res_existing_years:
+  - 0
+  res_inverter_cost:
+  - 0.25
+  res_inverter_efficiency:
+  - 0.95
+  res_inverter_existing_capacity:
+  - 0.0
+  res_inverter_existing_years:
+  - 0
+  res_inverter_lifetime:
+  - 20.0
+  res_inverter_nominal_capacity:
+  - 1000.0
+  res_lifetime:
+  - 20
+  res_specific_area:
+  - 11.49
+  res_specific_investment_cost:
+  - 0.95
+  res_specific_om_cost:
+  - 0.01
+  res_unit_co2_emission:
+  - 0.0
+resource_assessment:
+  G_NMOT: 800
+  NMOT: 45
+  T_NMOT: 20
+  azim: 180
+  drivetrain_efficiency: 0.9
+  k_T: -0.37
+  lat: -2.0565762
+  location: Faza, Kenya
+  lon: 41.108649
+  nom_power: 1000
+  res_names:
+  - Solar PV
+  res_nominal_capacity:
+  - 1000.0
+  res_sources: 1
+  ro_ground: 0.2
+  surface_type: Suburbs
+  tilt: 10
+  time_zone: 2
+  turbine_model: NPS100c-21
+  turbine_type: Horizontal Axis
