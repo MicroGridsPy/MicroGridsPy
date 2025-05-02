@@ -20,7 +20,6 @@ def add_energy_balance_constraints(
     years = sets.years.values
     steps = sets.steps.values
     step_duration = settings.advanced_settings.step_duration
-    milp_formulation = settings.advanced_settings.milp_formulation
     years_steps_tuples = [(years[i] - years[0], steps[i // step_duration]) for i in range(len(years))]
     # Calculate total renewable energy production
     total_res_energy_production = var['res_energy_production'].sum('renewable_sources')
@@ -71,23 +70,24 @@ def add_energy_balance_constraints(
                         )
                 model.add_constraints(
                     battery_system_energy ==  var['dc_system_energy'].sel(years=year),
-                    name=f"DC System Energy - Year {year}")
-                
-                if milp_formulation:
-                    # Ensure only one of dc_system_energy_positive or dc_system_energy_negative is nonzero
-                    model.add_constraints(
-                            var['dc_system_energy_positive'].sel(years=year) <= param['M'].sel(years=year) * var['single_flow_dc_system'].sel(years=year),
-                            name=f"DC System Energy Positive Constraint - Year {year}")
+                    name=f"DC System Energy - Year {year}"
+                )
 
-                    model.add_constraints(
-                        var['dc_system_energy_negative'].sel(years=year) >= -param['M'].sel(years=year) * (var['ones'].sel(years=year) - var['single_flow_dc_system'].sel(years=year)),
-                        name=f"DC System Energy Negative Constraint - Year {year}")
-                    
-                else:
-                    model.add_constraints(
-                        var['dc_system_energy_positive'].sel(years=year) + var['dc_system_energy_negative'].sel(years=year) == var['dc_system_energy'].sel(years=year),
-                        name=f"DC System Energy Split - Year {year}"
-                    )
+                # Ensure only one of dc_system_energy_positive or dc_system_energy_negative is nonzero
+                model.add_constraints(
+                    var['dc_system_energy_positive'].sel(years=year) <= param['M'].sel(years=year) * var['single_flow_dc_system'].sel(years=year),
+                    name=f"DC System Energy Positive Constraint - Year {year}"
+                )
+
+                model.add_constraints(
+                    var['dc_system_energy_negative'].sel(years=year) >= -param['M'].sel(years=year) * (var['ones'].sel(years=year) - var['single_flow_dc_system'].sel(years=year)),
+                    name=f"DC System Energy Negative Constraint - Year {year}"
+                )
+
+                model.add_constraints(
+                    var['dc_system_energy_positive'].sel(years=year) + var['dc_system_energy_negative'].sel(years=year) == var['dc_system_energy'].sel(years=year),
+                    name=f"DC System Energy Split - Year {year}"
+                )
 
                 model.add_constraints(
                     var['dc_system_energy_positive'].sel(years=year) >=  0,

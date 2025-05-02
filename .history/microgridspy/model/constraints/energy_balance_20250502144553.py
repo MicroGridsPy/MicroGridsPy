@@ -71,18 +71,19 @@ def add_energy_balance_constraints(
                         )
                 model.add_constraints(
                     battery_system_energy ==  var['dc_system_energy'].sel(years=year),
-                    name=f"DC System Energy - Year {year}")
-                
-                if milp_formulation:
-                    # Ensure only one of dc_system_energy_positive or dc_system_energy_negative is nonzero
-                    model.add_constraints(
-                            var['dc_system_energy_positive'].sel(years=year) <= param['M'].sel(years=year) * var['single_flow_dc_system'].sel(years=year),
-                            name=f"DC System Energy Positive Constraint - Year {year}")
+                    name=f"DC System Energy - Year {year}"
+                )
+                if milp_formulation :
+                # Ensure only one of dc_system_energy_positive or dc_system_energy_negative is nonzero
+                model.add_constraints(
+                        var['dc_system_energy_positive'].sel(years=year) <= param['M'].sel(years=year) * var['single_flow_dc_system'].sel(years=year),
+                        name=f"DC System Energy Positive Constraint - Year {year}"
+                    )
 
                     model.add_constraints(
                         var['dc_system_energy_negative'].sel(years=year) >= -param['M'].sel(years=year) * (var['ones'].sel(years=year) - var['single_flow_dc_system'].sel(years=year)),
-                        name=f"DC System Energy Negative Constraint - Year {year}")
-                    
+                        name=f"DC System Energy Negative Constraint - Year {year}"
+                    )
                 else:
                     model.add_constraints(
                         var['dc_system_energy_positive'].sel(years=year) + var['dc_system_energy_negative'].sel(years=year) == var['dc_system_energy'].sel(years=year),

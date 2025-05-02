@@ -129,9 +129,7 @@ def initialize_fuel_cost(sets: xr.Dataset) -> xr.DataArray:
         st.warning(f"Number of years detected in the fuel cost data file ({num_rows}) is higher than the number of years in the time horizon ({num_years}). The data will be truncated to match the project settings.")
     elif num_rows < num_years:
         st.error(f"The number of years in the fuel cost data file ({num_rows}) is less than the number of years in the time horizon ({num_years}). Please edit the fuel cost data from the user interface.")
-    else:
-        fuel_cost_data = fuel_cost_df.copy()
-        
+    
     # Select only the columns corresponding to generator types
     fuel_cost_data = fuel_cost_data[sets.generator_types.values]
     # Check if the number of generator types in the fuel cost data file is less than the number of generator types in the project settings

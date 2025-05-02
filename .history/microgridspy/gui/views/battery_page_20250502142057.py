@@ -11,7 +11,6 @@ import os
 import matplotlib.pyplot as plt
 from microgridspy.gui.utils import initialize_session_state
 
-#TODO: Change load function avoiding hard coded header names
 def load_cost_df(currency) -> pd.DataFrame:
     """
     Load or create a DataFrame for renewable energy costs with specified columns,
@@ -22,7 +21,7 @@ def load_cost_df(currency) -> pd.DataFrame:
     
     # Define the correct index for num_steps
     correct_index = [f"Investment Step {i}" for i in range(1, num_steps + 1)]
-    relevant_columns = [f"Battery Investment Cost [{currency}/Wh]"]
+    relevant_columns = [f"Battery Investment Cost [{currency}/W]"]
 
     if os.path.exists(battery_cost_file_path):
         # Load the CSV file
@@ -75,7 +74,7 @@ def battery_technology() -> None:
     Below is a brief overview of the mathematical formulation of backup system within MicroGridsPy:
     """)
     image_path = PathManager.IMAGES_PATH / "battery_math_formulation.PNG"
-    st.image(str(image_path), container_width=True, caption="Overview of the main equations for battery")
+    st.image(str(image_path), use_column_width=True, caption="Overview of the main equations for battery")
 
     has_battery = st.session_state.get('system_configuration', 0) in [0, 1]
     res_names = st.session_state.get('res_names', [])
@@ -90,7 +89,6 @@ def battery_technology() -> None:
         if unit_committment:
             st.session_state.battery_nominal_capacity = st.number_input("Nominal Capacity [Wh]", min_value=0.0, value=st.session_state.battery_nominal_capacity)
         cost_df = load_cost_df(currency)
-        print(cost_df.columns)
         edited_df = upload_cost_data(cost_df, currency)
         if st.button(f"Save investment cost data for Battery"):
             battery_cost_file_path = PathManager.BATTERY_COST_FILE_PATH
