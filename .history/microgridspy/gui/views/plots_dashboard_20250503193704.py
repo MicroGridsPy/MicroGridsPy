@@ -298,10 +298,10 @@ def plots_dashboard():
     if len(years) > 1:
         selected_year = st.slider("Select Year for Dispatch Plot", min_value=min_year, max_value=max_year, value=min_year)
         selected_year_index = years.index(selected_year)
-        selected_day = st.slider("Select Starting Day", 0, 364, 0, key="day_slider")
+        selected_day = st.slider("Select Day", 0, 364, 0, key="day_slider")
     else:
         selected_year_index = 0
-        selected_day = st.slider("Select Starting Day", 0, 364, 0, key="day_slider")
+        selected_day = st.slider("Select Day", 0, 364, 0, key="day_slider")
 
     # Add a slider to show hoow many days to show in the dispatch plot
     days_to_show = st.slider("Select Days to Show", 1, 7, 1, key="days_to_show_slider")

@@ -115,7 +115,7 @@ def create_sizing_plot(model: Model, color_dict: dict, sizing_df: pd.DataFrame):
     return fig
 
 
-def dispatch_plot(model: Model, scenario: int, year: int, day: int, num_days:int, color_dict: dict):
+def dispatch_plot(model: Model, scenario: int, year: int, day: int, color_dict: dict):
     """Plot the energy balance for a given day and year, including grid interactions and curtailment."""
     demand = model.parameters['DEMAND']
     res_production = model.get_solution_variable('Energy Production by Renewables')
@@ -128,9 +128,7 @@ def dispatch_plot(model: Model, scenario: int, year: int, day: int, num_days:int
     lost_load = model.get_solution_variable('Lost Load') if model.get_settings('lost_load_fraction') > 0.0 else None
 
     start_idx = day * 24
-    end_idx = (day + num_days) * 24
-    x = range(24 * num_days)
-
+    end_idx = (day + 1) * 24
 
     steps = model.sets['steps'].values
     years = model.sets['years'].values
@@ -149,8 +147,9 @@ def dispatch_plot(model: Model, scenario: int, year: int, day: int, num_days:int
 
     fig, ax = plt.subplots(figsize=(20, 12))
 
-    cumulative_outflow = np.zeros(24 * num_days)
-    cumulative_inflow = np.zeros(24 * num_days)
+    x = range(24)
+    cumulative_outflow = np.zeros(24)
+    cumulative_inflow = np.zeros(24)
 
     # Plot actual renewable energy production for each source
     renewable_sources = model.sets['renewable_sources'].values
@@ -206,8 +205,8 @@ def dispatch_plot(model: Model, scenario: int, year: int, day: int, num_days:int
 
     ax.set_xlabel('Hours')
     ax.set_ylabel('Energy (kWh)')
-    ax.set_title(f'Energy Balance - Year {year + 1}, Day {day + 1}', fontsize=20)
-    ax.legend(loc='upper left', fontsize=14, framealpha=0.8, fancybox=True, frameon=True)
+    ax.set_title(f'Energy Balance - Year {year + 1}, Day {day + 1}')
+    ax.legend(loc='upper left', fontsize=10, framealpha=0.8, fancybox=True, frameon=True)
     ax.grid(True)
     
     # Adjust y-axis to show negative values if energy is sold to the grid

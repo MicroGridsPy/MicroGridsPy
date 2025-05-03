@@ -149,8 +149,9 @@ def dispatch_plot(model: Model, scenario: int, year: int, day: int, num_days:int
 
     fig, ax = plt.subplots(figsize=(20, 12))
 
-    cumulative_outflow = np.zeros(24 * num_days)
-    cumulative_inflow = np.zeros(24 * num_days)
+    x = range(24)
+    cumulative_outflow = np.zeros(24)
+    cumulative_inflow = np.zeros(24)
 
     # Plot actual renewable energy production for each source
     renewable_sources = model.sets['renewable_sources'].values
