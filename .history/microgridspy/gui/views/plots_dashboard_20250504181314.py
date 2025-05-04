@@ -245,7 +245,7 @@ def plots_dashboard():
 
     with col2:
         lcoe = calculate_lcoe(model, optimization_goal)
-        lcoe_label = "Levelized Cost of Energy Production (LCOE)" if actualized else "Levelized Variable Cost of Energy Production (LVC)"
+        lcoe_label = "Levelized Cost of Energy Production (LCOE)" if actualized else "Levelized Variable Cost (LVC)"
         st.metric(lcoe_label, f"{lcoe:.4f} {currency}/kWh")
     
     # Display cost breakdown

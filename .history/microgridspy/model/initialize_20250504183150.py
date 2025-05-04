@@ -625,12 +625,6 @@ def initialize_generator_parameters(data: ProjectParameters, sets: xr.Dataset) -
             dims=['generator_types'],
             coords={'generator_types': generator_types},
             name='Fuel Lower Heating Value (LHV)'),
-
-        'MAXIMUM_FUEL_CONSUMPTION': xr.DataArray(
-            data.generator_params.max_fuel_consumption,
-            dims=['generator_types'],
-            coords={'generator_types': generator_types},
-            name='Maximum Fuel Consumption of the Generators'),
     }
     
     # Brownfield Investment scenario
@@ -668,6 +662,12 @@ def initialize_generator_parameters(data: ProjectParameters, sets: xr.Dataset) -
             dims=['generator_types'],
             coords={'generator_types': generator_types},
             name='Specific Fuel CO2 Emission of the Generators')
+        
+        generator_parameters['MAXIMUM_FUEL_CONSUMPTION'] = xr.DataArray(
+            data.generator_params.max_fuel_consumption,
+            dims=['generator_types'],
+            coords={'generator_types': generator_types},
+            name='Maximum Fuel Consumption of the Generators')
         
     if data.generator_params.partial_load:
         generator_parameters['GENERATOR_SAMPLED_RELATIVE_OUTPUT'] = xr.DataArray(

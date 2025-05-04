@@ -275,7 +275,7 @@ def generator_technology() -> None:
                 value=st.session_state.fuel_cap[i],
                 help="Check this box if you want to set a maximum yearly fuel consumption for this generator.")
             
-            if st.session_state.fuel_cap[i]:
+            if st.session_state.fuel_cap:
                 st.session_state.max_fuel_consumption[i] = st.number_input(
                     f"Maximum Yearly Fuel Consumption for {gen_name} [l/year]",
                     value=st.session_state.max_fuel_consumption[i])

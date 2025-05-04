@@ -245,7 +245,7 @@ def plots_dashboard():
 
     with col2:
         lcoe = calculate_lcoe(model, optimization_goal)
-        lcoe_label = "Levelized Cost of Energy Production (LCOE)" if actualized else "Levelized Variable Cost of Energy Production (LVC)"
+        lcoe_label = "Levelized Cost of Energy (LCOE)" if actualized else "Levelized Variable Cost (LVC)"
         st.metric(lcoe_label, f"{lcoe:.4f} {currency}/kWh")
     
     # Display cost breakdown
@@ -327,11 +327,11 @@ def plots_dashboard():
     if model.has_generator:
         fuel_consumption_da = model.get_solution_variable('Generator Fuel Consumption')
         fuel_consumption = fuel_consumption_da.sum().item() / num_years # Average yearly fuel consumption
-        fuel_consumption = fuel_consumption / 1000  # Convert to kiloliters
-        st.metric("Average Yearly Fuel Consumption", f"{fuel_consumption:.2f} kiloliters")
-
+        st.metric("Average Yearly Fuel Consumption", f"{fuel_consumption:.2f} liters")
         # Compute and display the Partial Load Indicators
         avg_load_factor, avg_efficiency = calculate_partial_load_indicators(model)
+
+        st.markdown("**Generator Partial Load Indicators**")
         col1, col2 = st.columns(2)
         with col1:
             st.metric("Average Generator Load Factor", f"{avg_load_factor:.2f} %")

@@ -170,7 +170,7 @@ def generator_technology() -> None:
             'gen_names', 'gen_nominal_capacity', 'gen_nominal_efficiency',
             'gen_specific_investment_cost', 'gen_specific_om_cost', 'gen_lifetime',
             'gen_unit_co2_emission', 'gen_existing_capacity', 'gen_existing_years', 
-            'fuel_names', 'fuel_lhv', 'fuel_co2_emission', 'fuel_cap', 'max_fuel_consumption',
+            'fuel_names', 'fuel_lhv', 'fuel_co2_emission', 'gen_min_output', 'gen_cost_increase',
             'gen_rectifier_efficiency', 'gen_rectifier_nominal_capacity', 'gen_rectifier_cost',
             'gen_rectifier_lifetime', 'gen_existing_rectifier_capacity', 'gen_existing_rectifier_years'
         ]
@@ -275,7 +275,7 @@ def generator_technology() -> None:
                 value=st.session_state.fuel_cap[i],
                 help="Check this box if you want to set a maximum yearly fuel consumption for this generator.")
             
-            if st.session_state.fuel_cap[i]:
+            if st.session_state.fuel_cap:
                 st.session_state.max_fuel_consumption[i] = st.number_input(
                     f"Maximum Yearly Fuel Consumption for {gen_name} [l/year]",
                     value=st.session_state.max_fuel_consumption[i])
