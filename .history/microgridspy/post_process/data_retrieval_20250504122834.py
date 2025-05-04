@@ -149,9 +149,7 @@ def get_conversion_sizing_results(model) -> pd.DataFrame:
             grid_nominal_transformer_capacity = model.parameters['GRID_TRANSFORMER_NOMINAL_CAPACITY']
             grid_existing_transformer_capacity = model.parameters.get('GRID_EXISTING_TRANSFORMER_CAPACITY', 0)
             categories.append("Grid Transformer")
-            unit_val = float(transformer_units_grid.values.squeeze())
-            capacity_val = float(grid_nominal_transformer_capacity.values)
-            cap = unit_val * capacity_val / 1000
+            cap = transformer_units_grid.values * grid_nominal_transformer_capacity / 1000
             capacities.append(cap)
             existing_capacities.append(grid_existing_transformer_capacity / 1000 if is_brownfield else 0)
             capacity_units.append('kVA')
@@ -160,20 +158,12 @@ def get_conversion_sizing_results(model) -> pd.DataFrame:
     data = []
     for category, capacity, existing, unit in zip(categories, capacities, existing_capacities, capacity_units):
         row = [f"{category} ({unit})", int(existing)]
-
-        if np.isscalar(capacity) or np.ndim(capacity) == 0:
-            row.append(int(capacity))
-            total_capacity = int(existing) + int(capacity)
-            step_labels = ['Step 1']
-        else:
-            row.extend([int(c) for c in capacity])
-            total_capacity = int(existing) + sum(int(c) for c in capacity)
-            step_labels = [f"Step {i+1}" for i in range(len(capacity))]
-
+        row.extend([int(cap) for cap in capacity])
+        total_capacity = int(existing) + sum(int(cap) for cap in capacity)
         row.append(total_capacity)
         data.append(row)
 
-    columns = ['Component', 'Existing'] + step_labels + ['Total']
+    columns = ['Component', 'Existing'] + [f'Step {i + 1}' for i in range(len(capacities[0]))] + ['Total']
     return pd.DataFrame(data, columns=columns)
 
 

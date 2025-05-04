@@ -45,7 +45,7 @@ def initialize_sets(data: ProjectParameters, has_generator: bool) -> xr.Dataset:
 
 def initialize_demand(sets: xr.Dataset) -> xr.DataArray:
     """
-    Load the demand time series data into an xarray DataArray.
+    Load the demand time series data into an xarray DataArray with robust dimension validation.
     """
     try:
         demand_df = read_csv_data(PathManager.AGGREGATED_DEMAND_FILE_PATH)
@@ -55,19 +55,37 @@ def initialize_demand(sets: xr.Dataset) -> xr.DataArray:
     num_scenarios = len(sets.scenarios)
     num_years = len(sets.years)
     num_periods = len(sets.periods)
+    expected_rows = num_scenarios * num_periods
+    expected_columns = num_years
 
-    # Check if the number of years in the demand data file is less than the number of years in the project settings
-    num_columns = demand_df.shape[1]
-    if num_columns < num_years:
-        raise RuntimeError(f"The number of years in the demand data file ({num_columns}) is less than the number of years in the time horizon ({num_years}). Please edit the demand data from the user interface.")
-    elif num_columns > num_years:
-        demand_df = demand_df.iloc[:, :num_years]
-        st.warning(f"Number of years detected in the demand data file ({num_columns}) higher than the number of years in the time horizon ({num_years}). The data will be truncated to match the project settings.")
+    # Check data shape
+    if demand_df.shape[0] < expected_rows:
+        raise RuntimeError(
+            f"Demand data has {demand_df.shape[0]} rows but expected at least {expected_rows} "
+            f"(scenarios={num_scenarios}, periods={num_periods}). Please provide a complete dataset.")
+    elif demand_df.shape[0] > expected_rows:
+        demand_df = demand_df.iloc[:expected_rows, :]
+        st.warning(
+            f"Demand data has {demand_df.shape[0]} rows, more than expected ({expected_rows}). "
+            f"Extra rows will be truncated.")
 
-    # Reshape the data to match other variables' dimension order
-    demand_data = demand_df.values.reshape(num_scenarios, num_periods, num_years)
+    if demand_df.shape[1] < expected_columns:
+        raise RuntimeError(
+            f"Demand data has {demand_df.shape[1]} columns (years), but {expected_columns} are expected. "
+            f"Please adjust the data file to match the number of years in the model.")
+    elif demand_df.shape[1] > expected_columns:
+        demand_df = demand_df.iloc[:, :expected_columns]
+        st.warning(
+            f"Demand data has {demand_df.shape[1]} columns (years), more than expected ({expected_columns}). "
+            f"Extra columns will be truncated.")
 
-    # Create xarray DataArray with consistent dimension order
+    # Reshape and construct DataArray
+    try:
+        demand_data = demand_df.values.reshape(num_scenarios, num_periods, num_years)
+    except ValueError as e:
+        raise RuntimeError(f"Error reshaping demand data: {str(e)}. "
+                           f"Expected shape: ({num_scenarios}, {num_periods}, {num_years})")
+
     demand_array = xr.DataArray(
         data=demand_data,
         dims=["scenarios", "periods", "years"],
@@ -93,11 +111,6 @@ def initialize_resource(sets: xr.Dataset) -> xr.DataArray:
     num_scenarios = len(sets.scenarios)
     num_res_sources = len(sets.renewable_sources)
     num_periods = len(sets.periods)
-
-    # Check if the number of resources in the resource data file is less than the expected number of resources
-    num_columns = resource_df.shape[1]
-    if num_columns < num_res_sources:
-        raise RuntimeError(f"The number of resources in the resource data file ({num_columns}) is less than the expected number of resources ({num_res_sources}). Please edit the resource data from the user interface.")
 
     # Reshape the data to match other variables' dimension order
     resource_data = resource_df.values.flatten(order='F').reshape(num_scenarios, num_res_sources, num_periods)
@@ -130,24 +143,26 @@ def initialize_fuel_cost(sets: xr.Dataset) -> xr.DataArray:
     num_rows = fuel_cost_df.shape[0]
     if num_rows > num_years:
         # Truncate the data to match the project settings
-        fuel_cost_df = fuel_cost_df.iloc[:num_years, :]
+        fuel_cost_data = fuel_cost_df.iloc[:num_years, :]
         st.warning(f"Number of years detected in the fuel cost data file ({num_rows}) is higher than the number of years in the time horizon ({num_years}). The data will be truncated to match the project settings.")
     elif num_rows < num_years:
         st.error(f"The number of years in the fuel cost data file ({num_rows}) is less than the number of years in the time horizon ({num_years}). Please edit the fuel cost data from the user interface.")
+    else:
+        fuel_cost_data = fuel_cost_df.copy()
 
     # Select only the columns corresponding to generator types
-    fuel_cost_df = fuel_cost_df[sets.generator_types.values]
+    fuel_cost_data = fuel_cost_data[sets.generator_types.values]
     # Check if the number of generator types in the fuel cost data file is less than the number of generator types in the project settings
-    num_columns = fuel_cost_df.shape[1]
+    num_columns = fuel_cost_data.shape[1]
     if num_columns > num_gen_types:
         # Truncate the data to match the project settings
-        fuel_cost_df = fuel_cost_df.iloc[:, :num_gen_types]
+        fuel_cost_data = fuel_cost_data.iloc[:, :num_gen_types]
         st.warning(f"Number of generator types detected in the fuel cost data file ({num_columns}) is higher than the number of generator types in the project settings ({num_gen_types}). The data will be truncated to match the project settings.")
     elif num_columns < num_gen_types:
         st.error(f"The number of generator types in the fuel cost data file ({num_columns}) is less than the number of generator types in the project settings ({num_gen_types}). Please edit the fuel cost data from the user interface.")
 
     # Reshape the data to match other variables' dimension order
-    fuel_cost_data = fuel_cost_df.values.flatten(order='F').reshape(num_gen_types, num_years)
+    fuel_cost_data = fuel_cost_data.values.flatten(order='F').reshape(num_gen_types, num_years)
 
     # Create xarray DataArray with consistent dimension order
     return xr.DataArray(
@@ -202,7 +217,7 @@ def initialize_grid_availability(sets: xr.Dataset) -> xr.DataArray:
     num_columns = grid_availability_df.shape[1]
     if num_columns < num_years:
         raise RuntimeError(f"The number of years in the grid availability data file ({num_columns}) is less than the number of years in the time horizon ({num_years}). Please edit the grid availability data from the user interface.")
-    elif num_columns > num_years:
+    else:
         grid_availability_df = grid_availability_df.iloc[:, :num_years]
         st.warning(f"Number of years detected in the grid availability data file ({num_columns}) higher than the number of years in the time horizon ({num_years}). The data will be truncated to match the project settings.")
 
@@ -245,12 +260,6 @@ def initialize_project_parameters(data: ProjectParameters, sets: xr.Dataset) -> 
         operate_discount_rate(data),
         dims=[],
         name='Yearly Discount Rate (fraction)')
-    
-    # Distribution Type
-    project_parameters['DISTRIBUTION_TYPE'] = xr.DataArray(
-        data.project_settings.distribution_type,
-        dims=[],
-        name='Distribution Type')
 
     # Investment Cost Limit if optimization goal is total variable costs minimization
     if data.project_settings.optimization_goal == 1:

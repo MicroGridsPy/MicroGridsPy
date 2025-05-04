@@ -248,7 +248,7 @@ def initialize_project_parameters(data: ProjectParameters, sets: xr.Dataset) -> 
     
     # Distribution Type
     project_parameters['DISTRIBUTION_TYPE'] = xr.DataArray(
-        data.project_settings.distribution_type,
+        data.project_settings_settings.distribution_type,
         dims=[],
         name='Distribution Type')
 

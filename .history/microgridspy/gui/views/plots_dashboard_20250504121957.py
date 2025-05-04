@@ -277,9 +277,13 @@ def plots_dashboard():
     st.pyplot(sizing_fig)
     st.table(sizing_df)
 
-    conversion_sizing_df = get_conversion_sizing_results(model)
-    st.markdown("**Conversion Sizing Results**")
-    st.table(conversion_sizing_df)
+    try:
+        conversion_sizing_df = get_conversion_sizing_results(model)
+        st.write("Conversion Sizing Results")
+        st.table(conversion_sizing_df)
+    except Exception as e:
+        st.error(f"Error retrieving conversion sizing results: {e}")
+        conversion_sizing_df = None
 
     
     # Energy Balance Visualization

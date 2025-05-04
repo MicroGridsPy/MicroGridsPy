@@ -130,24 +130,26 @@ def initialize_fuel_cost(sets: xr.Dataset) -> xr.DataArray:
     num_rows = fuel_cost_df.shape[0]
     if num_rows > num_years:
         # Truncate the data to match the project settings
-        fuel_cost_df = fuel_cost_df.iloc[:num_years, :]
+        fuel_cost_data = fuel_cost_df.iloc[:num_years, :]
         st.warning(f"Number of years detected in the fuel cost data file ({num_rows}) is higher than the number of years in the time horizon ({num_years}). The data will be truncated to match the project settings.")
     elif num_rows < num_years:
         st.error(f"The number of years in the fuel cost data file ({num_rows}) is less than the number of years in the time horizon ({num_years}). Please edit the fuel cost data from the user interface.")
+    else:
+        fuel_cost_data = fuel_cost_df.copy()
 
     # Select only the columns corresponding to generator types
-    fuel_cost_df = fuel_cost_df[sets.generator_types.values]
+    fuel_cost_data = fuel_cost_data[sets.generator_types.values]
     # Check if the number of generator types in the fuel cost data file is less than the number of generator types in the project settings
-    num_columns = fuel_cost_df.shape[1]
+    num_columns = fuel_cost_data.shape[1]
     if num_columns > num_gen_types:
         # Truncate the data to match the project settings
-        fuel_cost_df = fuel_cost_df.iloc[:, :num_gen_types]
+        fuel_cost_data = fuel_cost_data.iloc[:, :num_gen_types]
         st.warning(f"Number of generator types detected in the fuel cost data file ({num_columns}) is higher than the number of generator types in the project settings ({num_gen_types}). The data will be truncated to match the project settings.")
     elif num_columns < num_gen_types:
         st.error(f"The number of generator types in the fuel cost data file ({num_columns}) is less than the number of generator types in the project settings ({num_gen_types}). Please edit the fuel cost data from the user interface.")
 
     # Reshape the data to match other variables' dimension order
-    fuel_cost_data = fuel_cost_df.values.flatten(order='F').reshape(num_gen_types, num_years)
+    fuel_cost_data = fuel_cost_data.values.flatten(order='F').reshape(num_gen_types, num_years)
 
     # Create xarray DataArray with consistent dimension order
     return xr.DataArray(
@@ -202,7 +204,7 @@ def initialize_grid_availability(sets: xr.Dataset) -> xr.DataArray:
     num_columns = grid_availability_df.shape[1]
     if num_columns < num_years:
         raise RuntimeError(f"The number of years in the grid availability data file ({num_columns}) is less than the number of years in the time horizon ({num_years}). Please edit the grid availability data from the user interface.")
-    elif num_columns > num_years:
+    else:
         grid_availability_df = grid_availability_df.iloc[:, :num_years]
         st.warning(f"Number of years detected in the grid availability data file ({num_columns}) higher than the number of years in the time horizon ({num_years}). The data will be truncated to match the project settings.")
 
@@ -245,12 +247,6 @@ def initialize_project_parameters(data: ProjectParameters, sets: xr.Dataset) -> 
         operate_discount_rate(data),
         dims=[],
         name='Yearly Discount Rate (fraction)')
-    
-    # Distribution Type
-    project_parameters['DISTRIBUTION_TYPE'] = xr.DataArray(
-        data.project_settings.distribution_type,
-        dims=[],
-        name='Distribution Type')
 
     # Investment Cost Limit if optimization goal is total variable costs minimization
     if data.project_settings.optimization_goal == 1:

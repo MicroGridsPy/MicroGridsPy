@@ -278,7 +278,7 @@ def plots_dashboard():
     st.table(sizing_df)
 
     conversion_sizing_df = get_conversion_sizing_results(model)
-    st.markdown("**Conversion Sizing Results**")
+    st.write("Conversion Sizing Results")
     st.table(conversion_sizing_df)
 
     

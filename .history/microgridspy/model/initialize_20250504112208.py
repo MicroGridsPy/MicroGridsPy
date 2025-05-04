@@ -147,11 +147,11 @@ def initialize_fuel_cost(sets: xr.Dataset) -> xr.DataArray:
         st.error(f"The number of generator types in the fuel cost data file ({num_columns}) is less than the number of generator types in the project settings ({num_gen_types}). Please edit the fuel cost data from the user interface.")
 
     # Reshape the data to match other variables' dimension order
-    fuel_cost_data = fuel_cost_df.values.flatten(order='F').reshape(num_gen_types, num_years)
+    fuel_cost_df = fuel_cost_df.values.flatten(order='F').reshape(num_gen_types, num_years)
 
     # Create xarray DataArray with consistent dimension order
     return xr.DataArray(
-        data=fuel_cost_data,
+        data=fuel_cost_df,
         dims=["generator_types", "years"],
         coords={
             "generator_types": sets.generator_types.values,
@@ -245,12 +245,6 @@ def initialize_project_parameters(data: ProjectParameters, sets: xr.Dataset) -> 
         operate_discount_rate(data),
         dims=[],
         name='Yearly Discount Rate (fraction)')
-    
-    # Distribution Type
-    project_parameters['DISTRIBUTION_TYPE'] = xr.DataArray(
-        data.project_settings.distribution_type,
-        dims=[],
-        name='Distribution Type')
 
     # Investment Cost Limit if optimization goal is total variable costs minimization
     if data.project_settings.optimization_goal == 1:

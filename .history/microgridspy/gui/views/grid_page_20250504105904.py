@@ -71,7 +71,7 @@ def save_grid_availability_data(grid_availability_data: pd.DataFrame, project_na
 
     # Save the demand data to a CSV file into the related project folder
     path_manager = PathManager(project_name)
-    project_folder_path = os.path.join(path_manager.PROJECTS_FOLDER_PATH / project_name / "Grid Availability.csv")
+    project_folder_path = os.path.join(path_manager.PROJECTS_FOLDER_PATH / project_name / "grid" / "Grid Availability.csv")
     grid_availability_data.to_csv(project_folder_path, index=True)
 
     st.success(f"Grid Availability.csv successfully saved at {inputs_folder_path} for current use as well as at {project_folder_path} for future use.")

@@ -149,9 +149,11 @@ def get_conversion_sizing_results(model) -> pd.DataFrame:
             grid_nominal_transformer_capacity = model.parameters['GRID_TRANSFORMER_NOMINAL_CAPACITY']
             grid_existing_transformer_capacity = model.parameters.get('GRID_EXISTING_TRANSFORMER_CAPACITY', 0)
             categories.append("Grid Transformer")
-            unit_val = float(transformer_units_grid.values.squeeze())
-            capacity_val = float(grid_nominal_transformer_capacity.values)
-            cap = unit_val * capacity_val / 1000
+            print("DEBUG — transformer_units_grid.values:", transformer_units_grid.values)
+            print("DEBUG — shape:", transformer_units_grid.values.shape)
+            print("DEBUG — grid_nominal_transformer_capacity:", grid_nominal_transformer_capacity)
+            print("DEBUG — type:", type(grid_nominal_transformer_capacity))
+            cap = transformer_units_grid.values * grid_nominal_transformer_capacity / 1000
             capacities.append(cap)
             existing_capacities.append(grid_existing_transformer_capacity / 1000 if is_brownfield else 0)
             capacity_units.append('kVA')

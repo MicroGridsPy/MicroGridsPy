@@ -115,7 +115,7 @@ def add_investment_cost(
         start_year: int = years[0]
         grid_connection_discount = 1 / ((1 + param['DISCOUNT_RATE']) ** (year_grid_connection - start_year))
         investment_cost += (param['GRID_DISTANCE'] * param['GRID_CONNECTION_COST'] * grid_connection_discount)
-        investment_cost += (var['grid_transformer_units'] * param['GRID_TRANSFORMER_NOMINAL_CAPACITY']* param['GRID_TRANSFORMER_COST'])
+        investment_cost += (var['grid_transformer_units'] * param['GRID_TRASFORMER_NOMINAL_CAPACITY']* param['GRID_TRANSFORMER_COST'])
     
     try:
         # Add constraint

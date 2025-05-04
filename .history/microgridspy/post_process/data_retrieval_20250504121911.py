@@ -98,7 +98,7 @@ def get_conversion_sizing_results(model) -> pd.DataFrame:
     steps = model.sets['steps'].values
 
     # Renewable inverters (kW)
-    inverter_units_res = model.get_solution_variable('Units of Inverters for Renewables')
+    inverter_units_res = model.get_solution_variable('res_inverter_units')
     if inverter_units_res is not None:
         res_nominal_inverter_capacity = model.parameters['RES_INVERTER_NOMINAL_CAPACITY']
         res_existing_inverter_capacity = model.parameters.get('RES_EXISTING_INVERTER_CAPACITY')
@@ -116,7 +116,7 @@ def get_conversion_sizing_results(model) -> pd.DataFrame:
 
     # Battery inverters (kW)
     if model.has_battery:
-        inverter_units_bat = model.get_solution_variable('Units of Inverters for Battery')
+        inverter_units_bat = model.get_solution_variable('battery_inverter_units')
         if inverter_units_bat is not None:
             bat_nominal_inverter_capacity = model.parameters['BATTERY_INVERTER_NOMINAL_CAPACITY']
             bat_existing_inverter_capacity = model.parameters.get('BATTERY_EXISTING_INVERTER_CAPACITY', 0)
@@ -129,8 +129,8 @@ def get_conversion_sizing_results(model) -> pd.DataFrame:
 
     # Generator rectifiers (kW)
     if model.has_generator:
-        rectifier_units_gen = model.get_solution_variable('Units of Rectifiers for Generators')
-        if rectifier_units_gen is not None and model.parameters['DISTRIBUTION_TYPE'] == 'Direct Current':
+        rectifier_units_gen = model.get_solution_variable('generator_rectifier_units')
+        if rectifier_units_gen is not None and st.session_state.grid_type == 'Direct Current':
             gen_nominal_rectifier_capacity = model.parameters['GENERATOR_RECTIFIER_NOMINAL_CAPACITY']
             gen_existing_rectifier_capacity = model.parameters.get('GENERATOR_EXISTING_RECTIFIER_CAPACITY')
 
@@ -144,14 +144,12 @@ def get_conversion_sizing_results(model) -> pd.DataFrame:
 
     # Grid transformers (kVA)
     if model.has_grid_connection:
-        transformer_units_grid = model.get_solution_variable('Units of Transformers for Grid')
+        transformer_units_grid = model.get_solution_variable('grid_transformer_units')
         if transformer_units_grid is not None:
             grid_nominal_transformer_capacity = model.parameters['GRID_TRANSFORMER_NOMINAL_CAPACITY']
             grid_existing_transformer_capacity = model.parameters.get('GRID_EXISTING_TRANSFORMER_CAPACITY', 0)
             categories.append("Grid Transformer")
-            unit_val = float(transformer_units_grid.values.squeeze())
-            capacity_val = float(grid_nominal_transformer_capacity.values)
-            cap = unit_val * capacity_val / 1000
+            cap = transformer_units_grid.values * grid_nominal_transformer_capacity / 1000
             capacities.append(cap)
             existing_capacities.append(grid_existing_transformer_capacity / 1000 if is_brownfield else 0)
             capacity_units.append('kVA')
@@ -160,20 +158,12 @@ def get_conversion_sizing_results(model) -> pd.DataFrame:
     data = []
     for category, capacity, existing, unit in zip(categories, capacities, existing_capacities, capacity_units):
         row = [f"{category} ({unit})", int(existing)]
-
-        if np.isscalar(capacity) or np.ndim(capacity) == 0:
-            row.append(int(capacity))
-            total_capacity = int(existing) + int(capacity)
-            step_labels = ['Step 1']
-        else:
-            row.extend([int(c) for c in capacity])
-            total_capacity = int(existing) + sum(int(c) for c in capacity)
-            step_labels = [f"Step {i+1}" for i in range(len(capacity))]
-
+        row.extend([int(cap) for cap in capacity])
+        total_capacity = int(existing) + sum(int(cap) for cap in capacity)
         row.append(total_capacity)
         data.append(row)
 
-    columns = ['Component', 'Existing'] + step_labels + ['Total']
+    columns = ['Component', 'Existing'] + [f'Step {i + 1}' for i in range(len(capacities[0]))] + ['Total']
     return pd.DataFrame(data, columns=columns)
 
 

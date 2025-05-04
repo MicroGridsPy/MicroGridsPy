@@ -13,16 +13,6 @@ def add_grid_constraints(model: Model, settings: ProjectParameters, sets: xr.Dat
     if settings.advanced_settings.grid_connection_type == 1:
         add_maximum_power_to_grid_constraint(model, settings, sets, param, var)
 
-def add_maximum_energy_supply_constraint(model: Model, settings: ProjectParameters, sets: xr.Dataset, param: xr.Dataset, var: Dict[str, linopy.Variable]) -> None:
-    """Add constraint for maximum energy supply equal to the demand."""
-    
-    year_grid_connection = settings.grid_params.year_grid_connection
-
-    for year in sets.years.values:
-        if year >= year_grid_connection:
-            model.add_constraints(
-                var['energy_from_grid'].sel(years=year) <= param['DEMAND'].sel(years=year),
-                name=f"Maximum Energy to supply Demand - Year {year}")
 
 def add_maximum_power_from_grid_constraint(model: Model, settings: ProjectParameters, sets: xr.Dataset, param: xr.Dataset, var: Dict[str, linopy.Variable]) -> None:
     """Add constraint for maximum power that can be drawn from the grid."""

@@ -132,7 +132,7 @@ def calculate_renewable_penetration(model: Model):
             total_production += yearly_gen_production
         
         if model.has_grid_connection:
-            total_grid_import = model.get_solution_variable('Energy from Grid')
+            total_grid_import = model.get_solution_variable('Energy From Grid')
             yearly_grid_import = total_grid_import.sel(years=year).sum().values.item()
             total_production += yearly_grid_import
 

@@ -245,12 +245,6 @@ def initialize_project_parameters(data: ProjectParameters, sets: xr.Dataset) -> 
         operate_discount_rate(data),
         dims=[],
         name='Yearly Discount Rate (fraction)')
-    
-    # Distribution Type
-    project_parameters['DISTRIBUTION_TYPE'] = xr.DataArray(
-        data.project_settings.distribution_type,
-        dims=[],
-        name='Distribution Type')
 
     # Investment Cost Limit if optimization goal is total variable costs minimization
     if data.project_settings.optimization_goal == 1:
