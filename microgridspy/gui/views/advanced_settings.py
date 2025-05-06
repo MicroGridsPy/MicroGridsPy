@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 
+from config.path_manager import PathManager
 from microgridspy.gui.utils import initialize_session_state
 
 def display_timeline(time_horizon, step_duration):
@@ -155,8 +156,20 @@ def advanced_settings():
                 st.session_state.calculated_wacc = wacc
 
     with st.expander("🎯 Multi-Objective Optimization", expanded=False):
-        # TODO: Check multi-objective optimization results
-        st.warning("⚠️ This functionality is a work in progress and may produce inaccurate results.")
+        st.markdown("""
+            In rural electrification, minimizing **Net Present Cost (NPC)** and **CO₂ emissions** are often both critical and conflicting objectives. Multi-objective optimization addresses the limitations of single-objective approaches by evaluating trade-offs between costs and emissions.
+
+            **Methodology**
+
+            - First, the model computes optimal solutions for NPC and CO₂ emissions independently to determine the feasible range.
+            - Then, it iteratively constrains one objective (e.g., emissions) while minimizing the other (NPC), generating **Pareto optimal solutions**.
+            - The result is a **Pareto front**, a set of solutions offering diverse trade-offs between cost and emissions.
+
+            The Pareto front gives stakeholders a broader view of possible system configurations. Each point on the curve is an optimal balance between NPC and CO₂ emissions: no solution is strictly better than another without compromising one of the two objectives.
+
+        """)
+        image_path = PathManager.IMAGES_PATH / "pareto_front.jpg"
+        st.image(str(image_path), use_container_width=True, caption="A graphical example of the Pareto optimal front")
         st.session_state.multiobjective_optimization = st.checkbox(
             "Enable Multi-Objective Optimization", 
             value=st.session_state.multiobjective_optimization,
