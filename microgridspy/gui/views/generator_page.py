@@ -114,30 +114,29 @@ def save_fuel_cost_data(file_path: Path, generator_fuel_costs: Dict[str, pd.Seri
         generator_fuel_costs (Dict[str, pd.Series]): Dictionary mapping generator names to their fuel cost Series.
         time_horizon (int): Number of years in the project.
     """
+    year_col = list(range(1, time_horizon + 1))
+    new_index = pd.Index(year_col, name="Year")
+
     if file_path.exists():
-        fuel_cost_df = pd.read_csv(file_path)
-        
-        # If 'Year' column is missing or wrong, rebuild it
-        if 'Year' not in fuel_cost_df.columns or len(fuel_cost_df['Year']) != time_horizon:
-            st.warning(f"'Year' column missing or mismatched. Resetting it.")
-            fuel_cost_df['Year'] = list(range(1, time_horizon + 1))
+        fuel_cost_df = pd.read_csv(file_path, index_col="Year") if "Year" in pd.read_csv(file_path, nrows=1).columns else pd.read_csv(file_path)
+        fuel_cost_df = fuel_cost_df.reindex(new_index)
     else:
-        # If file doesn't exist, create a new DataFrame
         st.info(f"Fuel cost file not found at {file_path}. A new one will be created.")
-        fuel_cost_df = pd.DataFrame({'Year': list(range(1, time_horizon + 1))})
+        fuel_cost_df = pd.DataFrame(index=new_index)
 
-    # Update or add generator fuel cost columns
     for gen_name, cost_series in generator_fuel_costs.items():
-        if gen_name in fuel_cost_df.columns:
-            st.info(f"Updating fuel cost data for generator: {gen_name}")
-        else:
-            st.info(f"Adding new fuel cost data for generator: {gen_name}")
-        
-        # Assign the new or updated fuel cost series
-        fuel_cost_df[gen_name] = cost_series.values
+        if len(cost_series) < time_horizon:
+            cost_series = cost_series.append(
+                pd.Series([cost_series.iloc[-1]] * (time_horizon - len(cost_series))),
+                ignore_index=True
+            )
+        elif len(cost_series) > time_horizon:
+            cost_series = cost_series.iloc[:time_horizon]
 
-    # Save back to CSV
-    fuel_cost_df.to_csv(file_path, index=False)
+        fuel_cost_df[gen_name] = cost_series.values
+        st.info(f"Updated fuel cost for generator: {gen_name}")
+
+    fuel_cost_df.reset_index().to_csv(file_path, index=False)
     st.success(f"Fuel cost data successfully saved to {file_path}")
     
 
