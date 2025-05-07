@@ -34,6 +34,7 @@ def advanced_settings():
     with st.expander("🧮 Model Formulation", expanded=False):
         st.markdown("""
         - **Linear Programming (LP):** This formulation uses continuous variables for optimization, allowing fractional sizing of components without considering nominal capacity constraints. It provides computational efficiency but may overlook realistic unit-based sizing.
+
         - **Mixed-Integer Linear Programming (MILP):** This approach introduces binary variables to capture more realistic technology behavior, like discrete flows for charging/discharging and minimum unit sizes for components. When enabled, the model also supports **Unit Commitment**, optimizing the number of units (n_units) for each technology, reflecting true nominal capacity steps.
         """)
         milp_options = ["Linear Programming (LP)", "Mixed-Integer Linear Programming (MILP)"]
@@ -51,8 +52,6 @@ def advanced_settings():
                 "Enable Unit Commitment Approach", 
                 value=st.session_state.unit_commitment,
                 help="Restrict sizing variables to units of nominal capacity for each technology. It allows for more realistic technology representation but may increase computational effort.")
-        
-        st.divider()
 
         st.markdown("""
         - **Greenfield:** Represents entirely new systems with no existing infrastructure, optimizing all components from scratch.
@@ -67,8 +66,6 @@ def advanced_settings():
             help="Choose Greenfield for entirely new projects or Brownfield if considering existing capacity installed for the case study.")
         
         st.session_state.brownfield = project_type_choice == "Brownfield"
-
-        st.divider()
 
         st.markdown("""
         - **Single Investment Step:** The system is optimized for the entire project horizon in one step.
@@ -100,15 +97,6 @@ def advanced_settings():
 
 
     with st.expander("⚡ Grid Connection", expanded=False):
-        st.markdown("""
-        The model allows for the system to **buy or sell electricity to the main grid** after a specified year of connection. This introduces several important parameters:
-        - **Grid Electricity Prices:** Different rates for purchasing and selling electricity.
-        - **Grid Distance and Connection Costs:** Includes the cost of extending the power line and installing transformers.
-        - **Maximum Connection Capacity:** Sets the limit for energy exchange with the grid.
-        - **CO₂ Emissions:** Accounts for emissions associated with national grid power consumption.
-        - **Grid Availability:** Models the reliability of the grid connection, including outages and downtime. 
-        Availability is simulated using **Weibull distributions** to sample outage frequency and duration, creating a realistic grid availability profile.
-        """)
         st.session_state.grid_connection = st.checkbox(
             "Simulate Grid Connection", 
             value=st.session_state.grid_connection,
@@ -125,12 +113,6 @@ def advanced_settings():
             st.session_state.grid_connection_type = 0 if grid_connection_type == "Purchase Only" else 1
 
     with st.expander("📈 Weighted Average Cost of Capital Calculation", expanded=False):
-        st.markdown("""
-        WACC represents the **average cost of financing** a project, weighted by its capital structure (debt and equity). It replaces the standard discount rate in financial modeling, providing a more realistic measure of the **minimum return needed** to make the investment profitable.
-        The calculation accounts for the **cost of equity**, **cost of debt**, and the **corporate tax rate**, reflecting the true cost of capital for mini-grid projects.
-        """)
-        image_path = PathManager.IMAGES_PATH / "wacc.PNG"
-        st.image(str(image_path), use_container_width=True, caption="Trends in debt and equity for SSA mini-grids")
         st.session_state.wacc_calculation = st.checkbox(
             "Enable WACC Calculation", 
             value=st.session_state.wacc_calculation,

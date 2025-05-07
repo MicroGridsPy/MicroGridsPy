@@ -129,7 +129,7 @@ def advanced_settings():
         WACC represents the **average cost of financing** a project, weighted by its capital structure (debt and equity). It replaces the standard discount rate in financial modeling, providing a more realistic measure of the **minimum return needed** to make the investment profitable.
         The calculation accounts for the **cost of equity**, **cost of debt**, and the **corporate tax rate**, reflecting the true cost of capital for mini-grid projects.
         """)
-        image_path = PathManager.IMAGES_PATH / "wacc.PNG"
+        image_path = PathManager.IMAGES_PATH / "wacc.jpg"
         st.image(str(image_path), use_container_width=True, caption="Trends in debt and equity for SSA mini-grids")
         st.session_state.wacc_calculation = st.checkbox(
             "Enable WACC Calculation", 
