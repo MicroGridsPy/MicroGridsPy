@@ -276,9 +276,9 @@ def run_model():
 
         # Create a pareto front plot
         fig, ax = plt.subplots()
-        ax.plot(npc_values, co2_values, 'o-', color='blue', label='Pareto Optimal Front')
-        ax.set_xlabel(f"Net Present Cost [{currency}]")
-        ax.set_ylabel("CO₂ Emissions [CO₂]")
+        ax.plot(npc_values / 1000, co2_values / 1000, 'o-', color='blue', label='Pareto Optimal Front')
+        ax.set_xlabel(f"Net Present Cost [k{currency}]")
+        ax.set_ylabel("CO₂ Emissions [tonCO₂]")
         ax.set_title("Pareto Front: Trade-off between CO₂ Emissions and NPC")
         ax.legend()
         st.pyplot(fig)
