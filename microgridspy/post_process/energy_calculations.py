@@ -53,7 +53,7 @@ def calculate_energy_usage(model):
 
     for year in years:
         yearly_demand = demand.sel(years=year).sum().values.item()
-        yearly_renewables_production = res_production.sel(years=year).sum().values.item()
+        yearly_renewables_production = res_production.sel(steps=1).sum().values.item()  #TODO: Incorporate steps dimension
         yearly_curtailment = curtailment.sel(years=year).sum().values.item()
         yearly_curtailment_percentage.append((yearly_curtailment / (yearly_renewables_production + yearly_curtailment)) * 100)
 
