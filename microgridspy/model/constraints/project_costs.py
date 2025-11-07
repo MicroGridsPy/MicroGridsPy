@@ -467,201 +467,286 @@ def add_salvage_value(
     has_generator: bool,
     has_grid_connection: bool
 ) -> None:
-    # Set useful alias for parameters
-    project_duration: int = settings.project_settings.time_horizon
-    step_duration: int = settings.advanced_settings.step_duration
+    """
+    Compute economically consistent salvage value (NPC level), in a way that:
+    - Is consistent with CRF / discounting logic of the NPC objective.
+    - Uses the last-step CAPEX for salvage (as in the previous implementation).
+    - Treats RES, batteries, generators, and their inverters/rectifiers consistently.
+    - Avoids comparisons on linopy.Variable (no > 0 on variables).
+
+    For a component with lifetime L and discount rate r, used for H years
+    after its investment, the salvage PV at the investment time is:
+
+        S_at_invest = I * f(L, H)
+
+    with CRF-consistent salvage fraction:
+        f(L, H) = ((1+r)^(L-H) - 1) / ((1+r)^L - 1)      for 0 <= H < L
+                  0                                      otherwise
+
+    Then we discount S_at_invest from investment year t_inv to year 0.
+    """
+
+    # Aliases
+    project_duration: int = settings.project_settings.time_horizon      # [years]
+    step_duration: int = settings.advanced_settings.step_duration       # [years]
     years: xr.DataArray = sets.years.values
-    renewable_sources: xr.DataArray = sets.renewable_sources.values
-    generators: xr.DataArray = sets.generator_types.values if has_generator else []
     is_brownfield: bool = settings.advanced_settings.brownfield
-    discount_factor: xr.DataArray = 1 / ((1 + param['DISCOUNT_RATE']) ** project_duration)
-    salvage_value: linopy.LinearExpression = 0
+    r = param["DISCOUNT_RATE"]
+    one_plus_r = 1 + r
 
-    for step in sets.steps.values:
-        # Initial investment step (including existing capacity for brownfield)
-        if step == 1:
-            
-            # RES salvage value calculation
-            salvage_value += (
-                var['res_units'].sel(steps=step)
-                * param['RES_NOMINAL_CAPACITY']
-                * param['RES_SPECIFIC_INVESTMENT_COST'].sel(steps=sets.steps.values[-1])
-                * (
-                    where(
-                        param['RES_LIFETIME'] - project_duration > 0,
-                        param['RES_LIFETIME'] - project_duration,
-                        0
-                    )
-                    / param['RES_LIFETIME']
-                )
-                * discount_factor
-            ).sum('renewable_sources')
+    # ------------------------------------------------------------------
+    # Helper: CRF-consistent salvage fraction (PV at investment time)
+    # ------------------------------------------------------------------
+    def salvage_fraction_crf(lifetime: xr.DataArray, years_in_use: float) -> xr.DataArray:
+        """
+        Compute CRF-consistent salvage fraction f(L, H) at the time of investment.
 
-            salvage_value += (
-                var['res_inverter_units'].sel(steps=step)
-                * param['RES_INVERTER_NOMINAL_CAPACITY']
-                * param['RES_INVERTER_COST']
-                * (
-                    where(
-                        param['RES_INVERTER_LIFETIME'] - project_duration > 0,
-                        param['RES_INVERTER_LIFETIME'] - project_duration,
-                        0
-                    )
-                    / param['RES_INVERTER_LIFETIME']
-                )
-                * discount_factor
-            ).sum('renewable_sources')
-            
-            if is_brownfield:
-                for res in renewable_sources:
-                    # Existing salvage value (brownfield) for each renewable source
-                    salvage_value += (
-                        param['RES_EXISTING_CAPACITY']
-                        * param['RES_SPECIFIC_INVESTMENT_COST'].sel(steps=sets.steps.values[-1])
-                        * (
-                            where(
-                                param['RES_LIFETIME'] - param['RES_EXISTING_YEARS'] - project_duration > 0,
-                                param['RES_LIFETIME'] - param['RES_EXISTING_YEARS']- project_duration,
-                                0
-                            )
-                            / param['RES_LIFETIME']
-                        )
-                        * discount_factor
-                    ).sum('renewable_sources')
-            
-                    salvage_value += (
-                        param['RES_INVERTER_EXISTING_CAPACITY']
-                        * param['RES_INVERTER_NOMINAL_CAPACITY']
-                        * (
-                            where(
-                                param['RES_INVERTER_LIFETIME'] - param['RES_INVERTER_EXISTING_YEARS'] - project_duration > 0,
-                                param['RES_INVERTER_LIFETIME'] - param['RES_INVERTER_EXISTING_YEARS']- project_duration,
-                                0
-                            )
-                            / param['RES_INVERTER_LIFETIME']
-                        )
-                        * discount_factor
-                    ).sum('renewable_sources')
+        lifetime:    DataArray with technical lifetime L (yrs).
+        years_in_use: scalar H (yrs of use in the project horizon, from
+                      the investment date to project end).
 
-            if has_battery:
-                salvage_value += (
-                    var['battery_units'].sel(steps=step)
-                    * param['BATTERY_NOMINAL_CAPACITY']
-                    * param['BATTERY_SPECIFIC_INVESTMENT_COST'].sel(steps=sets.steps.values[-1])
-                    * (
-                        where(
-                            param['BATTERY_LIFETIME'] - project_duration > 0,
-                            param['BATTERY_LIFETIME'] - project_duration,
-                            0
-                        )
-                        / param['BATTERY_LIFETIME']
-                    )
-                    * discount_factor
-                )
-                salvage_value += (
-                    var['battery_inverter_units'].sel(steps=step)
-                    * param['BATTERY_INVERTER_NOMINAL_CAPACITY']
-                    * param['BATTERY_INVERTER_COST']
-                    * (
-                        where(
-                            param['BATTERY_INVERTER_LIFETIME'] - project_duration > 0,
-                            param['BATTERY_INVERTER_LIFETIME'] - project_duration,
-                            0
-                        )
-                        / param['BATTERY_INVERTER_LIFETIME']
-                    )
-                    * discount_factor
-                )
-                if is_brownfield:
-                    # Existing battery salvage (brownfield)
-                    salvage_value += (param['BATTERY_EXISTING_CAPACITY'] * param['BATTERY_SPECIFIC_INVESTMENT_COST'].sel(steps=sets.steps.values[-1]) *
-                                     (max(0, param['BATTERY_LIFETIME'] - param['BATTERY_EXISTING_YEARS'] - project_duration) / param['BATTERY_LIFETIME']) *
-                                     discount_factor)
-                    salvage_value += (param['BATTERY_INVERTER_EXISTING_CAPACITY'] * param['BATTERY_INVERTER_COST'] *
-                                     (max(0, param['BATTERY_INVERTER_LIFETIME'] - param['BATTERY_INVERTER_EXISTING_YEARS'] - project_duration) / param['BATTERY_INVERTER_LIFETIME']) *
-                                     discount_factor)
+        Returned fraction f(L, H) is zero if:
+          - lifetime <= 0, or
+          - H <= 0, or
+          - H >= lifetime (fully used within the project).
+        """
 
-            if has_generator:
-                salvage_value += (var['generator_units'].sel(steps=step) * 
-                                  param['GENERATOR_NOMINAL_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] *
-                                  (max(0, param['GENERATOR_LIFETIME'] - project_duration) / param['GENERATOR_LIFETIME']) *
-                                  discount_factor).sum('generator_types')
-                salvage_value += (var['generator_rectifier_units'].sel(steps=step) * 
-                                  param['GENERATOR_RECTIFIER_NOMINAL_CAPACITY'] * param['GENERATOR_RECTIFIER_COST'] *
-                                  (max(0, param['GENERATOR_RECTIFIER_LIFETIME'] - project_duration) / param['GENERATOR_RECTIFIER_LIFETIME']) *
-                                  discount_factor).sum('generator_types')
-                
-                if is_brownfield:
-                    for gen in generators:
-                        # Existing generator salvage (brownfield)
-                        salvage_value += (param['GENERATOR_EXISTING_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] *
-                                        (max(0, param['GENERATOR_LIFETIME'] - param['GENERATOR_EXISTING_YEARS'] - project_duration) / param['GENERATOR_LIFETIME']) *
-                                        discount_factor).sel(generator_types=gen)
-                        salvage_value += (param['GENERATOR_RECTIFIER_EXISTING_CAPACITY'] * param['GENERATOR_RECTIFIER_COST'] *
-                                        (max(0, param['GENERATOR_RECTIFIER_LIFETIME'] - param['GENERATOR_RECTIFIER_EXISTING_YEARS'] - project_duration) / param['GENERATOR_RECTIFIER_LIFETIME']) *
-                                        discount_factor).sel(generator_types=gen)
-        # Subsequent investment steps
+        # Broadcast scalar years_in_use to lifetime shape
+        if not isinstance(years_in_use, xr.DataArray):
+            H = xr.full_like(lifetime, float(years_in_use), dtype=float)
         else:
-            # RES salvage
-            additional_units = var['res_units'].sel(steps=step) - var['res_units'].sel(steps=step - 1)
-            remaining_lifetime = where(
-                param['RES_LIFETIME'] - (project_duration - (step * step_duration)) > 0,
-                param['RES_LIFETIME'] - (project_duration - (step * step_duration)),
-                0
+            H = xr.broadcast(years_in_use, lifetime)[0]
+
+        L = lifetime
+
+        # Clamp H into [0, L]
+        H = xr.where(H < 0, 0, H)
+        H = xr.where(H > L, L, H)
+
+        # Valid region: 0 < H < L and L > 0
+        valid = (L > 0) & (H > 0) & (H < L)
+
+        # Numerator and denominator of f(L,H)
+        num = one_plus_r ** (L - H) - 1
+        den = one_plus_r ** L - 1
+
+        frac = xr.where(valid, num / den, 0)
+
+        return frac
+
+    # ------------------------------------------------------------------
+    # Accumulate salvage NPV at year 0
+    # ------------------------------------------------------------------
+    salvage_npv: linopy.LinearExpression = 0
+
+    # -----------------------------
+    # NEW / ADDITIONAL CAPACITY
+    # -----------------------------
+    for step in sets.steps.values:
+        # Investment year (in years from project start)
+        # Convention: step 1 -> invest at year 0
+        if step == 1:
+            invest_year = 0
+        else:
+            invest_year = step * step_duration
+
+        # Years of use of this asset segment within the project
+        years_in_use = project_duration - invest_year
+
+        # Discount factor from investment year to year 0
+        df_invest = 1 / (one_plus_r ** invest_year)
+
+        # --- RES modules ---
+        res_units_step = var["res_units"].sel(steps=step)
+        if step == 1:
+            additional_res_units = res_units_step
+        else:
+            additional_res_units = res_units_step - var["res_units"].sel(steps=step - 1)
+        # Note: we rely on monotonic capacity constraints; no clipping with xr.where on variables.
+
+        if "renewable_sources" in res_units_step.dims:
+            res_frac = salvage_fraction_crf(param["RES_LIFETIME"], years_in_use)
+            salvage_npv += (
+                additional_res_units
+                * param["RES_NOMINAL_CAPACITY"]
+                * param["RES_SPECIFIC_INVESTMENT_COST"].sel(steps=sets.steps.values[-1])
+                * res_frac
+                * df_invest
+            ).sum("renewable_sources")
+
+        # --- RES inverters ---
+        res_inv_units_step = var["res_inverter_units"].sel(steps=step)
+        if step == 1:
+            additional_res_inv_units = res_inv_units_step
+        else:
+            additional_res_inv_units = res_inv_units_step - var["res_inverter_units"].sel(steps=step - 1)
+
+        if "renewable_sources" in res_inv_units_step.dims:
+            res_inv_frac = salvage_fraction_crf(param["RES_INVERTER_LIFETIME"], years_in_use)
+            salvage_npv += (
+                additional_res_inv_units
+                * param["RES_INVERTER_NOMINAL_CAPACITY"]
+                * param["RES_INVERTER_COST"]
+                * res_inv_frac
+                * df_invest
+            ).sum("renewable_sources")
+
+        # --- Batteries (bank + inverter) ---
+        if has_battery:
+            # Battery bank
+            bat_units_step = var["battery_units"].sel(steps=step)
+            if step == 1:
+                additional_bat_units = bat_units_step
+            else:
+                additional_bat_units = bat_units_step - var["battery_units"].sel(steps=step - 1)
+
+            bat_frac = salvage_fraction_crf(param["BATTERY_LIFETIME"], years_in_use)
+            salvage_npv += (
+                additional_bat_units
+                * param["BATTERY_NOMINAL_CAPACITY"]
+                * param["BATTERY_SPECIFIC_INVESTMENT_COST"].sel(steps=sets.steps.values[-1])
+                * bat_frac
+                * df_invest
             )
-            salvage_value += (additional_units * 
-                              param['RES_NOMINAL_CAPACITY'] * param['RES_SPECIFIC_INVESTMENT_COST'].sel(steps=sets.steps.values[-1]) *
-                              (remaining_lifetime / param['RES_LIFETIME']) *
-                              discount_factor).sum('renewable_sources')
-            
-            additional_res_inverter_units = var['res_inverter_units'].sel(steps=step) - var['res_inverter_units'].sel(steps=step - 1)
-            remaining_res_inverter_lifetime = where(
-                param['RES_INVERTER_LIFETIME'] - (project_duration - (step * step_duration)) > 0,
-                param['RES_INVERTER_LIFETIME'] - (project_duration - (step * step_duration)),
-                0
+
+            # Battery inverter
+            bat_inv_units_step = var["battery_inverter_units"].sel(steps=step)
+            if step == 1:
+                additional_bat_inv_units = bat_inv_units_step
+            else:
+                additional_bat_inv_units = bat_inv_units_step - var["battery_inverter_units"].sel(steps=step - 1)
+
+            bat_inv_frac = salvage_fraction_crf(param["BATTERY_INVERTER_LIFETIME"], years_in_use)
+            salvage_npv += (
+                additional_bat_inv_units
+                * param["BATTERY_INVERTER_NOMINAL_CAPACITY"]
+                * param["BATTERY_INVERTER_COST"]
+                * bat_inv_frac
+                * df_invest
             )
-            salvage_value += (additional_res_inverter_units * 
-                              param['RES_INVERTER_NOMINAL_CAPACITY'] * param['RES_INVERTER_COST'] *
-                              (remaining_res_inverter_lifetime / param['RES_INVERTER_LIFETIME']) *
-                              discount_factor).sum('renewable_sources')
 
-            if has_battery:
-                additional_battery_units = var['battery_units'].sel(steps=step) - var['battery_units'].sel(steps=step - 1)
-                remaining_battery_lifetime = max(0, param['BATTERY_LIFETIME'] - (project_duration - (step * step_duration)))
-                salvage_value += (additional_battery_units * 
-                                  param['BATTERY_NOMINAL_CAPACITY'] * param['BATTERY_SPECIFIC_INVESTMENT_COST'].sel(steps=sets.steps.values[-1]) *
-                                  (remaining_battery_lifetime / param['BATTERY_LIFETIME']) *
-                                  discount_factor)
-                
-                additional_battery_inverter_units = var['battery_inverter_units'].sel(steps=step) - var['battery_inverter_units'].sel(steps=step - 1)
-                remaining_battery_inverter_lifetime = max(0, param['BATTERY_INVERTER_LIFETIME'] - (project_duration - (step * step_duration)))
-                salvage_value += (additional_battery_inverter_units * 
-                                  param['BATTERY_INVERTER_NOMINAL_CAPACITY'] * param['BATTERY_INVERTER_COST'] *
-                                  (remaining_battery_inverter_lifetime / param['BATTERY_INVERTER_LIFETIME']) *
-                                  discount_factor)
+        # --- Generators (prime mover + rectifier) ---
+        if has_generator:
+            # Prime movers
+            gen_units_step = var["generator_units"].sel(steps=step)
+            if step == 1:
+                additional_gen_units = gen_units_step
+            else:
+                additional_gen_units = gen_units_step - var["generator_units"].sel(steps=step - 1)
 
-            if has_generator:
-                additional_generator_units = var['generator_units'].sel(steps=step) - var['generator_units'].sel(steps=step - 1)
-                remaining_generator_lifetime = max(0, param['GENERATOR_LIFETIME'] - (project_duration - (step * step_duration)))
-                salvage_value += (additional_generator_units * 
-                                  param['GENERATOR_NOMINAL_CAPACITY'] * param['GENERATOR_SPECIFIC_INVESTMENT_COST'] *
-                                  (remaining_generator_lifetime / param['GENERATOR_LIFETIME']) *
-                                  discount_factor).sum('generator_types')
-    
-                additional_generator_rectifier_units = var['generator_rectifier_units'].sel(steps=step) - var['generator_rectifier_units'].sel(steps=step - 1)
-                remaining_generator_rectifier_lifetime = max(0, param['GENERATOR_RECTIFIER_LIFETIME'] - (project_duration - (step * step_duration)))
-                salvage_value += (additional_generator_rectifier_units * 
-                                  param['GENERATOR_RECTIFIER_NOMINAL_CAPACITY'] * param['GENERATOR_RECTIFIER_COST'] *
-                                  (remaining_generator_rectifier_lifetime / param['GENERATOR_RECTIFIER_LIFETIME']) *
-                                  discount_factor).sum('generator_types')
+            gen_frac = salvage_fraction_crf(param["GENERATOR_LIFETIME"], years_in_use)
+            salvage_npv += (
+                additional_gen_units
+                * param["GENERATOR_NOMINAL_CAPACITY"]
+                * param["GENERATOR_SPECIFIC_INVESTMENT_COST"]
+                * gen_frac
+                * df_invest
+            ).sum("generator_types")
 
+            # Rectifiers
+            gen_rect_units_step = var["generator_rectifier_units"].sel(steps=step)
+            if step == 1:
+                additional_gen_rect_units = gen_rect_units_step
+            else:
+                additional_gen_rect_units = gen_rect_units_step - var["generator_rectifier_units"].sel(steps=step - 1)
+
+            gen_rect_frac = salvage_fraction_crf(param["GENERATOR_RECTIFIER_LIFETIME"], years_in_use)
+            salvage_npv += (
+                additional_gen_rect_units
+                * param["GENERATOR_RECTIFIER_NOMINAL_CAPACITY"]
+                * param["GENERATOR_RECTIFIER_COST"]
+                * gen_rect_frac
+                * df_invest
+            ).sum("generator_types")
+
+    # -----------------------------
+    # EXISTING (BROWNFIELD) ASSETS
+    # -----------------------------
+    if is_brownfield:
+        # We treat existing assets as if a "virtual" investment of cost I_existing
+        # happens at year 0, with an effective remaining lifetime L_rem = L - age.
+        # Then we apply the same CRF-consistent salvage logic with H = min(project_duration, L_rem).
+
+        # --- Existing RES modules ---
+        L_res_eff = param["RES_LIFETIME"] - param["RES_EXISTING_YEARS"]
+        H_res = project_duration  # use for up to project_duration years, limited by L_res_eff inside salvage_fraction_crf
+        res_existing_frac = salvage_fraction_crf(L_res_eff, H_res)
+        salvage_npv += (
+            param["RES_EXISTING_CAPACITY"]
+            * param["RES_SPECIFIC_INVESTMENT_COST"].sel(steps=sets.steps.values[-1])
+            * res_existing_frac
+        ).sum("renewable_sources")
+
+        # --- Existing RES inverters (if present) ---
+        if "RES_INVERTER_EXISTING_CAPACITY" in param:
+            L_res_inv_eff = param["RES_INVERTER_LIFETIME"] - param["RES_INVERTER_EXISTING_YEARS"]
+            H_res_inv = project_duration
+            res_inv_existing_frac = salvage_fraction_crf(L_res_inv_eff, H_res_inv)
+            salvage_npv += (
+                param["RES_INVERTER_EXISTING_CAPACITY"]
+                * param["RES_INVERTER_COST"]
+                * res_inv_existing_frac
+            ).sum("renewable_sources")
+
+        # --- Existing batteries ---
+        if has_battery:
+            L_bat_eff = param["BATTERY_LIFETIME"] - param["BATTERY_EXISTING_YEARS"]
+            H_bat = project_duration
+            bat_existing_frac = salvage_fraction_crf(L_bat_eff, H_bat)
+            salvage_npv += (
+                param["BATTERY_EXISTING_CAPACITY"]
+                * param["BATTERY_SPECIFIC_INVESTMENT_COST"].sel(steps=sets.steps.values[-1])
+                * bat_existing_frac
+            )
+
+            if "BATTERY_INVERTER_EXISTING_CAPACITY" in param:
+                L_bat_inv_eff = param["BATTERY_INVERTER_LIFETIME"] - param["BATTERY_INVERTER_EXISTING_YEARS"]
+                H_bat_inv = project_duration
+                bat_inv_existing_frac = salvage_fraction_crf(L_bat_inv_eff, H_bat_inv)
+                salvage_npv += (
+                    param["BATTERY_INVERTER_EXISTING_CAPACITY"]
+                    * param["BATTERY_INVERTER_COST"]
+                    * bat_inv_existing_frac
+                )
+
+        # --- Existing generators ---
+        if has_generator:
+            L_gen_eff = param["GENERATOR_LIFETIME"] - param["GENERATOR_EXISTING_YEARS"]
+            H_gen = project_duration
+            gen_existing_frac = salvage_fraction_crf(L_gen_eff, H_gen)
+            salvage_npv += (
+                param["GENERATOR_EXISTING_CAPACITY"]
+                * param["GENERATOR_SPECIFIC_INVESTMENT_COST"]
+                * gen_existing_frac
+            ).sum("generator_types")
+
+            L_gen_rect_eff = param["GENERATOR_RECTIFIER_LIFETIME"] - param["GENERATOR_RECTIFIER_EXISTING_YEARS"]
+            H_gen_rect = project_duration
+            gen_rect_existing_frac = salvage_fraction_crf(L_gen_rect_eff, H_gen_rect)
+            salvage_npv += (
+                param["GENERATOR_RECTIFIER_EXISTING_CAPACITY"]
+                * param["GENERATOR_RECTIFIER_COST"]
+                * gen_rect_existing_frac
+            ).sum("generator_types")
+
+    # -----------------------------
+    # GRID CONNECTION SALVAGE
+    # -----------------------------
+    salvage_grid_npv: linopy.LinearExpression = 0
     if has_grid_connection:
-        year_grid_connection = (settings.grid_params.year_grid_connection - years[0])
-        salvage_value += (param['GRID_DISTANCE'] * param['GRID_CONNECTION_COST'] /
-                         ((1 + param['DISCOUNT_RATE'])**(project_duration - year_grid_connection)))
+        # Keep the existing simplified logic for the line asset;
+        # it does not have an explicit technical lifetime parameter here.
+        year_grid_connection = settings.grid_params.year_grid_connection - years[0]
+        salvage_grid_npv += (
+            param["GRID_DISTANCE"]
+            * param["GRID_CONNECTION_COST"]
+            / (one_plus_r ** (project_duration - year_grid_connection))
+        )
+
+    total_salvage_npv = salvage_npv + salvage_grid_npv
 
     try:
-        model.add_constraints(var['salvage_value'] == salvage_value, name="Salvage Value Constraint")
+        model.add_constraints(var["salvage_value"] == total_salvage_npv, name="Salvage Value Constraint")
     except Exception as e:
         raise ValueError(f"Error in calculating salvage value: {str(e)}")
 
