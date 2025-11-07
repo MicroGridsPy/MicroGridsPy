@@ -144,7 +144,7 @@ def grid_technology() -> None:
     st.title("Grid Connection Parameters")
     st.subheader("Define the parameters for the grid connection system")
     image_path = PathManager.IMAGES_PATH / "technology_characterization.png"
-    st.image(str(image_path), use_container_width=True, caption="Overview of the grid connection parameters")
+    # st.image(str(image_path), use_container_width=True, caption="Overview of the grid connection parameters")
 
     has_grid_connection = st.session_state.get('grid_connection', False)
     project_name = st.session_state.get('project_name')

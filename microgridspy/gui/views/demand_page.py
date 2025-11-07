@@ -421,7 +421,7 @@ def demand_assessment() -> None:
         For details, see the [IEEE paper](https://ieeexplore.ieee.org/document/10363287).
         """)
         image_path = PathManager.IMAGES_PATH / "archetypes.png"
-        st.image(str(image_path), use_column_width=True)
+        st.image(str(image_path), use_container_width=True)
         demand_growth = st.number_input("Enter yearly demand growth percentage [%]:", min_value=0.0, value=st.session_state.demand_growth * 100)
         st.session_state.demand_growth = demand_growth / 100
         st.session_state.cooling_period = st.selectbox("Select cooling period:", ["NC", "AY", "OM", "AS"])
@@ -446,10 +446,11 @@ def demand_assessment() -> None:
             # Save the aggregated demand data
             save_demand_data(demand_data, filename='Aggregated Demand.csv', project_name=project_name, start_year=start_year)
     
+    """
     with st.expander("⏯️ Simulate High-Resolution Load Profiles using RAMP Software", expanded=False):
         st.write("RAMP is an open-source software suite for the stochastic simulation of any user-driven energy demand time series based on few simple inputs. Learn more.")
         image_path = PathManager.IMAGES_PATH / "ramp.png"
-        st.image(str(image_path), use_column_width=True)
+        st.image(str(image_path), use_container_width=True)
         st.write("Examples of RAMP input files can be found [here](https://github.com/SESAM-Polimi/JupyRAMP/tree/main/ramp/Jupyter%20Notebooks/Excel%20Input%20Files)")
     
         num_days = st.number_input("Enter the number of days to simulate:", value=365)
@@ -492,6 +493,7 @@ def demand_assessment() -> None:
                         save_demand_data(user_demand_df, filename=f"{user.name}.csv", project_name=project_name, start_year=start_year)
     
                     st.session_state.aggregated_demand_flag = True
+    """
 
     # Visualization of aggregated demand data                
     st.write("### Demand Data Visualization")

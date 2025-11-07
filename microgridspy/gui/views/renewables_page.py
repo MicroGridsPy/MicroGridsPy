@@ -293,7 +293,7 @@ def renewables_technology() -> None:
     Below is a brief overview of the mathematical formulation of renewables within MicroGridsPy:
     """)
     image_path = PathManager.IMAGES_PATH / "renewables_math_formulation.PNG"
-    st.image(str(image_path), use_container_width=True, caption="Overview of the main equations for renewables")
+    # st.image(str(image_path), use_container_width=True, caption="Overview of the main equations for renewables")
 
     # Initialize session state variables
     initialize_session_state(st.session_state.default_values, 'renewables_params')

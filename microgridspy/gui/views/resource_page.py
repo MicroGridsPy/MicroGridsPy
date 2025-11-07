@@ -512,6 +512,7 @@ def resource_assessment():
                                 st.error(f"Error downloading NASA POWER data: {e}")
 
             with st.expander(f"📂 Upload CSV for {res_name}", expanded=False):
+                st.text(f"Check consistency with nominal capacity parameter. Time series data should be in unit of nominal capacity (W).")
                 st.session_state.res_nominal_capacity[i] = st.number_input(
                     f"Nominal Capacity for {res_name} of the data (W)", 
                     value=st.session_state.res_nominal_capacity[i], 
@@ -737,6 +738,7 @@ def resource_assessment():
                                 st.error(f"Error downloading NASA POWER data: {e}")
 
             with st.expander(f"📂 Upload CSV for {res_name}", expanded=False):
+                st.text(f"Check consistency with nominal capacity parameter. Time series data should be in unit of nominal capacity (W).")
                 st.session_state.res_nominal_capacity[i] = st.number_input(
                     f"Nominal Capacity for {res_name} of the data (W)", 
                     value=st.session_state.res_nominal_capacity[i], 
@@ -753,6 +755,7 @@ def resource_assessment():
 
         elif res_type == "📝 Other":
             with st.expander(f"📂 Upload CSV for {res_name}", expanded=False):
+                st.text(f"Check consistency with nominal capacity parameter. Time series data should be in unit of nominal capacity (W).")
                 st.session_state.res_nominal_capacity[i] = st.number_input(
                     f"Nominal Capacity for {res_name} of the data (W)", 
                     value=st.session_state.res_nominal_capacity[i], 
