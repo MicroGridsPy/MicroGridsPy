@@ -105,7 +105,7 @@ def settings_page():
         if st.session_state.lost_load_fraction > 0:
             st.session_state.lost_load_specific_cost = st.number_input(
                 f"Lost Load Specific Cost [{st.session_state.currency}/Wh]:", 
-                min_value=0.0,
+                min_value=0.000,
                 value=st.session_state.lost_load_specific_cost,
                 help=f"Define the economic cost of unmet demand. This helps balance the trade-off between system cost and reliability.")
             
