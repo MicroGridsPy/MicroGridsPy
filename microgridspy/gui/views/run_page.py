@@ -3,7 +3,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import time
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, date
 
 from microgridspy.model.parameters import ProjectParameters
 from microgridspy.model.model import Model
@@ -23,7 +23,11 @@ def update_nested_settings(settings):
                     setattr(settings, field, st.session_state[field])
             elif isinstance(value, datetime):
                 if field in st.session_state:
-                    setattr(settings, field, datetime_to_str(st.session_state[field]))
+                    # Convert date to datetime if needed
+                    session_value = st.session_state[field]
+                    if isinstance(session_value, date) and not isinstance(session_value, datetime):
+                        session_value = datetime.combine(session_value, datetime.min.time())
+                    setattr(settings, field, session_value)
             elif isinstance(value, list):
                 if field in st.session_state:
                     new_value = st.session_state[field]
@@ -42,7 +46,8 @@ def update_nested_settings(settings):
                 if field == 'renewables_params':
                     setattr(settings, field, update_renewable_params(value, settings.resource_assessment.res_sources))
                 elif field == 'generator_params':
-                    setattr(settings, field, update_generator_params(value, settings.generator_params.gen_types))
+                    gen_types = st.session_state.get('gen_types', settings.generator_params.gen_types)
+                    setattr(settings, field, update_generator_params(value, gen_types))
                 else:
                     setattr(settings, field, update_nested_settings(value))
     return settings
@@ -125,6 +130,15 @@ def update_generator_params(generator_params, gen_types):
         'gen_existing_rectifier_capacity','gen_existing_rectifier_years',
         'gen_sampled_relative_output', 'gen_sampled_efficiency'  # No 'partial_load' here
     ]
+    
+    # Fields that should contain integers
+    int_fields = {'gen_lifetime', 'gen_existing_years', 'gen_rectifier_lifetime', 'gen_existing_rectifier_years'}
+
+    # Update gen_types first - ensure it's an int (otherwise pydantic becomes pedantic)
+    if 'gen_types' in st.session_state:
+        generator_params.gen_types = int(st.session_state['gen_types'])
+        gen_types = int(st.session_state['gen_types'])  # Use the updated value
+
 
     for field in generator_fields:
         if hasattr(generator_params, field):
@@ -133,9 +147,14 @@ def update_generator_params(generator_params, gen_types):
                 if field in st.session_state:
                     new_value = st.session_state[field]
                     if isinstance(new_value, list):
+                        # Convert to int if this field should contain integers
+                        if field in int_fields:
+                            new_value = [int(x) for x in new_value]
                         setattr(generator_params, field, new_value[:gen_types])
                     else:
-                        setattr(generator_params, field, [new_value] * gen_types)
+                        # Convert to int if this field should contain integers
+                        value_to_set = int(new_value) if field in int_fields else new_value
+                        setattr(generator_params, field, [value_to_set] * gen_types)
                 else:
                     setattr(generator_params, field, current_value[:gen_types])
 

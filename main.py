@@ -18,8 +18,9 @@ from microgridspy.gui.views.battery_page import battery_technology
 from microgridspy.gui.views.generator_page import generator_technology
 from microgridspy.gui.views.grid_page import grid_technology
 from microgridspy.gui.views.profit_page import project_profitability
-from microgridspy.gui.views.run_page import run_model
+from microgridspy.gui.views.run_page import run_model, update_nested_settings
 from microgridspy.gui.views.plots_dashboard import plots_dashboard
+from microgridspy.model.parameters import ProjectParameters
 
 st.set_page_config(
     page_title="MicroGridsPy User Interface",
@@ -55,6 +56,24 @@ def main() -> None:
 
     # Determine if buttons should be enabled
     buttons_enabled = st.session_state.new_project_completed
+
+    # Save Configuration Button
+    if buttons_enabled:
+        st.sidebar.markdown("---")
+        if st.sidebar.button("Save Configuration", type="primary", use_container_width=True):
+            try:
+                project_name = st.session_state.get('project_name', 'default')
+                path_manager = PathManager()
+                yaml_filepath = path_manager.PROJECTS_FOLDER_PATH / project_name / f"{project_name}.yaml"
+                
+                current_settings = ProjectParameters.instantiate_from_yaml(yaml_filepath)
+                updated_settings = update_nested_settings(current_settings)
+                updated_settings.save_to_yaml(str(yaml_filepath))
+                
+                st.sidebar.success("Configuration saved successfully!")
+            except Exception as e:
+                st.sidebar.error(f"Error saving configuration: {str(e)}")
+        st.sidebar.markdown("---")
 
     # Navigation buttons
     if st.sidebar.button("Project Settings", disabled=not buttons_enabled):
