@@ -23,7 +23,7 @@ from typing import Tuple, Optional
 from config.path_manager import PathManager
 from microgridspy.utils.nasa_power import download_nasa_pv_data, download_nasa_wind_data
 from microgridspy.utils.pvgis import download_pvgis_pv_data, download_pvgis_wind_data
-from microgridspy.gui.utils import csv_upload_interface, initialize_session_state
+from microgridspy.gui.utils import csv_upload_interface
 
 def load_csv_data(uploaded_file, delimiter: str, decimal: str, resource_name: Optional[str] = None) -> Optional[pd.DataFrame]:
     """
@@ -239,9 +239,6 @@ def resource_assessment():
     st.subheader("Download or upload resource availability data for your project.")
 
     # Initialize session state variables
-    initialize_session_state(st.session_state.default_values, 'resource_assessment')
-    initialize_session_state(st.session_state.default_values, 'nasa_power_params')
-    initialize_session_state(st.session_state.default_values, 'pvgis_params')
     nasa_power_params = st.session_state.default_values.nasa_power_params
     pvgis_params = st.session_state.default_values.pvgis_params
     project_name = st.session_state.get("project_name")

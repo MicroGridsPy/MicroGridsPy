@@ -65,7 +65,7 @@ def main() -> None:
                 project_name = st.session_state.get('project_name', 'default')
                 path_manager = PathManager()
                 yaml_filepath = path_manager.PROJECTS_FOLDER_PATH / project_name / f"{project_name}.yaml"
-                
+                 
                 current_settings = ProjectParameters.instantiate_from_yaml(yaml_filepath)
                 updated_settings = update_nested_settings(current_settings)
                 updated_settings.save_to_yaml(str(yaml_filepath))
@@ -139,6 +139,7 @@ def main() -> None:
         "Results": plots_dashboard,
         "Project Profitability": project_profitability,
     }
+
 
     # Display the selected frame
     # This will call the function associated with the current page stored in session state

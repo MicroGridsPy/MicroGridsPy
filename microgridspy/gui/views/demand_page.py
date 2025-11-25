@@ -18,7 +18,7 @@ from ramp.post_process.post_process import Profile_formatting
 
 from config.path_manager import PathManager
 from microgridspy.utils.archetypes import demand_calculation
-from microgridspy.gui.utils import initialize_session_state, csv_upload_interface
+from microgridspy.gui.utils import csv_upload_interface
 
 class User:
     def __init__(self, name, demand_data):
@@ -352,8 +352,6 @@ def demand_assessment() -> None:
     start_year = str(st.session_state.get("start_date").year)
     project_name = st.session_state.get("project_name")
     st.session_state.aggregated_demand_flag = False
-    # Initialize session state variables
-    initialize_session_state(st.session_state.default_values, "archetypes_params")
     # Initialize variables for demand data
     users = []
     

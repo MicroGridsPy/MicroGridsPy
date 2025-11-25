@@ -2,7 +2,7 @@ import streamlit as st
 from config.path_manager import PathManager
 import pandas as pd
 import os
-from microgridspy.gui.utils import initialize_session_state, generate_flow_chart
+from microgridspy.gui.utils import generate_flow_chart
 
 def ensure_list_length(key: str, length: int) -> None:
     """Ensure the list in session state has the required length."""
@@ -296,7 +296,6 @@ def renewables_technology() -> None:
     # st.image(str(image_path), use_container_width=True, caption="Overview of the main equations for renewables")
 
     # Initialize session state variables
-    initialize_session_state(st.session_state.default_values, 'renewables_params')
     currency = st.session_state.get('currency', 'USD')
     res_sources = st.session_state.get('res_sources', 0)
     if res_sources == 0:
@@ -330,6 +329,7 @@ def renewables_technology() -> None:
             cost_df[f'{res_names[i]} Investment Cost [{currency}/W]'] = edited_df[f'{res_names[i]} Investment Cost [{currency}/W]']
             cost_df.to_csv(res_cost_file_path, index=True)
             st.success(f"Successfully saved investment cost data for {res_names[i]}")
+            st.session_state.res_specific_investment_cost[i] = float(edited_df[f'{res_names[i]} Investment Cost [{currency}/W]'].iloc[0])
         update_parameters(i, res_names[i], time_horizon, brownfield, land_availability, currency)
         st.markdown("---")  # Add a separator between renewable sources
     

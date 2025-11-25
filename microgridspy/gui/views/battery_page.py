@@ -9,7 +9,6 @@ from config.path_manager import PathManager
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
-from microgridspy.gui.utils import initialize_session_state
 
 #TODO: Change load function avoiding hard coded header names
 def load_cost_df(currency) -> pd.DataFrame:
@@ -82,7 +81,6 @@ def battery_technology() -> None:
 
     if has_battery:
         # Initialize session state variables
-        initialize_session_state(st.session_state.default_values, 'battery_params')
         currency = st.session_state.get('currency', 'USD')
         unit_committment = st.session_state.get('unit_commitment', False)
         brownfield = st.session_state.get('brownfield')

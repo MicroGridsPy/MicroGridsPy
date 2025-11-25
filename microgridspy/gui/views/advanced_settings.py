@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 
 from config.path_manager import PathManager
-from microgridspy.gui.utils import initialize_session_state
 
 def display_timeline(time_horizon, step_duration):
     """Display project timeline as a table."""
@@ -28,8 +27,6 @@ def advanced_settings():
     # Page title and description
     st.title("Advanced Settings")
     st.write("Configure detailed model parameters and optimization options for your project.")
-
-    initialize_session_state(st.session_state.default_values, 'advanced_settings')
 
     with st.expander("🧮 Model Formulation", expanded=False):
         st.markdown("""

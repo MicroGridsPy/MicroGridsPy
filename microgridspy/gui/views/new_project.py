@@ -2,6 +2,8 @@ import streamlit as st
 from pathlib import Path
 from config.path_manager import PathManager
 from microgridspy.model.parameters import ProjectParameters
+from microgridspy.gui.utils import initialize_session_state
+from microgridspy.gui.views.resource_page import resource_assessment
 
 def load_image(image_path):
     """Load an image from the images folder."""
@@ -111,4 +113,18 @@ def new_project():
             st.success(f"Project '{st.session_state.project_name}' loaded successfully!")
             st.session_state.page = "Project Settings"
             st.session_state.new_project_completed = True
+            initialize_session_state(st.session_state.default_values, 'advanced_settings')
+            initialize_session_state(st.session_state.default_values, 'archetypes_params')
+            initialize_session_state(st.session_state.default_values, 'battery_params')
+            initialize_session_state(st.session_state.default_values, 'generator_params')
+            initialize_session_state(st.session_state.default_values, 'grid_params')
+            initialize_session_state(st.session_state.default_values, 'nasa_power_params')
+            initialize_session_state(st.session_state.default_values, 'project_info')
+            initialize_session_state(st.session_state.default_values, 'project_settings')
+            initialize_session_state(st.session_state.default_values, 'pvgis_params')
+            initialize_session_state(st.session_state.default_values, 'renewables_params')
+            initialize_session_state(st.session_state.default_values, 'resource_assessment')
+            # Initialize session state variables. Can be removed if cycling manually through pages
+            resource_assessment()
+            
             st.rerun()
