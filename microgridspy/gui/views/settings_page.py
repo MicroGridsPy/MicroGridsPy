@@ -1,5 +1,7 @@
 import streamlit as st
 
+from microgridspy.gui.utils import initialize_session_state
+
 
 def settings_page():
     """Streamlit page for configuring project settings."""
@@ -7,6 +9,9 @@ def settings_page():
     st.title("Project Settings")
     st.subheader("Configure key aspects of the project's timeline, financial settings, and optimization goals.")
     st.write("This page allows you to configure the basic settings for your project. Adjust the timeline, financial parameters, and optimization goals to suit your project's needs.")
+
+    # Initialize session state variables
+    initialize_session_state(st.session_state.default_values, 'project_settings')
 
     # Project settings
     with st.expander("📅 Project Timeline", expanded=False):

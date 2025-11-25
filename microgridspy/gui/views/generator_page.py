@@ -14,7 +14,7 @@ from typing import Optional, Dict
 from pathlib import Path
 
 from config.path_manager import PathManager
-from microgridspy.gui.utils import csv_upload_interface
+from microgridspy.gui.utils import initialize_session_state,csv_upload_interface
 
 def load_csv_data(uploaded_file, delimiter: str, decimal: str) -> Optional[pd.DataFrame]:
     """
@@ -155,6 +155,7 @@ def generator_technology() -> None:
     has_generator = st.session_state.get('system_configuration', 0) in [0, 2]
 
     if has_generator:
+        initialize_session_state(st.session_state.default_values, "generator_params")
         currency = st.session_state.get('currency', 'USD')
         time_horizon = st.session_state.get('time_horizon', 0)
         brownfield = st.session_state.get('brownfield', False)

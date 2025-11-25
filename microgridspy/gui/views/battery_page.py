@@ -9,6 +9,7 @@ from config.path_manager import PathManager
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
+from microgridspy.gui.utils import initialize_session_state
 
 #TODO: Change load function avoiding hard coded header names
 def load_cost_df(currency) -> pd.DataFrame:
@@ -81,6 +82,7 @@ def battery_technology() -> None:
 
     if has_battery:
         # Initialize session state variables
+        initialize_session_state(st.session_state.default_values, 'battery_params')
         currency = st.session_state.get('currency', 'USD')
         unit_committment = st.session_state.get('unit_commitment', False)
         brownfield = st.session_state.get('brownfield')
@@ -95,6 +97,7 @@ def battery_technology() -> None:
             cost_df[f'Battery Investment Cost [{currency}/Wh]'] = edited_df[f'Battery Investment Cost [{currency}/Wh]']
             cost_df.to_csv(battery_cost_file_path, index=True)
             st.success(f"Data saved to {battery_cost_file_path}")
+            st.session_state.battery_investment_cost = cost_df[f'Battery Investment Cost [{currency}/Wh]'].tolist()
 
         st.session_state.battery_specific_electronic_investment_cost = st.number_input(f"Specific Electronic Investment Cost as % of investment cost [%]", min_value=0.0, max_value=100.0, value=st.session_state.battery_specific_electronic_investment_cost * 100) / 100
         st.session_state.battery_specific_om_cost = st.number_input(f"Specific O&M Cost as % of investment cost [%]", min_value=0.0, value=st.session_state.battery_specific_om_cost * 100) / 100

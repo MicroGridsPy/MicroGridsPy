@@ -2,7 +2,7 @@ import streamlit as st
 from config.path_manager import PathManager
 import pandas as pd
 import os
-from microgridspy.gui.utils import generate_flow_chart
+from microgridspy.gui.utils import initialize_session_state, generate_flow_chart
 
 def ensure_list_length(key: str, length: int) -> None:
     """Ensure the list in session state has the required length."""
@@ -296,6 +296,7 @@ def renewables_technology() -> None:
     # st.image(str(image_path), use_container_width=True, caption="Overview of the main equations for renewables")
 
     # Initialize session state variables
+    initialize_session_state(st.session_state.default_values, 'renewables_params')
     currency = st.session_state.get('currency', 'USD')
     res_sources = st.session_state.get('res_sources', 0)
     if res_sources == 0:
