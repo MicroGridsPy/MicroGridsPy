@@ -60,7 +60,7 @@ def main() -> None:
     # Save Configuration Button
     if buttons_enabled:
         st.sidebar.markdown("---")
-        if st.sidebar.button("Save Configuration", type="primary", use_container_width=True):
+        if st.sidebar.button("Save Configuration", type="primary", width='stretch'):
             try:
                 project_name = st.session_state.get('project_name', 'default')
                 path_manager = PathManager()
