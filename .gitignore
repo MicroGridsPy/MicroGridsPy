@@ -1,0 +1,4 @@
+projects/
+**/__pycache__/
+**/results/
+**/inputs/

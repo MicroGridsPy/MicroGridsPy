@@ -342,6 +342,7 @@ class GeneratorParams(BaseModel):
         fuel_lhv (List[float]): The lower heating value of the fuels used by the generator types.
         fuel_co2_emission (List[float]): The CO2 emission of the fuels used by the generator types.
         max_fuel_consumption (List[float]): The maximum yearly fuel consumption of the generator types.
+        fuel_cap (List[bool]): Indicates if there is a fuel consumption limit for the generator types.
         partial_load (bool): Indicates if partial load is allowed for the generator types.
         gen_sampled_relative_output (Optional[List[List[float]]]): Sampled relative output of the generator types.
         gen_sampled_efficiency (Optional[List[List[float]]]): Sampled efficiency of the generator types.
@@ -366,6 +367,7 @@ class GeneratorParams(BaseModel):
     fuel_lhv: List[float]
     fuel_co2_emission: List[float]
     max_fuel_consumption: List[float]
+    fuel_cap: List[bool]
     partial_load: bool
     gen_sampled_relative_output: Optional[List[List[float]]] = None 
     gen_sampled_efficiency: Optional[List[List[float]]] = None       

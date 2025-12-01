@@ -150,7 +150,7 @@ def generator_technology() -> None:
     Below is a brief overview of the mathematical formulation of backup systems within MicroGridsPy:
     """)
     image_path = PathManager.IMAGES_PATH / "generator_math_formulation.PNG"
-    # st.image(str(image_path), use_container_width=True, caption="Overview of the main equations for generator")
+    # st.image(str(image_path), width='stretch', caption="Overview of the main equations for generator")
 
     has_generator = st.session_state.get('system_configuration', 0) in [0, 2]
 

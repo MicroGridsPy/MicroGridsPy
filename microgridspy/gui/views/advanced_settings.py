@@ -130,7 +130,7 @@ def advanced_settings():
         The calculation accounts for the **cost of equity**, **cost of debt**, and the **corporate tax rate**, reflecting the true cost of capital for mini-grid projects.
         """)
         image_path = PathManager.IMAGES_PATH / "wacc.PNG"
-        st.image(str(image_path), use_container_width=True, caption="Trends in debt and equity for SSA mini-grids")
+        st.image(str(image_path), width='stretch', caption="Trends in debt and equity for SSA mini-grids")
         st.session_state.wacc_calculation = st.checkbox(
             "Enable WACC Calculation", 
             value=st.session_state.wacc_calculation,
@@ -189,7 +189,7 @@ def advanced_settings():
     """
     with st.expander("🎯 Multi-Objective Optimization", expanded=False):
         image_path = PathManager.IMAGES_PATH / "pareto_front.jpg"
-        st.image(str(image_path), use_container_width=True, caption="A graphical example of the Pareto optimal front")
+        st.image(str(image_path), width='stretch', caption="A graphical example of the Pareto optimal front")
         st.session_state.multiobjective_optimization = st.checkbox(
             "Enable Multi-Objective Optimization", 
             value=st.session_state.multiobjective_optimization,

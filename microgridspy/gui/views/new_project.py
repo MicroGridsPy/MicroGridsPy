@@ -1,4 +1,5 @@
 import streamlit as st
+import shutil
 from pathlib import Path
 from config.path_manager import PathManager
 from microgridspy.model.parameters import ProjectParameters
@@ -10,6 +11,36 @@ from microgridspy.gui.views.demand_page import demand_assessment
 from microgridspy.gui.views.renewables_page import renewables_technology
 from microgridspy.gui.views.battery_page import battery_technology
 from microgridspy.gui.views.generator_page import generator_technology
+
+def copy_project_inputs_to_default(project_inputs_folder: Path, default_inputs_folder: Path) -> None:
+    """
+    Copy CSV files from project inputs folder to default inputs folder, overwriting existing files.
+    
+    Args:
+        project_inputs_folder: Path to the project's inputs folder
+        default_inputs_folder: Path to the default inputs folder
+    """
+    try:
+        if not project_inputs_folder.exists():
+            return
+            
+        default_inputs_folder.mkdir(parents=True, exist_ok=True)
+        
+        files_copied = 0
+        for item in project_inputs_folder.iterdir():
+            if item.is_file() and item.suffix == '.csv':
+                dst_file = default_inputs_folder / item.name
+                shutil.copy2(item, dst_file)
+                files_copied += 1
+            elif item.is_dir():
+                # Recurse into subdirectories
+                copy_project_inputs_to_default(item, default_inputs_folder / item.name)
+        
+        if files_copied > 0:
+            st.info(f"Copied {files_copied} CSV files from project to default inputs folder.")
+    except Exception as e:
+        st.warning(f"Could not copy some files: {str(e)}")
+
 
 def load_image(image_path):
     """Load an image from the images folder."""
@@ -90,7 +121,7 @@ def new_project():
         """,
         unsafe_allow_html=True)
     
-    # st.image(load_image("model_overview.png"), use_container_width=True, caption="Model Overview")
+    # st.image(load_image("model_overview.png"), width='stretch', caption="Model Overview")
     
     # Create a new project
     st.subheader("Create a New Project")
@@ -113,6 +144,13 @@ def new_project():
     # Load an existing project
     st.subheader("Load an Existing Project")
     st.write("Upload an existing project configuration file (YAML format) to load the project.")
+    
+    copy_inputs_checkbox = st.checkbox(
+        "Copy project CSV files to default inputs folder",
+        value=False,
+        help="When enabled, CSV files from the project's inputs folder will be copied to the default inputs folder, overwriting existing files."
+    )
+    
     uploaded_file = st.file_uploader("Choose a YAML file", type="yaml")
     if uploaded_file is not None:
         if load_existing_project(uploaded_file):
@@ -128,6 +166,12 @@ def new_project():
             initialize_session_state(st.session_state.default_values, 'renewables_params')
             initialize_session_state(st.session_state.default_values, 'resource_assessment')
 
+            # Copy CSV files if checkbox is enabled
+            if copy_inputs_checkbox:
+                project_inputs = st.session_state.path_manager.PROJECTS_FOLDER_PATH / st.session_state.project_name / "inputs"
+                default_inputs = PathManager.INPUTS_FOLDER_PATH
+                copy_project_inputs_to_default(project_inputs, default_inputs)
+            
             st.success(f"Project '{st.session_state.project_name}' loaded successfully!")
             st.session_state.page = "Project Settings"
             st.session_state.new_project_completed = True
