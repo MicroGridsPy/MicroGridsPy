@@ -626,7 +626,13 @@ def initialize_generator_parameters(data: ProjectParameters, sets: xr.Dataset) -
             coords={'generator_types': generator_types},
             name='Fuel Lower Heating Value (LHV)'),
 
-        'MAXIMUM_FUEL_CONSUMPTION': xr.DataArray(
+        'FUEL_CAP' : xr.DataArray(
+            data.generator_params.fuel_cap,
+            dims=['generator_types'],
+            coords={'generator_types': generator_types},
+            name='Fuel Consumption Limit'),
+        
+        'MAXIMUM_FUEL_CONSUMPTION' : xr.DataArray(
             data.generator_params.max_fuel_consumption,
             dims=['generator_types'],
             coords={'generator_types': generator_types},

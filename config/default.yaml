@@ -155,6 +155,7 @@ generator_params:
   fuel_names: ["Diesel"]
   fuel_lhv: [10140] #Wh/l
   fuel_co2_emission: [2.68] #kgCO2/l
+  fuel_cap: [false] #bool
   max_fuel_consumption: [0.0] #l/h
   partial_load: false
   gen_sampled_relative_output: [] # List of arrays per generator type (filled only if partial load is true)
