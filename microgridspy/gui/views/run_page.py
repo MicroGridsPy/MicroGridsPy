@@ -128,7 +128,8 @@ def update_generator_params(generator_params, gen_types):
         'gen_specific_om_cost', 'gen_unit_co2_emission', 'gen_rectifier_efficiency',
         'gen_rectifier_nominal_capacity', 'gen_rectifier_cost', 'gen_rectifier_lifetime', 
         'gen_existing_rectifier_capacity','gen_existing_rectifier_years',
-        'gen_sampled_relative_output', 'gen_sampled_efficiency'  # No 'partial_load' here
+        'gen_sampled_relative_output', 'gen_sampled_efficiency',  # No 'partial_load' here
+        'fuel_cap', 'max_fuel_consumption'  # Added fuel cap fields
     ]
     
     # Fields that should contain integers
