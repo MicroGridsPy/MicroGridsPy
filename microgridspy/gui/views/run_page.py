@@ -52,13 +52,14 @@ def update_nested_settings(settings):
                     setattr(settings, field, update_nested_settings(value))
     return settings
 
-def copy_missing_files(src_folder: str, dst_folder: str) -> None:
+def copy_missing_files(src_folder: str, dst_folder: str, override_paths: bool = False) -> None:
     """
     Copy missing files from src_folder to dst_folder without overwriting existing files.
 
     Args:
         src_folder (str): Path to the source folder.
         dst_folder (str): Path to the destination folder.
+        override_paths (bool): If True, clear destination folder when src and dst are the same.
 
     Raises:
         FileNotFoundError: If the source folder does not exist.
@@ -68,11 +69,11 @@ def copy_missing_files(src_folder: str, dst_folder: str) -> None:
     try:
         src = Path(src_folder)
         dst = Path(dst_folder)
-
         if not src.exists() or not src.is_dir():
             raise FileNotFoundError(f"Source folder does not exist: {src}")
         if src.resolve() == dst.resolve():
-            raise ValueError("Source and destination folders must be different.")
+            if not override_paths:
+                raise ValueError("Source and destination folders must be different.")
 
         dst.mkdir(parents=True, exist_ok=True)  # Create destination if it doesn't exist
 
@@ -80,12 +81,12 @@ def copy_missing_files(src_folder: str, dst_folder: str) -> None:
         for item in src.iterdir():
             dst_file = dst / item.name
             if item.is_file():
-                if not dst_file.exists():
+                if not dst_file.exists() or override_paths:
                     shutil.copy2(item, dst_file)
                     files_copied += 1
             elif item.is_dir():
                 # If the item is a directory, recurse
-                copy_missing_files(item, dst_file)
+                copy_missing_files(item, dst_file, override_paths)
 
         if files_copied > 0:
             print(f"Copied {files_copied} missing files from '{src}' to '{dst}'.")
@@ -210,6 +211,8 @@ def run_model():
              By default, the model will NOT save the LP representation and the log file, but you can specify a path 
              if needed. If you opt to use a custom path, make sure the directory exists and is writable.""")
     
+    override_paths = st.checkbox("Override existing project input files", value=False)
+
     # Custom LP and log file paths
     use_lp_path = st.checkbox("Provide a custom LP file path")
     if use_lp_path: 
@@ -242,7 +245,7 @@ def run_model():
                 updated_settings.save_to_yaml(str(yaml_filepath))
                 inputs_folder = PathManager.INPUTS_FOLDER_PATH  
                 project_inputs_folder = path_manager.PROJECTS_FOLDER_PATH / project_name / "inputs"
-                copy_missing_files(inputs_folder, project_inputs_folder)
+                copy_missing_files(inputs_folder, project_inputs_folder, override_paths)
             except Exception as e:
                 st.error(f"An error occurred while saving settings and inputs: {str(e)}")
 
@@ -273,7 +276,7 @@ def run_model():
                 # Copy the inputs folder to the project folder
                 inputs_folder = PathManager.INPUTS_FOLDER_PATH  
                 project_inputs_folder = path_manager.PROJECTS_FOLDER_PATH / project_name / "inputs"
-                copy_missing_files(inputs_folder, project_inputs_folder)
+                copy_missing_files(inputs_folder, project_inputs_folder, override_paths)
             except Exception as e:
                 st.error(f"An error occurred while saving settings: {str(e)}")
 
