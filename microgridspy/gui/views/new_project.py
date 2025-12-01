@@ -3,6 +3,14 @@ import shutil
 from pathlib import Path
 from config.path_manager import PathManager
 from microgridspy.model.parameters import ProjectParameters
+from microgridspy.gui.utils import initialize_session_state
+from microgridspy.gui.views.resource_page import resource_assessment
+from microgridspy.gui.views.settings_page import settings_page
+from microgridspy.gui.views.advanced_settings import advanced_settings
+from microgridspy.gui.views.demand_page import demand_assessment
+from microgridspy.gui.views.renewables_page import renewables_technology
+from microgridspy.gui.views.battery_page import battery_technology
+from microgridspy.gui.views.generator_page import generator_technology
 
 def copy_project_inputs_to_default(project_inputs_folder: Path, default_inputs_folder: Path) -> None:
     """
@@ -146,6 +154,18 @@ def new_project():
     uploaded_file = st.file_uploader("Choose a YAML file", type="yaml")
     if uploaded_file is not None:
         if load_existing_project(uploaded_file):
+            initialize_session_state(st.session_state.default_values, 'advanced_settings')
+            initialize_session_state(st.session_state.default_values, 'archetypes_params')
+            initialize_session_state(st.session_state.default_values, 'battery_params')
+            initialize_session_state(st.session_state.default_values, 'generator_params')
+            initialize_session_state(st.session_state.default_values, 'grid_params')
+            initialize_session_state(st.session_state.default_values, 'nasa_power_params')
+            initialize_session_state(st.session_state.default_values, 'project_info')
+            initialize_session_state(st.session_state.default_values, 'project_settings')
+            initialize_session_state(st.session_state.default_values, 'pvgis_params')
+            initialize_session_state(st.session_state.default_values, 'renewables_params')
+            initialize_session_state(st.session_state.default_values, 'resource_assessment')
+
             # Copy CSV files if checkbox is enabled
             if copy_inputs_checkbox:
                 project_inputs = st.session_state.path_manager.PROJECTS_FOLDER_PATH / st.session_state.project_name / "inputs"

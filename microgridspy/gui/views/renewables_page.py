@@ -330,6 +330,7 @@ def renewables_technology() -> None:
             cost_df[f'{res_names[i]} Investment Cost [{currency}/W]'] = edited_df[f'{res_names[i]} Investment Cost [{currency}/W]']
             cost_df.to_csv(res_cost_file_path, index=True)
             st.success(f"Successfully saved investment cost data for {res_names[i]}")
+            st.session_state.res_specific_investment_cost[i] = float(edited_df[f'{res_names[i]} Investment Cost [{currency}/W]'].iloc[0])
         update_parameters(i, res_names[i], time_horizon, brownfield, land_availability, currency)
         st.markdown("---")  # Add a separator between renewable sources
     

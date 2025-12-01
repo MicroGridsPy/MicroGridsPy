@@ -97,6 +97,7 @@ def battery_technology() -> None:
             cost_df[f'Battery Investment Cost [{currency}/Wh]'] = edited_df[f'Battery Investment Cost [{currency}/Wh]']
             cost_df.to_csv(battery_cost_file_path, index=True)
             st.success(f"Data saved to {battery_cost_file_path}")
+            st.session_state.battery_investment_cost = cost_df[f'Battery Investment Cost [{currency}/Wh]'].tolist()
 
         st.session_state.battery_specific_electronic_investment_cost = st.number_input(f"Specific Electronic Investment Cost as % of investment cost [%]", min_value=0.0, max_value=100.0, value=st.session_state.battery_specific_electronic_investment_cost * 100) / 100
         st.session_state.battery_specific_om_cost = st.number_input(f"Specific O&M Cost as % of investment cost [%]", min_value=0.0, value=st.session_state.battery_specific_om_cost * 100) / 100
