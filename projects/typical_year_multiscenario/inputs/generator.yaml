@@ -1,0 +1,90 @@
+meta:
+  units:
+    generator_nominal_capacity_kw: kW
+    generator_lifetime_years: years
+    generator_specific_investment_cost_per_kw: currency_per_kW
+    generator_wacc: '-'
+    generator_embedded_emissions_kgco2e_per_kw: kgCO2e_per_kW
+    generator_nominal_efficiency_full_load: '-'
+    generator_max_installable_capacity_kw: kW
+    generator_fixed_om_share_per_year: share_per_year
+    fuel_lhv_kwh_per_unit_fuel: kWh_per_unit_fuel
+    fuel_direct_emissions_kgco2e_per_unit_fuel: kgCO2e_per_unit_fuel
+    fuel_fuel_cost_per_unit_fuel: currency_per_unit_fuel
+  context:
+    formulation: steady_state
+    multi_scenario: true
+    scenarios:
+    - low
+    - base
+    - high
+    capacity_expansion: false
+    investment_steps: null
+    year_labels_for_fuel_cost:
+    - typical_year
+    efficiency_curve_path_base: inputs/
+  description:
+    summary: Generator inputs define cohort-dependent investment data, shared technical
+      behavior, scenario-dependent operating assumptions, and scenario fuel properties.
+    parameters:
+      generator_nominal_capacity_kw: Nominal power represented by one generator unit.
+      generator_lifetime_years: Generator lifetime used for replacement and annuity
+        calculations.
+      generator_specific_investment_cost_per_kw: Specific generator investment cost.
+      generator_wacc: Weighted average cost of capital used for generator annuities.
+      generator_embedded_emissions_kgco2e_per_kw: Embodied emissions associated with
+        generator capacity.
+      generator_nominal_efficiency_full_load: Generator efficiency at full load when
+        no partial-load curve is used.
+      generator_max_installable_capacity_kw: Upper bound on installed generator capacity.
+      generator_fixed_om_share_per_year: Fixed annual O&M cost expressed as a share
+        of generator CAPEX.
+      fuel_lhv_kwh_per_unit_fuel: Lower heating value of the fuel.
+      fuel_direct_emissions_kgco2e_per_unit_fuel: Direct combustion emissions per
+        unit of fuel.
+      fuel_fuel_cost_per_unit_fuel: Fuel price in the steady-state formulation.
+generator:
+  label: Generator
+  investment:
+    by_step:
+      base:
+        nominal_capacity_kw: 1.0
+        lifetime_years: 10
+        specific_investment_cost_per_kw: 450
+        wacc: 0.07
+        embedded_emissions_kgco2e_per_kw: 0.0
+  technical:
+    nominal_efficiency_full_load: 0.3
+    max_installable_capacity_kw: null
+  operation:
+    by_scenario:
+      low:
+        fixed_om_share_per_year: 0.05
+        efficiency_curve_csv: null
+      base:
+        fixed_om_share_per_year: 0.05
+        efficiency_curve_csv: null
+      high:
+        fixed_om_share_per_year: 0.05
+        efficiency_curve_csv: null
+fuel:
+  label: Fuel
+  by_scenario:
+    low:
+      lhv_kwh_per_unit_fuel: 10.0
+      direct_emissions_kgco2e_per_unit_fuel: 0.0
+      fuel_cost_per_unit_fuel: 1.2
+      description: Typical-year fuel inputs use a single constant fuel cost per unit
+        fuel.
+    base:
+      lhv_kwh_per_unit_fuel: 10.0
+      direct_emissions_kgco2e_per_unit_fuel: 0.0
+      fuel_cost_per_unit_fuel: 1.2
+      description: Typical-year fuel inputs use a single constant fuel cost per unit
+        fuel.
+    high:
+      lhv_kwh_per_unit_fuel: 10.0
+      direct_emissions_kgco2e_per_unit_fuel: 0.0
+      fuel_cost_per_unit_fuel: 1.2
+      description: Typical-year fuel inputs use a single constant fuel cost per unit
+        fuel.
