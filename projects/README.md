@@ -31,9 +31,6 @@ The examples are ordered from **simplest to most advanced**, following the conce
 | **example_9** | Multi-year (10 years), increasing demand (+5%), capacity expansion (2 steps), on-grid |
 | **example_10** | Multi-year (10 years), increasing demand (+5%), capacity expansion (2 steps), on-grid with emissions |
 
----
-
-# Conceptual Progression Across Examples
 
 The example projects are intentionally designed to **introduce model features incrementally**, allowing users to isolate the impact of each modelling assumption.
 
