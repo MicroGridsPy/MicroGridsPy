@@ -147,6 +147,44 @@ def build_kpis_table(
     ).kpis
 
 
+def build_summary_metrics_table(reporting) -> pd.DataFrame:
+    kpis = reporting.kpis.copy()
+    kpis["scenario"] = kpis["scenario"].astype(str)
+    expected = kpis[kpis["scenario"].str.lower() == "expected"]
+    expected_row = expected.iloc[0] if not expected.empty else pd.Series(dtype=float)
+
+    total_annual_cost_exp = float(safe_float(expected_row.get("reported_total_annual_cost", np.nan)))
+    delivered_kwh = float(safe_float(expected_row.get("served_energy_kwh", np.nan)))
+    lcoe = total_annual_cost_exp / delivered_kwh if delivered_kwh > 1e-9 and np.isfinite(total_annual_cost_exp) else float("nan")
+    total_upfront_gross_k = (
+        float(pd.to_numeric(reporting.upfront["Upfront gross [thousand]"], errors="coerce").fillna(0.0).sum())
+        if not reporting.upfront.empty
+        else 0.0
+    )
+    total_upfront_net_k = (
+        float(pd.to_numeric(reporting.upfront["Upfront net [thousand]"], errors="coerce").fillna(0.0).sum())
+        if not reporting.upfront.empty
+        else 0.0
+    )
+    embodied_cost_exp = (
+        float(pd.to_numeric(reporting.embodied["Embodied Cost [/yr]"], errors="coerce").fillna(0.0).sum())
+        if not reporting.embodied.empty
+        else 0.0
+    )
+    scope3_kg_exp = float(safe_float(expected_row.get("scope3_emissions_kgco2e", 0.0)))
+
+    return pd.DataFrame(
+        [
+            {"Metric": "Total Annualized Cost (Expected)", "Value": total_annual_cost_exp, "Unit": "/yr"},
+            {"Metric": "LCOE (Expected, delivered)", "Value": lcoe, "Unit": "/kWh"},
+            {"Metric": "Upfront investment gross", "Value": total_upfront_gross_k, "Unit": "thousand"},
+            {"Metric": "Upfront investment net", "Value": total_upfront_net_k, "Unit": "thousand"},
+            {"Metric": "Embodied emissions (Expected)", "Value": scope3_kg_exp, "Unit": "kgCO2e/yr"},
+            {"Metric": "Embodied externality cost (Expected)", "Value": embodied_cost_exp, "Unit": "/yr"},
+        ]
+    )
+
+
 def energy_balance_residual_summary(energy_balance_df: pd.DataFrame) -> pd.DataFrame:
     g = energy_balance_df.groupby("scenario", as_index=False)["balance_residual"].agg(
         max_abs_balance_residual=lambda x: float(np.max(np.abs(np.asarray(x, dtype=float))))
@@ -176,7 +214,14 @@ def export_typical_year_results(
     dispatch_df = build_dispatch_timeseries_table(data=data, vars=vars, solution=solution)
     energy_df = build_energy_balance_table(data=data, dispatch_df=dispatch_df)
     design_df = build_design_summary_table(data=data, vars=vars, solution=solution)
-    kpi_df = build_kpis_table(data=data, vars=vars, solution=solution, objective_value=objective_value)
+    reporting = build_reporting_tables(
+        data=data,
+        dispatch_df=dispatch_df,
+        design_df=design_df,
+        solver_objective_value=objective_value,
+    )
+    kpi_df = reporting.kpis
+    summary_metrics_df = build_summary_metrics_table(reporting)
 
     return write_csv_outputs(
         out_dir,
@@ -185,5 +230,14 @@ def export_typical_year_results(
             "energy_balance.csv": energy_df,
             "design_summary.csv": design_df,
             "kpis.csv": kpi_df,
+            "summary_metrics.csv": summary_metrics_df,
+            "upfront_investment.csv": reporting.upfront,
+            "expected_cost_components.csv": reporting.expected_cost_components,
+            "expected_fixed_om.csv": reporting.expected_fixed_om,
+            "annuities.csv": reporting.annuities,
+            "embodied_externalities.csv": reporting.embodied,
+            "scenario_variable_costs.csv": reporting.scenario_variable_costs,
+            "scenario_emissions.csv": reporting.scenario_emissions,
+            "scenario_total_operating_costs.csv": reporting.scenario_total_operating_costs,
         },
     )

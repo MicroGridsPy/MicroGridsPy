@@ -134,6 +134,20 @@ def _append_expected_rows(df: pd.DataFrame, *, numeric_cols: list[str]) -> pd.Da
     return pd.concat([df, pd.DataFrame(expected_rows)], ignore_index=True)
 
 
+def _scalar_param(x: Any, **indexers: Any) -> float:
+    if not isinstance(x, xr.DataArray):
+        return float(safe_float(x))
+    da = x
+    valid_indexers = {key: value for key, value in indexers.items() if key in da.dims}
+    if valid_indexers:
+        da = da.sel(**valid_indexers)
+    extra_dims = [dim for dim in da.dims if da.sizes.get(dim, 1) > 1]
+    if extra_dims:
+        da = da.isel({dim: 0 for dim in extra_dims})
+    values = np.asarray(da.values, dtype=float).reshape(-1)
+    return float(values[0]) if values.size else float("nan")
+
+
 def _sum_if_has_inv_step(x: Any) -> Any:
     if isinstance(x, xr.DataArray) and "inv_step" in x.dims:
         return x.sum("inv_step")
@@ -787,6 +801,217 @@ def build_scenario_costs_table_multi_year(
     return _append_expected_rows(scenario_df, numeric_cols=numeric_cols)
 
 
+def build_investment_summary_table_multi_year(
+    *,
+    sets: xr.Dataset,
+    data: xr.Dataset,
+    design_df: pd.DataFrame,
+) -> pd.DataFrame:
+    p = get_params(data)
+    rs = float((p.settings.get("social_discount_rate", 0.0) or 0.0))
+    years = [str(y) for y in sets.coords["year"].values.tolist()]
+    start_year_map = (
+        {str(step): str(sets["inv_step_start_year"].sel(inv_step=step).item()) for step in sets.coords["inv_step"].values}
+        if "inv_step_start_year" in sets
+        else {}
+    )
+    year_to_ordinal = {year: idx for idx, year in enumerate(years)}
+
+    rows = []
+    for _, row in design_df.iterrows():
+        technology = str(row.get("technology", "")).strip().lower()
+        inv_step = str(row.get("inv_step", ""))
+        resource = str(row.get("resource", "")).strip()
+        installed_capacity = float(pd.to_numeric(pd.Series([row.get("installed_capacity", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
+        if installed_capacity == 0.0:
+            continue
+        start_year = str(row.get("inv_step_start_year", start_year_map.get(inv_step, years[0] if years else "")))
+        discount_factor = 1.0 / ((1.0 + rs) ** year_to_ordinal.get(start_year, 0))
+
+        if technology == "renewable":
+            capex = _scalar_param(p.res_specific_investment_cost_per_kw, inv_step=inv_step, resource=resource)
+            grant = _scalar_param(p.res_grant_share_of_capex, inv_step=inv_step, resource=resource)
+            nominal = installed_capacity * capex * (1.0 - grant)
+            label = resource
+            unit = "kW"
+        elif technology == "battery":
+            capex = _scalar_param(p.battery_specific_investment_cost_per_kwh, inv_step=inv_step)
+            nominal = installed_capacity * capex
+            label = "Battery"
+            unit = "kWh"
+        elif technology == "generator":
+            capex = _scalar_param(p.generator_specific_investment_cost_per_kw, inv_step=inv_step)
+            nominal = installed_capacity * capex
+            label = "Generator"
+            unit = "kW"
+        else:
+            continue
+
+        rows.append(
+            {
+                "Technology": label,
+                "Capacity unit": unit,
+                "Nominal investment cost": nominal,
+                "Present-value investment cost": nominal * discount_factor,
+            }
+        )
+
+    if not rows:
+        return pd.DataFrame(columns=["Technology", "Capacity unit", "Nominal investment cost", "Present-value investment cost"])
+
+    out = pd.DataFrame(rows)
+    return out.groupby(["Technology", "Capacity unit"], as_index=False)[["Nominal investment cost", "Present-value investment cost"]].sum()
+
+
+def build_yearly_expected_table_multi_year(cash_df: pd.DataFrame, scenario_costs_df: pd.DataFrame) -> pd.DataFrame:
+    cash = cash_df.copy()
+    cash["year"] = cash["year"].astype(str)
+    expected = scenario_costs_df[scenario_costs_df["scenario"].astype(str).str.lower() == "expected"].copy()
+    expected["year"] = expected["year"].astype(str)
+    expected = expected.drop(columns=["scenario", "weight"], errors="ignore")
+    yearly = cash.merge(expected, on="year", how="left")
+    yearly["annuity_total"] = yearly[["annuity_res", "annuity_battery", "annuity_generator"]].sum(axis=1)
+    yearly["renewables_cost"] = (
+        yearly["annuity_res"]
+        + yearly["fixed_om_res"]
+        - yearly["res_subsidy_revenue"]
+        + yearly["scope3_res_emissions_cost"]
+    )
+    yearly["battery_cost"] = (
+        yearly["annuity_battery"]
+        + yearly["fixed_om_battery"]
+        + yearly["scope3_battery_emissions_cost"]
+    )
+    yearly["generator_cost"] = (
+        yearly["annuity_generator"]
+        + yearly["fixed_om_generator"]
+        + yearly["fuel_cost"]
+        + yearly["scope1_emissions_cost"]
+        + yearly["scope3_generator_emissions_cost"]
+    )
+    yearly["grid_cost"] = yearly["grid_import_cost"] - yearly["grid_export_revenue"]
+    yearly["reliability_cost"] = yearly["lost_load_penalty"] + yearly["scope2_emissions_cost"]
+    return yearly
+
+
+def build_additional_reporting_table_multi_year(
+    *,
+    sets: xr.Dataset,
+    data: xr.Dataset,
+    design_df: pd.DataFrame,
+    kpis_df: pd.DataFrame,
+    cash_df: pd.DataFrame,
+    scenario_costs_df: pd.DataFrame,
+    objective_value: Optional[float] = None,
+) -> pd.DataFrame:
+    investment = build_investment_summary_table_multi_year(sets=sets, data=data, design_df=design_df)
+    yearly = build_yearly_expected_table_multi_year(cash_df, scenario_costs_df)
+
+    expected_kpis = kpis_df[kpis_df["scenario"].astype(str).str.lower() == "expected"].copy()
+    expected_kpis["year"] = expected_kpis["year"].astype(str)
+    lcoe_df = cash_df.copy()
+    lcoe_df["year"] = lcoe_df["year"].astype(str)
+    lcoe_df = lcoe_df.merge(expected_kpis[["year", "served_energy_kwh"]], on="year", how="left")
+
+    npc = float(safe_float(objective_value))
+    if not np.isfinite(npc):
+        npc = float(pd.to_numeric(cash_df.get("discounted_objective_contribution"), errors="coerce").fillna(0.0).sum())
+
+    discounted_energy = float(
+        (
+            pd.to_numeric(lcoe_df.get("discount_factor"), errors="coerce").fillna(0.0)
+            * pd.to_numeric(lcoe_df.get("served_energy_kwh"), errors="coerce").fillna(0.0)
+        ).sum()
+    )
+    lcoe = npc / discounted_energy if discounted_energy > 1e-12 else float("nan")
+
+    rows: list[dict[str, Any]] = [
+        {"section": "summary_metrics", "row_label": "Net Present Cost (Expected)", "year": "", "unit": "", "value": npc},
+        {"section": "summary_metrics", "row_label": "LCOE", "year": "", "unit": "/kWh", "value": lcoe},
+        {
+            "section": "summary_metrics",
+            "row_label": "Investment cost (nominal)",
+            "year": "",
+            "unit": "",
+            "value": float(pd.to_numeric(investment.get("Nominal investment cost"), errors="coerce").fillna(0.0).sum()),
+        },
+        {
+            "section": "summary_metrics",
+            "row_label": "Investment cost (present)",
+            "year": "",
+            "unit": "",
+            "value": float(pd.to_numeric(investment.get("Present-value investment cost"), errors="coerce").fillna(0.0).sum()),
+        },
+    ]
+
+    for _, row in investment.iterrows():
+        rows.append(
+            {
+                "section": "investment_summary",
+                "row_label": str(row.get("Technology", "")),
+                "year": "",
+                "unit": str(row.get("Capacity unit", "")),
+                "value": float(safe_float(row.get("Nominal investment cost", 0.0))),
+                "value_secondary": float(safe_float(row.get("Present-value investment cost", 0.0))),
+                "secondary_label": "present_value_investment_cost",
+            }
+        )
+
+    cost_components = [
+        ("Annualized CAPEX", "annuity_total"),
+        ("Fixed O&M", "fixed_om_total"),
+        ("Fuel cost", "fuel_cost"),
+        ("Grid import cost", "grid_import_cost"),
+        ("Grid export revenue", "grid_export_revenue"),
+        ("RES subsidy revenue", "res_subsidy_revenue"),
+        ("Lost load penalty", "lost_load_penalty"),
+        ("Emissions cost", "emissions_cost"),
+        ("Embedded emissions cost", "embedded_expected"),
+        ("TOTAL", "total_before_discount"),
+    ]
+    fixed_om_components = [
+        ("Renewables", "fixed_om_res"),
+        ("Battery", "fixed_om_battery"),
+        ("Generator", "fixed_om_generator"),
+    ]
+
+    yearly_numeric = yearly.select_dtypes(include=[np.number])
+    average_year = yearly_numeric.mean(numeric_only=True) if not yearly_numeric.empty else pd.Series(dtype=float)
+    year_views: list[tuple[str, pd.Series]] = [("Average yearly", average_year)]
+    for _, row in yearly.iterrows():
+        year_views.append((str(row.get("year", "")), row))
+
+    for year_label, year_row in year_views:
+        if year_row.empty:
+            continue
+        for label, key in cost_components:
+            rows.append(
+                {
+                    "section": "expected_cost_components",
+                    "row_label": label,
+                    "year": year_label,
+                    "unit": "/yr",
+                    "value": float(safe_float(year_row.get(key, 0.0))),
+                }
+            )
+        for label, key in fixed_om_components:
+            rows.append(
+                {
+                    "section": "expected_fixed_om",
+                    "row_label": label,
+                    "year": year_label,
+                    "unit": "/yr",
+                    "value": float(safe_float(year_row.get(key, 0.0))),
+                }
+            )
+
+    out = pd.DataFrame(rows)
+    for column in ["value_secondary", "secondary_label"]:
+        if column not in out.columns:
+            out[column] = np.nan if column == "value_secondary" else ""
+    return out[["section", "row_label", "year", "unit", "value", "secondary_label", "value_secondary"]]
+
+
 def export_multi_year_results(
     project_name: str,
     sets: xr.Dataset,
@@ -811,6 +1036,15 @@ def export_multi_year_results(
     kpis = build_yearly_kpis_table_multi_year(sets=sets, data=data, vars=vars, solution=solution, objective_value=obj)
     cash = build_discounted_cashflows_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
     scenario_costs = build_scenario_costs_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
+    reporting = build_additional_reporting_table_multi_year(
+        sets=sets,
+        data=data,
+        design_df=design,
+        kpis_df=kpis,
+        cash_df=cash,
+        scenario_costs_df=scenario_costs,
+        objective_value=obj,
+    )
     written = write_csv_outputs(
         out_dir,
         {
@@ -820,6 +1054,7 @@ def export_multi_year_results(
             "kpis_yearly.csv": kpis,
             "cashflows_discounted.csv": cash,
             "scenario_costs_yearly.csv": scenario_costs,
+            "reporting_summary.csv": reporting,
         },
     )
 
