@@ -154,6 +154,12 @@ class MultiYearModel:
             encoding="utf-8",
         )
 
+    def _solve_supports_kwarg(self, name: str) -> bool:
+        solve_fn = getattr(self.model, "solve", None)
+        code = getattr(solve_fn, "__code__", None)
+        varnames = getattr(code, "co_varnames", ())
+        return bool(varnames) and name in varnames
+
     # ---------------------------------------------------------------------
     # Solve
     # ---------------------------------------------------------------------
@@ -196,9 +202,9 @@ class MultiYearModel:
         try:
             # Many linopy versions accept log_file / logfile; be defensive
             if self._last_log_path is not None:
-                if "logfile" in self.model.solve.__code__.co_varnames:
+                if self._solve_supports_kwarg("logfile"):
                     solve_kwargs["logfile"] = str(self._last_log_path)
-                elif "log_file" in self.model.solve.__code__.co_varnames:
+                elif self._solve_supports_kwarg("log_file"):
                     solve_kwargs["log_file"] = str(self._last_log_path)
                 # otherwise: ignore; solver may still print to stdout
         except Exception:
@@ -207,12 +213,13 @@ class MultiYearModel:
 
         # Solve call
         solve_fn = self.model.solve
+        use_solver_name = self._solve_supports_kwarg("solver_name")
         try:
             if self._last_log_path is not None:
                 with tee_console_output(self._last_log_path):
-                    result = solve_fn(solver_name=solver, **solve_kwargs) if "solver_name" in getattr(solve_fn, "__code__", object()).co_varnames else solve_fn(solver, **solve_kwargs)
+                    result = solve_fn(solver_name=solver, **solve_kwargs) if use_solver_name else solve_fn(solver, **solve_kwargs)
             else:
-                result = solve_fn(solver_name=solver, **solve_kwargs) if "solver_name" in getattr(solve_fn, "__code__", object()).co_varnames else solve_fn(solver, **solve_kwargs)
+                result = solve_fn(solver_name=solver, **solve_kwargs) if use_solver_name else solve_fn(solver, **solve_kwargs)
         except ValueError as e:
             msg = str(e)
             if "contains nan" in msg.lower():

@@ -38,6 +38,7 @@ from core.data_pipeline.utils import (
     read_yaml_or_raise,
 )
 from core.data_pipeline.loader import load_project_dataset
+from core.io.csv_format import read_csv_with_format, write_csv_with_format
 from core.io.utils import project_paths, simulate_grid_availability_dynamic
 
 
@@ -336,7 +337,7 @@ def _load_load_demand_csv(
     if not path.exists():
         raise InputValidationError(f"Missing required file: {path}")
 
-    df = pd.read_csv(path, header=[0, 1])
+    df = read_csv_with_format(path, header=[0, 1])
 
     # ------------------------------------------------------------
     # 1) hour column validation
@@ -449,7 +450,7 @@ def _load_resource_availability_csv(
     if not path.exists():
         raise InputValidationError(f"Missing required file: {path}")
 
-    df = pd.read_csv(path, header=[0, 1, 2])
+    df = read_csv_with_format(path, header=[0, 1, 2])
 
     # ------------------------------------------------------------
     # Normalize MultiIndex headers produced by pandas for blank cells
@@ -1193,7 +1194,7 @@ def _load_generator_and_fuel_yaml(
             curve_path = inputs_dir / curve_path
         if not curve_path.exists():
             raise InputValidationError(f"{path.name}: generator efficiency curve not found: {curve_path}")
-        cdf = pd.read_csv(curve_path)
+        cdf = read_csv_with_format(curve_path)
         req_cols = ["Relative Power Output [-]", "Efficiency [-]"]
         for col in req_cols:
             if col not in cdf.columns:
@@ -1294,7 +1295,7 @@ def _load_price_csv_dynamic(
     if not path.exists():
         raise InputValidationError(f"Missing required file: {path}")
 
-    df = pd.read_csv(path, header=[0, 1])
+    df = read_csv_with_format(path, header=[0, 1])
 
     # --------------------------------------------------
     # 1) hour column validation
@@ -1568,7 +1569,7 @@ def _write_grid_availability_csv_dynamic(path: Path, *, availability: xr.DataArr
             df[(scenario, year_label)] = availability.sel(scenario=scenario, year=year_value).values.astype(float)
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(path, index=False)
+    write_csv_with_format(df, path, index=False)
 
 
 def _first_connection_year_to_ordinal(
