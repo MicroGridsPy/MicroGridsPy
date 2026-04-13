@@ -24,6 +24,7 @@ from core.data_pipeline.utils import (
     read_yaml_or_raise,
     validate_hour_column,
 )
+from core.io.csv_format import read_csv_with_format, write_csv_with_format
 
 
 class InputValidationError(RuntimeError):
@@ -839,7 +840,7 @@ def _load_generator_and_fuel_yaml(
                 f"{path.name}: generator technical efficiency_curve_csv not found: {curve_path}"
             )
 
-        cdf = pd.read_csv(curve_path)
+        cdf = read_csv_with_format(curve_path)
         req_cols = ["Relative Power Output [-]", "Efficiency [-]"]
         for col in req_cols:
             if col not in cdf.columns:
@@ -1119,6 +1120,5 @@ def _write_grid_availability_csv(
         df[(s, year_label)] = mat[:, j]
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(path, index=False)
-
+    write_csv_with_format(df, path, index=False)
 

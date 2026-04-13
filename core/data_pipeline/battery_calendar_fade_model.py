@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from core.io.csv_format import read_csv_with_format
+
 
 CONVEXITY_TOL = 1e-8
 MONOTONIC_TOL = 1e-10
@@ -49,7 +51,7 @@ def load_battery_calendar_fade_curve_dataset(path: Path) -> xr.Dataset:
         raise InputValidationError(f"Missing required battery calendar-fade curve file: {path}")
 
     try:
-        df = pd.read_csv(path)
+        df = read_csv_with_format(path)
     except Exception as exc:
         raise InputValidationError(f"Cannot read battery calendar-fade CSV {path}: {exc}") from exc
 

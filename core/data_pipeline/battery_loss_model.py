@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from core.io.csv_format import read_csv_with_format
+
 
 CONSTANT_EFFICIENCY = "constant_efficiency"
 CONVEX_LOSS_EPIGRAPH = "convex_loss_epigraph"
@@ -162,7 +164,7 @@ def load_battery_loss_curve_dataset(
         )
 
     try:
-        df = pd.read_csv(path)
+        df = read_csv_with_format(path)
     except Exception as exc:
         raise InputValidationError(f"Cannot read battery curve CSV {path}: {exc}") from exc
 

@@ -9,6 +9,8 @@ import pandas as pd
 import xarray as xr
 import yaml
 
+from core.io.csv_format import read_csv_with_format
+
 
 def read_json_or_raise(path: Path, *, error_cls: Type[Exception] = RuntimeError) -> Dict[str, Any]:
     """Read and parse JSON file, raising error_cls on failure."""
@@ -35,13 +37,14 @@ def read_csv_or_raise(
     path: Path,
     *,
     header: int | list[int],
+    csv_format: Dict[str, str] | None = None,
     error_cls: Type[Exception] = RuntimeError,
 ) -> pd.DataFrame:
     """Read a CSV file with a fixed header shape, raising error_cls on failure."""
     if not path.exists():
         raise error_cls(f"Missing required file: {path}")
     try:
-        return pd.read_csv(path, header=header)
+        return read_csv_with_format(path, header=header, csv_format=csv_format)
     except Exception as e:
         raise error_cls(f"Cannot parse CSV: {path}\nerror: {e}")
 
@@ -194,4 +197,3 @@ def finite_nonnegative_scalar_limit(
     if limit < 0.0:
         raise error_cls(f"{name} must be non-negative when provided.")
     return limit
-
