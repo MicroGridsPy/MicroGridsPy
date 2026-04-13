@@ -1,6 +1,7 @@
 # generation_planning/pages/optimization.py
 from __future__ import annotations
 
+import json
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
@@ -13,6 +14,7 @@ import xarray as xr
 from core.typical_year_model.model import SteadyStateModel
 from core.multi_year_model.model import MultiYearModel
 from core.export.results_bundle import build_results_bundle
+from core.io.jsonio import write_json
 from core.io.utils import project_paths
 from core.visualization.page_helpers import get_dataset_settings, read_json_file
 
@@ -49,6 +51,7 @@ KEYS = {
     "gurobi_mip_gap": "gp_gurobi_mip_gap",
     "gurobi_threads": "gp_gurobi_threads",
     "gurobi_presolve": "gp_gurobi_presolve",
+    "optimization_settings_project_hint": "gp_optimization_settings_project_hint",
 
     # outputs
     "solution": "gp_solution",
@@ -92,6 +95,7 @@ def _init_defaults() -> None:
         KEYS["gurobi_mip_gap"]: 0.0,
         KEYS["gurobi_threads"]: 0,
         KEYS["gurobi_presolve"]: -1,
+        KEYS["optimization_settings_project_hint"]: "",
     }
     for k, v in defaults.items():
         if k not in st.session_state or st.session_state[k] is None:
@@ -101,6 +105,97 @@ def _init_defaults() -> None:
 def _reset_result_state() -> None:
     for key in RESULT_STATE_KEYS:
         st.session_state[key] = None
+
+
+def _optimization_settings_payload() -> Dict[str, Any]:
+    return {
+        "solver": str(st.session_state[KEYS["solver"]]),
+        "problem_export": {
+            "enabled": bool(st.session_state[KEYS["use_custom_lp"]]),
+            "path": str(st.session_state[KEYS["custom_lp"]]).strip(),
+        },
+        "log": {
+            "override_enabled": bool(st.session_state[KEYS["use_custom_log"]]),
+            "path": str(st.session_state[KEYS["custom_log"]]).strip(),
+        },
+        "highs": {
+            "time_limit": int(st.session_state[KEYS["highs_time_limit"]]),
+            "mip_rel_gap": float(st.session_state[KEYS["highs_mip_rel_gap"]]),
+            "threads": int(st.session_state[KEYS["highs_threads"]]),
+            "presolve": bool(st.session_state[KEYS["highs_presolve"]]),
+        },
+        "gurobi": {
+            "time_limit": int(st.session_state[KEYS["gurobi_time_limit"]]),
+            "mip_gap": float(st.session_state[KEYS["gurobi_mip_gap"]]),
+            "threads": int(st.session_state[KEYS["gurobi_threads"]]),
+            "presolve": int(st.session_state[KEYS["gurobi_presolve"]]),
+        },
+    }
+
+
+def _apply_optimization_settings_payload(payload: Dict[str, Any]) -> None:
+    if not isinstance(payload, dict):
+        return
+
+    solver = str(payload.get("solver", st.session_state[KEYS["solver"]]) or st.session_state[KEYS["solver"]])
+    if solver in {"highs", "gurobi"}:
+        st.session_state[KEYS["solver"]] = solver
+
+    problem_export = payload.get("problem_export", {}) or {}
+    if isinstance(problem_export, dict):
+        st.session_state[KEYS["use_custom_lp"]] = bool(problem_export.get("enabled", st.session_state[KEYS["use_custom_lp"]]))
+        st.session_state[KEYS["custom_lp"]] = str(problem_export.get("path", st.session_state[KEYS["custom_lp"]]) or "")
+
+    log_settings = payload.get("log", {}) or {}
+    if isinstance(log_settings, dict):
+        st.session_state[KEYS["use_custom_log"]] = bool(log_settings.get("override_enabled", st.session_state[KEYS["use_custom_log"]]))
+        st.session_state[KEYS["custom_log"]] = str(log_settings.get("path", st.session_state[KEYS["custom_log"]]) or "")
+
+    highs = payload.get("highs", {}) or {}
+    if isinstance(highs, dict):
+        st.session_state[KEYS["highs_time_limit"]] = int(highs.get("time_limit", st.session_state[KEYS["highs_time_limit"]]) or 0)
+        st.session_state[KEYS["highs_mip_rel_gap"]] = float(highs.get("mip_rel_gap", st.session_state[KEYS["highs_mip_rel_gap"]]) or 0.0)
+        st.session_state[KEYS["highs_threads"]] = int(highs.get("threads", st.session_state[KEYS["highs_threads"]]) or 0)
+        st.session_state[KEYS["highs_presolve"]] = bool(highs.get("presolve", st.session_state[KEYS["highs_presolve"]]))
+
+    gurobi = payload.get("gurobi", {}) or {}
+    if isinstance(gurobi, dict):
+        st.session_state[KEYS["gurobi_time_limit"]] = int(gurobi.get("time_limit", st.session_state[KEYS["gurobi_time_limit"]]) or 0)
+        st.session_state[KEYS["gurobi_mip_gap"]] = float(gurobi.get("mip_gap", st.session_state[KEYS["gurobi_mip_gap"]]) or 0.0)
+        st.session_state[KEYS["gurobi_threads"]] = int(gurobi.get("threads", st.session_state[KEYS["gurobi_threads"]]) or 0)
+        st.session_state[KEYS["gurobi_presolve"]] = int(gurobi.get("presolve", st.session_state[KEYS["gurobi_presolve"]]))
+
+
+def _load_optimization_settings_for_project(project_name: str) -> None:
+    hint = str(st.session_state.get(KEYS["optimization_settings_project_hint"], "") or "")
+    if hint == project_name:
+        return
+
+    paths = project_paths(project_name)
+    payload: Dict[str, Any] = {}
+    if paths.formulation_json.exists():
+        try:
+            payload = json.loads(paths.formulation_json.read_text(encoding="utf-8"))
+        except Exception:
+            payload = {}
+
+    saved = payload.get("optimization_settings", {}) if isinstance(payload, dict) else {}
+    _apply_optimization_settings_payload(saved if isinstance(saved, dict) else {})
+    st.session_state[KEYS["optimization_settings_project_hint"]] = project_name
+
+
+def _save_optimization_settings_for_project(project_name: str) -> None:
+    paths = project_paths(project_name)
+    payload: Dict[str, Any] = {}
+    if paths.formulation_json.exists():
+        try:
+            payload = json.loads(paths.formulation_json.read_text(encoding="utf-8"))
+        except Exception:
+            payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+    payload["optimization_settings"] = _optimization_settings_payload()
+    write_json(paths.formulation_json, payload)
 
 
 # =============================================================================
@@ -579,6 +674,7 @@ def render_generation_planning_optimization_page() -> None:
     if not project_name:
         st.error("No active project found. Please create/select a project first in the Project Setup page.")
         return
+    _load_optimization_settings_for_project(str(project_name))
 
     st.success(f"Active project: {project_name}")
 
@@ -696,6 +792,7 @@ def render_generation_planning_optimization_page() -> None:
         t0 = time.time()
 
         with st.spinner(f"Building and solving project '{project_name}'..."):
+            _save_optimization_settings_for_project(str(project_name))
             model = _build_model(project_name, formulation_mode)
             solution = model.solve_single_objective(
                 solver=solver,
