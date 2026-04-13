@@ -201,6 +201,7 @@ def build_energy_balance_dataframe(bundle: ResultsBundle) -> pd.DataFrame:
     formulation = get_bundle_formulation(bundle)
     if formulation == "dynamic":
         dispatch = build_dispatch_timeseries_table_multi_year(
+            sets=bundle.sets,
             data=bundle.data,
             vars=bundle.vars,
             solution=bundle.solution if isinstance(bundle.solution, xr.Dataset) else None,
@@ -211,7 +212,7 @@ def build_energy_balance_dataframe(bundle: ResultsBundle) -> pd.DataFrame:
         vars=bundle.vars,
         solution=bundle.solution if isinstance(bundle.solution, xr.Dataset) else None,
     )
-    return build_energy_balance_table(dispatch)
+    return build_energy_balance_table(data=bundle.data, dispatch_df=dispatch)
 
 
 def export_results_from_bundle(

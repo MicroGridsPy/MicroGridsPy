@@ -17,6 +17,12 @@ from core.export.results_page_helpers import (
     load_multi_year_results_from_files,
     load_typical_year_results_from_files,
 )
+from core.export.typical_year_reporting import (
+    build_reporting_tables,
+    select_dispatch_view as select_reporting_dispatch_view,
+    select_kpi_row as select_reporting_kpi_row,
+)
+from core.export.typical_year_results import build_design_summary_table, build_dispatch_timeseries_table
 from core.visualization.page_helpers import get_dataset_settings, get_nested_flag, safe_float as _safe_float
 from core.visualization.multi_year_results_page import render_multi_year_results, render_multi_year_results_from_files
 from core.visualization.typical_year_file_results_page import render_typical_year_results_from_files
@@ -106,6 +112,98 @@ def _pick_mode(da: xr.DataArray, *, mode: str, scenario_label: Optional[str], w_
     return da.sel(scenario=scenario_label)
 
 
+def _safe_percent(numerator: float, denominator: float) -> float | None:
+    if abs(float(denominator)) <= 1e-12:
+        return None
+    return 100.0 * float(numerator) / float(denominator)
+
+
+def _build_typical_diagnostics_table(
+    *,
+    data: xr.Dataset,
+    vars_dict: Dict[str, Any],
+    sol_ds: Optional[xr.Dataset],
+    mode: str,
+    scenario_label: Optional[str],
+    w_s: xr.DataArray,
+) -> pd.DataFrame:
+    settings = get_dataset_settings(data)
+    battery_loss_model = str(((settings.get("battery_model", {}) or {}).get("loss_model", "constant_efficiency")) or "constant_efficiency").strip().lower()
+    generator_partial_load = bool(((settings.get("generator", {}) or {}).get("partial_load_modelling_enabled", False)))
+    if battery_loss_model != "convex_loss_epigraph" and not generator_partial_load:
+        return pd.DataFrame()
+
+    rows: list[dict[str, Any]] = []
+
+    bat_ch = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="battery_charge")
+    bat_dis = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="battery_discharge")
+    bat_ch_dc = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="battery_charge_dc")
+    bat_dis_dc = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="battery_discharge_dc")
+    bat_ch_loss = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="battery_charge_loss")
+    bat_dis_loss = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="battery_discharge_loss")
+    fuel_cons = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="fuel_consumption")
+    gen_gen = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="generator_generation")
+
+    if all(isinstance(x, xr.DataArray) for x in (bat_ch, bat_dis, bat_ch_dc, bat_dis_dc)):
+        ch_ac = _pick_mode(bat_ch, mode=mode, scenario_label=scenario_label, w_s=w_s)
+        dis_ac = _pick_mode(bat_dis, mode=mode, scenario_label=scenario_label, w_s=w_s)
+        ch_dc = _pick_mode(bat_ch_dc, mode=mode, scenario_label=scenario_label, w_s=w_s)
+        dis_dc = _pick_mode(bat_dis_dc, mode=mode, scenario_label=scenario_label, w_s=w_s)
+        ch_ac_sum = _safe_float(ch_ac.sum("period"))
+        dis_ac_sum = _safe_float(dis_ac.sum("period"))
+        ch_dc_sum = _safe_float(ch_dc.sum("period"))
+        dis_dc_sum = _safe_float(dis_dc.sum("period"))
+        rows.append({"Metric": "Battery DC throughput", "Value": 0.5 * (ch_dc_sum + dis_dc_sum) / 1e3, "Unit": "MWh"})
+        charge_eff = _safe_percent(ch_dc_sum, ch_ac_sum)
+        discharge_eff = _safe_percent(dis_ac_sum, dis_dc_sum)
+        roundtrip_eff = None
+        if charge_eff is not None and discharge_eff is not None:
+            roundtrip_eff = (charge_eff / 100.0) * (discharge_eff / 100.0) * 100.0
+        if charge_eff is not None:
+            rows.append({"Metric": "Battery avg charging efficiency", "Value": charge_eff, "Unit": "%"})
+        if discharge_eff is not None:
+            rows.append({"Metric": "Battery avg discharging efficiency", "Value": discharge_eff, "Unit": "%"})
+        if roundtrip_eff is not None:
+            rows.append({"Metric": "Battery implied round-trip efficiency", "Value": roundtrip_eff, "Unit": "%"})
+        if isinstance(bat_ch_loss, xr.DataArray) and isinstance(bat_dis_loss, xr.DataArray):
+            ch_loss = _pick_mode(bat_ch_loss, mode=mode, scenario_label=scenario_label, w_s=w_s)
+            dis_loss = _pick_mode(bat_dis_loss, mode=mode, scenario_label=scenario_label, w_s=w_s)
+            rows.append(
+                {
+                    "Metric": "Battery conversion losses",
+                    "Value": (_safe_float(ch_loss.sum("period")) + _safe_float(dis_loss.sum("period"))) / 1e3,
+                    "Unit": "MWh",
+                }
+            )
+    if isinstance(fuel_cons, xr.DataArray) and isinstance(gen_gen, xr.DataArray) and "fuel_lhv_kwh_per_unit_fuel" in data:
+        fuel_sel = _pick_mode(fuel_cons, mode=mode, scenario_label=scenario_label, w_s=w_s)
+        gen_sel = _pick_mode(gen_gen, mode=mode, scenario_label=scenario_label, w_s=w_s)
+        lhv_sel = _pick_mode(data["fuel_lhv_kwh_per_unit_fuel"], mode=mode, scenario_label=scenario_label, w_s=w_s)
+        fuel_sum = _safe_float(fuel_sel.sum("period"))
+        gen_sum = _safe_float(gen_sel.sum("period"))
+        lhv_val = _safe_float(lhv_sel)
+        avg_eff = _safe_percent(gen_sum, fuel_sum * lhv_val)
+        if avg_eff is not None:
+            rows.append({"Metric": "Generator average conversion efficiency", "Value": avg_eff, "Unit": "%"})
+        if "generator_nominal_efficiency_full_load" in data:
+            gen_nom_eff = _pick_mode(
+                data["generator_nominal_efficiency_full_load"],
+                mode=mode,
+                scenario_label=scenario_label,
+                w_s=w_s,
+            )
+            rows.append(
+                {
+                    "Metric": "Generator nominal full-load efficiency",
+                    "Value": 100.0 * _safe_float(gen_nom_eff),
+                    "Unit": "%",
+                }
+            )
+        rows.append({"Metric": "Generator fuel consumption", "Value": fuel_sum, "Unit": "fuel units"})
+
+    return pd.DataFrame(rows)
+
+
 def _days_to_slice(T: int, start_day: int, ndays: int) -> Tuple[slice, int, int]:
     """
     Convert day window to a 0-based slice for numpy arrays.
@@ -127,18 +225,6 @@ def _days_to_slice(T: int, start_day: int, ndays: int) -> Tuple[slice, int, int]
     # label is 1-based hour index
     start_hr_label = i0 + 1
     return slice(i0, i1), start_hr_label, (i1 - i0)
-
-def _crf(r: float, n: float) -> float:
-    """Capital recovery factor."""
-    r = float(r)
-    n = float(n)
-    if n <= 0:
-        return float("nan")
-    if abs(r) < 1e-12:
-        return 1.0 / n
-    a = (1.0 + r) ** n
-    return (r * a) / (a - 1.0)
-
 
 # ---------------------------------------------------------------------
 # Plot palette (match reference)
@@ -170,20 +256,25 @@ def _plot_dispatch_stack(
     Positive stack: RES → BDIS → GEN → G-Import → Lost Load.
     Negative stack: Battery charge → Grid export.
     """
+    y_bnet = y_bdis - y_bch
+    y_bnet_pos = np.clip(y_bnet, 0.0, None)
+    y_bnet_neg = np.clip(-y_bnet, 0.0, None)
+
     # cumulative positive stack
     p1 = y_res
-    p2 = p1 + y_bdis
+    p2 = p1 + y_bnet_pos
     p3 = p2 + y_gen
     p4 = p3 + (y_gimp if y_gimp is not None else 0.0)
     p5 = p4 + y_ll
 
     # negative stack
-    n1 = -y_bch
+    n1 = -y_bnet_neg
     n2 = n1 - (y_gexp if y_gexp is not None else 0.0)
 
     # positive fills
     ax.fill_between(x, 0,  p1,  color=C_RES, alpha=0.85, label="Renewables")
-    ax.fill_between(x, p1, p2, color=C_BAT, alpha=0.35, label="Battery discharge")
+    if np.any(y_bnet_pos > 0):
+        ax.fill_between(x, p1, p2, color=C_BAT, alpha=0.35, label="Battery net discharge")
     ax.fill_between(x, p2, p3, color=C_GEN, alpha=0.85, label="Generator")
     if y_gimp is not None and np.any(y_gimp > 0):
         ax.fill_between(x, p3, p4, color=C_IMP, alpha=0.85, label="Grid import")
@@ -191,8 +282,8 @@ def _plot_dispatch_stack(
         ax.fill_between(x, p4, p5, color=C_LL, alpha=0.45, label="Lost load")
 
     # negative fills
-    if np.any(y_bch > 0):
-        ax.fill_between(x, 0, n1, color=C_BAT, alpha=0.35, label="Battery charge")
+    if np.any(y_bnet_neg > 0):
+        ax.fill_between(x, 0, n1, color=C_BAT, alpha=0.35, label="Battery net charge")
     if y_gexp is not None and np.any(y_gexp > 0):
         ax.fill_between(x, n1, n2, color=C_EXP, alpha=0.75, label="Grid export")
 
@@ -287,15 +378,6 @@ def render_generation_planning_results_page() -> None:
     battery_units = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="battery_units")
     generator_units = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="generator_units")
 
-    res_gen = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="res_generation")
-    gen_gen = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="generator_generation")
-    ll = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="lost_load")
-    bat_ch = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="battery_charge")
-    bat_dis = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="battery_discharge")
-
-    grid_imp = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="grid_import") if on_grid else None
-    grid_exp = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="grid_export") if (on_grid and allow_export) else None
-
     if res_units is None or battery_units is None or generator_units is None:
         st.error("Design variables not found in results. Ensure the model solved and variables are stored in session.")
         return
@@ -312,6 +394,14 @@ def render_generation_planning_results_page() -> None:
     cap_res_kw = (res_units * res_nom_kw)
     cap_bat_kwh = (battery_units * bat_nom_kwh)
     cap_gen_kw = (generator_units * gen_nom_kw)
+    dispatch_df = build_dispatch_timeseries_table(data=data, vars=vars_dict, solution=sol_ds)
+    design_df = build_design_summary_table(data=data, vars=vars_dict, solution=sol_ds)
+    reporting = build_reporting_tables(
+        data=data,
+        dispatch_df=dispatch_df,
+        design_df=design_df,
+        solver_objective_value=bundle.objective_value,
+    )
 
     df_size = pd.DataFrame(
         [
@@ -365,55 +455,7 @@ def render_generation_planning_results_page() -> None:
     if load is None:
         st.warning("load_demand not found in data. KPIs will be partial.")
     else:
-        # Collapse/Select per mode, then aggregate totals
-        load_p = _pick_mode(load, mode=mode, scenario_label=scen_label, w_s=w_s)
-        ll_p = _pick_mode(ll, mode=mode, scenario_label=scen_label, w_s=w_s) if ll is not None else 0.0
-
-        # generation totals
-        res_p = _pick_mode(res_gen.sum("resource"), mode=mode, scenario_label=scen_label, w_s=w_s) if res_gen is not None else 0.0
-        gen_p = _pick_mode(gen_gen, mode=mode, scenario_label=scen_label, w_s=w_s) if gen_gen is not None else 0.0
-
-        # on-grid
-        gimp_p = _pick_mode(grid_imp, mode=mode, scenario_label=scen_label, w_s=w_s) if grid_imp is not None else 0.0
-        gexp_p = _pick_mode(grid_exp, mode=mode, scenario_label=scen_label, w_s=w_s) if grid_exp is not None else 0.0
-
-        grid_eta = data.get("grid_transmission_efficiency", None) if on_grid else None
-        grid_ren_share = data.get("grid_renewable_share", None) if on_grid else None
-        if on_grid and grid_eta is None:
-            grid_eta = xr.DataArray(
-                np.ones(int(data.coords["scenario"].size)),
-                dims=("scenario",),
-                coords={"scenario": data.coords["scenario"]},
-            )
-        if on_grid and grid_ren_share is None:
-            grid_ren_share = xr.DataArray(
-                np.zeros(int(data.coords["scenario"].size)),
-                dims=("scenario",),
-                coords={"scenario": data.coords["scenario"]},
-            )
-
-        grid_delivered_p = (gimp_p * _pick_mode(grid_eta, mode=mode, scenario_label=scen_label, w_s=w_s)) if on_grid else 0.0
-        grid_renewable_p = (
-            grid_delivered_p * _pick_mode(grid_ren_share, mode=mode, scenario_label=scen_label, w_s=w_s)
-            if on_grid
-            else 0.0
-        )
-
-        # totals (kWh -> MWh)
-        total_load_mwh = _safe_float(load_p.sum("period")) / 1e3
-        total_ll_mwh = _safe_float(ll_p.sum("period")) / 1e3
-        total_res_mwh = _safe_float(res_p.sum("period")) / 1e3
-        total_gen_mwh = _safe_float(gen_p.sum("period")) / 1e3
-        total_imp_mwh = _safe_float(grid_delivered_p.sum("period")) / 1e3 if on_grid else 0.0
-        total_grid_ren_mwh = _safe_float(grid_renewable_p.sum("period")) / 1e3 if on_grid else 0.0
-        total_exp_mwh = _safe_float(gexp_p.sum("period")) / 1e3 if (on_grid and allow_export) else 0.0
-
-        delivered_mwh = max(total_load_mwh - total_ll_mwh, 0.0)
-        total_supply_mwh = total_res_mwh + total_gen_mwh + total_imp_mwh
-
-        def _pct(a: float, b: float) -> float:
-            return (a / b * 100.0) if b > 1e-12 else 0.0
-
+        kpi_row = select_reporting_kpi_row(reporting.kpis, data, mode=mode, scenario_label=scen_label)
         kpi_df = pd.DataFrame(
             {
                 "Metric": [
@@ -425,20 +467,22 @@ def render_generation_planning_results_page() -> None:
                     "Grid imports (delivered)" if on_grid else None,
                     "Grid renewable contribution" if on_grid else None,
                     "Grid exports" if (on_grid and allow_export) else None,
-                    "Renewable share of supply",
+                    "Renewable share of primary supply",
+                    "Curtailment share of renewables",
                     "Lost load fraction",
                 ],
                 "Value": [
-                    total_load_mwh,
-                    delivered_mwh,
-                    total_ll_mwh,
-                    total_res_mwh,
-                    total_gen_mwh,
-                    total_imp_mwh if on_grid else None,
-                    total_grid_ren_mwh if on_grid else None,
-                    total_exp_mwh if (on_grid and allow_export) else None,
-                    _pct(total_res_mwh + total_grid_ren_mwh, total_supply_mwh),
-                    _pct(total_ll_mwh, total_load_mwh),
+                    float(_safe_float(kpi_row.get("total_demand_kwh", 0.0))) / 1e3,
+                    float(_safe_float(kpi_row.get("served_energy_kwh", 0.0))) / 1e3,
+                    float(_safe_float(kpi_row.get("lost_load_kwh", 0.0))) / 1e3,
+                    float(_safe_float(kpi_row.get("total_res_kwh", 0.0))) / 1e3,
+                    float(_safe_float(kpi_row.get("generator_generation_kwh", 0.0))) / 1e3,
+                    float(_safe_float(kpi_row.get("grid_import_delivered_kwh", 0.0))) / 1e3 if on_grid else None,
+                    float(_safe_float(kpi_row.get("grid_renewable_kwh", 0.0))) / 1e3 if on_grid else None,
+                    float(_safe_float(kpi_row.get("grid_export_delivered_kwh", 0.0))) / 1e3 if (on_grid and allow_export) else None,
+                    100.0 * float(_safe_float(kpi_row.get("renewable_penetration", 0.0))),
+                    100.0 * float(_safe_float(kpi_row.get("renewable_curtailment_share", 0.0))),
+                    100.0 * float(_safe_float(kpi_row.get("lost_load_fraction", 0.0))),
                 ],
                 "Unit": [
                     "MWh",
@@ -451,6 +495,7 @@ def render_generation_planning_results_page() -> None:
                     "MWh" if (on_grid and allow_export) else None,
                     "%",
                     "%",
+                    "%",
                 ],
             }
         ).dropna(subset=["Metric"])
@@ -459,6 +504,21 @@ def render_generation_planning_results_page() -> None:
             kpi_df.style.format({"Value": "{:,.2f}"}).hide(axis="index"),
             width="stretch",
         )
+
+        diagnostics_df = _build_typical_diagnostics_table(
+            data=data,
+            vars_dict=vars_dict,
+            sol_ds=sol_ds,
+            mode=mode,
+            scenario_label=scen_label,
+            w_s=w_s,
+        )
+        if not diagnostics_df.empty:
+            st.markdown("**Efficiency diagnostics**")
+            st.dataframe(
+                diagnostics_df.style.format({"Value": "{:,.4f}"}).hide(axis="index"),
+                width="stretch",
+            )
 
     st.markdown("---")
 
@@ -471,27 +531,23 @@ def render_generation_planning_results_page() -> None:
         "battery charging and grid exports are shown below zero."
     )
 
-    if load is None or ll is None or res_gen is None or gen_gen is None or bat_ch is None or bat_dis is None:
+    required_dispatch_cols = {
+        "load_demand",
+        "lost_load",
+        "res_generation_total",
+        "generator_generation",
+        "battery_charge",
+        "battery_discharge",
+    }
+    if any(col not in reporting.dispatch.columns for col in required_dispatch_cols):
         st.info("Dispatch plot needs load_demand and the main operational variables. Some are missing.")
         return
 
     mode_d, scen_label_d = _scenario_selector(settings, data, key="gp_disp_view_sel")
-
-    # time series (period) after scenario selection / expectation
-    load_p = _pick_mode(load, mode=mode_d, scenario_label=scen_label_d, w_s=w_s)
-    ll_p   = _pick_mode(ll,   mode=mode_d, scenario_label=scen_label_d, w_s=w_s)
-
-    res_p  = _pick_mode(res_gen.sum("resource"), mode=mode_d, scenario_label=scen_label_d, w_s=w_s)
-    gen_p  = _pick_mode(gen_gen,                mode=mode_d, scenario_label=scen_label_d, w_s=w_s)
-
-    bch_p  = _pick_mode(bat_ch,  mode=mode_d, scenario_label=scen_label_d, w_s=w_s)
-    bdis_p = _pick_mode(bat_dis, mode=mode_d, scenario_label=scen_label_d, w_s=w_s)
-
-    gimp_p = _pick_mode(grid_imp, mode=mode_d, scenario_label=scen_label_d, w_s=w_s) if grid_imp is not None else None
-    gexp_p = _pick_mode(grid_exp, mode=mode_d, scenario_label=scen_label_d, w_s=w_s) if grid_exp is not None else None
+    disp_view = select_reporting_dispatch_view(reporting.dispatch, data, mode=mode_d, scenario_label=scen_label_d)
 
     # ---------- Time window ----------
-    T = int(load_p.sizes["period"])
+    T = int(len(disp_view))
     with st.expander("Time window", expanded=False):
         st.caption("Pick the start day and how many days to plot (1–7).")
         max_days = max(1, int(np.ceil(T / 24)))
@@ -517,14 +573,14 @@ def render_generation_planning_results_page() -> None:
     x = np.arange(start_hr, start_hr + window)
 
     # arrays
-    y_load = np.asarray(load_p.values)[idx]
-    y_ll   = np.asarray(ll_p.values)[idx]
-    y_res  = np.asarray(res_p.values)[idx]
-    y_gen  = np.asarray(gen_p.values)[idx]
-    y_bdis = np.asarray(bdis_p.values)[idx]
-    y_bch  = np.asarray(bch_p.values)[idx]
-    y_gimp = (np.asarray(gimp_p.values)[idx] if gimp_p is not None else None)
-    y_gexp = (np.asarray(gexp_p.values)[idx] if gexp_p is not None else None)
+    y_load = disp_view["load_demand"].to_numpy(dtype=float)[idx]
+    y_ll   = disp_view["lost_load"].to_numpy(dtype=float)[idx]
+    y_res  = disp_view["res_generation_total"].to_numpy(dtype=float)[idx]
+    y_gen  = disp_view["generator_generation"].to_numpy(dtype=float)[idx]
+    y_bdis = disp_view["battery_discharge"].to_numpy(dtype=float)[idx]
+    y_bch  = disp_view["battery_charge"].to_numpy(dtype=float)[idx]
+    y_gimp = (disp_view["grid_import_delivered"].to_numpy(dtype=float)[idx] if "grid_import_delivered" in disp_view.columns else None)
+    y_gexp = (disp_view["grid_export_delivered"].to_numpy(dtype=float)[idx] if "grid_export_delivered" in disp_view.columns else None)
 
     # ---------- Plot ----------
     fig, ax = plt.subplots(figsize=(11, 4))
@@ -551,307 +607,26 @@ def render_generation_planning_results_page() -> None:
     # Cost summary & Cash-flow (objective-consistent)
     # -------------------------------------------------------------------------
     st.subheader("Cost summary & Cash-flow")
-
-    # -----------------------------
-    # Helpers (local)
-    # -----------------------------
-    def _as_scenario_da(x: Any, *, scenario_like: xr.DataArray) -> xr.DataArray:
-        """
-        Ensure x is (scenario,) DataArray aligned to scenario_like.
-        Accepts scalar, numpy, list, or DataArray (scenario or scalar).
-        """
-        if isinstance(x, xr.DataArray):
-            if "scenario" in x.dims:
-                return x.sel(scenario=scenario_like.coords["scenario"])
-            # scalar DA -> broadcast
-            return xr.DataArray(
-                float(_safe_float(x)),
-                dims=("scenario",),
-                coords={"scenario": scenario_like.coords["scenario"]},
-            )
-        # python scalar
-        return xr.DataArray(
-            float(_safe_float(x)),
-            dims=("scenario",),
-            coords={"scenario": scenario_like.coords["scenario"]},
-        )
-
-    def _zeros_scenario(*, scenario_like: xr.DataArray) -> xr.DataArray:
-        return xr.DataArray(
-            np.zeros((int(scenario_like.size),), dtype=float),
-            dims=("scenario",),
-            coords={"scenario": scenario_like.coords["scenario"]},
-        )
-
-    def _sum_if_dim(da: xr.DataArray, dim: str) -> xr.DataArray:
-        return da.sum(dim) if (isinstance(da, xr.DataArray) and dim in da.dims) else da
-
-    # -----------------------------
-    # 1) Design capacities
-    # -----------------------------
-    cap_res_kw = (res_units * data["res_nominal_capacity_kw"]).fillna(0.0)  # (resource,)
-    cap_bat_kwh = (battery_units * data["battery_nominal_capacity_kwh"])    # scalar
-    cap_gen_kw = (generator_units * data["generator_nominal_capacity_kw"])  # scalar
-
-    # -----------------------------
-    # 2) Parameters (as in objective.py)
-    # -----------------------------
-    # Renewables
-    res_capex_kw = data["res_specific_investment_cost_per_kw"]               # (resource,)
-    res_grant = data["res_grant_share_of_capex"]                             # (resource,)
-    res_life_y = data["res_lifetime_years"]                                  # (resource,)
-    res_wacc = data["res_wacc"]                                              # (resource,)
-    res_fom_share = data["res_fixed_om_share_per_year"]                      # (scenario, resource)
-    res_subsidy_kwh = data["res_production_subsidy_per_kwh"]                 # (scenario, resource)
-    res_emb_kg_per_kw = data["res_embedded_emissions_kgco2e_per_kw"]         # (scenario, resource)
-
-    # Battery
-    bat_capex_kwh = data["battery_specific_investment_cost_per_kwh"]         # scalar
-    bat_life_y = data["battery_calendar_lifetime_years"]                     # scalar
-    bat_wacc = data["battery_wacc"]                                          # scalar
-    bat_fom_share = data["battery_fixed_om_share_per_year"]                  # (scenario,)
-    bat_emb_kg_per_kwh = data["battery_embedded_emissions_kgco2e_per_kwh"]   # (scenario,)
-
-    # Generator
-    gen_capex_kw = data["generator_specific_investment_cost_per_kw"]         # scalar
-    gen_life_y = data["generator_lifetime_years"]                            # scalar
-    gen_wacc = data["generator_wacc"]                                        # scalar
-    gen_fom_share = data["generator_fixed_om_share_per_year"]                # (scenario,)
-    gen_emb_kg_per_kw = data["generator_embedded_emissions_kgco2e_per_kw"]   # (scenario,)
-
-    # Fuel
-    fuel_cost = data["fuel_fuel_cost_per_unit_fuel"]                         # (scenario,)
-    fuel_dir_kg_per_unit = data["fuel_direct_emissions_kgco2e_per_unit_fuel"]# (scenario,)
-
-    # Policy / externalities
-    lost_load_cost = data["lost_load_cost_per_kwh"]                          # scalar or (scenario,)
-    emission_cost = data["emission_cost_per_kgco2e"]                         # scalar or (scenario,)
-
-    # Scenario weights
-    scenario_like = data.coords["scenario"]
-    w_s = data.get("scenario_weight", None)
-    if w_s is None:
-        w_s = xr.DataArray(
-            np.ones(int(scenario_like.size)) / float(scenario_like.size),
-            dims=("scenario",),
-            coords={"scenario": scenario_like},
-        )
-
-    # Flags
-    settings = get_dataset_settings(data)
-    on_grid = get_nested_flag(settings, ("grid", "on_grid"), default=False)
-    allow_export = get_nested_flag(settings, ("grid", "allow_export"), default=False)
-
-    # Grid prices (only if on-grid)
-    grid_import_price = data["grid_import_price"] if on_grid else None       # (period, scenario)
-    grid_export_price = data["grid_export_price"] if (on_grid and allow_export) else None
-    grid_eta = data.get("grid_transmission_efficiency", None) if on_grid else None
-    grid_em_factor = data.get("grid_emissions_factor_kgco2e_per_kwh", None) if on_grid else None
-
-    # -----------------------------
-    # 3) Variables (solution)
-    # -----------------------------
-    # These are already fetched earlier in your page; re-use if available
-    # res_gen, ll, grid_imp, grid_exp are already above in your file
-    fuel_cons = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="fuel_consumption")  # (period, scenario) expected
-
-    if fuel_cons is None:
-        st.warning("fuel_consumption not found; fuel costs & direct emissions will be omitted (set to 0).")
-
-    # -----------------------------
-    # 4) CRFs (match objective formula)
-    # -----------------------------
-    crf_res = xr.DataArray(
-        [_crf(float(r), float(n)) for r, n in zip(res_wacc.values.tolist(), res_life_y.values.tolist())],
-        dims=("resource",),
-        coords={"resource": res_wacc.coords["resource"]},
-    )
-    crf_bat = _crf(_safe_float(bat_wacc), _safe_float(bat_life_y))
-    crf_gen = _crf(_safe_float(gen_wacc), _safe_float(gen_life_y))
-
-    # -----------------------------
-    # 5) Upfront investment (gross + net after RES grants)
-    # -----------------------------
-    upfront_res_gross = (cap_res_kw * res_capex_kw).fillna(0.0)                       # (resource,)
-    upfront_res_net   = (cap_res_kw * res_capex_kw * (1.0 - res_grant)).fillna(0.0)   # (resource,)
-    upfront_bat = (cap_bat_kwh * bat_capex_kwh)
-    upfront_gen = (cap_gen_kw * gen_capex_kw)
-
-    total_upfront_gross = _safe_float(upfront_res_gross.sum("resource")) + _safe_float(upfront_bat) + _safe_float(upfront_gen)
-    total_upfront_net   = _safe_float(upfront_res_net.sum("resource"))   + _safe_float(upfront_bat) + _safe_float(upfront_gen)
-
-    # convert in kcurrency
-    total_upfront_gross_k = total_upfront_gross / 1e3
-    total_upfront_net_k   = total_upfront_net / 1e3
-
-    # -----------------------------
-    # 6) Annualized CAPEX (annuity) — objective-consistent
-    # -----------------------------
-    res_capex_eff_kw = (1.0 - res_grant) * res_capex_kw
-    ann_res = (crf_res * res_capex_eff_kw * cap_res_kw).fillna(0.0)  # (resource,)
-    ann_bat = crf_bat * bat_capex_kwh * cap_bat_kwh                  # scalar
-    ann_gen = crf_gen * gen_capex_kw * cap_gen_kw                    # scalar
-
-    total_annuity = _safe_float(ann_res.sum("resource")) + _safe_float(ann_bat) + _safe_float(ann_gen)
-
-    # -----------------------------
-    # 7) Fixed O&M (scenario-dependent) + Expected
-    #   annual_res_fom_s = Σ_r res_capex_kw[r] * res_fom_share[s,r] * cap_res_kw[r]
-    # -----------------------------
-    annual_res_fom_s = (res_capex_kw * res_fom_share * cap_res_kw).sum("resource").fillna(0.0)  # (scenario,)
-    annual_bat_fom_s = (bat_capex_kwh * bat_fom_share * cap_bat_kwh).fillna(0.0)                # (scenario,)
-    annual_gen_fom_s = (gen_capex_kw * gen_fom_share * cap_gen_kw).fillna(0.0)                  # (scenario,)
-    annual_fom_s = annual_res_fom_s + annual_bat_fom_s + annual_gen_fom_s                        # (scenario,)
-
-    total_fom_exp = _safe_float((w_s * annual_fom_s).sum("scenario"))
-
-    # Also keep a clean expected per-tech breakdown (Expected of each block)
-    res_fom_exp = _weighted_over_scenario(annual_res_fom_s, w_s=w_s)
-    bat_fom_exp = _safe_float(_weighted_over_scenario(annual_bat_fom_s, w_s=w_s))
-    gen_fom_exp = _safe_float(_weighted_over_scenario(annual_gen_fom_s, w_s=w_s))
-
-    # -----------------------------
-    # 8) Variable operating costs per scenario (match objective.py)
-    # -----------------------------
-    # 8.1 Fuel
-    fuel_cost_s = _zeros_scenario(scenario_like=scenario_like)
-    if fuel_cons is not None:
-        fc = fuel_cons
-        # if extra dims sneak in, collapse them safely
-        fc = _sum_if_dim(fc, "generator")
-        fuel_cost_s = (fc.sum("period") * fuel_cost).fillna(0.0)  # (scenario,)
-
-    fuel_cost_exp = _safe_float((w_s * fuel_cost_s).sum("scenario"))
-
-    # 8.2 Grid import/export
-    grid_import_cost_s = _zeros_scenario(scenario_like=scenario_like)
-    grid_export_rev_s  = _zeros_scenario(scenario_like=scenario_like)
-
-    if on_grid and grid_imp is not None and grid_import_price is not None:
-        grid_import_cost_s = (grid_imp * grid_import_price).sum("period").fillna(0.0)  # (scenario,)
-        if allow_export and grid_exp is not None and grid_export_price is not None:
-            grid_export_rev_s = (grid_exp * grid_export_price).sum("period").fillna(0.0)  # (scenario,)
-
-    grid_import_cost_exp = _safe_float((w_s * grid_import_cost_s).sum("scenario"))
-    grid_export_rev_exp  = _safe_float((w_s * grid_export_rev_s).sum("scenario"))
-
-    # 8.3 RES production subsidy (revenue)
-    res_subsidy_rev_s = _zeros_scenario(scenario_like=scenario_like)
-    if res_gen is not None:
-        res_subsidy_rev_s = (res_gen.sum("period") * res_subsidy_kwh).sum("resource").fillna(0.0)  # (scenario,)
-    res_subsidy_rev_exp = _safe_float((w_s * res_subsidy_rev_s).sum("scenario"))
-
-    # 8.4 Lost load penalty
-    ll_cost_param_s = _as_scenario_da(lost_load_cost, scenario_like=scenario_like)  # (scenario,)
-    ll_cost_s = _zeros_scenario(scenario_like=scenario_like)
-    if ll is not None:
-        ll_cost_s = (ll.sum("period") * ll_cost_param_s).fillna(0.0)  # (scenario,)
-    ll_cost_exp = _safe_float((w_s * ll_cost_s).sum("scenario"))
-
-    # 8.5 Emissions (scope 1 + scope 2 + scope 3), priced
-    emission_cost_s = _as_scenario_da(emission_cost, scenario_like=scenario_like)  # (scenario,)
-
-    scope1_kg_s = _zeros_scenario(scenario_like=scenario_like)
-    if fuel_cons is not None:
-        fc = fuel_cons
-        fc = _sum_if_dim(fc, "generator")
-        scope1_kg_s = (fc.sum("period") * fuel_dir_kg_per_unit).fillna(0.0)  # (scenario,)
-
-    scope2_kg_s = _zeros_scenario(scenario_like=scenario_like)
-    if on_grid and grid_imp is not None:
-        grid_eta_s = _as_scenario_da(grid_eta if grid_eta is not None else 1.0, scenario_like=scenario_like)
-        grid_em_factor_s = _as_scenario_da(grid_em_factor if grid_em_factor is not None else 0.0, scenario_like=scenario_like)
-        scope2_kg_s = ((grid_imp * grid_eta_s).sum("period") * grid_em_factor_s).fillna(0.0)
-
-    # Embodied annualized by lifetime (scenario-dependent factors)
-    emb_res_kg_s = ((cap_res_kw * res_emb_kg_per_kw) / res_life_y).sum("resource").fillna(0.0)  # (scenario,)
-    emb_gen_kg_s = ((cap_gen_kw * gen_emb_kg_per_kw) / gen_life_y).fillna(0.0)                  # (scenario,)
-    emb_bat_kg_s = ((cap_bat_kwh * bat_emb_kg_per_kwh) / bat_life_y).fillna(0.0)                # (scenario,)
-    scope3_kg_s = _as_scenario_da(
-        (emb_res_kg_s + emb_gen_kg_s + emb_bat_kg_s).fillna(0.0),
-        scenario_like=scenario_like,
-    )
-
-    total_emissions_kg_s = _as_scenario_da(
-        (scope1_kg_s + scope2_kg_s + scope3_kg_s).fillna(0.0),
-        scenario_like=scenario_like,
-    )
-    emissions_cost_s = (emission_cost_s * total_emissions_kg_s).fillna(0.0)         # (scenario,)
-    emissions_cost_exp = _safe_float((w_s * emissions_cost_s).sum("scenario"))
-
-    scope1_kg_exp = _safe_float((w_s * scope1_kg_s).sum("scenario"))
-    scope2_kg_exp = _safe_float((w_s * scope2_kg_s).sum("scenario"))
-    scope3_kg_exp = _safe_float((w_s * scope3_kg_s).sum("scenario"))
-    total_emissions_kg_exp = _safe_float((w_s * total_emissions_kg_s).sum("scenario"))
-
-    # -----------------------------
-    # 9) Total annual costs (objective-consistent)
-    # -----------------------------
-    annual_operating_cost_s = (
-        annual_fom_s
-        + fuel_cost_s
-        + grid_import_cost_s
-        - grid_export_rev_s
-        - res_subsidy_rev_s
-        + ll_cost_s
-        + emissions_cost_s
-    )  # (scenario,)
-
-    expected_annual_operating_cost = _safe_float((w_s * annual_operating_cost_s).sum("scenario"))
-
-    total_annual_cost_exp = total_annuity + expected_annual_operating_cost
-
-    # -----------------------------
-    # 10) LCOE (Expected, delivered)
-    # -----------------------------
-    lcoe = float("nan")
-    delivered_kwh = float("nan")
-    load = data.get("load_demand", None)
-    if (load is not None) and (ll is not None):
-        load_exp = _weighted_over_scenario(load, w_s=w_s)  # (period)
-        ll_exp   = _weighted_over_scenario(ll, w_s=w_s)    # (period)
-        delivered_kwh = max(_safe_float((load_exp - ll_exp).sum("period")), 0.0)
-        if delivered_kwh > 1e-9:
-            lcoe = total_annual_cost_exp / delivered_kwh
-
+
     # -----------------------------
     # 11) Headline metrics
     # -----------------------------
+    expected_row = select_reporting_kpi_row(reporting.kpis, data, mode="expected", scenario_label=None)
+    total_annual_cost_exp = float(_safe_float(expected_row.get("reported_total_annual_cost", np.nan)))
+    delivered_kwh = float(_safe_float(expected_row.get("served_energy_kwh", np.nan)))
+    lcoe = total_annual_cost_exp / delivered_kwh if delivered_kwh > 1e-9 and np.isfinite(total_annual_cost_exp) else float("nan")
+    total_upfront_gross_k = float(pd.to_numeric(reporting.upfront["Upfront gross [thousand]"], errors="coerce").fillna(0.0).sum()) if not reporting.upfront.empty else 0.0
+    total_upfront_net_k = float(pd.to_numeric(reporting.upfront["Upfront net [thousand]"], errors="coerce").fillna(0.0).sum()) if not reporting.upfront.empty else 0.0
+
     c1, c2, c3 = st.columns(3)
     c1.metric("Total Annualized Cost (Expected)", f"{total_annual_cost_exp:,.0f}/yr")
     c2.metric("LCOE (Expected, delivered)", f"{lcoe:,.4f}/kWh" if np.isfinite(lcoe) else "n/a")
     c3.metric("Upfront investment (gross / net) [thousand]", f"{total_upfront_gross_k:,.0f} / {total_upfront_net_k:,.0f}")
 
     st.markdown("---")
-
-    # ======================================================
-    # Upfront investment breakdown
-    # ======================================================
     st.markdown("**Upfront investment** *(per technology)*")
-    df_up = pd.concat(
-        [
-            pd.DataFrame({
-                "Technology": [str(r) for r in cap_res_kw.coords["resource"].values],
-                "Capacity": [float(v) for v in cap_res_kw.values],
-                "Unit": ["kW"] * int(cap_res_kw.sizes["resource"]),
-                "Grant share": [float(v) for v in res_grant.values],
-                "Upfront gross [thousand]": [float(_safe_float(upfront_res_gross.sel(resource=r))) / 1e3 for r in cap_res_kw.coords["resource"].values], # convert to kcurrency
-                "Upfront net [thousand]":   [float(_safe_float(upfront_res_net.sel(resource=r))) / 1e3   for r in cap_res_kw.coords["resource"].values], # convert to kcurrency
-            }),
-            pd.DataFrame({
-                "Technology": ["Battery", "Generator"],
-                "Capacity": [float(_safe_float(cap_bat_kwh)), float(_safe_float(cap_gen_kw))],
-                "Unit": ["kWh", "kW"],
-                "Grant share": [np.nan, np.nan],
-                "Upfront gross [thousand]": [float(_safe_float(upfront_bat)) / 1e3, float(_safe_float(upfront_gen)) / 1e3], # convert to kcurrency
-                "Upfront net [thousand]":   [float(_safe_float(upfront_bat)) / 1e3, float(_safe_float(upfront_gen)) / 1e3], # convert to kcurrency
-            }),
-        ],
-        ignore_index=True,
-    )
-
     st.dataframe(
-        df_up.style.format({
+        reporting.upfront.style.format({
             "Capacity": "{:,.3g}",
             "Grant share": "{:.0%}",
             "Upfront gross [thousand]": "{:,.0f}",
@@ -860,148 +635,59 @@ def render_generation_planning_results_page() -> None:
         width="stretch",
     )
 
-    # ======================================================
-    # Annual cost composition (Expected) table (objective-consistent)
-    # ======================================================
     st.markdown("**Expected annual cost composition** *(objective-consistent)*")
-    df_cost = pd.DataFrame(
-        [
-            {"Component": "Annualized CAPEX (annuity)", "Value": total_annuity, "Unit": "/yr"},
-            {"Component": "Fixed O&M (expected)", "Value": total_fom_exp, "Unit": "/yr"},
-            {"Component": "Fuel cost (expected)", "Value": fuel_cost_exp, "Unit": "/yr"},
-            {"Component": "Grid import cost (expected)", "Value": grid_import_cost_exp, "Unit": "/yr"},
-            {"Component": "Grid export revenue (expected)", "Value": -grid_export_rev_exp, "Unit": "/yr"},
-            {"Component": "RES production subsidy (expected)", "Value": -res_subsidy_rev_exp, "Unit": "/yr"},
-            {"Component": "Lost load penalty (expected)", "Value": ll_cost_exp, "Unit": "/yr"},
-            {"Component": "Emissions cost (scope 1 + 2 + 3, expected)", "Value": emissions_cost_exp, "Unit": "/yr"},
-            {"Component": "TOTAL (Expected)", "Value": total_annual_cost_exp, "Unit": "/yr"},
-        ]
-    )
-
     st.dataframe(
-        df_cost.style.format({"Value": "{:,.0f}"}).hide(axis="index"),
+        reporting.expected_cost_components.style.format({"Value": "{:,.0f}"}).hide(axis="index"),
         width="stretch",
     )
 
-    # ======================================================
-    # Annual Fixed O&M breakdown (Expected)
-    # ======================================================
     st.markdown("**Expected annual fixed O&M** *(per technology)*")
-    df_fom = pd.DataFrame(
-        [
-            {"Technology": "Renewables", "Annual FOM [/yr]": float(_safe_float(res_fom_exp))},
-            {"Technology": "Battery",    "Annual FOM [/yr]": float(_safe_float(bat_fom_exp))},
-            {"Technology": "Generator",  "Annual FOM [/yr]": float(_safe_float(gen_fom_exp))},
-        ]
-    )
     st.dataframe(
-        df_fom.style.format({"Annual FOM [/yr]": "{:,.0f}"}).hide(axis="index"),
+        reporting.expected_fixed_om.style.format({"Annual FOM [/yr]": "{:,.0f}"}).hide(axis="index"),
         width="stretch",
     )
 
-    # ======================================================
-    # Cash-flow annuities (per technology, with lifetimes)
-    # ======================================================
     st.markdown("**Cash-flow annuities** *(per technology, expected)*")
-    rows = []
-    for r in cap_res_kw.coords["resource"].values:
-        rows.append({
-            "Technology (lifetime)": f"{str(r)} ({int(_safe_float(res_life_y.sel(resource=r)))}y)",
-            "Annuity [/yr]": float(_safe_float(ann_res.sel(resource=r))),
-        })
-    rows.append({"Technology (lifetime)": f"Battery ({int(_safe_float(bat_life_y))}y)",   "Annuity [/yr]": float(_safe_float(ann_bat))})
-    rows.append({"Technology (lifetime)": f"Generator ({int(_safe_float(gen_life_y))}y)", "Annuity [/yr]": float(_safe_float(ann_gen))})
-
-    df_ann = pd.DataFrame(rows)
     st.dataframe(
-        df_ann.style.format({"Annuity [/yr]": "{:,.0f}"}).hide(axis="index"),
+        reporting.annuities.style.format({"Annuity [/yr]": "{:,.0f}"}).hide(axis="index"),
         width="stretch",
     )
 
-    # --------------------------------------------------
-    # Cost Share Visualization
-    # --------------------------------------------------
-    st.caption("Annual cost composition (Expected) and Annuity breakdown per technology")
-
-    comp_vals = np.array([total_annuity, total_fom_exp, fuel_cost_exp])
-    comp_labels = ["Annualized CAPEX", "Annual Fixed O&M", "Annual Fuel Cost"]
-
-    ann_vals = np.array([
-        _safe_float(ann_res.sum()),
-        _safe_float(ann_gen),
-        _safe_float(ann_bat)
-    ])
-    ann_labels = ["Renewables", "Generator", "Battery"]
-
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 7), gridspec_kw={'width_ratios': [1.5, 1]})
-
-    # Donut
-    if comp_vals.sum() > 0:
-        ax1.pie(comp_vals, labels=comp_labels, autopct='%1.1f%%',
-                startangle=90, wedgeprops=dict(width=0.45))
-        ax1.axis("equal")
-        ax1.set_title("Annual Cost Shares")
-
-    # Bar
-    if total_annuity > 0:
-        ann_pct = 100 * ann_vals / total_annuity
+    st.caption("Expected annual cost components and annuity breakdown per technology")
+    cost_chart_df = reporting.expected_cost_components[
+        reporting.expected_cost_components["Component"] != "TOTAL (Expected)"
+    ].copy()
+    annuity_total = float(_safe_float(expected_row.get("investment_annuity_cost", 0.0)))
+    ann_vals = pd.to_numeric(reporting.annuities["Annuity [/yr]"], errors="coerce").fillna(0.0).to_numpy(dtype=float)
+    ann_labels = reporting.annuities["Technology (lifetime)"].tolist()
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 7), gridspec_kw={"width_ratios": [1.5, 1]})
+    if not cost_chart_df.empty:
+        ax1.barh(cost_chart_df["Component"], cost_chart_df["Value"])
+        ax1.axvline(0.0, color="#444444", linewidth=1.0)
+        ax1.set_xlabel("Value [/yr]")
+        ax1.set_title("Expected Annual Cost Components")
+    if annuity_total > 0 and ann_vals.size > 0:
+        ann_pct = 100.0 * ann_vals / annuity_total
         ax2.barh(ann_labels, ann_pct)
         ax2.set_xlabel("Share of Total Annuity (%)")
         ax2.set_title("Annuity Breakdown by Technology")
-
     plt.tight_layout()
     st.pyplot(fig)
 
-
-    # ======================================================
-    # Embodied externalities (annualized) — Expected + breakdown
-    # ======================================================
     st.markdown("**Embodied externalities** *(annualized)*")
-    embodied_cost_exp = _safe_float((w_s * (emission_cost_s * scope3_kg_s)).sum("scenario"))
-
+    embodied_cost_exp = float(pd.to_numeric(reporting.embodied["Embodied Cost [/yr]"], errors="coerce").fillna(0.0).sum()) if not reporting.embodied.empty else 0.0
+    scope3_kg_exp = float(_safe_float(expected_row.get("scope3_emissions_kgco2e", 0.0)))
     c1, c2 = st.columns(2)
-    c1.metric("Embodied emissions (Expected)", f"{scope3_kg_exp:,.0f} kgCO₂e/yr")
+    c1.metric("Embodied emissions (Expected)", f"{scope3_kg_exp:,.0f} kgCO2e/yr")
     c2.metric("Embodied externality cost (Expected)", f"{embodied_cost_exp:,.0f}/yr")
-
-    rows = []
-    for r in cap_res_kw.coords["resource"].values:
-        kg_s = ((cap_res_kw.sel(resource=r) * res_emb_kg_per_kw.sel(resource=r)) / res_life_y.sel(resource=r)).fillna(0.0)  # (scenario,)
-        kg_exp = _safe_float((w_s * kg_s).sum("scenario"))
-        rows.append({
-            "Technology": str(r),
-            "Lifetime [y]": int(_safe_float(res_life_y.sel(resource=r))),
-            "Embodied Emissions [kg/yr]": kg_exp,
-            "Embodied Cost [/yr]": kg_exp * _safe_float((w_s * emission_cost_s).sum("scenario")),
-        })
-
-    kg_gen_exp = _safe_float((w_s * emb_gen_kg_s).sum("scenario"))
-    rows.append({
-        "Technology": "Generator",
-        "Lifetime [y]": int(_safe_float(gen_life_y)),
-        "Embodied Emissions [kg/yr]": kg_gen_exp,
-        "Embodied Cost [/yr]": kg_gen_exp * _safe_float((w_s * emission_cost_s).sum("scenario")),
-    })
-
-    kg_bat_exp = _safe_float((w_s * emb_bat_kg_s).sum("scenario"))
-    rows.append({
-        "Technology": "Battery",
-        "Lifetime [y]": int(_safe_float(bat_life_y)),
-        "Embodied Emissions [kg/yr]": kg_bat_exp,
-        "Embodied Cost [/yr]": kg_bat_exp * _safe_float((w_s * emission_cost_s).sum("scenario")),
-    })
-
-    df_emb = pd.DataFrame(rows)
     st.dataframe(
-        df_emb.style.format({
+        reporting.embodied.style.format({
             "Embodied Emissions [kg/yr]": "{:,.0f}",
             "Embodied Cost [/yr]": "{:,.0f}",
         }).hide(axis="index"),
         width="stretch",
     )
 
-    # ======================================================
-    # Scenario-specific operational fuel costs (Expected vs Scenario)
-    # ======================================================
     st.subheader("Scenario-specific operational costs & emissions")
     st.caption("Variable operating cost and emissions can be inspected scenario-by-scenario.")
 
@@ -1012,36 +698,22 @@ def render_generation_planning_results_page() -> None:
     else:
         view = "Expected"
 
-    annual_variable_cost_s = (fuel_cost_s + grid_import_cost_s - grid_export_rev_s - res_subsidy_rev_s).fillna(0.0)
-    annual_variable_cost_exp = _safe_float((w_s * annual_variable_cost_s).sum("scenario"))
-
-    if fuel_cons is not None or on_grid:
-        if view == "Expected":
-            variable_cost_view = annual_variable_cost_exp
-            total_emissions_view = total_emissions_kg_exp
-        else:
-            sc = view.split("Scenario ", 1)[-1].strip()
-            variable_cost_view = _safe_float(annual_variable_cost_s.sel(scenario=sc))
-            total_emissions_view = _safe_float(total_emissions_kg_s.sel(scenario=sc))
-
-        m1, m2 = st.columns(2)
-        m1.metric("Annual variable cost", f"{variable_cost_view:,.0f}/yr")
-        m2.metric("Total emissions", f"{total_emissions_view:,.0f} kgCO₂e/yr")
+    if view == "Expected":
+        variable_cost_view = float(_safe_float(expected_row.get("annual_variable_cost", 0.0)))
+        total_emissions_view = float(_safe_float(expected_row.get("emissions_kgco2e", 0.0)))
     else:
-        st.info("No fuel or grid-import variables found; skipping emissions breakdown.")
+        sc = view.split("Scenario ", 1)[-1].strip()
+        scenario_row = select_reporting_kpi_row(reporting.kpis, data, mode="scenario", scenario_label=sc)
+        variable_cost_view = float(_safe_float(scenario_row.get("annual_variable_cost", 0.0)))
+        total_emissions_view = float(_safe_float(scenario_row.get("emissions_kgco2e", 0.0)))
 
-    df_cost_breakdown = pd.DataFrame({
-        "Scenario": [str(s) for s in scenario_like.values.tolist()],
-        "Fuel cost": [float(_safe_float(fuel_cost_s.sel(scenario=s))) for s in scenario_like.values],
-        "Grid import cost": [float(_safe_float(grid_import_cost_s.sel(scenario=s))) for s in scenario_like.values],
-        "Grid export revenue": [float(_safe_float(grid_export_rev_s.sel(scenario=s))) for s in scenario_like.values],
-        "RES subsidy revenue": [float(_safe_float(res_subsidy_rev_s.sel(scenario=s))) for s in scenario_like.values],
-        "Annual variable cost": [float(_safe_float(annual_variable_cost_s.sel(scenario=s))) for s in scenario_like.values],
-        "Weight": [float(_safe_float(w_s.sel(scenario=s))) for s in scenario_like.values],
-    })
+    m1, m2 = st.columns(2)
+    m1.metric("Annual variable cost", f"{variable_cost_view:,.0f}/yr")
+    m2.metric("Total emissions", f"{total_emissions_view:,.0f} kgCO2e/yr")
+
     with st.expander("Scenario-wise variable cost breakdown", expanded=False):
         st.dataframe(
-            df_cost_breakdown.style.format({
+            reporting.scenario_variable_costs.style.format({
                 "Fuel cost": "{:,.0f}",
                 "Grid import cost": "{:,.0f}",
                 "Grid export revenue": "{:,.0f}",
@@ -1052,18 +724,9 @@ def render_generation_planning_results_page() -> None:
             width="stretch",
         )
 
-    df_emissions_breakdown = pd.DataFrame({
-        "Scenario": [str(s) for s in scenario_like.values.tolist()],
-        "Scope 1 emissions": [float(_safe_float(scope1_kg_s.sel(scenario=s))) for s in scenario_like.values],
-        "Scope 2 emissions": [float(_safe_float(scope2_kg_s.sel(scenario=s))) for s in scenario_like.values],
-        "Scope 3 emissions": [float(_safe_float(scope3_kg_s.sel(scenario=s))) for s in scenario_like.values],
-        "Total emissions": [float(_safe_float(total_emissions_kg_s.sel(scenario=s))) for s in scenario_like.values],
-        "Emissions cost": [float(_safe_float(emissions_cost_s.sel(scenario=s))) for s in scenario_like.values],
-        "Weight": [float(_safe_float(w_s.sel(scenario=s))) for s in scenario_like.values],
-    })
     with st.expander("Scenario-wise emissions breakdown", expanded=False):
         st.dataframe(
-            df_emissions_breakdown.style.format({
+            reporting.scenario_emissions.style.format({
                 "Scope 1 emissions": "{:,.0f}",
                 "Scope 2 emissions": "{:,.0f}",
                 "Scope 3 emissions": "{:,.0f}",
@@ -1074,29 +737,9 @@ def render_generation_planning_results_page() -> None:
             width="stretch",
         )
 
-    # ======================================================
-    # (Optional) Scenario-wise total operating cost table
-    # ======================================================
     with st.expander("Scenario-wise total operating cost breakdown", expanded=False):
-        df_sc = pd.DataFrame({
-            "Scenario": [str(s) for s in scenario_like.values.tolist()],
-            "Fixed O&M": [float(_safe_float(annual_fom_s.sel(scenario=s))) for s in scenario_like.values],
-            "Fuel cost": [float(_safe_float(fuel_cost_s.sel(scenario=s))) for s in scenario_like.values],
-            "Grid import cost": [float(_safe_float(grid_import_cost_s.sel(scenario=s))) for s in scenario_like.values],
-            "Grid export revenue": [float(_safe_float(grid_export_rev_s.sel(scenario=s))) for s in scenario_like.values],
-            "RES subsidy revenue": [float(_safe_float(res_subsidy_rev_s.sel(scenario=s))) for s in scenario_like.values],
-            "Annual variable cost": [float(_safe_float(annual_variable_cost_s.sel(scenario=s))) for s in scenario_like.values],
-            "Lost load penalty": [float(_safe_float(ll_cost_s.sel(scenario=s))) for s in scenario_like.values],
-            "Scope 1 emissions": [float(_safe_float(scope1_kg_s.sel(scenario=s))) for s in scenario_like.values],
-            "Scope 2 emissions": [float(_safe_float(scope2_kg_s.sel(scenario=s))) for s in scenario_like.values],
-            "Scope 3 emissions": [float(_safe_float(scope3_kg_s.sel(scenario=s))) for s in scenario_like.values],
-            "Total emissions": [float(_safe_float(total_emissions_kg_s.sel(scenario=s))) for s in scenario_like.values],
-            "Emissions cost": [float(_safe_float(emissions_cost_s.sel(scenario=s))) for s in scenario_like.values],
-            "Total operating cost": [float(_safe_float(annual_operating_cost_s.sel(scenario=s))) for s in scenario_like.values],
-            "Weight": [float(_safe_float(w_s.sel(scenario=s))) for s in scenario_like.values],
-        })
         st.dataframe(
-            df_sc.style.format({
+            reporting.scenario_total_operating_costs.style.format({
                 "Fixed O&M": "{:,.0f}",
                 "Fuel cost": "{:,.0f}",
                 "Grid import cost": "{:,.0f}",
@@ -1104,10 +747,6 @@ def render_generation_planning_results_page() -> None:
                 "RES subsidy revenue": "{:,.0f}",
                 "Annual variable cost": "{:,.0f}",
                 "Lost load penalty": "{:,.0f}",
-                "Scope 1 emissions": "{:,.0f}",
-                "Scope 2 emissions": "{:,.0f}",
-                "Scope 3 emissions": "{:,.0f}",
-                "Total emissions": "{:,.0f}",
                 "Emissions cost": "{:,.0f}",
                 "Total operating cost": "{:,.0f}",
                 "Weight": "{:.3f}",
@@ -1138,3 +777,5 @@ def render_generation_planning_results_page() -> None:
 
 # Entrypoint
 render_generation_planning_results_page()
+
+

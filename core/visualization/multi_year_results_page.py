@@ -15,6 +15,7 @@ from core.export.multi_year_results import (
     build_design_by_step_table_multi_year,
     build_discounted_cashflows_table_multi_year,
     build_dispatch_timeseries_table_multi_year,
+    build_scenario_costs_table_multi_year,
     build_yearly_kpis_table_multi_year,
 )
 from core.export.results_bundle import ResultsBundle
@@ -29,6 +30,9 @@ C_IMP = "#9C27B0"
 C_EXP = "#9C27B0"
 C_LL = "#E53935"
 C_LOAD = "#111111"
+C_SCOPE1 = "#B71C1C"
+C_SCOPE2 = "#1565C0"
+C_SCOPE3 = "#2E7D32"
 
 
 @dataclass(frozen=True)
@@ -93,8 +97,8 @@ def _build_expected_dispatch(view: pd.DataFrame, weights: Optional[xr.DataArray]
         "battery_charge",
         "battery_discharge",
         "lost_load",
-        "grid_import",
-        "grid_export",
+        "grid_import_delivered",
+        "grid_export_delivered",
     ]
     for col in agg_cols:
         weighted[f"weighted__{col}"] = weighted[col] * weighted["weight"]
@@ -119,31 +123,35 @@ def _plot_dispatch_stack(*, ax: Any, profile: pd.DataFrame, title_suffix: str) -
     y_res = profile["res_generation_total"].to_numpy(dtype=float)
     y_bdis = profile["battery_discharge"].to_numpy(dtype=float)
     y_gen = profile["generator_generation"].to_numpy(dtype=float)
-    y_gimp = profile["grid_import"].to_numpy(dtype=float)
+    y_gimp = profile["grid_import_delivered"].to_numpy(dtype=float) if "grid_import_delivered" in profile.columns else profile["grid_import"].to_numpy(dtype=float)
     y_ll = profile["lost_load"].to_numpy(dtype=float)
     y_bch = profile["battery_charge"].to_numpy(dtype=float)
-    y_gexp = profile["grid_export"].to_numpy(dtype=float)
+    y_gexp = profile["grid_export_delivered"].to_numpy(dtype=float) if "grid_export_delivered" in profile.columns else profile["grid_export"].to_numpy(dtype=float)
     y_load = profile["load_demand"].to_numpy(dtype=float)
+    y_bnet = y_bdis - y_bch
+    y_bnet_pos = np.clip(y_bnet, 0.0, None)
+    y_bnet_neg = np.clip(-y_bnet, 0.0, None)
 
     p1 = y_res
-    p2 = p1 + y_bdis
+    p2 = p1 + y_bnet_pos
     p3 = p2 + y_gen
     p4 = p3 + y_gimp
     p5 = p4 + y_ll
-    n1 = -y_bch
+    n1 = -y_bnet_neg
     n2 = n1 - y_gexp
 
     ax.fill_between(x, 0, p1, color=C_RES, alpha=0.85, label="Renewables")
-    ax.fill_between(x, p1, p2, color=C_BAT, alpha=0.35, label="Battery discharge")
+    if np.any(y_bnet_pos > 0):
+        ax.fill_between(x, p1, p2, color=C_BAT, alpha=0.35, label="Battery net discharge")
     ax.fill_between(x, p2, p3, color=C_GEN, alpha=0.85, label="Generator")
     if np.any(y_gimp > 0):
-        ax.fill_between(x, p3, p4, color=C_IMP, alpha=0.85, label="Grid import")
+        ax.fill_between(x, p3, p4, color=C_IMP, alpha=0.85, label="Grid import (delivered)")
     if np.any(y_ll > 0):
         ax.fill_between(x, p4, p5, color=C_LL, alpha=0.45, label="Lost load")
-    if np.any(y_bch > 0):
-        ax.fill_between(x, 0, n1, color=C_BAT, alpha=0.35, label="Battery charge")
+    if np.any(y_bnet_neg > 0):
+        ax.fill_between(x, 0, n1, color=C_BAT, alpha=0.35, label="Battery net charge")
     if np.any(y_gexp > 0):
-        ax.fill_between(x, n1, n2, color=C_EXP, alpha=0.75, label="Grid export")
+        ax.fill_between(x, n1, n2, color=C_EXP, alpha=0.75, label="Grid export (delivered)")
 
     ax.plot(x, y_load, color=C_LOAD, linewidth=1.8, label="Load")
     ax.set_title(f"Dispatch profile - {title_suffix}")
@@ -182,6 +190,39 @@ def _weights_da(data: xr.Dataset) -> xr.DataArray:
         dims=("scenario",),
         coords={"scenario": scenario},
     )
+
+
+def _emissions_priced_in_objective(data: xr.Dataset) -> bool:
+    emission_cost = data.get("emission_cost_per_kgco2e")
+    if not isinstance(emission_cost, xr.DataArray):
+        return False
+    vals = np.asarray(emission_cost.values, dtype=float)
+    vals = vals[np.isfinite(vals)]
+    return bool(vals.size > 0 and float(np.max(vals)) > 0.0)
+
+
+def _ensure_delivered_grid_columns(dispatch: pd.DataFrame, data: xr.Dataset) -> pd.DataFrame:
+    df = dispatch.copy()
+    if "grid_import_delivered" not in df.columns:
+        df["grid_import_delivered"] = np.nan
+    if "grid_export_delivered" not in df.columns:
+        df["grid_export_delivered"] = np.nan
+    if "scenario" not in df.columns:
+        df["grid_import_delivered"] = df["grid_import_delivered"].fillna(df.get("grid_import", 0.0))
+        df["grid_export_delivered"] = df["grid_export_delivered"].fillna(df.get("grid_export", 0.0))
+        return df
+
+    grid_eta = data.get("grid_transmission_efficiency")
+    for scenario in df["scenario"].astype(str).unique():
+        mask = df["scenario"].astype(str) == str(scenario)
+        eta = float(grid_eta.sel(scenario=scenario)) if isinstance(grid_eta, xr.DataArray) else 1.0
+        if "grid_import" in df.columns:
+            df.loc[mask & df["grid_import_delivered"].isna(), "grid_import_delivered"] = df.loc[mask, "grid_import"] * eta
+        if "grid_export" in df.columns:
+            df.loc[mask & df["grid_export_delivered"].isna(), "grid_export_delivered"] = df.loc[mask, "grid_export"] * eta
+    df["grid_import_delivered"] = pd.to_numeric(df["grid_import_delivered"], errors="coerce").fillna(0.0)
+    df["grid_export_delivered"] = pd.to_numeric(df["grid_export_delivered"], errors="coerce").fillna(0.0)
+    return df
 
 
 def _capacity_by_year(sets_ds: xr.Dataset, design_df: pd.DataFrame) -> pd.DataFrame:
@@ -387,131 +428,12 @@ def _build_scenario_costs(
     vars_dict: Dict[str, Any],
     solution: Optional[xr.Dataset],
 ) -> pd.DataFrame:
-    p = get_params(data)
-    weights = _weights_da(data)
-
-    res_units = require_data_array("res_units", get_var_solution(vars_dict=vars_dict, solution=solution, name="res_units"))
-    bat_units = require_data_array("battery_units", get_var_solution(vars_dict=vars_dict, solution=solution, name="battery_units"))
-    gen_units = require_data_array("generator_units", get_var_solution(vars_dict=vars_dict, solution=solution, name="generator_units"))
-    res_gen = require_data_array("res_generation", get_var_solution(vars_dict=vars_dict, solution=solution, name="res_generation"))
-    fuel_cons = require_data_array("fuel_consumption", get_var_solution(vars_dict=vars_dict, solution=solution, name="fuel_consumption"))
-    lost_load = require_data_array("lost_load", get_var_solution(vars_dict=vars_dict, solution=solution, name="lost_load"))
-
-    grid_imp = get_var_solution(vars_dict=vars_dict, solution=solution, name="grid_import")
-    grid_exp = get_var_solution(vars_dict=vars_dict, solution=solution, name="grid_export")
-
-    res_nom = require_data_array("res_nominal_capacity_kw", p.res_nominal_capacity_kw)
-    res_capex = require_data_array("res_specific_investment_cost_per_kw", p.res_specific_investment_cost_per_kw)
-    res_grant = require_data_array("res_grant_share_of_capex", p.res_grant_share_of_capex)
-    bat_nom = require_data_array("battery_nominal_capacity_kwh", p.battery_nominal_capacity_kwh)
-    bat_capex = require_data_array("battery_specific_investment_cost_per_kwh", p.battery_specific_investment_cost_per_kwh)
-    gen_nom = require_data_array("generator_nominal_capacity_kw", p.generator_nominal_capacity_kw)
-    gen_capex = require_data_array("generator_specific_investment_cost_per_kw", p.generator_specific_investment_cost_per_kw)
-
-    fuel_price = p.fuel_cost_per_unit_fuel if p.fuel_cost_per_unit_fuel is not None else p.fuel_fuel_cost_per_unit_fuel
-    fuel_cost_y_s = _as_year_scenario_da((fuel_cons * fuel_price).sum("period"), sets) if fuel_price is not None else _as_year_scenario_da(0.0, sets)
-    grid_import_cost_y_s = _as_year_scenario_da((grid_imp * p.grid_import_price).sum("period"), sets) if (p.is_grid_on() and isinstance(grid_imp, xr.DataArray) and p.grid_import_price is not None) else _as_year_scenario_da(0.0, sets)
-    grid_export_rev_y_s = _as_year_scenario_da((grid_exp * p.grid_export_price).sum("period"), sets) if (p.is_grid_export_enabled() and isinstance(grid_exp, xr.DataArray) and p.grid_export_price is not None) else _as_year_scenario_da(0.0, sets)
-
-    res_subsidy_y_s = _as_year_scenario_da(0.0, sets)
-    if p.res_production_subsidy_per_kwh is not None:
-        subsidy = p.res_production_subsidy_per_kwh
-        if "inv_step" in subsidy.dims:
-            subsidy = subsidy.isel(inv_step=0, drop=True)
-        res_subsidy_y_s = _as_year_scenario_da((res_gen * subsidy).sum("period").sum("resource"), sets)
-
-    res_inv = res_units * res_nom * res_capex * (1.0 - res_grant)
-    bat_inv = bat_units * bat_nom * bat_capex
-    gen_inv = gen_units * gen_nom * gen_capex
-    active = replacement_active_mask(sets)
-
-    res_fom_share = p.res_fixed_om_share_per_year if p.res_fixed_om_share_per_year is not None else 0.0
-    bat_fom_share = p.battery_fixed_om_share_per_year if p.battery_fixed_om_share_per_year is not None else 0.0
-    gen_fom_share = p.generator_fixed_om_share_per_year if p.generator_fixed_om_share_per_year is not None else 0.0
-
-    fixed_om_res_y_s = _as_year_scenario_da((res_inv * res_fom_share * active).sum("inv_step").sum("resource"), sets)
-    fixed_om_battery_y_s = _as_year_scenario_da((bat_inv * bat_fom_share * active).sum("inv_step"), sets)
-    fixed_om_generator_y_s = _as_year_scenario_da((gen_inv * gen_fom_share * active).sum("inv_step"), sets)
-
-    lost_load_cost_y_s = _as_year_scenario_da(lost_load.sum("period") * p.lost_load_cost_per_kwh, sets) if p.lost_load_cost_per_kwh is not None else _as_year_scenario_da(0.0, sets)
-
-    scope1_y_s = _as_year_scenario_da(fuel_cons.sum("period") * p.fuel_direct_emissions_kgco2e_per_unit_fuel, sets) if p.fuel_direct_emissions_kgco2e_per_unit_fuel is not None else _as_year_scenario_da(0.0, sets)
-    scope2_y_s = _as_year_scenario_da(0.0, sets)
-
-    commission_res = replacement_commission_mask(sets, require_data_array("res_lifetime_years", p.res_lifetime_years))
-    commission_bat = replacement_commission_mask(sets, require_data_array("battery_calendar_lifetime_years", p.battery_calendar_lifetime_years))
-    commission_gen = replacement_commission_mask(sets, require_data_array("generator_lifetime_years", p.generator_lifetime_years))
-
-    scope3_res_y = _as_year_scenario_da(
-        (res_units * res_nom * p.res_embedded_emissions_kgco2e_per_kw * commission_res).sum("inv_step").sum("resource"),
-        sets,
-    ) if p.res_embedded_emissions_kgco2e_per_kw is not None else _as_year_scenario_da(0.0, sets)
-    scope3_battery_y = _as_year_scenario_da(
-        (bat_units * bat_nom * p.battery_embedded_emissions_kgco2e_per_kwh * commission_bat).sum("inv_step"),
-        sets,
-    ) if p.battery_embedded_emissions_kgco2e_per_kwh is not None else _as_year_scenario_da(0.0, sets)
-    scope3_generator_y = _as_year_scenario_da(
-        (gen_units * gen_nom * p.generator_embedded_emissions_kgco2e_per_kw * commission_gen).sum("inv_step"),
-        sets,
-    ) if p.generator_embedded_emissions_kgco2e_per_kw is not None else _as_year_scenario_da(0.0, sets)
-    scope3_y_s = scope3_res_y + scope3_battery_y + scope3_generator_y
-
-    emission_cost_y_s = _as_year_scenario_da(p.emission_cost_per_kgco2e, sets) if p.emission_cost_per_kgco2e is not None else _as_year_scenario_da(0.0, sets)
-    scope1_cost_y_s = scope1_y_s * emission_cost_y_s
-    scope2_cost_y_s = scope2_y_s * emission_cost_y_s
-    scope3_res_cost_y_s = scope3_res_y * emission_cost_y_s
-    scope3_battery_cost_y_s = scope3_battery_y * emission_cost_y_s
-    scope3_generator_cost_y_s = scope3_generator_y * emission_cost_y_s
-    emissions_cost_y_s = scope1_cost_y_s + scope2_cost_y_s + scope3_res_cost_y_s + scope3_battery_cost_y_s + scope3_generator_cost_y_s
-
-    variable_cost_y_s = fuel_cost_y_s + grid_import_cost_y_s - grid_export_rev_y_s - res_subsidy_y_s
-    total_operating_cost_y_s = (
-        variable_cost_y_s
-        + fixed_om_res_y_s
-        + fixed_om_battery_y_s
-        + fixed_om_generator_y_s
-        + lost_load_cost_y_s
-        + emissions_cost_y_s
+    return build_scenario_costs_table_multi_year(
+        sets=sets,
+        data=data,
+        vars=vars_dict,
+        solution=solution,
     )
-
-    rows = []
-    for year in sets.coords["year"].values:
-        for scenario in sets.coords["scenario"].values:
-            rows.append(
-                {
-                    "year": str(year),
-                    "scenario": str(scenario),
-                    "weight": float(weights.sel(scenario=scenario)),
-                    "fuel_cost": _scalar_float(fuel_cost_y_s.sel(year=year, scenario=scenario)),
-                    "grid_import_cost": _scalar_float(grid_import_cost_y_s.sel(year=year, scenario=scenario)),
-                    "grid_export_revenue": _scalar_float(grid_export_rev_y_s.sel(year=year, scenario=scenario)),
-                    "res_subsidy_revenue": _scalar_float(res_subsidy_y_s.sel(year=year, scenario=scenario)),
-                    "annual_variable_cost": _scalar_float(variable_cost_y_s.sel(year=year, scenario=scenario)),
-                    "fixed_om_res": _scalar_float(fixed_om_res_y_s.sel(year=year, scenario=scenario)),
-                    "fixed_om_battery": _scalar_float(fixed_om_battery_y_s.sel(year=year, scenario=scenario)),
-                    "fixed_om_generator": _scalar_float(fixed_om_generator_y_s.sel(year=year, scenario=scenario)),
-                    "fixed_om_total": _scalar_float((fixed_om_res_y_s + fixed_om_battery_y_s + fixed_om_generator_y_s).sel(year=year, scenario=scenario)),
-                    "lost_load_penalty": _scalar_float(lost_load_cost_y_s.sel(year=year, scenario=scenario)),
-                    "scope1_emissions": _scalar_float(scope1_y_s.sel(year=year, scenario=scenario)),
-                    "scope2_emissions": _scalar_float(scope2_y_s.sel(year=year, scenario=scenario)),
-                    "scope3_res_emissions": _scalar_float(scope3_res_y.sel(year=year, scenario=scenario)),
-                    "scope3_battery_emissions": _scalar_float(scope3_battery_y.sel(year=year, scenario=scenario)),
-                    "scope3_generator_emissions": _scalar_float(scope3_generator_y.sel(year=year, scenario=scenario)),
-                    "scope3_emissions": _scalar_float(scope3_y_s.sel(year=year, scenario=scenario)),
-                    "total_emissions": _scalar_float((scope1_y_s + scope2_y_s + scope3_y_s).sel(year=year, scenario=scenario)),
-                    "scope1_emissions_cost": _scalar_float(scope1_cost_y_s.sel(year=year, scenario=scenario)),
-                    "scope2_emissions_cost": _scalar_float(scope2_cost_y_s.sel(year=year, scenario=scenario)),
-                    "scope3_res_emissions_cost": _scalar_float(scope3_res_cost_y_s.sel(year=year, scenario=scenario)),
-                    "scope3_battery_emissions_cost": _scalar_float(scope3_battery_cost_y_s.sel(year=year, scenario=scenario)),
-                    "scope3_generator_emissions_cost": _scalar_float(scope3_generator_cost_y_s.sel(year=year, scenario=scenario)),
-                    "emissions_cost": _scalar_float(emissions_cost_y_s.sel(year=year, scenario=scenario)),
-                    "total_operating_cost": _scalar_float(total_operating_cost_y_s.sel(year=year, scenario=scenario)),
-                }
-            )
-
-    scenario_df = pd.DataFrame(rows)
-    numeric_cols = [col for col in scenario_df.columns if col not in {"year", "scenario", "weight"}]
-    return _append_expected_rows(scenario_df, numeric_cols=numeric_cols)
 
 
 def _build_yearly_expected(cash: pd.DataFrame, scenario_costs: pd.DataFrame) -> pd.DataFrame:
@@ -553,9 +475,12 @@ def _build_context(bundle: ResultsBundle) -> MultiYearResultsContext:
     solution = bundle.solution if isinstance(bundle.solution, xr.Dataset) else None
     sets = bundle.sets if isinstance(bundle.sets, xr.Dataset) else xr.Dataset()
     settings = _get_settings(data)
-    dispatch = build_dispatch_timeseries_table_multi_year(data=data, vars=vars_dict, solution=solution)
+    dispatch = _ensure_delivered_grid_columns(
+        build_dispatch_timeseries_table_multi_year(sets=sets, data=data, vars=vars_dict, solution=solution),
+        data,
+    )
     design = build_design_by_step_table_multi_year(sets=sets, data=data, vars=vars_dict, solution=solution)
-    kpis = build_yearly_kpis_table_multi_year(data=data, vars=vars_dict, solution=solution, objective_value=bundle.objective_value)
+    kpis = build_yearly_kpis_table_multi_year(sets=sets, data=data, vars=vars_dict, solution=solution, objective_value=bundle.objective_value)
     cash = build_discounted_cashflows_table_multi_year(sets=sets, data=data, vars=vars_dict, solution=solution)
     capacity = _capacity_by_year(sets, design)
     scenario_costs = _build_scenario_costs(sets=sets, data=data, vars_dict=vars_dict, solution=solution)
@@ -587,7 +512,7 @@ def _build_context_from_files(file_results: MultiYearFileResults) -> MultiYearRe
     data = file_results.data
     sets = file_results.sets
     settings = _get_settings(data)
-    dispatch = file_results.dispatch.copy()
+    dispatch = _ensure_delivered_grid_columns(file_results.dispatch.copy(), data)
     design = file_results.design.copy()
     kpis = file_results.kpis.copy()
     cash = file_results.cash.copy()
@@ -645,7 +570,6 @@ def _dispatch_kpi_summary(ctx: MultiYearResultsContext, selection: str) -> Dict[
     dispatch = ctx.dispatch.copy()
     weights = _weights_da(ctx.data)
     weight_map = {str(s): float(weights.sel(scenario=s)) for s in weights.coords["scenario"].values}
-    grid_eta = ctx.data.get("grid_transmission_efficiency")
     grid_ren = ctx.data.get("grid_renewable_share")
 
     def _expected_for_year(year_value: str) -> Dict[str, float]:
@@ -654,9 +578,8 @@ def _dispatch_kpi_summary(ctx: MultiYearResultsContext, selection: str) -> Dict[
         for scenario, group in year_df.groupby("scenario", sort=False):
             scenario_label = str(scenario)
             raw_import = float(group["grid_import"].sum())
-            eta = float(grid_eta.sel(scenario=scenario)) if isinstance(grid_eta, xr.DataArray) else 1.0
+            delivered_import = float(group["grid_import_delivered"].sum()) if "grid_import_delivered" in group.columns else raw_import
             ren_share = float(grid_ren.sel(scenario=scenario)) if isinstance(grid_ren, xr.DataArray) else 0.0
-            delivered_import = raw_import * eta
             rows.append(
                 {
                     "load": float(group["load_demand"].sum()),
@@ -665,7 +588,7 @@ def _dispatch_kpi_summary(ctx: MultiYearResultsContext, selection: str) -> Dict[
                     "generator": float(group["generator_generation"].sum()),
                     "grid_import_delivered": delivered_import,
                     "grid_renewable": delivered_import * ren_share,
-                    "grid_export": float(group["grid_export"].sum()),
+                    "grid_export_delivered": float(group["grid_export_delivered"].sum()) if "grid_export_delivered" in group.columns else float(group["grid_export"].sum()),
                     "weight": weight_map.get(scenario_label, 0.0),
                 }
             )
@@ -682,6 +605,138 @@ def _dispatch_kpi_summary(ctx: MultiYearResultsContext, selection: str) -> Dict[
         yearly = [_expected_for_year(year) for year in ctx.years]
         return {key: float(np.mean([row.get(key, 0.0) for row in yearly])) for key in yearly[0]} if yearly else {}
     return _expected_for_year(selection)
+
+
+def _build_multi_year_diagnostics_table(ctx: MultiYearResultsContext, selection: str) -> pd.DataFrame:
+    rows: list[dict[str, Any]] = []
+    weights = _weights_da(ctx.data)
+
+    def _expected_year_view(year_label: str) -> pd.DataFrame:
+        year_view = ctx.dispatch[ctx.dispatch["year"].astype(str) == str(year_label)].copy()
+        return _build_expected_dispatch(year_view, weights)
+
+    if selection == "Average yearly":
+        views = [_expected_year_view(year_label) for year_label in ctx.years]
+        if not views:
+            return pd.DataFrame()
+        frame = pd.concat(views, ignore_index=True)
+        divisor = max(len(ctx.years), 1)
+        soh_views = [view for view in views if "battery_soh" in view.columns and not view.empty]
+        initial_soh = float(np.mean([view["battery_soh"].iloc[0] for view in soh_views])) if soh_views else None
+        final_soh = float(np.mean([view["battery_soh"].iloc[-1] for view in soh_views])) if soh_views else None
+    else:
+        frame = _expected_year_view(str(selection))
+        divisor = 1
+        initial_soh = float(frame["battery_soh"].iloc[0]) if "battery_soh" in frame.columns and not frame.empty else None
+        final_soh = float(frame["battery_soh"].iloc[-1]) if "battery_soh" in frame.columns and not frame.empty else None
+
+    if {"battery_charge", "battery_discharge", "battery_charge_dc", "battery_discharge_dc"}.issubset(frame.columns):
+        ch_ac_sum = float(frame["battery_charge"].sum()) / divisor
+        dis_ac_sum = float(frame["battery_discharge"].sum()) / divisor
+        ch_dc_sum = float(frame["battery_charge_dc"].sum()) / divisor
+        dis_dc_sum = float(frame["battery_discharge_dc"].sum()) / divisor
+        rows.append({"Metric": "Battery DC throughput", "Value": 0.5 * (ch_dc_sum + dis_dc_sum) / 1e3, "Unit": "MWh/yr"})
+        if ch_ac_sum > 1e-12:
+            rows.append({"Metric": "Battery avg charging efficiency", "Value": 100.0 * ch_dc_sum / ch_ac_sum, "Unit": "%"})
+        if dis_dc_sum > 1e-12:
+            rows.append({"Metric": "Battery avg discharging efficiency", "Value": 100.0 * dis_ac_sum / dis_dc_sum, "Unit": "%"})
+        if ch_ac_sum > 1e-12 and dis_dc_sum > 1e-12:
+            rows.append({"Metric": "Battery implied round-trip efficiency", "Value": 100.0 * (ch_dc_sum / ch_ac_sum) * (dis_ac_sum / dis_dc_sum), "Unit": "%"})
+    if {"battery_charge_loss", "battery_discharge_loss"}.issubset(frame.columns):
+        rows.append({"Metric": "Battery conversion losses", "Value": (float(frame["battery_charge_loss"].sum()) + float(frame["battery_discharge_loss"].sum())) / divisor / 1e3, "Unit": "MWh/yr"})
+    if "battery_cycle_fade" in frame.columns:
+        rows.append({"Metric": "Battery cycle fade", "Value": float(frame["battery_cycle_fade"].sum()) / divisor / 1e3, "Unit": "MWh cap./yr"})
+    if "battery_calendar_fade" in frame.columns:
+        rows.append({"Metric": "Battery calendar fade", "Value": float(frame["battery_calendar_fade"].sum()) / divisor / 1e3, "Unit": "MWh cap./yr"})
+    if initial_soh is not None and final_soh is not None:
+        rows.append({"Metric": "Battery initial SoH", "Value": initial_soh, "Unit": "-"})
+        rows.append({"Metric": "Battery final SoH", "Value": final_soh, "Unit": "-"})
+        rows.append({"Metric": "Battery SoH drop", "Value": 100.0 * max(initial_soh - final_soh, 0.0), "Unit": "p.p."})
+    if "battery_effective_energy_capacity" in frame.columns:
+        rows.append(
+            {
+                "Metric": "Battery avg effective energy capacity",
+                "Value": float(frame["battery_effective_energy_capacity"].mean()) / 1e3,
+                "Unit": "MWh",
+            }
+        )
+        rows.append(
+            {
+                "Metric": "Battery min effective energy capacity",
+                "Value": float(frame["battery_effective_energy_capacity"].min()) / 1e3,
+                "Unit": "MWh",
+            }
+        )
+
+    p = get_params(ctx.data)
+    if selection == "Average yearly":
+        kpi_expected = ctx.kpis[ctx.kpis["scenario"].astype(str).str.lower() == "expected"].copy()
+        fuel_sum = float(kpi_expected["fuel_consumption"].mean()) if "fuel_consumption" in kpi_expected.columns and not kpi_expected.empty else 0.0
+    else:
+        kpi_expected = ctx.kpis[
+            (ctx.kpis["scenario"].astype(str).str.lower() == "expected")
+            & (ctx.kpis["year"].astype(str) == str(selection))
+        ].copy()
+        fuel_sum = float(kpi_expected.iloc[0]["fuel_consumption"]) if "fuel_consumption" in kpi_expected.columns and not kpi_expected.empty else 0.0
+    gen_sum = float(frame["generator_generation"].sum()) / divisor if "generator_generation" in frame.columns else 0.0
+    if p.fuel_lhv_kwh_per_unit_fuel is not None and fuel_sum > 1e-12:
+        lhv_expected = float((p.fuel_lhv_kwh_per_unit_fuel * weights).sum("scenario")) if "scenario" in p.fuel_lhv_kwh_per_unit_fuel.dims else float(safe_float(p.fuel_lhv_kwh_per_unit_fuel))
+        if fuel_sum * lhv_expected > 1e-12:
+            rows.append({"Metric": "Generator average conversion efficiency", "Value": 100.0 * gen_sum / (fuel_sum * lhv_expected), "Unit": "%"})
+    if p.generator_nominal_efficiency_full_load is not None:
+        gen_nom_eff = float((p.generator_nominal_efficiency_full_load * weights).sum("scenario")) if "scenario" in p.generator_nominal_efficiency_full_load.dims else float(safe_float(p.generator_nominal_efficiency_full_load))
+        rows.append({"Metric": "Generator nominal full-load efficiency", "Value": 100.0 * gen_nom_eff, "Unit": "%"})
+    if fuel_sum > 0.0:
+        rows.append({"Metric": "Generator fuel consumption", "Value": fuel_sum, "Unit": "fuel units/yr" if selection == "Average yearly" else "fuel units"})
+
+    return pd.DataFrame(rows)
+
+
+def _battery_lifetime_soh_warning(ctx: MultiYearResultsContext) -> str | None:
+    degradation_settings = (((ctx.settings.get("battery_model", {}) or {}).get("degradation_model", {}) or {}))
+    end_of_life_soh_raw = degradation_settings.get("end_of_life_soh", None)
+    if end_of_life_soh_raw in (None, ""):
+        return None
+    try:
+        end_of_life_soh = float(end_of_life_soh_raw)
+    except Exception:
+        return None
+
+    p = get_params(ctx.data)
+    if p.battery_calendar_lifetime_years is None:
+        return None
+    vals = np.asarray(p.battery_calendar_lifetime_years.values, dtype=float).reshape(-1)
+    vals = vals[np.isfinite(vals)]
+    if vals.size == 0:
+        return None
+    calendar_lifetime_years = float(vals[0])
+    if not np.allclose(vals, calendar_lifetime_years, atol=1e-9, rtol=0.0):
+        return None
+    target_service_year = int(np.floor(calendar_lifetime_years))
+    if target_service_year < 1:
+        return None
+    if target_service_year > len(ctx.years):
+        return None
+    target_year_label = str(ctx.years[target_service_year - 1])
+
+    expected_dispatch = _build_expected_dispatch(ctx.dispatch.copy(), _weights_da(ctx.data))
+    if expected_dispatch.empty or "battery_soh" not in expected_dispatch.columns:
+        return None
+    year_view = expected_dispatch[expected_dispatch["year"].astype(str) == target_year_label].copy()
+    if year_view.empty:
+        return None
+
+    simulated_soh = float(year_view["battery_soh"].iloc[-1])
+    diff = simulated_soh - end_of_life_soh
+    if abs(diff) < 0.05:
+        return None
+
+    relation = "above" if diff > 0.0 else "below"
+    return (
+        f"Battery expected SoH at the end of service year {target_service_year} ({target_year_label}) is {simulated_soh:.2f}, "
+        f"which is {abs(diff):.2f} {relation} the configured end-of-life SoH {end_of_life_soh:.2f}. "
+        f"This means the degradation settings and `calendar_lifetime_years` are not closely aligned."
+    )
 
 
 def _render_sizing_summary(ctx: MultiYearResultsContext) -> None:
@@ -728,6 +783,9 @@ def _render_sizing_summary(ctx: MultiYearResultsContext) -> None:
 
 def _render_performance_kpis(ctx: MultiYearResultsContext) -> None:
     st.subheader("Performance KPIs")
+    lifetime_warning = _battery_lifetime_soh_warning(ctx)
+    if lifetime_warning:
+        st.warning(lifetime_warning)
     expected = ctx.kpis[ctx.kpis["scenario"].astype(str).str.lower() == "expected"].copy()
     options = ["Average yearly"] + ctx.years
     choice = st.selectbox("View performance for", options, key="my_results_kpi_period")
@@ -743,10 +801,11 @@ def _render_performance_kpis(ctx: MultiYearResultsContext) -> None:
         {"Metric": "Lost load", "Value": dispatch_summary.get("lost_load", float(row.get("lost_load_kwh", 0.0))) / 1e3, "Unit": "MWh"},
         {"Metric": "Renewable generation", "Value": dispatch_summary.get("renewables", float(row.get("total_res_kwh", 0.0))) / 1e3, "Unit": "MWh"},
         {"Metric": "Generator generation", "Value": dispatch_summary.get("generator", 0.0) / 1e3, "Unit": "MWh"},
-        {"Metric": "Renewable share of supply", "Value": 100.0 * dispatch_summary.get("renewable_share", float(row.get("renewable_penetration", 0.0))), "Unit": "%"},
+        {"Metric": "Renewable share of primary supply", "Value": 100.0 * dispatch_summary.get("renewable_share", float(row.get("renewable_penetration", 0.0))), "Unit": "%"},
+        {"Metric": "Curtailment share of renewables", "Value": 100.0 * float(row.get("renewable_curtailment_share", 0.0)), "Unit": "%"},
         {"Metric": "Lost load fraction", "Value": 100.0 * dispatch_summary.get("lost_load_fraction", float(row.get("lost_load_fraction", 0.0))), "Unit": "%"},
         {"Metric": "Fuel consumption", "Value": float(row.get("fuel_consumption", 0.0)), "Unit": "fuel units"},
-        {"Metric": "Emissions", "Value": float(row.get("emissions_kgco2e", 0.0)), "Unit": "kgCO2e"},
+        {"Metric": "Total emissions", "Value": float(row.get("emissions_kgco2e", 0.0)), "Unit": "kgCO2e"},
     ]
     if ctx.on_grid:
         kpi_rows.insert(
@@ -770,7 +829,7 @@ def _render_performance_kpis(ctx: MultiYearResultsContext) -> None:
             7 if ctx.on_grid else 5,
             {
                 "Metric": "Grid exports",
-                "Value": dispatch_summary.get("grid_export", 0.0) / 1e3,
+                "Value": dispatch_summary.get("grid_export_delivered", dispatch_summary.get("grid_export", 0.0)) / 1e3,
                 "Unit": "MWh",
             },
         )
@@ -779,6 +838,14 @@ def _render_performance_kpis(ctx: MultiYearResultsContext) -> None:
         hide_index=True,
         width="stretch",
     )
+    diagnostics_df = _build_multi_year_diagnostics_table(ctx, choice)
+    if not diagnostics_df.empty:
+        st.markdown("**Efficiency & degradation diagnostics**")
+        st.dataframe(
+            diagnostics_df.style.format({"Value": "{:,.4f}"}),
+            hide_index=True,
+            width="stretch",
+        )
 
 
 def _render_energy_mix(ctx: MultiYearResultsContext) -> None:
@@ -1049,6 +1116,48 @@ def _render_scenario_costs_and_emissions(ctx: MultiYearResultsContext) -> None:
     ax.grid(True, alpha=0.25, linestyle=":")
     ax.legend(ncols=3, fontsize=9)
     st.pyplot(fig)
+
+    if not _emissions_priced_in_objective(ctx.data):
+        return
+
+    st.markdown("**Emissions by scope**")
+    scope_view_options = ["Expected"] + ctx.scenarios if len(ctx.scenarios) > 1 else [ctx.scenarios[0]]
+    default_scope_view = "Expected" if "Expected" in scope_view_options else scope_view_options[0]
+    scope_view = st.selectbox(
+        "Emissions scope view",
+        scope_view_options,
+        index=scope_view_options.index(default_scope_view),
+        key="my_results_scope_emissions_view",
+    )
+
+    scope_df = ctx.scenario_costs.copy()
+    if scope_view == "Expected":
+        scope_df = scope_df[scope_df["scenario"] == "Expected"].copy()
+    else:
+        scope_df = scope_df[scope_df["scenario"] == str(scope_view)].copy()
+    if selected_year != "All years":
+        scope_df = scope_df[scope_df["year"].astype(str) == str(selected_year)].copy()
+
+    if scope_df.empty:
+        st.info("No emissions data available for the selected scope view.")
+        return
+
+    fig_scope, ax_scope = plt.subplots(figsize=(11, 4))
+    x_labels = scope_df["year"].astype(str).tolist()
+    x = np.arange(len(x_labels))
+    scope1 = scope_df["scope1_emissions"].to_numpy(dtype=float)
+    scope2 = scope_df["scope2_emissions"].to_numpy(dtype=float)
+    scope3 = scope_df["scope3_emissions"].to_numpy(dtype=float)
+
+    ax_scope.bar(x, scope1, color=C_SCOPE1, alpha=0.9, label="Scope 1")
+    ax_scope.bar(x, scope2, bottom=scope1, color=C_SCOPE2, alpha=0.9, label="Scope 2")
+    ax_scope.bar(x, scope3, bottom=scope1 + scope2, color=C_SCOPE3, alpha=0.9, label="Scope 3")
+    ax_scope.set_title(f"Emissions by scope - {scope_view}")
+    ax_scope.set_ylabel("kgCO2e / year")
+    ax_scope.set_xticks(x, x_labels)
+    ax_scope.grid(True, axis="y", alpha=0.25, linestyle=":")
+    ax_scope.legend(ncols=3, fontsize=9)
+    st.pyplot(fig_scope)
 
 
 def _render_export_section(ctx: MultiYearResultsContext, project_name: Optional[str]) -> None:

@@ -1,0 +1,92 @@
+meta:
+  units:
+    battery_nominal_capacity_kwh: kWh
+    battery_specific_investment_cost_per_kwh: currency_per_kWh
+    battery_wacc: '-'
+    battery_calendar_lifetime_years: years
+    battery_embedded_emissions_kgco2e_per_kwh: kgCO2e_per_kWh
+    battery_fixed_om_share_per_year: share_per_year
+    battery_charge_efficiency: '-'
+    battery_discharge_efficiency: '-'
+    battery_initial_soc: share
+    battery_depth_of_discharge: share
+    battery_max_discharge_time_hours: hours
+    battery_max_charge_time_hours: hours
+    battery_max_installable_capacity_kwh: kWh
+    battery_efficiency_curve_csv: csv_path
+    battery_capacity_degradation_rate_per_year: per_year
+  context:
+    formulation: dynamic
+    multi_scenario: false
+    capacity_expansion: true
+    investment_steps:
+    - step: step_1
+      duration_years: 5
+    - step: step_2
+      duration_years: 5
+  description:
+    summary: Battery inputs define step-dependent investment data and shared technical
+      parameters.
+    parameters:
+      battery_nominal_capacity_kwh: Nominal energy capacity represented by one battery
+        unit.
+      battery_specific_investment_cost_per_kwh: Specific investment cost of battery
+        capacity.
+      battery_wacc: Weighted average cost of capital used for battery annuities.
+      battery_calendar_lifetime_years: Calendar lifetime used for battery replacement
+        economics.
+      battery_embedded_emissions_kgco2e_per_kwh: Embodied emissions associated with
+        battery capacity.
+      battery_fixed_om_share_per_year: Fixed annual O&M cost expressed as a share
+        of battery CAPEX. In the typical-year formulation this input is scenario-independent.
+      battery_charge_efficiency: Battery one-way charging efficiency used directly
+        in constant-efficiency mode and as the full-load baseline in curve mode.
+      battery_discharge_efficiency: Battery one-way discharging efficiency used directly
+        in constant-efficiency mode and as the full-load baseline in curve mode.
+      battery_initial_soc: Initial state of charge as a share of usable capacity.
+      battery_depth_of_discharge: Usable fraction of nominal battery capacity. When
+        cycle fade is enabled, the same value is also used as the reference DoD for
+        deriving the internal cycle-fade coefficient from cycle life and end-of-life
+        SoH.
+      battery_max_discharge_time_hours: Minimum time needed to fully discharge at
+        nominal power.
+      battery_max_charge_time_hours: Minimum time needed to fully charge at nominal
+        power.
+      battery_max_installable_capacity_kwh: Optional upper bound on total installed
+        battery capacity used as a planning/siting limit. It is not the physics reference
+        for the current endogenous degradation model.
+      battery_efficiency_curve_csv: 'CSV file containing the battery charge/discharge
+        efficiency shape used by the advanced convex loss model. Preferred semantics:
+        normalized multipliers relative to the scalar efficiencies above.'
+      battery_capacity_degradation_rate_per_year: Simplified exogenous annual reduction
+        in effective battery capacity used only when the full endogenous battery degradation
+        model is disabled. If cycle/calendar fade is enabled, this linear term is
+        ignored to avoid double-counting degradation.
+battery:
+  label: Battery
+  investment:
+    by_step:
+      step_1:
+        nominal_capacity_kwh: 1.0
+        specific_investment_cost_per_kwh: 350
+        wacc: 0.05
+        calendar_lifetime_years: 10
+        embedded_emissions_kgco2e_per_kwh: 0.0
+        fixed_om_share_per_year: 0.02
+      step_2:
+        nominal_capacity_kwh: 1.0
+        specific_investment_cost_per_kwh: 350
+        wacc: 0.05
+        calendar_lifetime_years: 10
+        embedded_emissions_kgco2e_per_kwh: 100
+        fixed_om_share_per_year: 0.02
+  technical:
+    charge_efficiency: 0.95
+    discharge_efficiency: 0.96
+    initial_soc: 0.5
+    depth_of_discharge: 0.8
+    max_discharge_time_hours: 5.0
+    max_charge_time_hours: 5.0
+    max_installable_capacity_kwh: null
+    efficiency_curve_csv: null
+    capacity_degradation_rate_per_year: 0.0

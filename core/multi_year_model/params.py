@@ -47,9 +47,12 @@ class Params:
     battery_charge_efficiency: Optional[xr.DataArray]
     battery_discharge_efficiency: Optional[xr.DataArray]
     battery_initial_soc: Optional[xr.DataArray]
+    battery_initial_soh: Optional[xr.DataArray]
     battery_depth_of_discharge: Optional[xr.DataArray]
     battery_max_charge_time_hours: Optional[xr.DataArray]
     battery_max_discharge_time_hours: Optional[xr.DataArray]
+    battery_cycle_fade_coefficient_per_kwh_throughput: Optional[xr.DataArray]
+    battery_calendar_time_increment_per_year: Optional[xr.DataArray]
     battery_capacity_degradation_rate_per_year: Optional[xr.DataArray]
 
     # Generator / fuel
@@ -79,6 +82,7 @@ class Params:
     # Optional curve vars + coord
     generator_eff_curve_rel_power: Optional[xr.DataArray]
     generator_eff_curve_eff: Optional[xr.DataArray]
+    generator_fuel_curve_rel_fuel_use: Optional[xr.DataArray]
     curve_point: Optional[xr.DataArray]
 
     def is_grid_on(self) -> bool:
@@ -130,9 +134,12 @@ def get_params(ds: xr.Dataset) -> Params:
         battery_charge_efficiency=_opt("battery_charge_efficiency"),
         battery_discharge_efficiency=_opt("battery_discharge_efficiency"),
         battery_initial_soc=_opt("battery_initial_soc"),
+        battery_initial_soh=_opt("battery_initial_soh"),
         battery_depth_of_discharge=_opt("battery_depth_of_discharge"),
         battery_max_charge_time_hours=_opt("battery_max_charge_time_hours"),
         battery_max_discharge_time_hours=_opt("battery_max_discharge_time_hours"),
+        battery_cycle_fade_coefficient_per_kwh_throughput=_opt("battery_cycle_fade_coefficient_per_kwh_throughput"),
+        battery_calendar_time_increment_per_year=_opt("battery_calendar_time_increment_per_year"),
         battery_capacity_degradation_rate_per_year=_opt("battery_capacity_degradation_rate_per_year"),
         generator_nominal_capacity_kw=_opt("generator_nominal_capacity_kw"),
         generator_max_installable_capacity_kw=_opt("generator_max_installable_capacity_kw"),
@@ -156,5 +163,6 @@ def get_params(ds: xr.Dataset) -> Params:
         grid_export_price=_opt("grid_export_price"),
         generator_eff_curve_rel_power=_opt("generator_eff_curve_rel_power"),
         generator_eff_curve_eff=_opt("generator_eff_curve_eff"),
+        generator_fuel_curve_rel_fuel_use=_opt("generator_fuel_curve_rel_fuel_use"),
         curve_point=curve_point,
     )

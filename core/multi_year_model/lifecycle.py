@@ -88,8 +88,13 @@ def discounted_annuity_tail_memo(
     social_discount_rate: float,
 ) -> xr.DataArray:
     """
-    Reporting-only memo: present value of the remaining annuity tail beyond the
-    planning horizon for the last active replacement cycle of each cohort.
+    Reporting-only memo: discounted value of the remaining annuity stream
+    beyond the planning horizon for the last active replacement cycle of each
+    cohort.
+
+    This helper is intentionally aligned with the annuity-based accounting used
+    by the current multi-year objective. It is not a classical salvage/book-
+    value formula and it is not included in the optimization objective.
     """
     lt = xr.DataArray(lifetime_years)
     age_h = replacement_cycle_age(sets, lt).isel(year=-1, drop=True)

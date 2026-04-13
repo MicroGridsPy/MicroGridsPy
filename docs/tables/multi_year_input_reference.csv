@@ -1,0 +1,15 @@
+file_name,purpose,format,mandatory,depends_on,edited_by_user,used_for,dimensional_meaning
+formulation.json,Project-level formulation flags horizon scenario setup and constraints,JSON,yes,always,no,selects dynamic mode and global optimization settings,project-level scalars and lists
+load_demand.csv,Hourly electrical demand,CSV,yes,always,yes,load balance and unmet-load calculations,period x scenario x year
+resource_availability.csv,Hourly renewable availability by resource,CSV,yes,always,yes,renewable generation availability,period x scenario x year x resource
+renewables.yaml,Renewable techno-economic inputs,YAML,yes,always,yes,renewable sizing annuity land subsidy and degradation parameters,resource plus investment step
+battery.yaml,Battery techno-economic inputs,YAML,yes,always,yes,storage sizing operation loss and degradation parameters,investment step plus shared battery technical data
+generator.yaml,Generator and fuel inputs,YAML,yes,always,yes,backup generation fuel cost emissions and partial-load inputs,investment step plus yearly scenario fuel prices
+grid.yaml,Grid line outage and connection-timing inputs,YAML,conditional,on_grid=true,yes,grid limits outages renewable-share emissions and first-year connection,scenario-level parameters
+grid_import_price.csv,Hourly import tariff,CSV,conditional,on_grid=true,yes,grid import operating cost,period x scenario x year
+grid_export_price.csv,Hourly export tariff,CSV,conditional,on_grid=true and grid_allow_export=true,yes,grid export revenue,period x scenario x year
+grid_availability.csv,Derived hourly grid availability matrix,CSV,derived,on_grid=true,no,backend-generated availability after outage simulation,period x scenario x year
+battery_efficiency_curve.csv,Battery advanced efficiency curve,CSV,conditional,battery_model.loss_model=convex_loss_epigraph,yes,advanced convex battery loss formulation,curve points
+battery_calendar_fade_curve.csv,Battery calendar-fade coefficient curve,CSV,conditional,battery_model.degradation_model.calendar_fade_enabled=true,yes,endogenous battery calendar ageing surrogate,curve points
+generator_efficiency_curve.csv,Generator part-load efficiency curve,CSV,conditional,generator_model.efficiency_model=efficiency_curve,yes,partial-load generator surrogate,curve points
+README_inputs.md,Human-readable summary of generated inputs,Markdown,no,always,no,reference only,not parsed as model input

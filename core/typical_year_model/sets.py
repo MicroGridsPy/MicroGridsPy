@@ -7,6 +7,7 @@ import json
 import xarray as xr
 
 from core.io.utils import project_paths  
+from core.io.input_labels import renewable_labels_from_yaml
 
 
 class InputValidationError(RuntimeError):
@@ -54,8 +55,15 @@ def initialize_sets(project_name: str) -> xr.Dataset:
 
     # --- renewables ---
     components = formulation.get("system_configuration", {}) or {}
-    resource_labels = list(components.get("resources") or [])
-    n_res = int(components.get("n_sources", len(resource_labels)))
+    renewables_yaml = renewable_labels_from_yaml(paths.inputs_dir / "renewables.yaml")
+    resource_labels = list(renewables_yaml.get("resources") or components.get("resources") or [])
+    n_res = int(components.get("n_sources", len(resource_labels) or 1))
+    if not resource_labels:
+        resource_labels = [f"Resource_{i+1}" for i in range(n_res)]
+    elif len(resource_labels) < n_res:
+        resource_labels = resource_labels + [f"Resource_{i+1}" for i in range(len(resource_labels), n_res)]
+    elif len(resource_labels) > n_res:
+        resource_labels = resource_labels[:n_res]
 
     # --- define dimensions explicitly ---
     ds = xr.Dataset(

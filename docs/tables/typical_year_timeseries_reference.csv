@@ -1,0 +1,8 @@
+file_name,header_rows,required_meta_column,required_value_axes,units,expected_length,mandatory_when,notes
+load_demand.csv,2,meta/hour,scenario x typical_year,kWh per hour,8760,always,all scenario headers must match formulation.json
+resource_availability.csv,3,meta/hour,scenario x typical_year x resource,capacity factor [-],8760,always,resource labels must match renewables.yaml resource fields
+grid_import_price.csv,2,meta/hour,scenario x typical_year,currency per kWh,8760,on_grid=true,same scenario ordering as load_demand.csv
+grid_export_price.csv,2,meta/hour,scenario x typical_year,currency per kWh,8760,on_grid=true and grid_allow_export=true,only used when export is enabled
+grid_availability.csv,2,meta/hour,scenario x typical_year,binary availability 0 or 1,8760,derived file,generated from grid.yaml not a primary user template
+generator_efficiency_curve.csv,1,,curve rows with columns Relative Power Output [-] and Efficiency [-],dimensionless,variable,generator efficiency curve mode,last relative-power point must be 1.0 and an explicit 0.0 row is optional
+battery_efficiency_curve.csv,1,,curve rows with columns relative_power_pu charge_efficiency discharge_efficiency,dimensionless multipliers,variable,battery convex loss mode,full-load row should be 1.0 multipliers

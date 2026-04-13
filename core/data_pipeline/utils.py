@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Sequence, Type
+from typing import Any, Dict, Optional, Sequence, Type
 
 import json
 import numpy as np
@@ -158,4 +158,40 @@ def broadcast_to_scenario(value: xr.DataArray, scenario_coord: xr.DataArray) -> 
         name=value.name,
         attrs=dict(value.attrs or {}),
     )
+
+
+def merge_optional_datasets(
+    *datasets: xr.Dataset | None,
+    compat: str = "override",
+    join: Optional[str] = None,
+) -> xr.Dataset:
+    """Merge non-null datasets while preserving xarray merge options."""
+    present = [ds for ds in datasets if ds is not None]
+    if not present:
+        return xr.Dataset()
+    kwargs: Dict[str, Any] = {"compat": compat}
+    if join is not None:
+        kwargs["join"] = join
+    return xr.merge(present, **kwargs)
+
+
+def finite_nonnegative_scalar_limit(
+    value: Any,
+    *,
+    name: str,
+    error_cls: Type[Exception] = RuntimeError,
+) -> float | None:
+    """
+    Return the first finite scalar limit if present and validate it is non-negative.
+
+    None means the limit is inactive because no finite value was provided.
+    """
+    values = np.asarray(value, dtype=float).reshape(-1)
+    values = values[np.isfinite(values)]
+    if values.size == 0:
+        return None
+    limit = float(values[0])
+    if limit < 0.0:
+        raise error_cls(f"{name} must be non-negative when provided.")
+    return limit
 

@@ -9,11 +9,30 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from core.data_pipeline.battery_loss_model import (
+    CONVEX_LOSS_EPIGRAPH,
+    InputValidationError as BatteryLossInputValidationError,
+    get_battery_loss_model_from_formulation,
+    load_battery_loss_curve_dataset,
+    resolve_efficiency_curve_values,
+)
+from core.data_pipeline.generator_partial_load_model import build_generator_partial_load_surrogate
+from core.data_pipeline.battery_degradation_model import (
+    InputValidationError as BatteryDegradationInputValidationError,
+    derive_cycle_fade_coefficient_from_cycle_life,
+    get_battery_degradation_settings,
+    suppress_exogenous_battery_capacity_degradation_when_endogenous,
+)
+from core.data_pipeline.battery_calendar_fade_model import (
+    InputValidationError as BatteryCalendarFadeInputValidationError,
+    load_battery_calendar_fade_curve_dataset,
+)
 from core.data_pipeline.utils import (
     as_float,
     as_float_or_nan,
     as_str,
     broadcast_to_scenario,
+    merge_optional_datasets,
     normalize_weights,
     read_json_or_raise,
     read_yaml_or_raise,
@@ -44,8 +63,8 @@ def _normalize_step_key(k: object) -> str:
     Accepts:
       - "1", "2"
       - 1, 2
-      - "step_1", "step_2"
-      - "base" (alias/default block)
+      - "step_1", "step_2" (legacy aliases)
+      - "base" (single-step legacy alias)
       - "Step 1" (best effort)
     Returns:
       - "1" or "2" ... (string)
@@ -65,13 +84,13 @@ def _normalize_step_key(k: object) -> str:
 def _remap_by_step_dict(path: Path, by_step: dict, *, expected_steps: List[str], context: str) -> Dict[str, dict]:
     """
     Remap a YAML by_step mapping that may be keyed by:
-      - step labels ('1', '2', ...)
-      - aliases ('step_1', 'step_2', ...)
-      - 'base' (default block)
+      - canonical step labels ('1', '2', ...)
+      - legacy aliases ('step_1', 'step_2', ...)
+      - 'base' (single-step legacy alias)
 
     Behavior for 'base':
       - if only one step is expected, 'base' maps to that step
-      - if multiple steps are expected, 'base' is broadcast as default for any missing step
+      - if multiple steps are expected, it is rejected to avoid hidden broadcasting
 
     Raises a clear error if after remapping required steps are still missing.
     """
@@ -84,12 +103,13 @@ def _remap_by_step_dict(path: Path, by_step: dict, *, expected_steps: List[str],
         nk = _normalize_step_key(k)
         remapped[str(nk)] = v
 
-    # Support human-friendly single/default block in templates:
-    # by_step: {base: {...}}
     if "base" in remapped:
-        base_block = remapped["base"]
-        for st in expected_steps:
-            remapped.setdefault(st, base_block)
+        if len(expected_steps) != 1:
+            raise InputValidationError(
+                f"{path.name}: {context} uses legacy key 'base' for a multi-step project. "
+                f"Use explicit step labels {expected_steps}."
+            )
+        remapped.setdefault(expected_steps[0], remapped["base"])
 
     missing = [st for st in expected_steps if st not in remapped]
     if missing:
@@ -99,6 +119,191 @@ def _remap_by_step_dict(path: Path, by_step: dict, *, expected_steps: List[str],
             f"Found keys: {list(by_step.keys())}"
         )
     return remapped
+
+
+def _component_top_level_by_step(
+    path: Path,
+    component_block: dict,
+    *,
+    expected_steps: List[str],
+    context: str,
+) -> Dict[str, dict] | None:
+    by_step = component_block.get("by_step", None)
+    if by_step is None:
+        return None
+    remapped = _remap_by_step_dict(
+        path,
+        by_step,
+        expected_steps=expected_steps,
+        context=f"{context}.by_step",
+    )
+    for st in expected_steps:
+        blk = remapped.get(st, None)
+        if not isinstance(blk, dict):
+            raise InputValidationError(f"{path.name}: {context}.by_step['{st}'] must be a dict.")
+    return remapped
+
+
+def _normalize_optional_path(raw: object) -> str | None:
+    if isinstance(raw, str):
+        value = raw.strip()
+        return value or None
+    return None
+
+
+def _shared_technology_error(component: str) -> str:
+    return (
+        "Multi-year formulation assumes shared technology across investment steps; "
+        f"step-specific technical parameters are not supported for {component}."
+    )
+
+
+def _collapse_shared_by_step_numeric(
+    path: Path,
+    *,
+    by_step: Dict[str, dict],
+    step_labels: List[str],
+    keys: List[str],
+    optional_defaults: Dict[str, float],
+    context: str,
+) -> Dict[str, float]:
+    shared: Dict[str, float] = {}
+    for key in keys:
+        baseline: float | None = None
+        for step in step_labels:
+            block = by_step[step]
+            if key not in block:
+                if key in optional_defaults:
+                    value = float(optional_defaults[key])
+                else:
+                    raise InputValidationError(f"{path.name}: missing technical param '{key}' in {context}['{step}'].")
+            elif key.endswith("max_installable_capacity_kw") or key.endswith("max_installable_capacity_kwh"):
+                value = float(_as_float_or_nan(block.get(key), name=f"{context}/{step}/{key}"))
+            else:
+                value = float(_as_float(block.get(key), name=f"{context}/{step}/{key}", default=0.0))
+
+            if baseline is None:
+                baseline = value
+            else:
+                same = (
+                    (not np.isfinite(baseline) and not np.isfinite(value))
+                    or np.isclose(value, baseline, atol=1e-12, rtol=0.0)
+                )
+                if not same:
+                    raise InputValidationError(f"{path.name}: {_shared_technology_error(context.split('.')[0])}")
+        shared[key] = float("nan") if baseline is None else float(baseline)
+    return shared
+
+
+def _collapse_shared_by_step_paths(
+    path: Path,
+    *,
+    by_step: Dict[str, dict],
+    step_labels: List[str],
+    keys: List[str],
+    context: str,
+) -> Dict[str, str | None]:
+    shared: Dict[str, str | None] = {}
+    for key in keys:
+        baseline: str | None = None
+        for step in step_labels:
+            value = _normalize_optional_path(by_step[step].get(key, None))
+            if baseline is None:
+                baseline = value
+            elif value != baseline:
+                raise InputValidationError(f"{path.name}: {_shared_technology_error(context.split('.')[0])}")
+        shared[key] = baseline
+    return shared
+
+
+def _apply_shared_override_numeric(
+    *,
+    current: Dict[str, float],
+    key: str,
+    value: float,
+    component: str,
+) -> None:
+    baseline = current.get(key, None)
+    if baseline is not None:
+        same = (
+            (not np.isfinite(baseline) and not np.isfinite(value))
+            or np.isclose(float(value), float(baseline), atol=1e-12, rtol=0.0)
+        )
+        if not same:
+            raise InputValidationError(_shared_technology_error(component))
+    current[key] = float(value)
+
+
+def _require_shared_legacy_scenario_value(
+    path: Path,
+    *,
+    by_scenario: dict,
+    scenario_labels: List[str],
+    key: str,
+    context: str,
+    numeric: bool = True,
+    optional: bool = False,
+    default: float | str | None = None,
+) -> float | str | None:
+    values: list[float | str | None] = []
+    for scenario in scenario_labels:
+        block = by_scenario.get(scenario, None)
+        if not isinstance(block, dict):
+            raise InputValidationError(f"{path.name}: {context} missing scenario '{scenario}'.")
+        if key not in block:
+            if optional:
+                values.append(default)
+                continue
+            raise InputValidationError(f"{path.name}: {context}['{scenario}'] missing '{key}'.")
+        raw = block.get(key)
+        if raw is None and optional:
+            values.append(default)
+            continue
+        if numeric:
+            values.append(_as_float(raw, name=f"{context}/{scenario}/{key}", default=0.0))
+        else:
+            values.append(_normalize_optional_path(raw))
+
+    first = values[0]
+    for other in values[1:]:
+        if numeric:
+            if not np.isclose(float(other), float(first), atol=1e-12, rtol=0.0):
+                raise InputValidationError(
+                    f"{path.name}: legacy scenario-specific '{key}' values differ across scenarios in {context}. "
+                    "In the shared-technology multi-year model this parameter must be technology-based. "
+                    "Move it to a shared/by_step block or make the scenario values identical."
+                )
+        else:
+            if other != first:
+                raise InputValidationError(
+                    f"{path.name}: legacy scenario-specific '{key}' values differ across scenarios in {context}. "
+                    "In the shared-technology multi-year model this parameter must be technology-based."
+                )
+    return first
+
+
+def _validate_generator_partial_load_curve(
+    *,
+    rel: np.ndarray,
+    eff: np.ndarray,
+    path: Path,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Validate the implied generator fuel curve in relative units and return a
+    zero-anchored raw curve together with the convex surrogate used by the LP
+    secant-envelope formulation.
+
+    The generator CSV column is resolved upstream either as a normalized
+    multiplier relative to `generator_nominal_efficiency_full_load` or as a
+    backward-compatible absolute-efficiency curve. This validator works on the
+    resulting absolute efficiencies.
+    """
+    return build_generator_partial_load_surrogate(
+        rel=rel,
+        eff=eff,
+        path=path,
+        error_cls=InputValidationError,
+    )
 
 # -----------------------------------------------------------------------------
 # load data from CSV templates
@@ -111,13 +316,12 @@ def _load_load_demand_csv(
     year_coord: xr.DataArray,
 ) -> xr.DataArray:
     """
-    Parse multi-year (dynamic) load_demand.csv template with 2-row header:
+    Parse multi-year (dynamic) load_demand.csv template with 2-row header.
 
-      meta,hour
-      scenario_1,year_1
-      0,0.0
-      1,0.0
-      ...
+    Conceptual layout:
+      row 1: meta, scenario_1, scenario_1, ...
+      row 2: hour, 2026, 2027, ...
+      row 3+: 0, value, value, ...
 
     Actually stored as a MultiIndex header (scenario, year):
       - ("meta","hour") column must exist and match sets.period exactly (0..8759)
@@ -125,7 +329,8 @@ def _load_load_demand_csv(
       - returns xr.DataArray with dims (year, period, scenario) in kWh
 
     Notes:
-      - year labels are strings in the CSV (e.g., "typical_year", "year_1", "2025")
+      - year labels are read as strings from the CSV header but must match the
+        explicit Multi-Year set labels (typically calendar years such as "2026")
       - scenario labels are strings ("scenario_1", ...)
     """
     if not path.exists():
@@ -224,11 +429,12 @@ def _load_resource_availability_csv(
     resource_coord: xr.DataArray,
 ) -> xr.DataArray:
     """
-    Parse multi-year (dynamic) resource_availability.csv template with 3 header rows:
+    Parse multi-year (dynamic) resource_availability.csv template with 3 header rows.
 
-      meta,scenario_1,scenario_1,...
-      hour,year_1,year_1,...
-      ,Solar PV,Wind Turbine,...
+    Conceptual layout:
+      row 1: meta, scenario_1, scenario_1, ...
+      row 2: hour, 2026, 2026, ...
+      row 3: , Solar PV, Wind Turbine, ...
 
     Required:
       - header=[0,1,2]
@@ -369,21 +575,15 @@ def _load_renewables_yaml(
     Load dynamic renewable techno-economic parameters from inputs/renewables.yaml.
 
     Output dims:
-      - inv_step, resource                  (investment-side + any invariant-by-step params)
+      - inv_step, resource                  (investment-side params)
       - resource                            (technical params, step-invariant)
-      - scenario, inv_step, resource        (scenario-dependent operation params, broadcast across steps)
 
-    Expected YAML structure:
-      renewables:
-        - resource: <label>
-          investment:
-            by_step:
-              "<inv_step_label>": {investment-side params}
-          technical:
-            {step-invariant technical params}
-          operation:
-            by_scenario:
-              "<scenario>": {scenario operation params}
+    Supported YAML structures:
+      - Current shared-technology schema:
+          investment.by_step + shared technical
+      - Legacy schemas:
+          investment.by_step + shared technical + operation.by_scenario
+          by_step.<step>.investment / technical / operation.by_scenario
 
     Notes:
       - inv_step labels MUST match sets.inv_step, e.g. ["1","2"].
@@ -417,34 +617,32 @@ def _load_renewables_yaml(
         "wacc",
         "grant_share_of_capex",
         "embedded_emissions_kgco2e_per_kw",   # embodied per kW installed (investment-side)
+        "fixed_om_share_per_year",
+        "production_subsidy_per_kwh",
     ]
+    OPTIONAL_INVESTMENT_BY_STEP = {
+        "fixed_om_share_per_year": 0.0,
+        "production_subsidy_per_kwh": 0.0,
+    }
 
     # technical, step-invariant (single technology physics)
     PARAMS_TECHNICAL_INVARIANT = [
         "inverter_efficiency",
         "specific_area_m2_per_kw",            # physical land-use coefficient (resource-level)
         "max_installable_capacity_kw",        # allow None -> NaN
-    ]
-
-    # operation, scenario-dependent (NOT step-dependent in YAML)
-    # We broadcast across inv_step so downstream still sees (scenario, inv_step, resource)
-    PARAMS_OPERATION_BY_SCENARIO = [
-        "fixed_om_share_per_year",
-        "production_subsidy_per_kwh",
         "capacity_degradation_rate_per_year",
     ]
-    OPTIONAL_OPERATION = {
-        "capacity_degradation_rate_per_year",
-    }
+    OPTIONAL_TECHNICAL = {"capacity_degradation_rate_per_year": 0.0}
 
     n_k = len(step_labels)
     n_r = len(resource_labels)
-    n_s = len(scenario_labels)
-
     # allocate arrays
     inv_arr = {k: np.full((n_k, n_r), np.nan, dtype=float) for k in PARAMS_INVESTMENT_BY_STEP}
     tech_arr = {k: np.full((n_r,), np.nan, dtype=float) for k in PARAMS_TECHNICAL_INVARIANT}
-    op_arr = {k: np.full((n_s, n_k, n_r), np.nan, dtype=float) for k in PARAMS_OPERATION_BY_SCENARIO}
+    op_arr = {
+        "fixed_om_share_per_year": np.full((n_k, n_r), np.nan, dtype=float),
+        "production_subsidy_per_kwh": np.full((n_k, n_r), np.nan, dtype=float),
+    }
 
     # -----------------------------
     # Load each renewable entry
@@ -463,6 +661,12 @@ def _load_renewables_yaml(
                 f"{path.name}: renewable.resource='{res_label}' not found in sets.resource={resource_labels}."
             )
         j = res_to_idx[res_label]
+
+        if "by_step" in item:
+            raise InputValidationError(
+                f"{path.name}: resource '{res_label}' uses legacy top-level `by_step`. "
+                "Use `investment.by_step` plus a shared `technical` block."
+            )
 
         # ---- investment.by_step
         inv_block = item.get("investment", None)
@@ -493,6 +697,9 @@ def _load_renewables_yaml(
                 )
             for k in PARAMS_INVESTMENT_BY_STEP:
                 if k not in blk:
+                    if k in OPTIONAL_INVESTMENT_BY_STEP:
+                        inv_arr[k][si, j] = float(OPTIONAL_INVESTMENT_BY_STEP[k])
+                        continue
                     raise InputValidationError(
                         f"{path.name}: missing investment param '{k}' in resource '{res_label}', step '{st}'."
                     )
@@ -505,6 +712,11 @@ def _load_renewables_yaml(
         tech_block = item.get("technical", None)
         if not isinstance(tech_block, dict):
             raise InputValidationError(f"{path.name}: resource '{res_label}' missing/invalid 'technical' mapping.")
+        if "by_step" in tech_block:
+            raise InputValidationError(
+                f"{path.name}: resource '{res_label}' uses legacy `technical.by_step`. "
+                "Multi-year renewables require one shared `technical` block."
+            )
 
         for k in PARAMS_TECHNICAL_INVARIANT:
             if k in tech_block:
@@ -512,6 +724,10 @@ def _load_renewables_yaml(
                     tech_arr[k][j] = _as_float_or_nan(tech_block.get(k), name=f"{res_label}/technical/{k}")
                 else:
                     tech_arr[k][j] = _as_float(tech_block.get(k), name=f"{res_label}/technical/{k}", default=0.0)
+                continue
+
+            if k in OPTIONAL_TECHNICAL:
+                tech_arr[k][j] = float(OPTIONAL_TECHNICAL[k])
                 continue
 
             # Backward compatibility:
@@ -532,41 +748,16 @@ def _load_renewables_yaml(
                 f"{path.name}: missing technical param '{k}' in resource '{res_label}' (technical.{k})."
             )
 
-        # ---- operation.by_scenario (NOT step-dependent)
-        op_block = item.get("operation", None)
-        if not isinstance(op_block, dict):
-            raise InputValidationError(f"{path.name}: resource '{res_label}' missing/invalid 'operation' mapping.")
+        for st in step_labels:
+            si = step_to_idx[st]
+            op_arr["fixed_om_share_per_year"][si, j] = inv_arr["fixed_om_share_per_year"][si, j]
+            op_arr["production_subsidy_per_kwh"][si, j] = inv_arr["production_subsidy_per_kwh"][si, j]
 
-        by_scenario = op_block.get("by_scenario", None)
-        if not isinstance(by_scenario, dict):
+        if "operation" in item:
             raise InputValidationError(
-                f"{path.name}: resource '{res_label}' operation.by_scenario missing/invalid."
+                f"{path.name}: resource '{res_label}' uses legacy `operation` blocks. "
+                "Store fixed O&M and production subsidy in `investment.by_step`, and store capacity degradation once in `technical`."
             )
-
-        for s_idx, s_lab in enumerate(scenario_labels):
-            if s_lab not in by_scenario:
-                raise InputValidationError(
-                    f"{path.name}: resource '{res_label}' missing scenario '{s_lab}' in operation.by_scenario."
-                )
-
-            sb = by_scenario[s_lab]
-            if not isinstance(sb, dict):
-                raise InputValidationError(
-                    f"{path.name}: operation.by_scenario['{s_lab}'] for resource '{res_label}' must be a dict."
-                )
-
-            # broadcast across inv_step
-            for st in step_labels:
-                si = step_to_idx[st]
-                for k in PARAMS_OPERATION_BY_SCENARIO:
-                    if k not in sb:
-                        if k in OPTIONAL_OPERATION:
-                            op_arr[k][s_idx, si, j] = 0.0
-                            continue
-                        raise InputValidationError(
-                            f"{path.name}: missing operation param '{k}' in resource '{res_label}', scenario '{s_lab}'."
-                        )
-                    op_arr[k][s_idx, si, j] = _as_float(sb.get(k), name=f"{res_label}/operation/{s_lab}/{k}", default=0.0)
 
     # -----------------------------
     # Build xr.Dataset
@@ -595,19 +786,22 @@ def _load_renewables_yaml(
             attrs={"source_file": str(path), "component": "renewable", "original_key": k, "scenario_dependent": False},
         )
 
-    # operation by scenario (broadcast to inv_step): (scenario, inv_step, resource)
-    for k in PARAMS_OPERATION_BY_SCENARIO:
+    # investment-side shared economic terms by cohort/resource
+    for k in ("fixed_om_share_per_year", "production_subsidy_per_kwh"):
         var_name = f"res_{k}"
         data_vars[var_name] = xr.DataArray(
             op_arr[k],
-            coords={"scenario": scenario_coord, "inv_step": inv_step_coord, "resource": resource_coord},
-            dims=("scenario", "inv_step", "resource"),
+            coords={"inv_step": inv_step_coord, "resource": resource_coord},
+            dims=("inv_step", "resource"),
             name=var_name,
-            attrs={"source_file": str(path), "component": "renewable", "original_key": k, "scenario_dependent": True},
+            attrs={"source_file": str(path), "component": "renewable", "original_key": k, "scenario_dependent": False},
         )
 
     ds = xr.Dataset(data_vars=data_vars)
-    ds.attrs["settings"] = {"inputs_loaded": {"renewables_yaml": str(path)}, "schema": "new_cohort_investment_only"}
+    ds.attrs["settings"] = {
+        "inputs_loaded": {"renewables_yaml": str(path)},
+        "schema": "shared_technology_capacity_expansion",
+    }
     return ds
 
 def _load_battery_yaml(
@@ -615,31 +809,18 @@ def _load_battery_yaml(
     *,
     scenario_coord: xr.DataArray,
     inv_step_coord: xr.DataArray,
+    require_initial_soh: bool = False,
+    require_cycle_fade_coefficient: bool = False,
+    require_calendar_time_increment: bool = False,
 ) -> xr.Dataset:
-    """
-    Load dynamic battery parameters from inputs/battery.yaml (NEW SCHEMA).
+    """Load dynamic battery parameters from the current shared-technology schema.
 
-    expected YAML structure:
-      battery:
-        label: ...
-        investment:
-          by_step:
-            "<inv_step>":
-              {investment-side params, step-dependent}
-        technical:
-          {technical params, step-INVARIANT}
-        operation:
-          by_scenario:
-            "<scenario>":
-              {operation params, scenario-dependent (NOT step-dependent)}
+    Required schema:
+    - battery.investment.by_step
+    - battery.technical
 
-    Output dims (recommended for downstream convenience):
-      - inv_step                        investment-side params
-      - scenario, inv_step              technical + operation params (broadcasted)
-
-    Notes:
-      - embedded_emissions_kgco2e_per_kwh is treated as investment-side (cohort-dependent) here.
-      - Degradation keys are OPTIONAL (dynamic-only); if missing default to 0.0.
+    Technical battery parameters are treated as shared across investment steps
+    in the multi-year formulation.
     """
     payload = _read_yaml(path)
 
@@ -647,133 +828,134 @@ def _load_battery_yaml(
     if not isinstance(bat, dict):
         raise InputValidationError(f"{path.name}: missing/invalid 'battery' mapping.")
 
-    scenario_labels = [str(s) for s in scenario_coord.values.tolist()]
     step_labels = [str(st) for st in inv_step_coord.values.tolist()]
-    n_s = len(scenario_labels)
     n_k = len(step_labels)
 
     step_to_idx = {lab: i for i, lab in enumerate(step_labels)}
-    scen_to_idx = {lab: i for i, lab in enumerate(scenario_labels)}
 
-    # -----------------------------
-    # Parameter lists (NEW)
-    # -----------------------------
     INVESTMENT_BY_STEP = [
         "nominal_capacity_kwh",
         "specific_investment_cost_per_kwh",
         "wacc",
         "calendar_lifetime_years",
-        "embedded_emissions_kgco2e_per_kwh", # cohort-side
+        "embedded_emissions_kgco2e_per_kwh",
+        "fixed_om_share_per_year",
     ]
-
-    TECHNICAL_INVARIANT = [
+    OPTIONAL_INVESTMENT_BY_STEP = {"fixed_om_share_per_year": 0.0}
+    SHARED_TECHNICAL_KEYS = [
         "charge_efficiency",
         "discharge_efficiency",
         "initial_soc",
         "depth_of_discharge",
         "max_discharge_time_hours",
         "max_charge_time_hours",
-        "max_installable_capacity_kwh",      # allow None -> NaN
-    ]
-
-    OPERATION_BY_SCENARIO = [
-        "fixed_om_share_per_year",
-        "capacity_degradation_rate_per_year",  # optional -> default 0.0
-    ]
-    OPTIONAL_OPERATION = {
+        "max_installable_capacity_kwh",
         "capacity_degradation_rate_per_year",
+    ]
+    OPTIONAL_SHARED_TECHNICAL = {
+        "capacity_degradation_rate_per_year": 0.0,
     }
+    CONDITIONAL_TECHNICAL_DEFAULTS = {
+        "initial_soh": 1.0,
+        "end_of_life_soh": np.nan,
+        "cycle_lifetime_to_eol_cycles": np.nan,
+        "cycle_fade_coefficient_per_kwh_throughput": np.nan,
+        "calendar_time_increment_per_year": 1.0,
+    }
+    REQUIRED_CONDITIONAL_TECHNICAL = {
+        key
+        for key, required in {
+            "initial_soh": require_initial_soh,
+            "cycle_fade_coefficient_per_kwh_throughput": require_cycle_fade_coefficient,
+            "calendar_time_increment_per_year": require_calendar_time_increment,
+        }.items()
+        if required
+    }
+    SHARED_TECHNICAL_PATH_KEYS = [
+        "efficiency_curve_csv",
+        "calendar_fade_curve_csv",
+    ]
+    if "by_step" in bat:
+        raise InputValidationError(
+            f"{path.name}: battery uses legacy top-level `by_step`. "
+            "Use `battery.investment.by_step` plus a shared `battery.technical` block."
+        )
 
-    # -----------------------------
-    # 1) Investment block: battery.investment.by_step
-    # -----------------------------
     inv_block = bat.get("investment", None)
     if not isinstance(inv_block, dict):
         raise InputValidationError(f"{path.name}: missing/invalid battery.investment mapping.")
-
-    inv_by_step_raw = inv_block.get("by_step", None)
     inv_by_step = _remap_by_step_dict(
         path,
-        inv_by_step_raw,
+        inv_block.get("by_step", None),
         expected_steps=step_labels,
         context="battery.investment.by_step",
     )
-
     inv_arr = {k: np.full((n_k,), np.nan, dtype=float) for k in INVESTMENT_BY_STEP}
-
     for st in step_labels:
         blk = inv_by_step[st]
         if not isinstance(blk, dict):
             raise InputValidationError(f"{path.name}: battery.investment.by_step['{st}'] must be a dict.")
         si = step_to_idx[st]
-
         for k in INVESTMENT_BY_STEP:
             if k not in blk:
+                if k in OPTIONAL_INVESTMENT_BY_STEP:
+                    inv_arr[k][si] = float(OPTIONAL_INVESTMENT_BY_STEP[k])
+                    continue
                 raise InputValidationError(
                     f"{path.name}: missing investment param '{k}' in battery.investment.by_step['{st}']."
                 )
-            # Persist parsed investment values into (inv_step,) arrays.
-            if k in ("max_installable_capacity_kwh",):
-                inv_arr[k][si] = _as_float_or_nan(blk.get(k), name=f"battery/investment/{st}/{k}")
-            else:
-                inv_arr[k][si] = _as_float(blk.get(k), name=f"battery/investment/{st}/{k}", default=0.0)
+            inv_arr[k][si] = _as_float(blk.get(k), name=f"battery/investment/{st}/{k}", default=0.0)
 
-    # -----------------------------
-    # 2) Technical block: battery.technical (step-invariant)
-    # -----------------------------
-    tech = bat.get("technical", None)
-    if not isinstance(tech, dict):
+    tech_block = bat.get("technical", None)
+    if not isinstance(tech_block, dict):
         raise InputValidationError(f"{path.name}: missing/invalid battery.technical mapping.")
+    tech_by_step_raw = tech_block.get("by_step", None)
+    shared_tech: dict[str, float] = {}
+    shared_paths: dict[str, str | None] = {}
+    legacy_tech = None if tech_by_step_raw is not None else tech_block
 
-    tech_vals = {}
-    for k in TECHNICAL_INVARIANT:
-        if k not in tech:
-            raise InputValidationError(f"{path.name}: missing technical param '{k}' in battery.technical.")
-        if k in ("max_installable_capacity_kwh",):
-            tech_vals[k] = _as_float_or_nan(tech.get(k), name=f"battery/technical/{k}")
-        else:
-            tech_vals[k] = _as_float(tech.get(k), name=f"battery/technical/{k}", default=0.0)
-
-    # -----------------------------
-    # 3) Operation block: battery.operation.by_scenario (scenario-dependent, not step-dependent)
-    # -----------------------------
-    op = bat.get("operation", None)
-    if not isinstance(op, dict):
-        raise InputValidationError(f"{path.name}: missing/invalid battery.operation mapping.")
-
-    op_by_scen = op.get("by_scenario", None)
-    if not isinstance(op_by_scen, dict):
-        raise InputValidationError(f"{path.name}: missing/invalid battery.operation.by_scenario mapping.")
-
-    op_arr = {k: np.full((n_s,), np.nan, dtype=float) for k in OPERATION_BY_SCENARIO}
-
-    for s in scenario_labels:
-        if s not in op_by_scen:
-            raise InputValidationError(
-                f"{path.name}: battery.operation.by_scenario missing scenario '{s}'. Expected: {scenario_labels}"
-            )
-        sb = op_by_scen[s]
-        if not isinstance(sb, dict):
-            raise InputValidationError(f"{path.name}: battery.operation.by_scenario['{s}'] must be a dict.")
-
-        sj = scen_to_idx[s]
-        for k in OPERATION_BY_SCENARIO:
-            if k not in sb:
-                if k in OPTIONAL_OPERATION:
-                    op_arr[k][sj] = 0.0
+    if tech_by_step_raw is not None:
+        raise InputValidationError(
+            f"{path.name}: battery uses legacy `technical.by_step`. "
+            "Multi-year battery technical parameters must be provided once in the shared `battery.technical` block."
+        )
+    else:
+        if not isinstance(legacy_tech, dict):
+            raise InputValidationError(f"{path.name}: missing/invalid battery.technical mapping.")
+        if (
+            "calendar_time_increment_per_year" not in legacy_tech
+            and "calendar_time_increment_per_step" in legacy_tech
+        ):
+            legacy_tech["calendar_time_increment_per_year"] = legacy_tech["calendar_time_increment_per_step"]
+        for k in SHARED_TECHNICAL_KEYS:
+            if k not in legacy_tech:
+                if k in OPTIONAL_SHARED_TECHNICAL:
+                    shared_tech[k] = float(OPTIONAL_SHARED_TECHNICAL[k])
                     continue
-                raise InputValidationError(
-                    f"{path.name}: missing operation param '{k}' in battery.operation.by_scenario['{s}']."
-                )
-            op_arr[k][sj] = _as_float(sb.get(k), name=f"battery/operation/{s}/{k}", default=0.0)
+                raise InputValidationError(f"{path.name}: missing technical param '{k}' in battery.technical.")
+            if k == "max_installable_capacity_kwh":
+                shared_tech[k] = _as_float_or_nan(legacy_tech.get(k), name=f"battery/technical/{k}")
+            else:
+                shared_tech[k] = _as_float(legacy_tech.get(k), name=f"battery/technical/{k}", default=0.0)
+        for key, default_value in CONDITIONAL_TECHNICAL_DEFAULTS.items():
+            if key not in legacy_tech:
+                if key in REQUIRED_CONDITIONAL_TECHNICAL:
+                    raise InputValidationError(f"{path.name}: missing technical param '{key}' in battery.technical.")
+                shared_tech[key] = float(default_value)
+                continue
+            shared_tech[key] = _as_float(legacy_tech.get(key), name=f"battery/technical/{key}", default=0.0)
+        for k in SHARED_TECHNICAL_PATH_KEYS:
+            shared_paths[k] = _normalize_optional_path(legacy_tech.get(k, None))
 
-    # -----------------------------
-    # Build xr.Dataset
-    # -----------------------------
+    legacy_op = bat.get("operation", None)
+    if isinstance(legacy_op, dict):
+        raise InputValidationError(
+            f"{path.name}: battery uses legacy `operation` blocks. "
+            "Store fixed O&M in `battery.investment.by_step` and degradation inputs in the shared `battery.technical` block."
+        )
+
     PREFIX = "battery_"
     data_vars = {}
-
-    # investment: (inv_step,)
     for k in INVESTMENT_BY_STEP:
         var_name = f"{PREFIX}{k}"
         data_vars[var_name] = xr.DataArray(
@@ -784,32 +966,17 @@ def _load_battery_yaml(
             attrs={"source_file": str(path), "component": "battery", "original_key": k, "scenario_dependent": False},
         )
 
-    # technical: broadcast to (scenario, inv_step) for downstream convenience
-    for k in TECHNICAL_INVARIANT:
+    for k in SHARED_TECHNICAL_KEYS + list(CONDITIONAL_TECHNICAL_DEFAULTS.keys()):
         var_name = f"{PREFIX}{k}"
-        full = np.full((n_s, n_k), float(tech_vals[k]), dtype=float)
         data_vars[var_name] = xr.DataArray(
-            full,
-            coords={"scenario": scenario_coord, "inv_step": inv_step_coord},
-            dims=("scenario", "inv_step"),
+            shared_tech[k],
             name=var_name,
             attrs={"source_file": str(path), "component": "battery", "original_key": k, "scenario_dependent": False},
         )
-
-    # operation: broadcast (scenario,) -> (scenario, inv_step)
-    for k in OPERATION_BY_SCENARIO:
-        var_name = f"{PREFIX}{k}"
-        full = np.repeat(op_arr[k].reshape(n_s, 1), n_k, axis=1)
-        data_vars[var_name] = xr.DataArray(
-            full,
-            coords={"scenario": scenario_coord, "inv_step": inv_step_coord},
-            dims=("scenario", "inv_step"),
-            name=var_name,
-            attrs={"source_file": str(path), "component": "battery", "original_key": k, "scenario_dependent": True},
-        )
-
     ds = xr.Dataset(data_vars=data_vars)
     ds.attrs["battery_label"] = str(bat.get("label", "Battery"))
+    ds.attrs["efficiency_curve_file"] = shared_paths.get("efficiency_curve_csv", None)
+    ds.attrs["battery_calendar_fade_curve_file"] = shared_paths.get("calendar_fade_curve_csv", None)
     ds.attrs["settings"] = {"inputs_loaded": {"battery_yaml": str(path)}, "formulation": "dynamic"}
     return ds
 
@@ -821,35 +988,7 @@ def _load_generator_and_fuel_yaml(
     inv_step_coord: xr.DataArray,
     year_coord: xr.DataArray,
 ) -> Tuple[xr.Dataset, xr.Dataset, Optional[xr.Dataset], dict]:
-    """
-    Load dynamic generator + fuel blocks from inputs/generator.yaml.
-
-    generator schema:
-      generator:
-        label: ...
-        investment:
-          by_step:
-            base OR step_i:
-              {step-dependent investment-side parameters}
-        technical:
-          {step-invariant technical parameters}
-        operation:
-          by_scenario:
-            <scenario>:
-              {scenario-dependent operation parameters (+ optional degradation in dynamic)}
-
-    Fuel:
-      fuel:
-        label: ...
-        by_scenario:
-          <scenario>:
-            lhv_kwh_per_unit_fuel
-            direct_emissions_kgco2e_per_unit_fuel
-            by_year_cost_per_unit_fuel  # list aligned with year labels
-
-    Returns:
-      (gen_ds, fuel_ds, eff_curve_ds_or_none, meta_flags)
-    """
+    """Load dynamic generator + fuel parameters from the current shared-technology schema."""
     payload = _read_yaml(path)
 
     gen = payload.get("generator", None)
@@ -863,51 +1002,40 @@ def _load_generator_and_fuel_yaml(
     step_labels = [str(st) for st in inv_step_coord.values.tolist()]
     year_labels = [str(y) for y in year_coord.values.tolist()]
 
-    n_s = len(scenario_labels)
     n_k = len(step_labels)
     n_y = len(year_labels)
 
     step_to_idx = {lab: i for i, lab in enumerate(step_labels)}
 
-    # ============================================================
-    # Generator parameters (NEW)
-    # ============================================================
-    # investment-side params (step-dependent, scenario-invariant)
     GEN_INVESTMENT_STEP = [
         "nominal_capacity_kw",
         "lifetime_years",
         "specific_investment_cost_per_kw",
         "wacc",
-        "embedded_emissions_kgco2e_per_kw",   # investment-side attribute
-    ]
-    OPTIONAL_GEN_INVESTMENT_STEP = {"max_installable_capacity_kw"}
-
-    # technical params (step-invariant scalars)
-    GEN_TECHNICAL = [
-        "nominal_efficiency_full_load",
-        "max_installable_capacity_kw",        # optional
-    ]
-
-    # operation params (scenario-dependent, NOT step-dependent)
-    GEN_OPERATION_SCENARIO = [
+        "embedded_emissions_kgco2e_per_kw",
         "fixed_om_share_per_year",
-        "efficiency_curve_csv",              # optional, scenario-level
-        # dynamic-only optional degradation
+    ]
+    OPTIONAL_GEN_INVESTMENT_STEP = {"fixed_om_share_per_year"}
+    SHARED_GEN_TECHNICAL_KEYS = [
+        "nominal_efficiency_full_load",
+        "max_installable_capacity_kw",
         "capacity_degradation_rate_per_year",
     ]
-    OPTIONAL_GEN_OPERATION_SCENARIO = {
-        "efficiency_curve_csv",
-        "capacity_degradation_rate_per_year",
-    }
+    OPTIONAL_SHARED_GEN_TECHNICAL = {"capacity_degradation_rate_per_year": 0.0}
+    SHARED_GEN_PATH_KEYS = ["efficiency_curve_csv"]
 
-    # ---- investment.by_step
+    if "by_step" in gen:
+        raise InputValidationError(
+            f"{path.name}: generator uses legacy top-level `by_step`. "
+            "Use `generator.investment.by_step` plus a shared `generator.technical` block."
+        )
+
     inv_block = gen.get("investment", None)
     if not isinstance(inv_block, dict):
         raise InputValidationError(f"{path.name}: missing/invalid generator.investment mapping.")
-    inv_by_step_raw = inv_block.get("by_step", None)
     inv_by_step = _remap_by_step_dict(
         path,
-        inv_by_step_raw,
+        inv_block.get("by_step", None),
         expected_steps=step_labels,
         context="generator.investment.by_step",
     )
@@ -923,76 +1051,53 @@ def _load_generator_and_fuel_yaml(
         for k in GEN_INVESTMENT_STEP:
             if k not in blk:
                 if k in OPTIONAL_GEN_INVESTMENT_STEP:
-                    inv_arr[k][si] = float("nan")
+                    inv_arr[k][si] = 0.0
                     continue
                 raise InputValidationError(
                     f"{path.name}: missing generator investment param '{k}' in investment.by_step['{st}']."
                 )
 
             if k in OPTIONAL_GEN_INVESTMENT_STEP:
-                inv_arr[k][si] = _as_float_or_nan(blk.get(k), name=f"generator/investment/{st}/{k}")
+                inv_arr[k][si] = _as_float(blk.get(k), name=f"generator/investment/{st}/{k}", default=0.0)
             else:
                 inv_arr[k][si] = _as_float(blk.get(k), name=f"generator/investment/{st}/{k}", default=0.0)
 
-    # ---- technical (scalars)
     tech_block = gen.get("technical", None)
+    shared_gen_tech: dict[str, float] = {}
+    shared_gen_paths: dict[str, str | None] = {}
     if not isinstance(tech_block, dict):
         raise InputValidationError(f"{path.name}: missing/invalid generator.technical mapping.")
+    tech_by_step_raw = tech_block.get("by_step", None)
+    legacy_tech = None if tech_by_step_raw is not None else tech_block
+    if tech_by_step_raw is not None:
+        raise InputValidationError(
+            f"{path.name}: generator uses legacy `technical.by_step`. "
+            "Multi-year generator technical parameters must be provided once in the shared `generator.technical` block."
+        )
+    else:
+        if not isinstance(legacy_tech, dict):
+            raise InputValidationError(f"{path.name}: missing/invalid generator.technical mapping.")
+        for k in SHARED_GEN_TECHNICAL_KEYS:
+            if k not in legacy_tech:
+                if k in OPTIONAL_SHARED_GEN_TECHNICAL:
+                    shared_gen_tech[k] = float(OPTIONAL_SHARED_GEN_TECHNICAL[k])
+                    continue
+                raise InputValidationError(f"{path.name}: missing generator technical param '{k}' in generator.technical.")
+            if k == "max_installable_capacity_kw":
+                shared_gen_tech[k] = _as_float_or_nan(legacy_tech.get(k), name=f"generator/technical/{k}")
+            else:
+                shared_gen_tech[k] = _as_float(legacy_tech.get(k), name=f"generator/technical/{k}", default=0.0)
+        for k in SHARED_GEN_PATH_KEYS:
+            shared_gen_paths[k] = _normalize_optional_path(legacy_tech.get(k, None))
 
-    tech_vals: dict[str, float] = {}
-    for k in GEN_TECHNICAL:
-        if k not in tech_block:
-            raise InputValidationError(f"{path.name}: missing generator technical param '{k}' in generator.technical.")
-        if k == "max_installable_capacity_kw":
-            tech_vals[k] = _as_float_or_nan(tech_block.get(k), name=f"generator/technical/{k}")
-        else:
-            tech_vals[k] = _as_float(tech_block.get(k), name=f"generator/technical/{k}", default=0.0)
-
-    # ---- operation.by_scenario (scenario-dependent, no steps)
-    op_block = gen.get("operation", None)
-    if not isinstance(op_block, dict):
-        raise InputValidationError(f"{path.name}: missing/invalid generator.operation mapping.")
-    op_by_scenario = op_block.get("by_scenario", None)
-    if not isinstance(op_by_scenario, dict):
-        raise InputValidationError(f"{path.name}: generator.operation.by_scenario missing/invalid.")
-
-    op_arr = {k: np.full((n_s,), np.nan, dtype=float) for k in GEN_OPERATION_SCENARIO if k != "efficiency_curve_csv"}
-    curve_files: dict[str, Optional[str]] = {s: None for s in scenario_labels}
-
-    for s_idx, s in enumerate(scenario_labels):
-        if s not in op_by_scenario:
-            raise InputValidationError(f"{path.name}: generator.operation.by_scenario missing scenario '{s}'.")
-        sb = op_by_scenario[s]
-        if not isinstance(sb, dict):
-            raise InputValidationError(f"{path.name}: generator.operation.by_scenario['{s}'] must be a dict.")
-
-        # curve pointer (scenario-dependent)
-        raw_curve = sb.get("efficiency_curve_csv", None)
-        curve_files[s] = raw_curve.strip() if isinstance(raw_curve, str) and raw_curve.strip() else None
-
-        # fixed om is required
-        if "fixed_om_share_per_year" not in sb:
-            raise InputValidationError(
-                f"{path.name}: missing generator operation param 'fixed_om_share_per_year' in scenario '{s}'."
-            )
-        op_arr["fixed_om_share_per_year"][s_idx] = _as_float(
-            sb.get("fixed_om_share_per_year"), name=f"generator/operation/{s}/fixed_om_share_per_year", default=0.0
+    legacy_op_block = gen.get("operation", None)
+    if isinstance(legacy_op_block, dict):
+        raise InputValidationError(
+            f"{path.name}: generator uses legacy `operation` blocks. "
+            "Store fixed O&M in `generator.investment.by_step` and degradation once in `generator.technical`."
         )
 
-        # degradation optional (dynamic)
-        for k in ("capacity_degradation_rate_per_year"):
-            if k in op_arr:
-                if k not in sb:
-                    op_arr[k][s_idx] = 0.0
-                else:
-                    op_arr[k][s_idx] = _as_float(sb.get(k), name=f"generator/operation/{s}/{k}", default=0.0)
-
-    # ------------------------------------------------------------
-    # Build generator dataset
-    # ------------------------------------------------------------
     gen_data_vars: dict[str, xr.DataArray] = {}
-
-    # investment by step: (inv_step,)
     for k in GEN_INVESTMENT_STEP:
         var_name = f"generator_{k}"
         gen_data_vars[var_name] = xr.DataArray(
@@ -1003,100 +1108,71 @@ def _load_generator_and_fuel_yaml(
             attrs={"source_file": str(path), "scenario_dependent": False, "original_key": k, "block": "investment"},
         )
 
-    # technical scalars: dims=()
-    for k in GEN_TECHNICAL:
+    for k in SHARED_GEN_TECHNICAL_KEYS:
         var_name = f"generator_{k}"
         gen_data_vars[var_name] = xr.DataArray(
-            tech_vals[k],
-            dims=(),
+            shared_gen_tech[k],
             name=var_name,
             attrs={"source_file": str(path), "scenario_dependent": False, "original_key": k, "block": "technical"},
         )
-
-    # operation: (scenario,)
-    # fixed_om always exists; degradation arrays exist only if you kept them in GEN_OPERATION_SCENARIO
-    gen_data_vars["generator_fixed_om_share_per_year"] = xr.DataArray(
-        op_arr["fixed_om_share_per_year"],
-        coords={"scenario": scenario_coord},
-        dims=("scenario",),
-        name="generator_fixed_om_share_per_year",
-        attrs={"source_file": str(path), "scenario_dependent": True, "original_key": "fixed_om_share_per_year", "block": "operation"},
-    )
-    for k in ("capacity_degradation_rate_per_year"):
-        if k in op_arr:
-            var_name = f"generator_{k}"
-            gen_data_vars[var_name] = xr.DataArray(
-                op_arr[k],
-                coords={"scenario": scenario_coord},
-                dims=("scenario",),
-                name=var_name,
-                attrs={"source_file": str(path), "scenario_dependent": True, "original_key": k, "block": "operation"},
-            )
-
     gen_ds = xr.Dataset(data_vars=gen_data_vars)
     gen_ds.attrs["generator_label"] = str(gen.get("label", "Generator"))
+    gen_ds.attrs["generator_efficiency_curve_file"] = shared_gen_paths.get("efficiency_curve_csv", None)
 
-    # ============================================================
-    # Fuel parameters (dynamic)
-    # ============================================================
-    fuel_by_scenario = fuel.get("by_scenario", None)
-    if not isinstance(fuel_by_scenario, dict):
-        raise InputValidationError(f"{path.name}: fuel.by_scenario missing/invalid.")
-
-    FUEL_SCALAR = [
-        "lhv_kwh_per_unit_fuel",
-        "direct_emissions_kgco2e_per_unit_fuel",
-    ]
-    FUEL_YEARLY = "by_year_cost_per_unit_fuel"
-
-    fuel_scalar_arr = {k: np.full((n_s,), np.nan, dtype=float) for k in FUEL_SCALAR}
-    fuel_cost_year_arr = np.full((n_s, n_y), np.nan, dtype=float)
-
-    for s_idx, s in enumerate(scenario_labels):
-        if s not in fuel_by_scenario:
-            raise InputValidationError(f"{path.name}: fuel.by_scenario missing scenario '{s}'.")
-        fb = fuel_by_scenario[s]
-        if not isinstance(fb, dict):
-            raise InputValidationError(f"{path.name}: fuel.by_scenario['{s}'] must be a dict.")
-
-        for k in FUEL_SCALAR:
-            if k not in fb:
-                raise InputValidationError(f"{path.name}: fuel.by_scenario['{s}'] missing '{k}'.")
-            fuel_scalar_arr[k][s_idx] = _as_float(fb.get(k), name=f"fuel/{s}/{k}", default=0.0)
-
-        if FUEL_YEARLY not in fb:
+    fuel_shared_vals = {
+        "lhv_kwh_per_unit_fuel": float("nan"),
+        "direct_emissions_kgco2e_per_unit_fuel": float("nan"),
+    }
+    fuel_cost_year_arr = np.full((len(scenario_labels), n_y), np.nan, dtype=float)
+    fuel_technical_block = fuel.get("technical", None)
+    fuel_cost_block = fuel.get("cost", None)
+    if "by_step" in fuel:
+        raise InputValidationError(
+            f"{path.name}: fuel uses legacy `by_step`. "
+            "Multi-year fuel inputs require one shared `fuel.technical` block plus `fuel.cost.by_scenario` yearly prices."
+        )
+    if isinstance(fuel_technical_block, dict):
+        for key in fuel_shared_vals:
+            if key not in fuel_technical_block:
+                raise InputValidationError(f"{path.name}: fuel.technical missing '{key}'.")
+            fuel_shared_vals[key] = _as_float(fuel_technical_block.get(key), name=f"fuel/technical/{key}", default=0.0)
+        fuel_cost_by_scenario = fuel_cost_block.get("by_scenario", None) if isinstance(fuel_cost_block, dict) else None
+        if not isinstance(fuel_cost_by_scenario, dict):
             raise InputValidationError(
-                f"{path.name}: fuel.by_scenario['{s}'] missing '{FUEL_YEARLY}' (dynamic expects yearly list)."
+                f"{path.name}: shared-technology dynamic fuel inputs require fuel.cost.by_scenario for yearly fuel prices."
             )
-        series = fb.get(FUEL_YEARLY)
-        if not isinstance(series, list):
-            raise InputValidationError(
-                f"{path.name}: fuel.by_scenario['{s}'].{FUEL_YEARLY} must be a list aligned with year labels."
+        for s_idx, s in enumerate(scenario_labels):
+            block = fuel_cost_by_scenario.get(s, None)
+            if not isinstance(block, dict):
+                raise InputValidationError(f"{path.name}: fuel.cost.by_scenario missing scenario '{s}'.")
+            series = block.get("by_year_cost_per_unit_fuel", None)
+            if not isinstance(series, list) or len(series) != n_y:
+                raise InputValidationError(
+                    f"{path.name}: fuel.cost.by_scenario['{s}'].by_year_cost_per_unit_fuel must be a list with {n_y} entries."
+                )
+            fuel_cost_year_arr[s_idx, :] = np.asarray(
+                [_as_float(v, name=f"fuel/cost/{s}/by_year_cost_per_unit_fuel[{i}]", default=0.0) for i, v in enumerate(series)],
+                dtype=float,
             )
-        if len(series) != n_y:
-            raise InputValidationError(
-                f"{path.name}: fuel.by_scenario['{s}'].{FUEL_YEARLY} length mismatch: "
-                f"expected {n_y} (years={year_labels}), got {len(series)}."
-            )
-
-        vals = []
-        for i, v in enumerate(series):
-            vals.append(_as_float(v, name=f"fuel/{s}/{FUEL_YEARLY}[{i}]", default=0.0))
-        fuel_cost_year_arr[s_idx, :] = np.asarray(vals, dtype=float)
+    elif isinstance(fuel.get("by_scenario", None), dict):
+        raise InputValidationError(
+            f"{path.name}: fuel uses legacy `by_scenario`. "
+            "Multi-year fuel inputs now require `fuel.technical` plus `fuel.cost.by_scenario`."
+        )
+    else:
+        raise InputValidationError(
+            f"{path.name}: fuel must provide shared `technical` data plus `cost.by_scenario` yearly prices."
+        )
 
     fuel_ds = xr.Dataset(
         data_vars={
             "fuel_lhv_kwh_per_unit_fuel": xr.DataArray(
-                fuel_scalar_arr["lhv_kwh_per_unit_fuel"],
-                coords={"scenario": scenario_coord},
-                dims=("scenario",),
-                attrs={"source_file": str(path), "scenario_dependent": True, "original_key": "lhv_kwh_per_unit_fuel"},
+                fuel_shared_vals["lhv_kwh_per_unit_fuel"],
+                attrs={"source_file": str(path), "scenario_dependent": False, "original_key": "lhv_kwh_per_unit_fuel"},
             ),
             "fuel_direct_emissions_kgco2e_per_unit_fuel": xr.DataArray(
-                fuel_scalar_arr["direct_emissions_kgco2e_per_unit_fuel"],
-                coords={"scenario": scenario_coord},
-                dims=("scenario",),
-                attrs={"source_file": str(path), "scenario_dependent": True, "original_key": "direct_emissions_kgco2e_per_unit_fuel"},
+                fuel_shared_vals["direct_emissions_kgco2e_per_unit_fuel"],
+                attrs={"source_file": str(path), "scenario_dependent": False, "original_key": "direct_emissions_kgco2e_per_unit_fuel"},
             ),
             "fuel_cost_per_unit_fuel": xr.DataArray(
                 fuel_cost_year_arr,
@@ -1107,94 +1183,80 @@ def _load_generator_and_fuel_yaml(
         }
     )
     fuel_ds.attrs["fuel_label"] = str(fuel.get("label", "Fuel"))
-
-    # ============================================================
-    # Efficiency curve (optional) (scenario, curve_point) -- same behavior
-    # ============================================================
-    any_curve = any(v is not None for v in curve_files.values())
-    partial_load_enabled = bool(any_curve)
-
+    shared_curve_file = shared_gen_paths.get("efficiency_curve_csv", None)
+    unique_curve_files = sorted({v for v in [shared_curve_file] if v})
+    partial_load_enabled = bool(unique_curve_files)
     eff_curve_ds = None
-    if any_curve:
-        rel_list = []
-        eff_list = []
-        valid_scenarios = []
-
-        for s in scenario_labels:
-            fn = curve_files[s]
-            if fn is None:
-                continue
-
-            curve_path = Path(fn)
-            if not curve_path.is_absolute():
-                curve_path = inputs_dir / curve_path
-
-            if not curve_path.exists():
-                raise InputValidationError(
-                    f"{path.name}: efficiency_curve_csv for scenario '{s}' not found: {curve_path}"
-                )
-
-            cdf = pd.read_csv(curve_path)
-
-            req_cols = ["Relative Power Output [-]", "Efficiency [-]"]
-            for col in req_cols:
-                if col not in cdf.columns:
-                    raise InputValidationError(
-                        f"{curve_path.name}: missing required column '{col}'. Required: {req_cols}"
-                    )
-
-            rel = pd.to_numeric(cdf["Relative Power Output [-]"], errors="coerce").to_numpy(dtype=float)
-            eff = pd.to_numeric(cdf["Efficiency [-]"], errors="coerce").to_numpy(dtype=float)
-            if np.isnan(rel).any() or np.isnan(eff).any():
-                raise InputValidationError(f"{curve_path.name}: contains non-numeric values in required columns.")
-
-            if rel.size < 2:
-                raise InputValidationError(f"{curve_path.name}: curve must have at least 2 points.")
-            if np.any(rel < 0.0) or np.any(rel > 1.0):
-                raise InputValidationError(f"{curve_path.name}: Relative Power Output [-] must be within [0,1].")
-
-            rel_list.append(rel)
-            eff_list.append(eff)
-            valid_scenarios.append(s)
-
-        lengths = {len(x) for x in rel_list}
-        if len(lengths) > 1:
-            raise InputValidationError(
-                f"{path.name}: efficiency curves have different lengths across scenarios: {sorted(lengths)}. "
-                "For now, use the same number of points in each curve."
-            )
-
-        n_pts = int(next(iter(lengths))) if lengths else 0
-        curve_point = xr.IndexVariable("curve_point", list(range(n_pts)))
-
-        rel_full = np.full((n_s, n_pts), np.nan, dtype=float)
-        eff_full = np.full((n_s, n_pts), np.nan, dtype=float)
-
-        for s, rel, eff in zip(valid_scenarios, rel_list, eff_list):
-            i = scenario_labels.index(s)
-            rel_full[i, :] = rel
-            eff_full[i, :] = eff
-
+    if unique_curve_files:
+        curve_path = Path(shared_curve_file)
+        if not curve_path.is_absolute():
+            curve_path = inputs_dir / curve_path
+        if not curve_path.exists():
+            raise InputValidationError(f"{path.name}: generator efficiency curve not found: {curve_path}")
+        cdf = pd.read_csv(curve_path)
+        req_cols = ["Relative Power Output [-]", "Efficiency [-]"]
+        for col in req_cols:
+            if col not in cdf.columns:
+                raise InputValidationError(f"{curve_path.name}: missing required column '{col}'.")
+        rel = pd.to_numeric(cdf["Relative Power Output [-]"], errors="coerce").to_numpy(dtype=float)
+        eff_raw = pd.to_numeric(cdf["Efficiency [-]"], errors="coerce").to_numpy(dtype=float)
+        if np.isnan(rel).any() or np.isnan(eff_raw).any():
+            raise InputValidationError(f"{curve_path.name}: contains non-numeric values in required columns.")
+        if rel.size < 1 or np.any(rel < 0.0) or np.any(rel > 1.0) or np.any(np.diff(rel) <= 0.0) or not np.isclose(rel[-1], 1.0, atol=1e-9):
+            raise InputValidationError(f"{curve_path.name}: invalid relative-power grid for the generator efficiency curve.")
+        eff, _, _ = resolve_efficiency_curve_values(
+            eff_raw,
+            base_efficiency=float(shared_gen_tech["nominal_efficiency_full_load"]),
+            path=curve_path,
+            column_name="Efficiency [-]",
+            allow_zero=True,
+        )
+        rel, eff, fuel_raw_rel, fuel_surrogate_rel = _validate_generator_partial_load_curve(
+            rel=rel,
+            eff=eff,
+            path=curve_path,
+        )
+        curve_point = xr.IndexVariable("curve_point", list(range(rel.size)))
         eff_curve_ds = xr.Dataset(
             data_vars={
                 "generator_eff_curve_rel_power": xr.DataArray(
-                    rel_full,
-                    coords={"scenario": scenario_coord, "curve_point": curve_point},
-                    dims=("scenario", "curve_point"),
-                    attrs={"units": "-", "source_file": str(path), "scenario_dependent": True},
+                    rel,
+                    coords={"curve_point": curve_point},
+                    dims=("curve_point",),
+                    attrs={"units": "-", "scenario_dependent": False},
                 ),
                 "generator_eff_curve_eff": xr.DataArray(
-                    eff_full,
-                    coords={"scenario": scenario_coord, "curve_point": curve_point},
-                    dims=("scenario", "curve_point"),
-                    attrs={"units": "-", "source_file": str(path), "scenario_dependent": True},
+                    eff,
+                    coords={"curve_point": curve_point},
+                    dims=("curve_point",),
+                    attrs={"units": "-", "scenario_dependent": False},
+                ),
+                "generator_fuel_curve_rel_fuel_use": xr.DataArray(
+                    fuel_surrogate_rel,
+                    coords={"curve_point": curve_point},
+                    dims=("curve_point",),
+                    attrs={
+                        "units": "-",
+                        "scenario_dependent": False,
+                        "description": "Convex surrogate of the relative fuel-use curve phi(r)=r/eta(r) used internally by the LP partial-load formulation.",
+                    },
+                ),
+                "generator_fuel_curve_rel_fuel_use_raw": xr.DataArray(
+                    fuel_raw_rel,
+                    coords={"curve_point": curve_point},
+                    dims=("curve_point",),
+                    attrs={
+                        "units": "-",
+                        "scenario_dependent": False,
+                        "description": "Raw relative fuel-use curve phi(r)=r/eta(r) derived from the user CSV before convex LP surrogate construction.",
+                    },
                 ),
             }
         )
 
     meta_flags = {
         "partial_load_modelling_enabled": partial_load_enabled,
-        "efficiency_curve_files": curve_files,  # scenario -> filename or None
+        "efficiency_curve_file": shared_curve_file,
         "generator_label": gen_ds.attrs.get("generator_label", "Generator"),
         "fuel_label": fuel_ds.attrs.get("fuel_label", "Fuel"),
         "fuel_cost_is_yearly": True,
@@ -1214,13 +1276,12 @@ def _load_price_csv_dynamic(
     units: str = "currency_per_kWh",
 ) -> xr.DataArray:
     """
-    Parse dynamic price CSV template with header=[0,1] (scenario, year):
+    Parse dynamic price CSV template with header=[0,1] (scenario, year).
 
-      meta,scenario_1,scenario_1,scenario_2,scenario_2
-      hour,year_1,year_2,year_1,year_2
-      0,0.0,0.0,0.0,0.0
-      1, ...
-      ...
+    Conceptual layout:
+      row 1: meta, scenario_1, scenario_1, scenario_2, scenario_2
+      row 2: hour, 2026, 2027, 2026, 2027
+      row 3+: 0, value, value, value, value
 
     Requirements:
       - CSV uses header=[0,1]
@@ -1330,7 +1391,7 @@ def _load_grid_yaml_dynamic(
             line:
               capacity_kw: ...
               transmission_efficiency: ...
-            first_year_connection: <int year label or null>
+            first_year_connection: <year label or null>
             outages:
               average_outages_per_year: ...
               average_outage_duration_minutes: ...
@@ -1339,9 +1400,10 @@ def _load_grid_yaml_dynamic(
 
     Notes:
       - first_year_connection is scenario-dependent.
-      - If first_year_connection is null:
-          recommended interpretation is "grid available from the start of horizon"
-          (i.e., connected for all years). Your downstream model should define the convention.
+      - It may be provided either as an exact year label (preferred), or as an
+        integer calendar year when sets.year labels are also integer-like.
+      - If first_year_connection is null, grid is available from the start of
+        the modeled horizon.
     """
     payload = _read_yaml(path)
 
@@ -1361,6 +1423,7 @@ def _load_grid_yaml_dynamic(
         ("line", "capacity_kw", "grid_line_capacity_kw"),
         ("line", "transmission_efficiency", "grid_transmission_efficiency"),
         ("line", "renewable_share", "grid_renewable_share"),
+        ("line", "emissions_factor_kgco2e_per_kwh", "grid_emissions_factor_kgco2e_per_kwh"),
 
         ("outages", "average_outages_per_year", "grid_avg_outages_per_year"),
         ("outages", "average_outage_duration_minutes", "grid_avg_outage_duration_minutes"),
@@ -1370,7 +1433,7 @@ def _load_grid_yaml_dynamic(
     ]
 
     arr = {out: np.full((len(scenario_labels),), np.nan, dtype=float) for _, _, out in PARAMS}
-    first_year = np.full((len(scenario_labels),), np.nan, dtype=float)  # store as float; keep NaN for null
+    first_year = np.full((len(scenario_labels),), None, dtype=object)
 
     for i, s_lab in enumerate(scenario_labels):
         if s_lab not in by_scenario:
@@ -1384,32 +1447,31 @@ def _load_grid_yaml_dynamic(
             raise InputValidationError(f"{path.name}: grid.by_scenario['{s_lab}'] must be a mapping/dict.")
 
         # ---- first_year_connection (dynamic-only) ----
-        # Allow missing -> treat as NaN (but your template includes it; we still guard)
+        # Allow missing/blank -> treat as connected from the start of the horizon.
         raw_fy = block.get("first_year_connection", None)
         if raw_fy is None or (isinstance(raw_fy, str) and raw_fy.strip() == ""):
-            first_year[i] = float("nan")
+            first_year[i] = None
         else:
-            # keep strict: must be int-like
-            try:
-                fy_int = int(raw_fy)
-            except Exception:
-                raise InputValidationError(
-                    f"{path.name}: grid.by_scenario['{s_lab}'].first_year_connection must be an int year label or null."
-                )
-            first_year[i] = float(fy_int)
-
-            # Optional strict consistency check with provided year labels (if those are int-like)
-            # If year labels are not int-like (e.g., 'year_1'), we skip this check.
-            try:
-                year_ints = [int(str(y)) for y in year_labels]
-                if fy_int not in year_ints:
+            if isinstance(raw_fy, str):
+                fy_value: object = raw_fy.strip()
+            else:
+                try:
+                    fy_value = int(raw_fy)
+                except Exception:
                     raise InputValidationError(
-                        f"{path.name}: first_year_connection={fy_int} for scenario '{s_lab}' "
-                        f"not found in sets.year labels={year_labels}."
+                        f"{path.name}: grid.by_scenario['{s_lab}'].first_year_connection must be either "
+                        "an exact year label from sets.year or an integer calendar year."
                     )
-            except ValueError:
-                # year labels are not integer-coded; skip membership check
-                pass
+            if fy_value == "":
+                raise InputValidationError(
+                    f"{path.name}: grid.by_scenario['{s_lab}'].first_year_connection cannot be an empty string."
+                )
+            _first_connection_year_to_ordinal(
+                fy_value,
+                year_coord.values.tolist(),
+                context=f"{path.name}: grid.by_scenario['{s_lab}'].first_year_connection",
+            )
+            first_year[i] = fy_value
 
         # ---- line + outages ----
         for section, key, out in PARAMS:
@@ -1429,6 +1491,8 @@ def _load_grid_yaml_dynamic(
                 default = 1.0
             elif out == "grid_renewable_share":
                 default = 0.0
+            elif out == "grid_emissions_factor_kgco2e_per_kwh":
+                default = 0.0
             elif out == "grid_outage_scale_od_hours":
                 default = 36 / 60  # 0.6h default
             elif out == "grid_outage_shape_od":
@@ -1443,6 +1507,8 @@ def _load_grid_yaml_dynamic(
         raise InputValidationError(f"{path.name}: line.transmission_efficiency must be in [0,1].")
     if np.any(arr["grid_renewable_share"] < 0.0) or np.any(arr["grid_renewable_share"] > 1.0):
         raise InputValidationError(f"{path.name}: line.renewable_share must be in [0,1].")
+    if np.any(arr["grid_emissions_factor_kgco2e_per_kwh"] < 0.0):
+        raise InputValidationError(f"{path.name}: line.emissions_factor_kgco2e_per_kwh must be >= 0.")
     if np.any(arr["grid_outage_scale_od_hours"] <= 0.0):
         raise InputValidationError(f"{path.name}: outages.outage_scale_od_hours must be > 0.")
     if np.any(arr["grid_outage_shape_od"] <= 0.0):
@@ -1471,7 +1537,11 @@ def _load_grid_yaml_dynamic(
             "source_file": str(path),
             "component": "grid",
             "dynamic_only": True,
-            "notes": "NaN means null/unspecified; downstream should apply the chosen convention.",
+            "notes": (
+                "Null means connected from the start of the horizon. "
+                "Non-null values are validated against sets.year using exact label matching first; "
+                "integer calendar-year mapping is allowed only when sets.year labels are integer-like."
+            ),
         },
     )
 
@@ -1501,13 +1571,14 @@ def _write_grid_availability_csv_dynamic(path: Path, *, availability: xr.DataArr
     df.to_csv(path, index=False)
 
 
-def _first_connection_year_to_ordinal(first_year_value: Any, year_values: list[Any]) -> int | None:
-    try:
-        if first_year_value is None or np.isnan(float(first_year_value)):
-            return None
-    except Exception:
-        pass
-
+def _first_connection_year_to_ordinal(
+    first_year_value: Any,
+    year_values: list[Any],
+    *,
+    context: str = "first_year_connection",
+) -> int | None:
+    if first_year_value is None:
+        return None
     if not year_values:
         return None
 
@@ -1518,18 +1589,35 @@ def _first_connection_year_to_ordinal(first_year_value: Any, year_values: list[A
 
     try:
         fy_int = int(first_year_value)
-        year_ints = [int(v) for v in year_values]
-        if fy_int <= year_ints[0]:
-            return 1
-        for idx, year_int in enumerate(year_ints, start=1):
-            if fy_int == year_int:
-                return idx
-        if fy_int > year_ints[-1]:
-            return int(len(year_values) + 1)
-    except Exception:
-        pass
+    except Exception as exc:
+        raise InputValidationError(
+            f"{context}={first_year_value!r} does not match any sets.year label {year_labels}."
+        ) from exc
 
-    return None
+    try:
+        year_ints = [int(v) for v in year_values]
+    except Exception as exc:
+        raise InputValidationError(
+            f"{context}={first_year_value!r} does not match any sets.year label {year_labels}. "
+            "Because sets.year labels are not integer-like, numeric ordinal fallback is not supported."
+        ) from exc
+
+    if fy_int <= year_ints[0]:
+        # Calendar-year semantics: anything before or equal to the first modeled
+        # calendar year means the grid is connected from the horizon start.
+        return 1
+    for idx, year_int in enumerate(year_ints, start=1):
+        if fy_int == year_int:
+            return idx
+    if fy_int > year_ints[-1]:
+        # Connection happens after the modeled horizon, so availability is zero
+        # for all modeled years.
+        return int(len(year_values) + 1)
+
+    raise InputValidationError(
+        f"{context}={first_year_value!r} is not an exact sets.year label and does not match any modeled "
+        f"calendar year in {year_labels}. Provide an exact year label instead."
+    )
 
 
 def regenerate_grid_availability_dynamic(*, project_name: str, sets: xr.Dataset) -> xr.DataArray:
@@ -1560,7 +1648,11 @@ def regenerate_grid_availability_dynamic(*, project_name: str, sets: xr.Dataset)
         shape_od = float(grid_ds["grid_outage_shape_od"].sel(scenario=s_lab).values)
         seed = int(float(grid_ds["grid_outage_seed"].sel(scenario=s_lab).values))
         fy = grid_ds["grid_first_year_connection"].sel(scenario=s_lab).values
-        connection_ordinal = _first_connection_year_to_ordinal(fy, year_values)
+        connection_ordinal = _first_connection_year_to_ordinal(
+            fy.item() if hasattr(fy, "item") else fy,
+            year_values,
+            context=f"grid.by_scenario['{s_lab}'].first_year_connection",
+        )
 
         avail_ty = simulate_grid_availability_dynamic(
             ao,
@@ -1584,7 +1676,13 @@ def regenerate_grid_availability_dynamic(*, project_name: str, sets: xr.Dataset)
         coords={"period": period_coord, "scenario": scenario_coord, "year": year_coord},
         dims=("period", "scenario", "year"),
         name="grid_availability",
-        attrs={"units": "binary", "component": "grid", "dynamic_only": True},
+        attrs={
+            "units": "binary",
+            "component": "grid",
+            "dynamic_only": True,
+            "generated_artifact": True,
+            "notes": "Derived from grid.yaml outage statistics and first_year_connection; not a primary user-maintained input.",
+        },
     )
 
     _write_grid_availability_csv_dynamic(paths.inputs_dir / "grid_availability.csv", availability=grid_availability)
@@ -1650,7 +1748,7 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
     min_res_pen = _as_float(optc.get("min_renewable_penetration", 0.0), name="min_renewable_penetration", default=0.0)
     max_ll_frac = _as_float(optc.get("max_lost_load_fraction", 0.0), name="max_lost_load_fraction", default=0.0)
     lolc = _as_float(optc.get("lost_load_cost_per_kwh", 0.0), name="lost_load_cost_per_kwh", default=0.0)
-    land_m2 = _as_float(optc.get("land_availability_m2", 0.0), name="land_availability_m2", default=0.0)
+    land_m2 = _as_float_or_nan(optc.get("land_availability_m2", None), name="land_availability_m2")
     em_cost = _as_float(optc.get("emission_cost_per_kgco2e", 0.0), name="emission_cost_per_kgco2e", default=0.0)
 
     da_min_res_pen = xr.DataArray(min_res_pen, name="min_renewable_penetration")
@@ -1698,12 +1796,198 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
         resource_coord=resource_coord,
         inv_step_coord=inv_step_coord,
     )
+    battery_loss_model = get_battery_loss_model_from_formulation(formulation)
+    try:
+        battery_degradation_settings = get_battery_degradation_settings(
+            formulation,
+            battery_loss_model=battery_loss_model,
+        )
+    except BatteryDegradationInputValidationError as exc:
+        raise InputValidationError(str(exc)) from exc
     battery_path = paths.inputs_dir / "battery.yaml"
     bat_params_ds = _load_battery_yaml(
         battery_path,
         scenario_coord=scenario_coord,
         inv_step_coord=inv_step_coord,
+        require_initial_soh=bool(battery_degradation_settings.get("endogenous_degradation_enabled", False)),
+        require_cycle_fade_coefficient=False,
+        require_calendar_time_increment=bool(battery_degradation_settings.get("calendar_fade_enabled", False)),
     )
+    active_battery_capacity_degradation_rate, ignored_exogenous_battery_degradation = (
+        suppress_exogenous_battery_capacity_degradation_when_endogenous(
+            bat_params_ds.get("battery_capacity_degradation_rate_per_year", None),
+            calendar_fade_enabled=bool(battery_degradation_settings.get("calendar_fade_enabled", False)),
+        )
+    )
+    if active_battery_capacity_degradation_rate is not None:
+        bat_params_ds = bat_params_ds.copy()
+        bat_params_ds["battery_capacity_degradation_rate_per_year"] = active_battery_capacity_degradation_rate
+    active_battery_exogenous_degradation = False
+    if active_battery_capacity_degradation_rate is not None:
+        vals = np.asarray(active_battery_capacity_degradation_rate.values, dtype=float)
+        vals = vals[np.isfinite(vals)]
+        active_battery_exogenous_degradation = bool(vals.size > 0 and float(np.max(np.abs(vals))) > 0.0)
+    battery_calendar_curve_ds = None
+    battery_calendar_curve_path = bat_params_ds.attrs.get("battery_calendar_fade_curve_file", None)
+    if battery_degradation_settings.get("calendar_fade_enabled", False):
+        raw_curve_path = battery_calendar_curve_path or battery_degradation_settings.get("battery_calendar_fade_curve_csv")
+        if not raw_curve_path:
+            raise InputValidationError(
+                "battery.yaml: battery.technical.calendar_fade_curve_csv is required when calendar fade is enabled."
+            )
+        curve_path = Path(str(raw_curve_path))
+        if not curve_path.is_absolute():
+            curve_path = paths.inputs_dir / curve_path
+        try:
+            curve_ds = load_battery_calendar_fade_curve_dataset(curve_path)
+        except BatteryCalendarFadeInputValidationError as exc:
+            raise InputValidationError(str(exc)) from exc
+        calendar_curve_point = xr.IndexVariable("battery_calendar_curve_point", curve_ds.coords["battery_calendar_curve_point"].values)
+        calendar_segment = xr.IndexVariable("battery_calendar_segment", curve_ds.coords["battery_calendar_segment"].values)
+        battery_calendar_curve_ds = xr.Dataset(
+            data_vars={
+                "battery_calendar_soc_curve_pu": xr.DataArray(
+                    np.asarray(curve_ds["battery_calendar_soc_curve_pu"].values, dtype=float),
+                    coords={"battery_calendar_curve_point": calendar_curve_point},
+                    dims=("battery_calendar_curve_point",),
+                ),
+                "battery_calendar_fade_curve_coefficient_per_year": xr.DataArray(
+                    np.asarray(curve_ds["battery_calendar_fade_curve_coefficient_per_year"].values, dtype=float),
+                    coords={"battery_calendar_curve_point": calendar_curve_point},
+                    dims=("battery_calendar_curve_point",),
+                ),
+                "battery_calendar_fade_slope": xr.DataArray(
+                    np.asarray(curve_ds["battery_calendar_fade_slope"].values, dtype=float),
+                    coords={"battery_calendar_segment": calendar_segment},
+                    dims=("battery_calendar_segment",),
+                ),
+                "battery_calendar_fade_intercept": xr.DataArray(
+                    np.asarray(curve_ds["battery_calendar_fade_intercept"].values, dtype=float),
+                    coords={"battery_calendar_segment": calendar_segment},
+                    dims=("battery_calendar_segment",),
+                ),
+            }
+        )
+        battery_degradation_settings["battery_calendar_fade_curve_csv"] = str(curve_path)
+    battery_degradation_settings["initial_soh"] = float(
+        bat_params_ds["battery_initial_soh"].item()
+        if "battery_initial_soh" in bat_params_ds.data_vars
+        else battery_degradation_settings.get("initial_soh", 1.0)
+    )
+    battery_degradation_settings["end_of_life_soh"] = (
+        float(bat_params_ds["battery_end_of_life_soh"].item())
+        if "battery_end_of_life_soh" in bat_params_ds.data_vars and np.isfinite(float(bat_params_ds["battery_end_of_life_soh"].item()))
+        else battery_degradation_settings.get("end_of_life_soh", None)
+    )
+    battery_degradation_settings["cycle_lifetime_to_eol_cycles"] = (
+        float(bat_params_ds["battery_cycle_lifetime_to_eol_cycles"].item())
+        if "battery_cycle_lifetime_to_eol_cycles" in bat_params_ds.data_vars
+        and np.isfinite(float(bat_params_ds["battery_cycle_lifetime_to_eol_cycles"].item()))
+        else battery_degradation_settings.get("cycle_lifetime_to_eol_cycles", None)
+    )
+    legacy_cycle_fade_coefficient = (
+        float(bat_params_ds["battery_cycle_fade_coefficient_per_kwh_throughput"].item())
+        if "battery_cycle_fade_coefficient_per_kwh_throughput" in bat_params_ds.data_vars
+        and np.isfinite(float(bat_params_ds["battery_cycle_fade_coefficient_per_kwh_throughput"].item()))
+        else battery_degradation_settings.get("cycle_fade_coefficient_per_kwh_throughput", None)
+    )
+    if battery_degradation_settings.get("cycle_fade_enabled", False):
+        cycle_lifetime_to_eol_cycles = battery_degradation_settings.get("cycle_lifetime_to_eol_cycles", None)
+        end_of_life_soh = battery_degradation_settings.get("end_of_life_soh", None)
+        if cycle_lifetime_to_eol_cycles is not None and end_of_life_soh is not None:
+            battery_degradation_settings["cycle_fade_coefficient_per_kwh_throughput"] = float(
+                derive_cycle_fade_coefficient_from_cycle_life(
+                    initial_soh=float(battery_degradation_settings["initial_soh"]),
+                    end_of_life_soh=float(end_of_life_soh),
+                    cycle_lifetime_to_eol_cycles=float(cycle_lifetime_to_eol_cycles),
+                    reference_depth_of_discharge=float(bat_params_ds["battery_depth_of_discharge"].item()),
+                )
+            )
+            battery_degradation_settings["cycle_fade_input_mode"] = "derived_from_cycle_lifetime"
+        elif legacy_cycle_fade_coefficient is not None:
+            battery_degradation_settings["cycle_fade_coefficient_per_kwh_throughput"] = float(legacy_cycle_fade_coefficient)
+            battery_degradation_settings["cycle_fade_input_mode"] = "direct_coefficient"
+        else:
+            raise InputValidationError(
+                "battery.yaml: enable cycle fade only when either battery.technical.cycle_lifetime_to_eol_cycles "
+                "and battery.technical.end_of_life_soh are provided, or the legacy "
+                "battery.technical.cycle_fade_coefficient_per_kwh_throughput is provided."
+            )
+    else:
+        battery_degradation_settings["cycle_fade_coefficient_per_kwh_throughput"] = float(
+            legacy_cycle_fade_coefficient if legacy_cycle_fade_coefficient is not None else 0.0
+        )
+        battery_degradation_settings["cycle_fade_input_mode"] = (
+            "direct_coefficient" if legacy_cycle_fade_coefficient is not None else "disabled"
+        )
+    battery_degradation_settings["battery_calendar_time_increment_per_year"] = float(
+        bat_params_ds["battery_calendar_time_increment_per_year"].item()
+        if "battery_calendar_time_increment_per_year" in bat_params_ds.data_vars
+        else battery_degradation_settings.get("battery_calendar_time_increment_per_year", 1.0)
+    )
+    battery_curve_path = bat_params_ds.attrs.get("efficiency_curve_file", None)
+    battery_curve_ds = None
+    if battery_loss_model == CONVEX_LOSS_EPIGRAPH:
+        raw_curve_path = battery_curve_path
+        if not raw_curve_path:
+            raise InputValidationError(
+                "battery_model.loss_model='convex_loss_epigraph' requires battery.technical.efficiency_curve_csv."
+            )
+        curve_path = Path(raw_curve_path)
+        if not curve_path.is_absolute():
+            curve_path = paths.inputs_dir / curve_path
+        charge_efficiency_base = float(bat_params_ds["battery_charge_efficiency"].item())
+        discharge_efficiency_base = float(bat_params_ds["battery_discharge_efficiency"].item())
+        try:
+            curve_ds = load_battery_loss_curve_dataset(
+                curve_path,
+                charge_efficiency_base=charge_efficiency_base,
+                discharge_efficiency_base=discharge_efficiency_base,
+            )
+        except BatteryLossInputValidationError as exc:
+            raise InputValidationError(str(exc)) from exc
+        battery_curve_point = xr.IndexVariable("battery_curve_point", curve_ds.coords["battery_curve_point"].values)
+        battery_loss_segment = xr.IndexVariable("battery_loss_segment", curve_ds.coords["battery_loss_segment"].values)
+        battery_curve_ds = xr.Dataset(
+            data_vars={
+                "battery_efficiency_curve_rel_power": xr.DataArray(
+                    np.asarray(curve_ds["battery_efficiency_curve_rel_power"].values, dtype=float),
+                    coords={"battery_curve_point": battery_curve_point},
+                    dims=("battery_curve_point",),
+                ),
+                "battery_efficiency_curve_charge_efficiency": xr.DataArray(
+                    np.asarray(curve_ds["battery_efficiency_curve_charge_efficiency"].values, dtype=float),
+                    coords={"battery_curve_point": battery_curve_point},
+                    dims=("battery_curve_point",),
+                ),
+                "battery_efficiency_curve_discharge_efficiency": xr.DataArray(
+                    np.asarray(curve_ds["battery_efficiency_curve_discharge_efficiency"].values, dtype=float),
+                    coords={"battery_curve_point": battery_curve_point},
+                    dims=("battery_curve_point",),
+                ),
+                "battery_charge_loss_slope": xr.DataArray(
+                    np.asarray(curve_ds["battery_charge_loss_slope"].values, dtype=float),
+                    coords={"battery_loss_segment": battery_loss_segment},
+                    dims=("battery_loss_segment",),
+                ),
+                "battery_charge_loss_intercept": xr.DataArray(
+                    np.asarray(curve_ds["battery_charge_loss_intercept"].values, dtype=float),
+                    coords={"battery_loss_segment": battery_loss_segment},
+                    dims=("battery_loss_segment",),
+                ),
+                "battery_discharge_loss_slope": xr.DataArray(
+                    np.asarray(curve_ds["battery_discharge_loss_slope"].values, dtype=float),
+                    coords={"battery_loss_segment": battery_loss_segment},
+                    dims=("battery_loss_segment",),
+                ),
+                "battery_discharge_loss_intercept": xr.DataArray(
+                    np.asarray(curve_ds["battery_discharge_loss_intercept"].values, dtype=float),
+                    coords={"battery_loss_segment": battery_loss_segment},
+                    dims=("battery_loss_segment",),
+                ),
+            }
+        )
+        battery_curve_path = str(curve_path)
     genfuel_path = paths.inputs_dir / "generator.yaml"
     gen_ds, fuel_ds, curve_ds, genfuel_meta = _load_generator_and_fuel_yaml(
         genfuel_path,
@@ -1713,9 +1997,17 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
         inv_step_coord=inv_step_coord,
     )
 
-    data = xr.merge([data, ren_params_ds, bat_params_ds, gen_ds, fuel_ds], compat="override")
-    if curve_ds is not None:
-        data = xr.merge([data, curve_ds], compat="override")
+    data = merge_optional_datasets(
+        data,
+        ren_params_ds,
+        bat_params_ds,
+        gen_ds,
+        fuel_ds,
+        curve_ds,
+        battery_curve_ds,
+        battery_calendar_curve_ds,
+        compat="override",
+    )
 
     on_grid = bool(formulation.get("on_grid", False))
     allow_export = bool(formulation.get("grid_allow_export", False))
@@ -1761,7 +2053,7 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
         if grid_export_price is not None:
             to_merge.append(xr.Dataset({"grid_export_price": grid_export_price}))
 
-        data = xr.merge([data] + to_merge, compat="override", join="exact")
+        data = merge_optional_datasets(data, *to_merge, compat="override", join="exact")
 
         data.attrs.setdefault("settings", {})
         data.attrs["settings"]["grid"] = {
@@ -1783,6 +2075,8 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
             "project_name": project_name,
             "formulation": formulation_mode,
             "unit_commitment": uc_enabled,
+            "integer_sizing_enabled": uc_enabled,
+            "unit_commitment_semantics": "integer_sizing_only",
             "start_year_label": formulation.get("start_year_label"),
             "time_horizon_years": int(year_coord.size),
             "social_discount_rate": _as_float(
@@ -1803,6 +2097,8 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
                 "resource_availability_csv": str(resource_path),
                 "renewables_yaml": str(renewables_path),
                 "battery_yaml": str(battery_path),
+                "battery_efficiency_curve_csv": battery_curve_path,
+                "battery_calendar_fade_curve_csv": battery_calendar_curve_path,
                 "generator_yaml": str(genfuel_path),
             },
         }
@@ -1812,10 +2108,21 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
     data.attrs["settings"]["generator"]["partial_load_modelling_enabled"] = bool(
         genfuel_meta.get("partial_load_modelling_enabled", False)
     )
-    data.attrs["settings"]["generator"]["efficiency_curve_files"] = genfuel_meta.get("efficiency_curve_files", {})
+    data.attrs["settings"]["generator"]["efficiency_curve_file"] = genfuel_meta.get("efficiency_curve_file")
     data.attrs["settings"]["generator"]["label"] = genfuel_meta.get("generator_label", "Generator")
     data.attrs["settings"]["fuel"] = {"label": genfuel_meta.get("fuel_label", "Fuel")}
     data.attrs["settings"]["battery_label"] = bat_params_ds.attrs.get("battery_label", "Battery")
+    data.attrs["settings"]["battery_model"] = {
+        "loss_model": battery_loss_model,
+        "efficiency_curve_csv": battery_curve_path,
+        "degradation_model": battery_degradation_settings,
+    }
+    data.attrs["settings"]["battery_model"]["exogenous_capacity_degradation_active"] = bool(
+        active_battery_exogenous_degradation
+    )
+    data.attrs["settings"]["battery_model"]["exogenous_capacity_degradation_ignored"] = bool(
+        ignored_exogenous_battery_degradation
+    )
 
     return data
 

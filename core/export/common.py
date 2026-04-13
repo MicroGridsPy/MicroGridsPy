@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, Mapping, Optional
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 
@@ -24,6 +25,33 @@ def safe_float(value: Any) -> float:
         return float(value)
     except Exception:
         return float("nan")
+
+
+def safe_share(numerator: float, denominator: float) -> float:
+    """Return numerator / denominator with a zero-denominator guard."""
+    return float(numerator / denominator) if abs(float(denominator)) > 1e-12 else 0.0
+
+
+def select_or_self(x: Any, **indexers: Any) -> Any:
+    """Select along any matching xarray dimensions, otherwise return x unchanged."""
+    if not isinstance(x, xr.DataArray):
+        return x
+    valid_indexers = {k: v for k, v in indexers.items() if k in x.dims}
+    return x.sel(**valid_indexers) if valid_indexers else x
+
+
+def scalarize(x: Any, **indexers: Any) -> float:
+    """Best-effort scalar extraction after selecting matching dimensions."""
+    if not isinstance(x, xr.DataArray):
+        return safe_float(x)
+    da = select_or_self(x, **indexers)
+    extra_dims = [d for d in da.dims if da.sizes.get(d, 1) > 1]
+    if extra_dims:
+        da = da.isel({d: 0 for d in extra_dims})
+    vals = np.asarray(da.values, dtype=float).reshape(-1)
+    if vals.size == 0:
+        return float("nan")
+    return float(vals[0])
 
 
 def get_var_solution(

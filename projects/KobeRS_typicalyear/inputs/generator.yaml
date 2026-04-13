@@ -1,0 +1,74 @@
+meta:
+  units:
+    generator_nominal_capacity_kw: kW
+    generator_lifetime_years: years
+    generator_specific_investment_cost_per_kw: currency_per_kW
+    generator_wacc: '-'
+    generator_embedded_emissions_kgco2e_per_kw: kgCO2e_per_kW
+    generator_fixed_om_share_per_year: share_per_year
+    generator_nominal_efficiency_full_load: '-'
+    generator_max_installable_capacity_kw: kW
+    fuel_lhv_kwh_per_unit_fuel: kWh_per_unit_fuel
+    fuel_direct_emissions_kgco2e_per_unit_fuel: kgCO2e_per_unit_fuel
+    fuel_fuel_cost_per_unit_fuel: currency_per_unit_fuel
+  context:
+    formulation: steady_state
+    multi_scenario: false
+    scenarios:
+    - scenario_1
+    capacity_expansion: false
+    investment_steps: null
+    year_labels_for_fuel_cost:
+    - typical_year
+    efficiency_curve_path_base: inputs/
+    generator_efficiency_model: constant_efficiency
+  description:
+    summary: Generator inputs define step-dependent investment data plus shared technical
+      and fuel-property blocks. Yearly fuel prices remain scenario-based.
+    parameters:
+      generator_nominal_capacity_kw: Nominal power represented by one generator unit.
+      generator_lifetime_years: Generator lifetime used for replacement and annuity
+        calculations.
+      generator_specific_investment_cost_per_kw: Specific generator investment cost.
+      generator_wacc: Weighted average cost of capital used for generator annuities.
+      generator_embedded_emissions_kgco2e_per_kw: Embodied emissions associated with
+        generator capacity.
+      generator_fixed_om_share_per_year: Fixed annual O&M cost expressed as a share
+        of generator CAPEX. In the typical-year formulation this input is scenario-independent.
+      generator_nominal_efficiency_full_load: Generator full-load efficiency used
+        directly in constant-efficiency mode and as the baseline in partial-load curve
+        mode.
+      generator_partial_load_curve_note: When a generator efficiency-curve CSV is
+        provided, the user-facing CSV is interpreted as sampled efficiency behavior
+        (preferably normalized to 1.0 at full load). The solver internally converts
+        those samples into a relative fuel-use curve and builds a convex piecewise-linear
+        surrogate for the LP formulation.
+      generator_max_installable_capacity_kw: Upper bound on installed generator capacity.
+      fuel_lhv_kwh_per_unit_fuel: Lower heating value of the fuel.
+      fuel_direct_emissions_kgco2e_per_unit_fuel: Direct combustion emissions per
+        unit of fuel.
+      fuel_fuel_cost_per_unit_fuel: Fuel price in the steady-state formulation.
+generator:
+  label: Generator
+  investment:
+    by_step:
+      base:
+        nominal_capacity_kw: 1.0
+        lifetime_years: 20
+        specific_investment_cost_per_kw: 600
+        wacc: 0.0
+        embedded_emissions_kgco2e_per_kw: 0.0
+        fixed_om_share_per_year: 0.07
+  technical:
+    nominal_efficiency_full_load: 0.35
+    efficiency_curve_csv: null
+    max_installable_capacity_kw: null
+fuel:
+  label: Diesel
+  by_scenario:
+    scenario_1:
+      lhv_kwh_per_unit_fuel: 10.14
+      direct_emissions_kgco2e_per_unit_fuel: 2.68
+      fuel_cost_per_unit_fuel: 2.43
+      description: Typical-year fuel inputs use a single constant fuel cost per unit
+        fuel.

@@ -1,0 +1,98 @@
+Writing constraints.:   0%|[38;2;128;191;255m                                                                     [0m| 0/20 [00:00<?, ?it/s][0mWriting constraints.:   5%|[38;2;128;191;255m###                                                          [0m| 1/20 [00:00<00:03,  6.32it/s][0mWriting constraints.:  10%|[38;2;128;191;255m######1                                                      [0m| 2/20 [00:00<00:04,  3.89it/s][0mWriting constraints.:  15%|[38;2;128;191;255m#########1                                                   [0m| 3/20 [00:00<00:04,  3.70it/s][0mWriting constraints.:  20%|[38;2;128;191;255m############2                                                [0m| 4/20 [00:01<00:04,  3.58it/s][0mWriting constraints.:  25%|[38;2;128;191;255m###############2                                             [0m| 5/20 [00:01<00:04,  3.47it/s][0mWriting constraints.:  35%|[38;2;128;191;255m#####################3                                       [0m| 7/20 [00:01<00:03,  3.62it/s][0mWriting constraints.:  75%|[38;2;128;191;255m#############################################               [0m| 15/20 [00:02<00:00, 12.39it/s][0mWriting constraints.:  90%|[38;2;128;191;255m######################################################      [0m| 18/20 [00:02<00:00,  8.58it/s][0mWriting constraints.: 100%|[38;2;128;191;255m############################################################[0m| 20/20 [00:03<00:00,  6.56it/s][0m
+Writing continuous variables.:   0%|[38;2;128;191;255m                                                            [0m| 0/10 [00:00<?, ?it/s][0mWriting continuous variables.:  60%|[38;2;128;191;255m###############################2                    [0m| 6/10 [00:00<00:00, 56.07it/s][0mWriting continuous variables.: 100%|[38;2;128;191;255m###################################################[0m| 10/10 [00:00<00:00, 42.37it/s][0m
+Set parameter Username
+Academic license - for non-commercial use only - expires 2026-12-02
+Read LP format model from file C:\Users\onori\AppData\Local\Temp\linopy-problem-y6xq5e9o.lp
+Reading time = 4.46 seconds
+obj: 1401610 rows, 1051206 columns, 3523973 nonzeros
+Set parameter Presolve to value -1
+Gurobi Optimizer version 13.0.0 build v13.0.0rc1 (win64 - Windows 11+.0 (26200.2))
+
+CPU model: 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz, instruction set [SSE2|AVX|AVX2|AVX512]
+Thread count: 8 physical cores, 16 logical processors, using up to 16 threads
+
+Optimize a model with 1401610 rows, 1051206 columns and 3523973 nonzeros (Min)
+Model fingerprint: 0x8750d137
+Model has 525606 linear objective coefficients
+Coefficient statistics:
+  Matrix range     [1e-05, 3e+00]
+  Objective range  [6e-07, 6e+02]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+00, 5e+02]
+Presolve removed 614490 rows and 588200 columns
+Presolve time: 7.30s
+Presolved: 787120 rows, 463006 columns, 2750528 nonzeros
+
+Concurrent LP optimizer: primal simplex, dual simplex, and barrier
+Showing barrier log only...
+
+Ordering time: 3.02s
+
+Barrier statistics:
+ Dense cols : 6
+ AA' NZ     : 3.969e+06
+ Factor NZ  : 1.198e+07 (roughly 600 MB of memory)
+ Factor Ops : 1.982e+08 (less than 1 second per iteration)
+ Threads    : 1
+
+                  Objective                Residual
+Iter       Primal          Dual         Primal    Dual     Compl     Time
+   0   1.60793811e+08  0.00000000e+00  5.98e+03 0.00e+00  7.08e+04    15s
+   1   1.39654969e+08 -2.25188454e+08  1.39e+03 7.89e+00  3.07e+04    17s
+   2   1.14340720e+08 -2.36881909e+08  1.56e+02 6.20e-01  2.81e+03    20s
+   3   3.32150567e+07 -1.04561647e+07  8.68e-10 7.13e-03  6.58e+01    22s
+   4   1.14986905e+07 -1.01193995e+06  1.73e-09 4.85e-04  1.23e+01    25s
+   5   6.71446154e+06 -2.88120901e+05  8.74e-10 3.78e-04  6.67e+00    28s
+   6   4.88429769e+06  2.92903094e+04  5.72e-10 3.81e-04  4.56e+00    30s
+   7   4.10068143e+06  1.08442875e+05  4.53e-10 3.54e-04  3.74e+00    32s
+   8   3.88091759e+06  3.28081107e+05  4.17e-10 2.77e-04  3.29e+00    34s
+   9   3.47018436e+06  5.72399835e+05  3.51e-10 1.98e-04  2.66e+00    36s
+  10   2.75946411e+06  1.08625522e+06  2.31e-10 4.74e-05  1.50e+00    39s
+  11   2.43785796e+06  1.49181464e+06  3.43e-10 8.31e-06  8.39e-01    41s
+  12   2.25645578e+06  1.64218135e+06  8.19e-10 2.93e-06  5.43e-01    43s
+  13   2.16730268e+06  1.69798596e+06  1.46e-09 1.99e-06  4.15e-01    45s
+  14   2.12705705e+06  1.74358177e+06  1.81e-09 6.14e-07  3.39e-01    46s
+  15   2.07349992e+06  1.77754070e+06  2.14e-09 2.20e-12  2.61e-01    48s
+  16   2.04467694e+06  1.79699711e+06  1.57e-08 1.73e-11  2.19e-01    49s
+  17   1.99017977e+06  1.86183657e+06  2.66e-08 4.29e-11  1.13e-01    51s
+  18   1.96672819e+06  1.89176037e+06  3.35e-08 1.74e-10  6.62e-02    53s
+  19   1.95731672e+06  1.90500268e+06  3.00e-08 7.86e-14  4.62e-02    55s
+  20   1.95169172e+06  1.90824317e+06  1.52e-07 1.72e-11  3.83e-02    56s
+  21   1.94403165e+06  1.91404450e+06  1.62e-07 2.78e-11  2.65e-02    57s
+  22   1.94041244e+06  1.92091159e+06  2.88e-07 6.75e-11  1.72e-02    59s
+  23   1.93739128e+06  1.92620511e+06  3.62e-07 2.42e-11  9.87e-03    61s
+  24   1.93400649e+06  1.93028604e+06  2.85e-07 4.70e-13  3.28e-03    64s
+  25   1.93286698e+06  1.93169770e+06  2.14e-07 1.84e-10  1.03e-03    65s
+  26   1.93250875e+06  1.93207695e+06  1.02e-07 1.37e-12  3.80e-04    67s
+  27   1.93230534e+06  1.93215076e+06  3.87e-08 2.12e-11  1.36e-04    69s
+  28   1.93218295e+06  1.93216960e+06  1.75e-09 1.35e-11  1.17e-05    71s
+  29   1.93217638e+06  1.93217548e+06  7.47e-10 1.13e-11  7.90e-07    74s
+  30   1.93217590e+06  1.93217578e+06  3.04e-09 3.98e-11  9.98e-08    77s
+  31   1.93217586e+06  1.93217584e+06  6.21e-10 1.03e-10  1.87e-08    79s
+  32   1.93217585e+06  1.93217585e+06  6.78e-10 3.98e-11  1.73e-09    80s
+
+Barrier solved model in 32 iterations and 79.73 seconds (18.56 work units)
+Optimal objective 1.93217585e+06
+
+Crossover log...
+
+    4608 DPushes remaining with DInf 0.0000000e+00                81s
+    2309 DPushes remaining with DInf 0.0000000e+00                86s
+     956 DPushes remaining with DInf 0.0000000e+00                91s
+       0 DPushes remaining with DInf 0.0000000e+00                92s
+
+  192878 PPushes remaining with PInf 0.0000000e+00                92s
+   18912 PPushes remaining with PInf 0.0000000e+00                95s
+       0 PPushes remaining with PInf 0.0000000e+00               100s
+
+  Push phase complete: Pinf 0.0000000e+00, Dinf 1.4303738e-06    100s
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+  197441    1.9321758e+06   0.000000e+00   1.430340e-06    100s
+Crossover time: 20.71 seconds (7.44 work units)
+
+Solved with barrier
+  197442    1.9321758e+06   0.000000e+00   0.000000e+00    102s
+
+Solved in 197442 iterations and 101.59 seconds (26.49 work units)
+Optimal objective  1.932175850e+06

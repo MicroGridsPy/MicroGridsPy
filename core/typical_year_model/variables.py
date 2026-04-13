@@ -6,6 +6,8 @@ from typing import Dict
 import xarray as xr
 import linopy as lp
 
+from core.data_pipeline.battery_loss_model import CONVEX_LOSS_EPIGRAPH, normalize_battery_loss_model
+
 
 class InputValidationError(RuntimeError):
     pass
@@ -36,6 +38,10 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> Dict
       - battery_units()
       - generator_units()
 
+    In this formulation, the `unit_commitment` setting only makes sizing
+    variables integer-valued. It does not add chronological on/off commitment
+    binaries, startup logic, or minimum up/down constraints.
+
     Operational variables:
       - res_generation(period, scenario, resource)
       - generator_generation(period, scenario)
@@ -49,8 +55,6 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> Dict
       - grid_import(period, scenario)
       - grid_export(period, scenario) (if allow_export)
 
-    Optional partial-load curve scaffolding:
-      - gen_segment_energy(period, scenario, curve_point) (only if curve exists)
     """
     if not isinstance(sets, xr.Dataset):
         raise InputValidationError("initialize_vars: sets must be an xarray.Dataset.")
@@ -71,13 +75,25 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> Dict
     # --- feature flags (stored in data.attrs in your initializer)
     on_grid = _bool_from_attrs(data, ["settings", "grid", "on_grid"], default=False)
     allow_export = _bool_from_attrs(data, ["settings", "grid", "allow_export"], default=False)
-    partial_load_enabled = _bool_from_attrs(
-        data, ["settings", "generator", "partial_load_modelling_enabled"], default=False
+    battery_loss_model = normalize_battery_loss_model(
+        ((data.attrs or {}).get("settings", {}).get("battery_model", {}) or {}).get("loss_model"),
+        default="constant_efficiency",
     )
+    degradation_state_enabled = _bool_from_attrs(
+        data,
+        ["settings", "battery_model", "degradation_model", "cycle_fade_enabled"],
+        default=False,
+    ) or _bool_from_attrs(
+        data,
+        ["settings", "battery_model", "degradation_model", "calendar_fade_enabled"],
+        default=False,
+    )
+    if degradation_state_enabled:
+        raise InputValidationError(
+            "Battery degradation variables are not available in the steady_state typical-year formulation. "
+            "Use the dynamic multi-year formulation for cycle fade, calendar fade, and SoH tracking."
+        )
     is_integer = _bool_from_attrs(data, ["settings", "unit_commitment"], default=False)
-
-    # curve coord exists only if you merged curve_ds
-    has_curve_coord = "curve_point" in data.coords
 
     vars: Dict[str, lp.Variable] = {}
 
@@ -153,6 +169,31 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> Dict
         coords={"period": period, "scenario": scenario},
         name="battery_soc",
     )
+    if battery_loss_model == CONVEX_LOSS_EPIGRAPH:
+        vars["battery_charge_dc"] = model.add_variables(
+            lower=0.0,
+            dims=("period", "scenario"),
+            coords={"period": period, "scenario": scenario},
+            name="battery_charge_dc",
+        )
+        vars["battery_discharge_dc"] = model.add_variables(
+            lower=0.0,
+            dims=("period", "scenario"),
+            coords={"period": period, "scenario": scenario},
+            name="battery_discharge_dc",
+        )
+        vars["battery_charge_loss"] = model.add_variables(
+            lower=0.0,
+            dims=("period", "scenario"),
+            coords={"period": period, "scenario": scenario},
+            name="battery_charge_loss",
+        )
+        vars["battery_discharge_loss"] = model.add_variables(
+            lower=0.0,
+            dims=("period", "scenario"),
+            coords={"period": period, "scenario": scenario},
+            name="battery_discharge_loss",
+        )
 
     # Lost load [kWh]
     vars["lost_load"] = model.add_variables(
@@ -180,19 +221,5 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> Dict
                 coords={"period": period, "scenario": scenario},
                 name="grid_export",
             )
-
-    # =========================================================================
-    # Optional: partial-load curve scaffolding
-    # =========================================================================
-    # Keep this minimal: create segment energy variables only if curve exists.
-    # Later you can enforce convex combination / SOS2 / piecewise constraints.
-    if partial_load_enabled and has_curve_coord:
-        curve_point = data.coords["curve_point"]
-        vars["gen_segment_energy"] = model.add_variables(
-            lower=0.0,
-            dims=("period", "scenario", "curve_point"),
-            coords={"period": period, "scenario": scenario, "curve_point": curve_point},
-            name="gen_segment_energy",
-        )
 
     return vars

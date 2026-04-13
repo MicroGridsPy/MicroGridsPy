@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 import json
 
 from core.io.utils import project_paths
+from core.io.input_labels import renewable_labels_from_yaml, component_labels_from_yaml
 
 
 @dataclass(frozen=True)
@@ -37,6 +38,13 @@ class ManifestBundle:
 
 def _safe_list(x: Any, default: List[Any]) -> List[Any]:
     return x if isinstance(x, list) else default
+
+
+def _normalize_named_list(values: List[Any], *, n: int, prefix: str) -> List[str]:
+    out = [str(v) for v in values[:n]]
+    if len(out) < n:
+        out += [f"{prefix}_{i+1}" for i in range(len(out), n)]
+    return out
 
 
 def _parse_years(formulation: str, start_year_label: Any, horizon_years: Any) -> List[str]:
@@ -86,8 +94,21 @@ def read_manifest(project_name: str) -> ManifestBundle:
 
     syscfg = payload.get("system_configuration", {}) or {}
     n_sources = int(syscfg.get("n_sources", 1) or 1)
-    conversion_technologies = _safe_list(syscfg.get("conversion_technologies"), ["Technology_1"])
-    resources = _safe_list(syscfg.get("resources"), ["Resource_1"])
+    renewable_labels = renewable_labels_from_yaml(paths.inputs_dir / "renewables.yaml")
+    component_labels = component_labels_from_yaml(
+        battery_path=paths.inputs_dir / "battery.yaml",
+        generator_path=paths.inputs_dir / "generator.yaml",
+    )
+    conversion_technologies = _safe_list(
+        renewable_labels.get("conversion_technologies"),
+        _safe_list(syscfg.get("conversion_technologies"), [f"Technology_{i+1}" for i in range(n_sources)]),
+    )
+    resources = _safe_list(
+        renewable_labels.get("resources"),
+        _safe_list(syscfg.get("resources"), [f"Resource_{i+1}" for i in range(n_sources)]),
+    )
+    conversion_technologies = _normalize_named_list(conversion_technologies, n=n_sources, prefix="Technology")
+    resources = _normalize_named_list(resources, n=n_sources, prefix="Resource")
 
     sets = CoreSets(
         project_name=project_name,
@@ -103,11 +124,11 @@ def read_manifest(project_name: str) -> ManifestBundle:
         steps=steps,
         investment_steps_years=inv_steps_list,
         n_sources=n_sources,
-        conversion_technologies=[str(x) for x in conversion_technologies],
-        resources=[str(x) for x in resources],
-        battery_label=str(syscfg.get("battery", "Battery")),
-        generator_label=str(syscfg.get("generator", "Generator")),
-        fuel_label=str(syscfg.get("fuel", "Fuel")),
+        conversion_technologies=conversion_technologies,
+        resources=resources,
+        battery_label=component_labels.get("battery", "Battery"),
+        generator_label=component_labels.get("generator", "Generator"),
+        fuel_label=component_labels.get("fuel", "Fuel"),
     )
     return ManifestBundle(payload=payload, sets=sets)
 

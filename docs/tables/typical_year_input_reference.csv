@@ -1,0 +1,14 @@
+file_name,purpose,format,mandatory,depends_on,edited_by_user,used_for
+formulation.json,Project-level formulation flags and constraints,JSON,yes,always,no,selects steady_state mode scenarios grid flags and global constraints
+load_demand.csv,Hourly electrical demand,CSV,yes,always,yes,load balance and unmet-load calculations
+resource_availability.csv,Hourly renewable availability by resource,CSV,yes,always,yes,renewable generation availability
+renewables.yaml,Renewable techno-economic inputs,YAML,yes,always,yes,renewable sizing annuity land and subsidy parameters
+battery.yaml,Battery techno-economic inputs,YAML,yes,always,yes,storage sizing and operation
+generator.yaml,Generator and fuel inputs,YAML,yes,always,yes,backup generation fuel cost and fuel emissions
+grid.yaml,Grid line and outage inputs,YAML,conditional,on_grid=true,yes,grid limits emissions renewable-share and outage simulation
+grid_import_price.csv,Hourly import tariff,CSV,conditional,on_grid=true,yes,grid import operating cost
+grid_export_price.csv,Hourly export tariff,CSV,conditional,on_grid=true and grid_allow_export=true,yes,grid export revenue
+grid_availability.csv,Derived hourly grid availability matrix,CSV,derived,on_grid=true,no,grid availability after outage simulation
+battery_efficiency_curve.csv,Battery advanced loss curve,CSV,conditional,battery_model.loss_model=convex_loss_epigraph,yes,advanced convex battery loss formulation
+generator_efficiency_curve.csv,Generator part-load efficiency curve,CSV,conditional,generator_model.efficiency_model=efficiency_curve,yes,partial-load generator surrogate
+README_inputs.md,Human-readable summary of generated inputs,Markdown,no,always,no,reference only

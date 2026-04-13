@@ -102,8 +102,10 @@ def initialize_objective(
     gen_units = vars["generator_units"]           # (inv_step,)
 
     res_gen = vars["res_generation"]              # (period, year, scenario, resource)
-    fuel_cons = vars["fuel_consumption"]          # (period, year, scenario)
+    fuel_cons = vars["fuel_consumption"]          # (period, year, scenario, inv_step)
     lost_load = vars["lost_load"]                 # (period, year, scenario)
+    # Grid cost accounting uses raw PCC interchange variables; transmission
+    # efficiency is applied separately in the energy balance and scope-2 terms.
     grid_imp = vars.get("grid_import", None)      # (period, year, scenario)
     grid_exp = vars.get("grid_export", None)      # (period, year, scenario)
 
@@ -153,7 +155,7 @@ def initialize_objective(
     # ------------------------------------------------------------------
     fuel_cost = p.fuel_cost_per_unit_fuel if p.fuel_cost_per_unit_fuel is not None else p.fuel_fuel_cost_per_unit_fuel
     fuel_cost = _require_finite_da("fuel_cost_per_unit_fuel", fuel_cost)
-    fuel_cost_y_s = (fuel_cons * fuel_cost).sum("period")
+    fuel_cost_y_s = (fuel_cons * fuel_cost).sum("period").sum("inv_step")
 
     if on_grid:
         if grid_imp is None:
@@ -198,7 +200,7 @@ def initialize_objective(
     if p.generator_fixed_om_share_per_year is not None:
         gen_fom_share = _finite_or_zero(p.generator_fixed_om_share_per_year)
         gen_capex_base = gen_units * gen_nom_kw * gen_capex_kw
-        gen_fom_y_s = (gen_capex_base * gen_active).sum("inv_step") * gen_fom_share
+        gen_fom_y_s = (gen_capex_base * gen_active * gen_fom_share).sum("inv_step")
     else:
         gen_fom_y_s = 0.0
 
@@ -220,10 +222,15 @@ def initialize_objective(
     fuel_direct_kg = _require_finite_da("fuel_direct_emissions_kgco2e_per_unit_fuel", p.fuel_direct_emissions_kgco2e_per_unit_fuel)
 
     ll_cost_y_s = lost_load.sum("period") * lost_load_cost
-    direct_em_kg_y_s = fuel_cons.sum("period") * fuel_direct_kg
+    direct_em_kg_y_s = (fuel_cons.sum("period") * fuel_direct_kg).sum("inv_step")
     direct_em_cost_y_s = direct_em_kg_y_s * emission_cost
+    if on_grid and grid_imp is not None and p.grid_transmission_efficiency is not None and p.grid_emissions_factor_kgco2e_per_kwh is not None:
+        grid_scope2_kg_y_s = ((grid_imp * p.grid_transmission_efficiency).sum("period")) * p.grid_emissions_factor_kgco2e_per_kwh
+        grid_scope2_cost_y_s = grid_scope2_kg_y_s * emission_cost
+    else:
+        grid_scope2_cost_y_s = 0.0
 
-    ext_y_s = ll_cost_y_s + direct_em_cost_y_s
+    ext_y_s = ll_cost_y_s + direct_em_cost_y_s + grid_scope2_cost_y_s
     expected_cashflow_y = annuity_y + ((opex_y_s + ext_y_s) * w_s).sum("scenario")
 
     # Embedded emissions at commissioning year (optional)
@@ -256,19 +263,36 @@ def initialize_objective(
     #
     # epsilon in currency/kWh (tiny), aligned with the typical-year model.
     epsilon = 1e-6
+    epsilon_eff_cap = 1e-9
     bat_ch = vars["battery_charge"]
     bat_dis = vars["battery_discharge"]
-    bat_throughput_y_s = (bat_ch + bat_dis).sum("period")
+    bat_calendar_fade = vars.get("battery_calendar_fade", None)
+    bat_eff_cap = vars.get("battery_effective_energy_capacity", None)
+    bat_throughput_y_s = (bat_ch + bat_dis).sum("period").sum("inv_step")
     bat_reg_cost_y = epsilon * (bat_throughput_y_s * w_s).sum("scenario")
+    cal_fade_reg_cost_y = 0.0
+    eff_cap_reg_credit_y = 0.0
+    if bat_calendar_fade is not None:
+        cal_fade_reg_cost_y = epsilon * bat_calendar_fade.sum("inv_step")
+    if bat_eff_cap is not None:
+        # Keep the effective usable-capacity state at its largest feasible value
+        # when the LP is otherwise indifferent. This is an internal tie-break,
+        # not a degradation credit.
+        eff_cap_reg_credit_y = -epsilon_eff_cap * (bat_eff_cap.sum("inv_step") * w_s).sum("scenario")
 
-    # Reporting-only memo: tail of the last active replacement annuity beyond
-    # the horizon. It is intentionally excluded from the optimization objective
-    # to keep the annuity-based annual cashflow convention coherent.
-    salvage_tail_memo = (
+    # Reporting-only memo: discounted value of the annuity payments that would
+    # fall beyond the modeled horizon for the last active replacement cycle of
+    # each cohort. This is not a salvage credit in the optimization objective.
+    #
+    # In the current multi-year formulation we optimize discounted in-horizon
+    # annual cashflows only. Because out-of-horizon annuity payments are never
+    # charged to the objective, subtracting an additional salvage term here
+    # would mix annuity accounting with a full-CAPEX residual-value convention.
+    post_horizon_annuity_tail_memo = (
         discounted_annuity_tail_memo(sets, res_annuity, res_life_y, rs).sum("inv_step").sum("resource")
         + discounted_annuity_tail_memo(sets, bat_annuity, bat_life_y, rs).sum("inv_step")
         + discounted_annuity_tail_memo(sets, gen_annuity, gen_life_y, rs).sum("inv_step")
     )
 
-    npwc = ((total_cashflow_y + bat_reg_cost_y) * disc_y).sum("year")
+    npwc = ((total_cashflow_y + bat_reg_cost_y + cal_fade_reg_cost_y + eff_cap_reg_credit_y) * disc_y).sum("year")
     model.add_objective(npwc, overwrite=True)

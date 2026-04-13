@@ -1,14 +1,65 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import xarray as xr
 
-from core.data_pipeline.utils import coord_labels, validate_required_coords
+from core.data_pipeline.battery_loss_model import (
+    CONVEX_LOSS_EPIGRAPH,
+    InputValidationError as BatteryLossInputValidationError,
+    get_battery_loss_model_from_formulation,
+    load_battery_loss_curve_dataset,
+)
+from core.data_pipeline.utils import coord_labels, merge_optional_datasets, validate_required_coords
 from core.io.utils import project_paths, simulate_grid_availability_typical_year
 from core.data_pipeline import typical_year_parsing as p
 
 
 InputValidationError = p.InputValidationError
+
+
+def _load_battery_loss_curve_if_needed(
+    *,
+    formulation: dict,
+    battery_params_ds: xr.Dataset,
+    inputs_dir,
+) -> tuple[str, xr.Dataset | None, str | None]:
+    loss_model = get_battery_loss_model_from_formulation(formulation)
+    curve_file = battery_params_ds.attrs.get("efficiency_curve_file", None)
+
+    if loss_model != CONVEX_LOSS_EPIGRAPH:
+        return loss_model, None, curve_file
+
+    if not curve_file:
+        raise InputValidationError(
+            "battery_model.loss_model='convex_loss_epigraph' requires "
+            "`battery.technical.efficiency_curve_csv` in inputs/battery.yaml."
+        )
+
+    curve_path = Path(curve_file)
+    if not curve_path.is_absolute():
+        curve_path = inputs_dir / curve_path
+
+    charge_efficiency_base_da = battery_params_ds["battery_charge_efficiency"]
+    discharge_efficiency_base_da = battery_params_ds["battery_discharge_efficiency"]
+    if "scenario" in charge_efficiency_base_da.dims:
+        charge_efficiency_base_da = charge_efficiency_base_da.isel(scenario=0)
+    if "scenario" in discharge_efficiency_base_da.dims:
+        discharge_efficiency_base_da = discharge_efficiency_base_da.isel(scenario=0)
+    charge_efficiency_base = float(charge_efficiency_base_da)
+    discharge_efficiency_base = float(discharge_efficiency_base_da)
+
+    try:
+        curve_ds = load_battery_loss_curve_dataset(
+            curve_path,
+            charge_efficiency_base=charge_efficiency_base,
+            discharge_efficiency_base=discharge_efficiency_base,
+        )
+    except BatteryLossInputValidationError as exc:
+        raise InputValidationError(str(exc)) from exc
+
+    return loss_model, curve_ds, str(curve_path)
 
 
 def _validate_sets(sets: xr.Dataset) -> None:
@@ -77,7 +128,7 @@ def _assemble_grid_block(
         if grid_export_price is not None:
             to_merge.append(xr.Dataset({"grid_export_price": grid_export_price}))
 
-        data = xr.merge([data] + to_merge, compat="override", join="exact")
+        data = merge_optional_datasets(data, *to_merge, compat="override", join="exact")
 
         data.attrs.setdefault("settings", {})
         data.attrs["settings"]["grid"] = {
@@ -131,7 +182,12 @@ def regenerate_grid_availability_typical_year(
         coords={"period": period_coord, "scenario": scenario_coord},
         dims=("period", "scenario"),
         name="grid_availability",
-        attrs={"units": "binary", "component": "grid"},
+        attrs={
+            "units": "binary",
+            "component": "grid",
+            "generated_artifact": True,
+            "notes": "Derived from grid.yaml outage statistics; not a primary user-maintained input.",
+        },
     )
 
     grid_avail_csv_path = paths.inputs_dir / "grid_availability.csv"
@@ -193,7 +249,7 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
     )
     max_ll_frac = p._as_float(optc.get("max_lost_load_fraction", 0.0), name="max_lost_load_fraction", default=0.0)
     lolc = p._as_float(optc.get("lost_load_cost_per_kwh", 0.0), name="lost_load_cost_per_kwh", default=0.0)
-    land_m2 = p._as_float(optc.get("land_availability_m2", 0.0), name="land_availability_m2", default=0.0)
+    land_m2 = p._as_float_or_nan(optc.get("land_availability_m2", None), name="land_availability_m2")
     em_cost = p._as_float(optc.get("emission_cost_per_kgco2e", 0.0), name="emission_cost_per_kgco2e", default=0.0)
 
     da_min_res_pen = xr.DataArray(min_res_pen, name="min_renewable_penetration")
@@ -237,38 +293,69 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
     )
     battery_path = paths.inputs_dir / "battery.yaml"
     bat_params_ds = p._load_battery_yaml(battery_path, scenario_coord=sets.coords["scenario"])
+    battery_loss_model, battery_curve_ds, battery_curve_path = _load_battery_loss_curve_if_needed(
+        formulation=formulation,
+        battery_params_ds=bat_params_ds,
+        inputs_dir=paths.inputs_dir,
+    )
+    battery_degradation_settings = {
+        "cycle_fade_enabled": False,
+        "calendar_fade_enabled": False,
+    }
+    battery_calendar_curve_ds = None
+    battery_calendar_curve_path = None
     genfuel_path = paths.inputs_dir / "generator.yaml"
     gen_ds, fuel_ds, curve_ds, genfuel_meta = p._load_generator_and_fuel_yaml(
         genfuel_path, inputs_dir=paths.inputs_dir, scenario_coord=scenario_coord
     )
 
-    data = xr.merge([data, ren_params_ds], compat="override")
-    data = xr.merge([data, bat_params_ds], compat="override")
-    data = xr.merge([data, gen_ds, fuel_ds], compat="override")
-    if curve_ds is not None:
-        data = xr.merge([data, curve_ds], compat="override")
+    data = merge_optional_datasets(
+        data,
+        ren_params_ds,
+        bat_params_ds,
+        gen_ds,
+        fuel_ds,
+        curve_ds,
+        battery_curve_ds,
+        battery_calendar_curve_ds,
+        compat="override",
+    )
 
     data.attrs["settings"] = {
         "project_name": project_name,
         "formulation": formulation_mode,
         "unit_commitment": uc_enabled,
+        "integer_sizing_enabled": uc_enabled,
         "multi_scenario": {"enabled": ms_enabled, "n_scenarios": n_scen},
         "resources": {
             "n_resources": int(sets.sizes.get("resource", 0)),
             "resource_labels": sets.coords.get("resource", []).values.tolist(),
         },
         "optimization_constraints": {"enforcement": enforcement},
+        "modeling_notes": {
+            "unit_commitment_semantics": "In typical-year mode, `unit_commitment` enables integer sizing variables only; chronological generator commitment binaries are not part of this formulation.",
+            "land_constraint_semantics": "Land availability is enforced only when a finite non-negative `land_availability_m2` value is provided; omitted values leave the constraint inactive.",
+        },
         "inputs_loaded": {"load_demand_csv": str(load_path), "renewable_availability_csv": str(resource_path)},
     }
     data.attrs["settings"]["inputs_loaded"]["renewables_yaml"] = str(renewables_path)
     data.attrs["settings"]["inputs_loaded"]["battery_yaml"] = str(battery_path)
+    if battery_curve_path is not None:
+        data.attrs["settings"]["inputs_loaded"]["battery_efficiency_curve_csv"] = str(battery_curve_path)
+    if battery_calendar_curve_path is not None:
+        data.attrs["settings"]["inputs_loaded"]["battery_calendar_fade_curve_csv"] = str(battery_calendar_curve_path)
     data.attrs["settings"]["battery_label"] = bat_params_ds.attrs.get("battery_label", "Battery")
+    data.attrs["settings"]["battery_model"] = {
+        "loss_model": battery_loss_model,
+        "efficiency_curve_csv": battery_curve_path,
+        "degradation_model": battery_degradation_settings,
+    }
     data.attrs.setdefault("settings", {})
     data.attrs["settings"].setdefault("generator", {})
     data.attrs["settings"]["generator"]["partial_load_modelling_enabled"] = bool(
         genfuel_meta.get("partial_load_modelling_enabled", False)
     )
-    data.attrs["settings"]["generator"]["efficiency_curve_files"] = genfuel_meta.get("efficiency_curve_files", {})
+    data.attrs["settings"]["generator"]["efficiency_curve_file"] = genfuel_meta.get("efficiency_curve_file")
     data.attrs["settings"]["generator"]["label"] = genfuel_meta.get("generator_label", "Generator")
     data.attrs["settings"]["fuel"] = {"label": genfuel_meta.get("fuel_label", "Fuel")}
     data.attrs["settings"].setdefault("inputs_loaded", {})

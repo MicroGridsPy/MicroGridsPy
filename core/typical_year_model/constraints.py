@@ -7,6 +7,8 @@ import numpy as np
 import xarray as xr
 import linopy as lp
 
+from core.data_pipeline.battery_loss_model import CONVEX_LOSS_EPIGRAPH, normalize_battery_loss_model
+from core.data_pipeline.utils import finite_nonnegative_scalar_limit
 from core.typical_year_model.params import get_params
 
 
@@ -52,6 +54,20 @@ def initialize_constraints(
     p = get_params(data)
     on_grid = p.is_grid_on()
     allow_export = p.is_grid_export_enabled()
+    battery_loss_model = normalize_battery_loss_model(
+        ((data.attrs or {}).get("settings", {}).get("battery_model", {}) or {}).get("loss_model"),
+        default="constant_efficiency",
+    )
+    battery_model_settings = ((data.attrs or {}).get("settings", {}).get("battery_model", {}) or {})
+    degradation_settings = (battery_model_settings.get("degradation_model", {}) or {})
+    degradation_state_enabled = bool(degradation_settings.get("cycle_fade_enabled", False)) or bool(
+        degradation_settings.get("calendar_fade_enabled", False)
+    )
+    if degradation_state_enabled:
+        raise InputValidationError(
+            "Battery degradation constraints are not supported in the steady_state typical-year formulation. "
+            "Use the dynamic multi-year formulation for cycle fade, calendar fade, SoH update, and SoH-driven capacity restriction."
+        )
     enforcement = p.constraints_enforcement(default="scenario_wise")
     if enforcement not in ("expected", "scenario_wise"):
         raise InputValidationError(
@@ -81,10 +97,12 @@ def initialize_constraints(
     # Generator params
     gen_nom_kw = p.generator_nominal_capacity_kw  # ()
     gen_eta_full = p.generator_nominal_efficiency_full_load  # ()
+    gen_max_installable_kw = p.generator_max_installable_capacity_kw  # scalar, may be NaN
     fuel_lhv = p.fuel_lhv_kwh_per_unit_fuel  # (scenario,)
 
     # Battery params
     bat_nom_kwh = p.battery_nominal_capacity_kwh  # ()
+    bat_max_installable_kwh = p.battery_max_installable_capacity_kwh  # scalar or None
     eta_c = p.battery_charge_efficiency  # (scenario,)
     eta_d = p.battery_discharge_efficiency  # (scenario,)
     soc0 = p.battery_initial_soc  # (scenario,) fraction
@@ -116,10 +134,16 @@ def initialize_constraints(
     bat_ch = vars["battery_charge"]  # (period, scenario)
     bat_dis = vars["battery_discharge"]  # (period, scenario)
     soc = vars["battery_soc"]  # (period, scenario)
+    bat_ch_dc = vars.get("battery_charge_dc", None)
+    bat_dis_dc = vars.get("battery_discharge_dc", None)
+    bat_ch_loss = vars.get("battery_charge_loss", None)
+    bat_dis_loss = vars.get("battery_discharge_loss", None)
     ll = vars["lost_load"]  # (period, scenario)
 
-    grid_imp = vars.get("grid_import", None)  # (period, scenario) if on_grid. N.B: energy bought at PCC (before losses)
-    grid_exp = vars.get("grid_export", None)  # (period, scenario) if allow_export. N.B: energy sold at PCC (before losses)
+    # Grid interchange variables are modeled at the point of common coupling
+    # (PCC), before applying transmission efficiency in the internal balance.
+    grid_imp = vars.get("grid_import", None)  # (period, scenario) if on_grid
+    grid_exp = vars.get("grid_export", None)  # (period, scenario) if allow_export
 
     # ---------------------------------------------------------------------
     # 1) Renewable generation limited by availability and installed capacity
@@ -136,6 +160,8 @@ def initialize_constraints(
     #   only where res_max_kw is finite
     # ---------------------------------------------------------------------
     finite = np.isfinite(res_max_kw)
+    if bool(np.any((res_max_kw.where(finite, other=0.0) < 0.0).values)):
+        raise InputValidationError("res_max_installable_capacity_kw must be non-negative when provided.")
     res_max_kw_finite = res_max_kw.where(finite, drop=True)
     if res_max_kw_finite.sizes.get("resource", 0) > 0:
         model.add_constraints(
@@ -151,6 +177,17 @@ def initialize_constraints(
     rhs_gen = gen_units * gen_nom_kw
     model.add_constraints(gen_gen <= rhs_gen, name="generator_generation_cap")
 
+    gen_cap_limit = finite_nonnegative_scalar_limit(
+        gen_max_installable_kw.values,
+        name="generator_max_installable_capacity_kw",
+        error_cls=InputValidationError,
+    )
+    if gen_cap_limit is not None:
+        model.add_constraints(
+            gen_units * gen_nom_kw <= gen_cap_limit,
+            name="generator_max_installable_capacity",
+        )
+
     # ---------------------------------------------------------------------
     # 4) Fuel ↔ energy relationship
     #   - If no partial-load curve: equality with nominal efficiency
@@ -158,59 +195,39 @@ def initialize_constraints(
     # ---------------------------------------------------------------------
 
     pl_rel = p.generator_eff_curve_rel_power
-    pl_eff = p.generator_eff_curve_eff
+    pl_fuel_rel = p.generator_fuel_curve_rel_fuel_use
 
     pl_points_ok = (
-        pl_rel is not None and pl_eff is not None
-        and ("curve_point" in pl_rel.dims) and ("curve_point" in pl_eff.dims)
+        pl_rel is not None and pl_fuel_rel is not None
+        and ("curve_point" in pl_rel.dims) and ("curve_point" in pl_fuel_rel.dims)
         and (pl_rel.sizes["curve_point"] >= 2)
     )
 
-    # Helper: if a scenario row is all-NaN, treat as no-curve for that scenario
-    def _scenario_has_curve(scen: str) -> bool:
-        if not pl_points_ok:
-            return False
-        r = pl_rel.sel(scenario=scen)
-        e = pl_eff.sel(scenario=scen)
-        return (np.isfinite(r.values).any() and np.isfinite(e.values).any())
-
-    scenario_labels = [str(s) for s in sets.coords["scenario"].values.tolist()]
-    scenarios_with_pl = [s for s in scenario_labels if _scenario_has_curve(s)]
-    scenarios_without_pl = [s for s in scenario_labels if s not in scenarios_with_pl]
-
-    # --- Case A) scenarios without PL curve: nominal efficiency equality
-    if len(scenarios_without_pl) > 0:
-        model.add_constraints(
-            gen_gen.sel(scenario=scenarios_without_pl)
-            == fuel_cons.sel(scenario=scenarios_without_pl) * fuel_lhv.sel(scenario=scenarios_without_pl) * gen_eta_full,
-            name="fuel_to_power_nominal_eta",
-        )
-
-    # --- Case B) scenarios with PL curve: convex piecewise lower bound
-    if pl_points_ok and len(scenarios_with_pl) > 0:
+    if pl_points_ok:
         # segment coordinate: 0..P-2
         P = int(pl_rel.sizes["curve_point"])
         seg = xr.IndexVariable("segment", np.arange(P - 1))
+        scenario_labels = [str(s) for s in sets.coords["scenario"].values.tolist()]
 
-        for s in scenarios_with_pl:
+        for s in scenario_labels:
             # Scalar per scenario
             lhv_s = fuel_lhv.sel(scenario=s)  # scalar DA
             cap = gen_nom_kw                  # scalar DA (kW per unit)
 
-            # Breakpoints for this scenario
-            r_full = pl_rel.sel(scenario=s)   # (curve_point,)
-            e_full = pl_eff.sel(scenario=s)   # (curve_point,)
+            # Shared technology curve
+            r_full = pl_rel   # (curve_point,)
+            phi_full = pl_fuel_rel   # (curve_point,)
 
             # Basic sanity (optional but recommended)
             # - drop NaNs (if present) by requiring all finite
-            if not (np.isfinite(r_full.values).all() and np.isfinite(e_full.values).all()):
-                raise ValueError(f"Partial-load curve for scenario '{s}' contains NaNs; provide full curve_point series.")
+            if not (np.isfinite(r_full.values).all() and np.isfinite(phi_full.values).all()):
+                raise ValueError("Generator partial-load fuel-use curve contains NaNs; provide full curve_point series.")
 
-            # r0,r1 and eta0,eta1
+            # r0,r1 and phi0,phi1
             r0 = r_full.isel(curve_point=seg)         # (segment,)
             r1 = r_full.isel(curve_point=seg + 1)     # (segment,)
-            eta0 = e_full.isel(curve_point=seg)       # (segment,)
-            eta1 = e_full.isel(curve_point=seg + 1)   # (segment,)
+            phi0 = phi_full.isel(curve_point=seg)     # (segment,)
+            phi1 = phi_full.isel(curve_point=seg + 1) # (segment,)
 
             # Convert to power at breakpoints for ONE unit (kW)
             p0 = cap * r0                              # (segment,)
@@ -218,8 +235,8 @@ def initialize_constraints(
 
             # Fuel at breakpoints for ONE unit (unit_fuel/h since Δt=1h)
             # fc = P / (eta * LHV)
-            fc0 = p0 / (eta0 * lhv_s)                  # (segment,)
-            fc1 = p1 / (eta1 * lhv_s)                  # (segment,)
+            fc0 = cap * phi0 / lhv_s                   # (segment,)
+            fc1 = cap * phi1 / lhv_s                   # (segment,)
 
             # Segment slope in fuel per kWh (unit_fuel/kWh)
             denom = (p1 - p0)
@@ -240,16 +257,20 @@ def initialize_constraints(
                 fuel_b >= rhs,
                 name=f"fuel_to_power_partial_load_{s}",
             )
-
-
+    else:
+        model.add_constraints(
+            gen_gen == fuel_cons * fuel_lhv * gen_eta_full,
+            name="fuel_to_power_nominal_eta",
+        )
     # ---------------------------------------------------------------------
     # 5) Battery charge/discharge power limits
     #
     # battery_charge(t,s)    <= (battery_units * bat_nom_kwh) / t_ch
     # battery_discharge(t,s) <= (battery_units * bat_nom_kwh) / t_dis
     # ---------------------------------------------------------------------
-    model.add_constraints(bat_ch <= (bat_units * bat_nom_kwh) / t_ch, name="battery_charge_limit")
-    model.add_constraints(bat_dis <= (bat_units * bat_nom_kwh) / t_dis, name="battery_discharge_limit")
+    if battery_loss_model != CONVEX_LOSS_EPIGRAPH:
+        model.add_constraints(bat_ch <= (bat_units * bat_nom_kwh) / t_ch, name="battery_charge_limit")
+        model.add_constraints(bat_dis <= (bat_units * bat_nom_kwh) / t_dis, name="battery_discharge_limit")
 
     # ---------------------------------------------------------------------
     # 6) Battery SOC dynamics (hourly Δt=1h) with cyclic end condition
@@ -261,38 +282,141 @@ def initialize_constraints(
     # ---------------------------------------------------------------------
     T = int(period.size)
     Ecap = bat_units * bat_nom_kwh
+    if bat_max_installable_kwh is not None:
+        battery_cap_limit = finite_nonnegative_scalar_limit(
+            bat_max_installable_kwh.values,
+            name="battery_max_installable_capacity_kwh",
+            error_cls=InputValidationError,
+        )
+        if battery_cap_limit is not None:
+            model.add_constraints(
+                Ecap <= battery_cap_limit,
+                name="battery_max_installable_capacity",
+            )
 
-    model.add_constraints(soc.isel(period=0) == soc0 * Ecap, name="soc_initial")
+    if battery_loss_model == CONVEX_LOSS_EPIGRAPH:
+        if not all(v is not None for v in (bat_ch_dc, bat_dis_dc, bat_ch_loss, bat_dis_loss)):
+            raise InputValidationError(
+                "Advanced battery loss mode is active, but internal battery DC/loss variables are missing."
+            )
+        required_curve_vars = (
+            "battery_charge_loss_slope",
+            "battery_charge_loss_intercept",
+            "battery_discharge_loss_slope",
+            "battery_discharge_loss_intercept",
+        )
+        missing_curve_vars = [name for name in required_curve_vars if name not in data.data_vars]
+        if missing_curve_vars:
+            raise InputValidationError(
+                f"Advanced battery loss mode is active, but required battery curve variables are missing: {missing_curve_vars}"
+            )
 
-    if T > 1:
+        seg = data.coords["battery_loss_segment"]
+        ch_slope = data["battery_charge_loss_slope"]
+        ch_intercept = data["battery_charge_loss_intercept"]
+        dis_slope = data["battery_discharge_loss_slope"]
+        dis_intercept = data["battery_discharge_loss_intercept"]
+
+        # In advanced mode the internal battery power reference is the DC-side
+        # power derived from energy capacity and max charge/discharge time.
+        # Public AC powers are then coupled through explicit loss variables.
+        p_ref_ch = (Ecap / t_ch)
+        p_ref_dis = (Ecap / t_dis)
+
         model.add_constraints(
-            soc.isel(period=slice(1, None))
-            == soc.isel(period=slice(0, -1))
-            + eta_c * bat_ch.isel(period=slice(0, -1))
-            - bat_dis.isel(period=slice(0, -1)) / eta_d,
-            name="soc_balance",
+            bat_ch_dc <= p_ref_ch,
+            name="battery_charge_dc_limit",
+        )
+        model.add_constraints(
+            bat_dis_dc <= p_ref_dis,
+            name="battery_discharge_dc_limit",
+        )
+        model.add_constraints(
+            bat_ch <= p_ref_ch + bat_ch_loss,
+            name="battery_charge_limit",
+        )
+        model.add_constraints(
+            bat_dis <= p_ref_dis,
+            name="battery_discharge_limit",
+        )
+        model.add_constraints(
+            bat_ch == bat_ch_dc + bat_ch_loss,
+            name="battery_charge_ac_dc_coupling",
+        )
+        model.add_constraints(
+            bat_dis == bat_dis_dc - bat_dis_loss,
+            name="battery_discharge_ac_dc_coupling",
         )
 
-    # cyclic closure (do NOT also force soc[T-1]==soc0*Ecap)
-    model.add_constraints(
-        soc.isel(period=T-1)
-        + eta_c * bat_ch.isel(period=T-1)
-        - bat_dis.isel(period=T-1) / eta_d
-        == soc0 * Ecap,
-        name="soc_cyclic",
-    )
+        bat_ch_dc_b = bat_ch_dc.expand_dims({"battery_loss_segment": seg})
+        bat_ch_loss_b = bat_ch_loss.expand_dims({"battery_loss_segment": seg})
+        bat_dis_dc_b = bat_dis_dc.expand_dims({"battery_loss_segment": seg})
+        bat_dis_loss_b = bat_dis_loss.expand_dims({"battery_loss_segment": seg})
 
-    model.add_constraints(soc <= Ecap, name="soc_upper")
-    model.add_constraints(soc >= (1.0 - dod) * Ecap, name="soc_lower")
+        model.add_constraints(
+            bat_ch_loss_b >= (ch_slope * bat_ch_dc_b) + (ch_intercept * p_ref_ch),
+            name="battery_charge_loss_epigraph",
+        )
+        model.add_constraints(
+            bat_dis_loss_b >= (dis_slope * bat_dis_dc_b) + (dis_intercept * p_ref_dis),
+            name="battery_discharge_loss_epigraph",
+        )
+
+        if T > 1:
+            model.add_constraints(
+                soc.isel(period=slice(1, None))
+                == soc.isel(period=slice(0, -1))
+                + bat_ch_dc.isel(period=slice(0, -1))
+                - bat_dis_dc.isel(period=slice(0, -1)),
+                name="soc_balance",
+            )
+
+        model.add_constraints(
+            soc.isel(period=T-1)
+            + bat_ch_dc.isel(period=T-1)
+            - bat_dis_dc.isel(period=T-1)
+            == soc0 * Ecap,
+            name="soc_cyclic",
+        )
+        model.add_constraints(soc.isel(period=0) == soc0 * Ecap, name="soc_initial")
+        soc_upper_bound = Ecap
+        soc_lower_bound = (1.0 - dod) * Ecap
+    else:
+        model.add_constraints(soc.isel(period=0) == soc0 * Ecap, name="soc_initial")
+        if T > 1:
+            model.add_constraints(
+                soc.isel(period=slice(1, None))
+                == soc.isel(period=slice(0, -1))
+                + eta_c * bat_ch.isel(period=slice(0, -1))
+                - bat_dis.isel(period=slice(0, -1)) / eta_d,
+                name="soc_balance",
+            )
+
+        # cyclic closure (do NOT also force soc[T-1]==soc0*Ecap)
+        model.add_constraints(
+            soc.isel(period=T-1)
+            + eta_c * bat_ch.isel(period=T-1)
+            - bat_dis.isel(period=T-1) / eta_d
+            == soc0 * Ecap,
+            name="soc_cyclic",
+        )
+        soc_upper_bound = Ecap
+        soc_lower_bound = (1.0 - dod) * Ecap
+
+    model.add_constraints(soc <= soc_upper_bound, name="soc_upper")
+    model.add_constraints(soc >= soc_lower_bound, name="soc_lower")
 
     # ---------------------------------------------------------------------
     # 7) Grid import/export limits (if enabled)
     # Constraints:
     #   grid_import(t,s) <= grid_availability(t,s) * line_cap_kw(s)
     #   grid_export(t,s) <= grid_availability(t,s) * line_cap_kw(s)
+    # With hourly steps, the kW line capacity is used directly as a per-step
+    # kWh interchange bound (Δt = 1 h).
     # ---------------------------------------------------------------------
     if on_grid:
-        # Import limited by availability and line capacity and efficiency
+        # Line limits apply to raw PCC interchange. Transmission efficiency is
+        # applied later in the energy balance, not in the capacity bound.
         rhs_imp = grid_avail * line_cap_kw
         model.add_constraints(grid_imp <= rhs_imp, name="grid_import_cap")
 
@@ -305,8 +429,8 @@ def initialize_constraints(
     # Energy balance:
     #   Σ_r res_generation(t,s,r)
     # + generator_generation(t,s)
-    # + grid_import(t,s) [if on_grid]
-    # - grid_export(t,s) [if allow_export]
+    # + grid_import(t,s) * grid_eta(s) [if on_grid]
+    # - grid_export(t,s) * grid_eta(s) [if allow_export]
     # + battery_discharge(t,s)
     # - battery_charge(t,s)
     # + lost_load(t,s)
@@ -384,12 +508,19 @@ def initialize_constraints(
             model.add_constraints(E_renew_exp >= min_res_pen * E_total_exp, name="min_renewable_penetration_expected")
 
     # ---------------------------------------------------------------------
-    # 10) Land availability (renewables only)
+    # 10) Land availability (renewables only, only if user provides a finite
+    #     non-negative limit)
     #
     # area_used = Σ_r (res_units(r) * res_nominal_kw(r) * res_area_m2_per_kw(r))
     # ---------------------------------------------------------------------
-    area_used = (res_units * res_nom_kw * res_area_m2_per_kw).sum("resource") # scalar
-    model.add_constraints(area_used <= land_m2, name="land_availability") 
+    land_limit = finite_nonnegative_scalar_limit(
+        land_m2.values,
+        name="land_availability_m2",
+        error_cls=InputValidationError,
+    )
+    if land_limit is not None:
+        area_used = (res_units * res_nom_kw * res_area_m2_per_kw).sum("resource") # scalar
+        model.add_constraints(area_used <= land_limit, name="land_availability")
 
 
 

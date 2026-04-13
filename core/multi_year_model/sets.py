@@ -8,6 +8,7 @@ import math
 import xarray as xr
 
 from core.io.utils import project_paths
+from core.io.input_labels import renewable_labels_from_yaml
 
 
 class InputValidationError(RuntimeError):
@@ -27,6 +28,11 @@ def _safe_int(v: Any, *, name: str) -> int:
     try:
         iv = int(v)
     except Exception:
+        if name == "start_year_label":
+            raise InputValidationError(
+                f"Invalid int for '{name}': {v!r}. Multi-year projects currently require an integer-like "
+                "start year because year labels are used as explicit calendar-year coordinates."
+            )
         raise InputValidationError(f"Invalid int for '{name}': {v!r}")
     if iv <= 0:
         raise InputValidationError(f"'{name}' must be > 0, got {iv}")
@@ -39,7 +45,7 @@ def initialize_sets(project_name: str) -> xr.Dataset:
 
     Dynamic formulation:
       - period: 0..8759 (typical-year hours)
-      - year: 1..n_years
+      - year: explicit calendar-year labels derived from start_year_label
       - inv_step: 1..n_steps (or [1] if capacity_expansion disabled)
       - scenario: scenario labels
       - resource: resource labels
@@ -74,10 +80,15 @@ def initialize_sets(project_name: str) -> xr.Dataset:
 
     # --- renewables/resources ---
     components = formulation.get("system_configuration", {}) or {}
-    resource_labels = list(components.get("resources") or [])
-    n_res = int(components.get("n_sources", len(resource_labels)))
+    renewables_yaml = renewable_labels_from_yaml(paths.inputs_dir / "renewables.yaml")
+    resource_labels = list(renewables_yaml.get("resources") or components.get("resources") or [])
+    n_res = int(components.get("n_sources", len(resource_labels) or 1))
     if not resource_labels:
-        resource_labels = [f"res_{i+1}" for i in range(n_res)]
+        resource_labels = [f"Resource_{i+1}" for i in range(n_res)]
+    elif len(resource_labels) < n_res:
+        resource_labels = resource_labels + [f"Resource_{i+1}" for i in range(len(resource_labels), n_res)]
+    elif len(resource_labels) > n_res:
+        resource_labels = resource_labels[:n_res]
 
     # --- dynamic horizon / investment steps ---
     # Recommended keys (choose one convention and keep it stable)
@@ -87,9 +98,8 @@ def initialize_sets(project_name: str) -> xr.Dataset:
     # horizon
     n_years = _safe_int(formulation.get("time_horizon_years", 1), name="time_horizon_years")
 
-    # year labels (use the label as a START YEAR if possible; otherwise fall back to 1..n_years)
-    start_year_label = str(formulation.get("start_year_label", "")).strip()
-    start_year_int = int(start_year_label)
+    # Year labels are explicit calendar years derived from start_year_label.
+    start_year_int = _safe_int(formulation.get("start_year_label", None), name="start_year_label")
     year_labels = list(range(start_year_int, start_year_int + n_years))  # e.g. 2026..2029
 
     # capacity expansion and investment steps
@@ -97,7 +107,15 @@ def initialize_sets(project_name: str) -> xr.Dataset:
 
     if capexp_enabled:
         step_years_list = formulation.get("investment_steps_years") or []
-        step_years_list = [int(v) for v in step_years_list]
+        if not isinstance(step_years_list, list) or len(step_years_list) == 0:
+            raise InputValidationError(
+                "capacity_expansion is enabled, but 'investment_steps_years' is missing or empty."
+            )
+        step_years_list = [_safe_int(v, name="investment_steps_years") for v in step_years_list]
+        if sum(step_years_list) != n_years:
+            raise InputValidationError(
+                f"Sum of investment_steps_years ({sum(step_years_list)}) must equal time_horizon_years ({n_years})."
+            )
         n_steps = len(step_years_list)
         inv_steps = list(range(1, n_steps + 1))  # 1-based
 

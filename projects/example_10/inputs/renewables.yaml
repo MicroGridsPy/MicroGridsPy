@@ -1,0 +1,79 @@
+meta:
+  units:
+    res_nominal_capacity_kw: kW
+    res_specific_investment_cost_per_kw: currency_per_kW
+    res_wacc: '-'
+    res_grant_share_of_capex: share
+    res_lifetime_years: years
+    res_embedded_emissions_kgco2e_per_kw: kgCO2e_per_kW
+    res_fixed_om_share_per_year: share_per_year
+    res_production_subsidy_per_kwh: currency_per_kWh
+    res_inverter_efficiency: '-'
+    res_specific_area_m2_per_kw: m2_per_kW
+    res_max_installable_capacity_kw: kW
+    res_capacity_degradation_rate_per_year: per_year
+  context:
+    formulation: dynamic
+    multi_scenario: false
+    capacity_expansion: true
+    investment_steps:
+    - step: '1'
+      duration_years: 5
+    - step: '2'
+      duration_years: 5
+    inv_step_keys:
+    - step_1
+    - step_2
+  description:
+    summary: Renewable inputs define step-dependent investment parameters and shared
+      technical parameters.
+    parameters:
+      res_nominal_capacity_kw: Nominal capacity represented by one renewable unit.
+      res_specific_investment_cost_per_kw: Specific investment cost of installed renewable
+        capacity.
+      res_wacc: Weighted average cost of capital used for annualizing renewable CAPEX.
+      res_grant_share_of_capex: Fraction of renewable CAPEX covered by grants or subsidies.
+      res_lifetime_years: Technical/economic lifetime used for replacement and annuity
+        calculations.
+      res_embedded_emissions_kgco2e_per_kw: Embodied emissions associated with installing
+        renewable capacity.
+      res_inverter_efficiency: Conversion efficiency applied to renewable output.
+      res_specific_area_m2_per_kw: Land requirement per unit of renewable installed
+        capacity.
+      res_max_installable_capacity_kw: Upper bound on renewable installed capacity
+        for the resource.
+      res_fixed_om_share_per_year: Fixed annual O&M cost expressed as a share of renewable
+        CAPEX. In the typical-year formulation this input is scenario-independent.
+      res_production_subsidy_per_kwh: Operating subsidy earned per unit of renewable
+        generation.
+      res_capacity_degradation_rate_per_year: Annual reduction in effective renewable
+        capacity used in the dynamic formulation.
+renewables:
+- id: res_1
+  conversion_technology: Solar_PV
+  resource: Solar
+  investment:
+    by_step:
+      step_1:
+        nominal_capacity_kw: 1.0
+        specific_investment_cost_per_kw: 800
+        wacc: 0.05
+        grant_share_of_capex: 0.0
+        lifetime_years: 25
+        embedded_emissions_kgco2e_per_kw: 500
+        fixed_om_share_per_year: 0.02
+        production_subsidy_per_kwh: 0.0
+      step_2:
+        nominal_capacity_kw: 1.0
+        specific_investment_cost_per_kw: 800
+        wacc: 0.05
+        grant_share_of_capex: 0.0
+        lifetime_years: 25
+        embedded_emissions_kgco2e_per_kw: 0.0
+        fixed_om_share_per_year: 0.02
+        production_subsidy_per_kwh: 0.0
+  technical:
+    inverter_efficiency: 1.0
+    specific_area_m2_per_kw: null
+    max_installable_capacity_kw: null
+    capacity_degradation_rate_per_year: 0.0

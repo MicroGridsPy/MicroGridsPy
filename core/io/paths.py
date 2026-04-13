@@ -21,17 +21,5 @@ class ProjectPaths:
         return self.root / "logs"
 
     @property
-    def manifest_yaml(self) -> Path:
-        return self.root / "project.yaml"
-
-    @property
     def formulation_json(self) -> Path:
         return self.inputs_dir / "formulation.json"
-
-    @property
-    def parameters_yaml(self) -> Path:
-        return self.inputs_dir / "parameters.yaml"
-
-    @property
-    def timeseries_csv(self) -> Path:
-        return self.inputs_dir / "timeseries.csv"

@@ -1,0 +1,71 @@
+meta:
+  context:
+    formulation: dynamic
+    system_type: on_grid
+    multi_scenario: false
+    scenarios:
+    - scenario_1
+    year_headers_used_in_timeseries:
+    - '2026'
+    - '2027'
+    - '2028'
+    - '2029'
+    - '2030'
+    - '2031'
+    - '2032'
+    - '2033'
+    - '2034'
+    - '2035'
+    allow_export: false
+    csv_files:
+      grid_import_price: grid_import_price.csv
+      grid_export_price: null
+      csv_base_folder: inputs/
+  units:
+    grid_line_capacity_kw: kW
+    grid_transmission_efficiency: '-'
+    grid_renewable_share: share
+    grid_emissions_factor_kgco2e_per_kwh: kgCO2e_per_kWh
+    grid_avg_outages_per_year: events_per_year
+    grid_avg_outage_duration_minutes: minutes
+    grid_outage_scale_od_hours: hours
+    grid_outage_shape_od: '-'
+    grid_outage_seed: integer_seed
+    grid_first_year_connection: year_label
+  description:
+    summary: Grid inputs define line limits, outage statistics, and connection timing
+      for on-grid configurations.
+    parameters:
+      grid_line_capacity_kw: Maximum import/export capacity of the grid interconnection.
+      grid_transmission_efficiency: Efficiency applied to delivered imports/exports
+        in the internal energy balance and scope-2 accounting; line-capacity limits
+        and prices use raw PCC interchange.
+      grid_renewable_share: Share of delivered imported electricity counted as renewable
+        in policy metrics.
+      grid_emissions_factor_kgco2e_per_kwh: Scope 2 emissions factor applied to delivered
+        imported electricity.
+      grid_avg_outages_per_year: Average number of grid outages per year.
+      grid_avg_outage_duration_minutes: Average outage duration used by the outage
+        simulator.
+      grid_outage_scale_od_hours: Weibull scale parameter for outage duration sampling.
+      grid_outage_shape_od: Weibull shape parameter for outage duration sampling.
+      grid_outage_seed: Deterministic seed used when generating the derived grid availability
+        matrix.
+      grid_first_year_connection: First model year in which the grid connection becomes
+        available. Use an exact year label from sets.year when possible; integer calendar
+        years are supported only when the model year labels are themselves integer-like.
+grid:
+  by_scenario:
+    scenario_1:
+      line:
+        capacity_kw: 500
+        transmission_efficiency: 1.0
+        renewable_share: 0.0
+        emissions_factor_kgco2e_per_kwh: 0.35
+      outages:
+        average_outages_per_year: 60
+        average_outage_duration_minutes: 180
+        outage_scale_od_hours: 0.6
+        outage_shape_od: 0.56
+        outage_seed: 0
+      first_year_connection: 2026

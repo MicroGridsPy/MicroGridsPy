@@ -84,9 +84,7 @@ PDF_PREVIEWS = (
 )
 
 USEFUL_LINKS = (
-    ("Mathematical Formulation (PDF)", "https://github.com/AleOnori98/microgridspy-planning/blob/main/docs/Mathematical_Formulation.pdf"),
-    ("User Guide (PDF draft)", "https://github.com/AleOnori98/microgridspy-planning/blob/main/docs/User_Guide.pdf"),
-    ("Online Documentation (work in progress)", ONLINE_DOCS_URL),
+    ("Online Read-the-Docs Documentation (work in progress)", ONLINE_DOCS_URL),
 )
 
 
@@ -296,6 +294,7 @@ def _render_footer() -> None:
     st.markdown("**Technical Advisors**")
     st.markdown(
         """
+        - Nicolò Stevanato, Politecnico di Milano
         - Riccardo Mereu, Politecnico di Milano
         - Emanuela Colombo, Politecnico di Milano
         """

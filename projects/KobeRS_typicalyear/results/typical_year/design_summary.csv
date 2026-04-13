@@ -1,0 +1,2 @@
+battery_units,battery_installed_kwh,generator_units,generator_installed_kw,res_units_total,res_installed_kw_total,res_units__Solar,res_installed_kw__Solar
+140.0,140.0,-0.0,-0.0,129.0,129.0,129.0,129.0

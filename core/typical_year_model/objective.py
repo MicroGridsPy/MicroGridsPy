@@ -14,6 +14,10 @@ class InputValidationError(RuntimeError):
     pass
 
 
+BATTERY_REGULARIZATION_EPSILON = 1e-4
+GRID_REGULARIZATION_EPSILON = 1e-4
+
+
 def _crf(r: xr.DataArray | float, n: xr.DataArray | float) -> xr.DataArray:
     """
     Capital Recovery Factor:
@@ -38,11 +42,14 @@ def initialize_objective(
     Objective: minimize total expected annual system cost:
 
       total = annualized_investment_cost
+            + annual_fixed_om_cost
             + sum_s w_s * annual_operating_cost(s)
 
-    Annualized investment cost uses CRF and includes:
-      - CAPEX annualization (after grants)
-      - fixed O&M (modeled as share of CAPEX per year)
+    Annualized investment cost uses CRF and includes CAPEX annualization
+    (after grants).
+
+    Fixed O&M is computed once from installed capacity and is independent of
+    scenarios and dispatch.
 
     Annual operating cost includes:
       - fuel cost
@@ -93,6 +100,8 @@ def initialize_objective(
     fuel_cons = vars["fuel_consumption"]         # (period, scenario)
     lost_load = vars["lost_load"]                # (period, scenario)
 
+    # Grid cost accounting uses raw PCC interchange variables; transmission
+    # efficiency is applied separately in the energy balance and scope-2 terms.
     grid_imp = vars.get("grid_import", None)     # (period, scenario) if on_grid
     grid_exp = vars.get("grid_export", None)     # (period, scenario) if allow_export
 
@@ -105,8 +114,8 @@ def initialize_objective(
     res_life_y = p.res_lifetime_years                              # (resource,)
     res_wacc = p.res_wacc                                           # (resource,)
     res_grant = p.res_grant_share_of_capex                         # (resource,)
-    # scenario-dependent
-    res_fom_share = p.res_fixed_om_share_per_year                  # (scenario, resource)
+    # scenario-dependent subsidy, but scenario-independent fixed O&M
+    res_fom_share = p.res_fixed_om_share_per_year                  # (resource,)
     res_subsidy_kwh = p.res_production_subsidy_per_kwh             # (scenario, resource)
     res_emb_kg_per_kw = p.res_embedded_emissions_kgco2e_per_kw      # (scenario, resource)
 
@@ -115,7 +124,7 @@ def initialize_objective(
     bat_capex_kwh = p.battery_specific_investment_cost_per_kwh     # scalar
     bat_life_y = p.battery_calendar_lifetime_years                 # scalar
     bat_wacc = p.battery_wacc                                       # scalar
-    bat_fom_share = p.battery_fixed_om_share_per_year              # (scenario,)
+    bat_fom_share = p.battery_fixed_om_share_per_year              # scalar
     bat_emb_kg_per_kwh = p.battery_embedded_emissions_kgco2e_per_kwh  # (scenario,)
 
     # Generator
@@ -123,7 +132,7 @@ def initialize_objective(
     gen_capex_kw = p.generator_specific_investment_cost_per_kw    # scalar
     gen_life_y = p.generator_lifetime_years                       # scalar
     gen_wacc = p.generator_wacc                                   # scalar
-    gen_fom_share = p.generator_fixed_om_share_per_year           # (scenario,)
+    gen_fom_share = p.generator_fixed_om_share_per_year           # scalar
     gen_emb_kg_per_kw = p.generator_embedded_emissions_kgco2e_per_kw  # (scenario,)
 
     # Fuel (scenario-dependent)
@@ -147,7 +156,7 @@ def initialize_objective(
     emission_cost = p.emission_cost_per_kgco2e                     # scalar or (scenario,)
 
     # ------------------------------------------------------------------
-    # 1) Annualized investment cost (scenario-invariant CAPEX annuity + expected FOM)
+    # 1) Annualized investment cost + scenario-independent fixed O&M
     # ------------------------------------------------------------------
     # Installed capacities
     cap_res_kw = res_units * res_nom_kw                               # (resource,)
@@ -169,10 +178,10 @@ def initialize_objective(
     annualized_investment_cost = annual_res_capex + annual_bat_capex + annual_gen_capex  # scalar
 
     # Fixed O&M
-    annual_res_fom_s = (res_capex_kw * res_fom_share * cap_res_kw).sum("resource")  # (scenario,)
-    annual_bat_fom_s = (bat_capex_kwh * bat_fom_share * cap_bat_kwh)                # (scenario,)
-    annual_gen_fom_s = (gen_capex_kw * gen_fom_share * cap_gen_kw)                  # (scenario,)
-    annual_fom_s = annual_res_fom_s + annual_bat_fom_s + annual_gen_fom_s           # (scenario,)
+    annual_res_fom = (res_capex_kw * res_fom_share * cap_res_kw).sum("resource")  # scalar
+    annual_bat_fom = bat_capex_kwh * bat_fom_share * cap_bat_kwh                   # scalar
+    annual_gen_fom = gen_capex_kw * gen_fom_share * cap_gen_kw                     # scalar
+    annual_fixed_om_cost = annual_res_fom + annual_bat_fom + annual_gen_fom        # scalar
 
     # ------------------------------------------------------------------
     # 2) Annual operating cost per scenario (then expected value)
@@ -241,8 +250,7 @@ def initialize_objective(
     # Total annual operating cost per scenario
     # ------------------------------------------------------------------
     annual_operating_cost_s = (
-        annual_fom_s
-        + fuel_cost_s
+        fuel_cost_s
         + grid_import_cost_s
         - grid_export_revenue_s
         - res_subsidy_rev_s
@@ -257,15 +265,29 @@ def initialize_objective(
     # Encourage solutions without simultaneous charge/discharge and avoid
     # degenerate circulation loops. Not a degradation model.
     #
-    # epsilon in €/kWh (tiny).
-    epsilon = 1e-6
-
+    # Small penalties in currency per kWh discourage counter-flows without changing the model class.
     # scenario-weighted throughput (kWh)
     bat_throughput_s = (bat_ch + bat_dis).sum("period")   # (scenario,)
-    bat_reg_cost = epsilon * (w_s * bat_throughput_s).sum("scenario")  # scalar
+    bat_reg_cost = BATTERY_REGULARIZATION_EPSILON * (w_s * bat_throughput_s).sum("scenario")  # scalar
+
+    # Small anti-circulation penalty for grid import/export loops.
+    if on_grid and grid_imp is not None:
+        grid_throughput_s = grid_imp.sum("period")
+        if allow_export and grid_exp is not None:
+            grid_throughput_s = grid_throughput_s + grid_exp.sum("period")
+        grid_reg_cost = GRID_REGULARIZATION_EPSILON * (w_s * grid_throughput_s).sum("scenario")
+    else:
+        grid_reg_cost = xr.DataArray(0.0)
 
     # ------------------------------------------------------------------
     # Objective
     # ------------------------------------------------------------------
-    total_annual_cost = annualized_investment_cost + expected_annual_operating_cost + bat_reg_cost
+    total_annual_cost = (
+        annualized_investment_cost
+        + annual_fixed_om_cost
+        + expected_annual_operating_cost
+        + bat_reg_cost
+        + grid_reg_cost
+    )
     model.add_objective(total_annual_cost, overwrite=True)
+
