@@ -7,6 +7,7 @@ from typing import Sequence, Optional, List, Mapping, Any
 import pandas as pd
 import yaml
 
+from core.io.csv_format import write_csv_with_format
 from core.io.jsonio import ensure_parent_dir
 from core.io.paths import ProjectPaths
 
@@ -51,6 +52,8 @@ class TemplateSettings:
     generator_efficiency_model: str
     generator_efficiency_curve_csv: str
     fuel_label: str
+    csv_delimiter: str = ","
+    csv_decimal: str = "."
     renewable_vintage_labels_by_step: Optional[Mapping[str, Mapping[str, str]]] = None
     battery_vintage_labels_by_step: Optional[Mapping[str, str]] = None
     generator_vintage_labels_by_step: Optional[Mapping[str, str]] = None
@@ -74,11 +77,13 @@ def write_templates(paths: ProjectPaths, settings: TemplateSettings, overwrite: 
     if _safe_battery_loss_model(settings) == "convex_loss_epigraph":
         _write_battery_efficiency_curve_csv(
             paths.inputs_dir / _safe_battery_efficiency_curve_csv(settings),
+            settings=settings,
             overwrite=overwrite,
         )
     if _battery_calendar_fade_active(settings):
         _write_battery_calendar_fade_curve_csv(
             paths.inputs_dir / _safe_battery_calendar_fade_curve_csv(settings),
+            settings=settings,
             overwrite=overwrite,
         )
     # Write generator.yaml configuration
@@ -86,6 +91,7 @@ def write_templates(paths: ProjectPaths, settings: TemplateSettings, overwrite: 
     if _safe_generator_efficiency_model(settings) == "efficiency_curve":
         _write_generator_efficiency_curve_csv(
             paths.inputs_dir / _safe_generator_efficiency_curve_csv(settings),
+            settings=settings,
             overwrite=overwrite,
         )
     # Grid inputs (ONLY if on-grid)
@@ -324,10 +330,37 @@ def _ensure_parent_dir(path: Path) -> None:
     ensure_parent_dir(path)
 
 
-def _write_yaml_file(path: Path, payload: dict) -> None:
+def _csv_format(settings: TemplateSettings) -> dict[str, str]:
+    return {
+        "csv_format": {
+            "delimiter": str(getattr(settings, "csv_delimiter", ",") or ","),
+            "decimal": str(getattr(settings, "csv_decimal", ".") or "."),
+        }
+    }
+
+
+def _annotate_yaml_sections(text: str, section_comments: Mapping[str, str] | None = None) -> str:
+    if not section_comments:
+        return text
+
+    annotated_lines: list[str] = []
+    for line in text.splitlines():
+        key = line.split(":", 1)[0] if line and not line.startswith(" ") and ":" in line else None
+        if key in section_comments:
+            comment = str(section_comments[key]).rstrip()
+            if annotated_lines and annotated_lines[-1] != "":
+                annotated_lines.append("")
+            annotated_lines.extend(comment.splitlines())
+        annotated_lines.append(line)
+    return "\n".join(annotated_lines) + "\n"
+
+
+def _write_yaml_file(path: Path, payload: dict, *, section_comments: Mapping[str, str] | None = None) -> None:
     _ensure_parent_dir(path)
+    text = yaml.safe_dump(payload, sort_keys=False, allow_unicode=True)
+    text = _annotate_yaml_sections(text, section_comments)
     with path.open("w", encoding="utf-8") as f:
-        yaml.safe_dump(payload, f, sort_keys=False, allow_unicode=True)
+        f.write(text)
 
 
 def _hourly_index(n_hours: int = 8760) -> pd.RangeIndex:
@@ -337,6 +370,7 @@ def _hourly_index(n_hours: int = 8760) -> pd.RangeIndex:
 def _write_hourly_csv_template(
     path: Path,
     *,
+    settings: TemplateSettings,
     columns: pd.MultiIndex,
     hour_column: tuple,
     value_columns: list[tuple],
@@ -353,7 +387,7 @@ def _write_hourly_csv_template(
         df[column] = default_value
 
     _ensure_parent_dir(path)
-    df.to_csv(path, index=False)
+    write_csv_with_format(df, path, csv_format=_csv_format(settings), index=False)
 
 
 # =============================================================================
@@ -384,6 +418,7 @@ def _write_load_demand_csv(path: Path, settings: TemplateSettings, overwrite: bo
     value_columns = [(str(s), str(y)) for s in scenarios for y in years]
     _write_hourly_csv_template(
         path,
+        settings=settings,
         columns=columns,
         hour_column=("meta", "hour"),
         value_columns=value_columns,
@@ -417,6 +452,7 @@ def _write_resource_availability_csv(path: Path, settings: TemplateSettings, ove
     value_columns = [(str(s), str(y), str(r)) for s in scenarios for y in years for r in resource_labels]
     _write_hourly_csv_template(
         path,
+        settings=settings,
         columns=columns,
         hour_column=("meta", "hour", ""),
         value_columns=value_columns,
@@ -728,7 +764,25 @@ def _write_renewables_yaml(path: Path, settings: TemplateSettings, overwrite: bo
         "renewables": renewables_list,
     }
 
-    _write_yaml_file(path, payload)
+    _write_yaml_file(
+        path,
+        payload,
+        section_comments={
+            "meta": (
+                "# -----------------------------------------------------------------------------\n"
+                "# Metadata reference section.\n"
+                "# Units, context, and descriptions below are informational and normally do not\n"
+                "# need to be edited during project setup.\n"
+                "# -----------------------------------------------------------------------------"
+            ),
+            "renewables": (
+                "# -----------------------------------------------------------------------------\n"
+                "# Editable renewable inputs.\n"
+                "# Update the values below to define the renewable technologies in your project.\n"
+                "# -----------------------------------------------------------------------------"
+            ),
+        },
+    )
 
 
 def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool = False) -> None:
@@ -973,10 +1027,28 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
         "battery": battery_payload,
     }
 
-    _write_yaml_file(path, payload)
+    _write_yaml_file(
+        path,
+        payload,
+        section_comments={
+            "meta": (
+                "# -----------------------------------------------------------------------------\n"
+                "# Metadata reference section.\n"
+                "# Units, context, and descriptions below are informational and normally do not\n"
+                "# need to be edited during project setup.\n"
+                "# -----------------------------------------------------------------------------"
+            ),
+            "battery": (
+                "# -----------------------------------------------------------------------------\n"
+                "# Editable battery inputs.\n"
+                "# Update the values below to define the storage technology in your project.\n"
+                "# -----------------------------------------------------------------------------"
+            ),
+        },
+    )
 
 
-def _write_battery_efficiency_curve_csv(path: Path, overwrite: bool = False) -> None:
+def _write_battery_efficiency_curve_csv(path: Path, *, settings: TemplateSettings, overwrite: bool = False) -> None:
     """
     Create inputs/battery_efficiency_curve.csv.
 
@@ -999,10 +1071,10 @@ def _write_battery_efficiency_curve_csv(path: Path, overwrite: bool = False) -> 
     )
 
     _ensure_parent_dir(path)
-    df.to_csv(path, index=False)
+    write_csv_with_format(df, path, csv_format=_csv_format(settings), index=False)
 
 
-def _write_battery_calendar_fade_curve_csv(path: Path, overwrite: bool = False) -> None:
+def _write_battery_calendar_fade_curve_csv(path: Path, *, settings: TemplateSettings, overwrite: bool = False) -> None:
     """
     Create inputs/battery_calendar_fade_curve.csv.
 
@@ -1021,7 +1093,7 @@ def _write_battery_calendar_fade_curve_csv(path: Path, overwrite: bool = False) 
     )
 
     _ensure_parent_dir(path)
-    df.to_csv(path, index=False)
+    write_csv_with_format(df, path, csv_format=_csv_format(settings), index=False)
 
 
 def _write_generator_yaml(path: Path, settings: TemplateSettings, overwrite: bool = False) -> None:
@@ -1236,10 +1308,34 @@ def _write_generator_yaml(path: Path, settings: TemplateSettings, overwrite: boo
         "fuel": fuel_payload,
     }
 
-    _write_yaml_file(path, payload)
+    _write_yaml_file(
+        path,
+        payload,
+        section_comments={
+            "meta": (
+                "# -----------------------------------------------------------------------------\n"
+                "# Metadata reference section.\n"
+                "# Units, context, and descriptions below are informational and normally do not\n"
+                "# need to be edited during project setup.\n"
+                "# -----------------------------------------------------------------------------"
+            ),
+            "generator": (
+                "# -----------------------------------------------------------------------------\n"
+                "# Editable generator inputs.\n"
+                "# Update the values below to define the backup generation technology.\n"
+                "# -----------------------------------------------------------------------------"
+            ),
+            "fuel": (
+                "# -----------------------------------------------------------------------------\n"
+                "# Editable fuel inputs.\n"
+                "# Update the fuel properties and fuel-cost values used by the generator.\n"
+                "# -----------------------------------------------------------------------------"
+            ),
+        },
+    )
 
 
-def _write_generator_efficiency_curve_csv(path: Path, overwrite: bool = False) -> None:
+def _write_generator_efficiency_curve_csv(path: Path, *, settings: TemplateSettings, overwrite: bool = False) -> None:
     """
     Create inputs/generator_efficiency_curve.csv (optional helper template).
 
@@ -1262,7 +1358,7 @@ def _write_generator_efficiency_curve_csv(path: Path, overwrite: bool = False) -
     )
 
     _ensure_parent_dir(path)
-    df.to_csv(path, index=False)
+    write_csv_with_format(df, path, csv_format=_csv_format(settings), index=False)
 
 def _write_grid_inputs(paths: ProjectPaths, settings: TemplateSettings, overwrite: bool = False) -> None:
     """
@@ -1414,7 +1510,25 @@ def _write_grid_yaml(path: Path, settings: TemplateSettings, overwrite: bool = F
         },
     }
 
-    _write_yaml_file(path, payload)
+    _write_yaml_file(
+        path,
+        payload,
+        section_comments={
+            "meta": (
+                "# -----------------------------------------------------------------------------\n"
+                "# Metadata reference section.\n"
+                "# Units, context, and descriptions below are informational and normally do not\n"
+                "# need to be edited during project setup.\n"
+                "# -----------------------------------------------------------------------------"
+            ),
+            "grid": (
+                "# -----------------------------------------------------------------------------\n"
+                "# Editable grid inputs.\n"
+                "# Update the values below to define line limits, outages, and connection timing.\n"
+                "# -----------------------------------------------------------------------------"
+            ),
+        },
+    )
 
 
 
@@ -1446,6 +1560,7 @@ def _write_grid_import_price_csv(path: Path, settings: TemplateSettings, overwri
     value_columns = [(str(s), str(y)) for s in scenarios for y in years]
     _write_hourly_csv_template(
         path,
+        settings=settings,
         columns=columns,
         hour_column=("meta", "hour"),
         value_columns=value_columns,
@@ -1476,6 +1591,7 @@ def _write_grid_export_price_csv(path: Path, settings: TemplateSettings, overwri
     value_columns = [(str(s), str(y)) for s in scenarios for y in years]
     _write_hourly_csv_template(
         path,
+        settings=settings,
         columns=columns,
         hour_column=("meta", "hour"),
         value_columns=value_columns,
