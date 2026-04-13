@@ -483,5 +483,19 @@ def render_typical_year_results_from_files(file_results: TypicalYearFileResults,
 
     st.subheader("Saved Result Files")
     st.caption("These result views were reconstructed from files already exported in the project folder.")
-    for name in ("dispatch_timeseries.csv", "energy_balance.csv", "design_summary.csv", "kpis.csv"):
+    for name in (
+        "dispatch_timeseries.csv",
+        "energy_balance.csv",
+        "design_summary.csv",
+        "kpis.csv",
+        "summary_metrics.csv",
+        "upfront_investment.csv",
+        "expected_cost_components.csv",
+        "expected_fixed_om.csv",
+        "annuities.csv",
+        "embodied_externalities.csv",
+        "scenario_variable_costs.csv",
+        "scenario_emissions.csv",
+        "scenario_total_operating_costs.csv",
+    ):
         st.write(str(file_results.results_dir / name))
