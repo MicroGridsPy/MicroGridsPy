@@ -4,9 +4,11 @@ from pathlib import Path
 import pandas as pd
 import xarray as xr
 
+from core.io.csv_format import read_csv_with_format
+
 
 def read_csv_2level_timeseries(path: Path) -> xr.DataArray:
-    df = pd.read_csv(path, header=[0, 1])
+    df = read_csv_with_format(path, header=[0, 1])
     df.columns = pd.MultiIndex.from_tuples(df.columns, names=["scenario", "year"])
 
     if ("meta", "hour") not in df.columns:
@@ -27,7 +29,7 @@ def read_csv_2level_timeseries(path: Path) -> xr.DataArray:
 
 
 def read_csv_3level_timeseries(path: Path) -> xr.DataArray:
-    df = pd.read_csv(path, header=[0, 1, 2])
+    df = read_csv_with_format(path, header=[0, 1, 2])
     df.columns = pd.MultiIndex.from_tuples(df.columns, names=["scenario", "year", "resource"])
 
     meta_col = None
@@ -54,4 +56,3 @@ def read_csv_3level_timeseries(path: Path) -> xr.DataArray:
     s = df.stack(["scenario", "year", "resource"]).rename("value")
     da = s.to_xarray().astype(float)
     return da.transpose("hour", "scenario", "year", "resource")
-
