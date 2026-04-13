@@ -11,6 +11,7 @@ import xarray as xr
 
 from core.data_pipeline.loader import load_project_dataset
 from core.data_pipeline.typical_year_loader import regenerate_grid_availability_typical_year
+from core.io.csv_format import read_csv_with_format
 from core.export.yaml_reader import read_yaml
 from core.io.utils import project_paths
 from core.io.vintage_labels import load_multi_year_vintage_labels, vintage_display_for_step
@@ -444,7 +445,7 @@ def _read_optional_csv(path: Path) -> pd.DataFrame | None:
     if not path.exists():
         return None
     try:
-        return pd.read_csv(path)
+        return read_csv_with_format(path)
     except Exception:
         return None
 

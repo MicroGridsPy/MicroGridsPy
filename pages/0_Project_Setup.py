@@ -1,6 +1,7 @@
 # generation_planning/pages/project_setup.py
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, List, Tuple, Literal, Optional
@@ -14,6 +15,12 @@ from core.io.utils import (
     project_exists,
     project_paths,
     sanitize_project_name,
+)
+from core.io.csv_format import (
+    CSV_DECIMAL_OPTIONS,
+    CSV_DELIMITER_OPTIONS,
+    normalize_csv_decimal,
+    normalize_csv_delimiter,
 )
 from core.io.jsonio import write_json
 from core.io.templates import TemplateSettings, write_templates
@@ -77,6 +84,9 @@ K = {
     "generator_efficiency_model": "gp_generator_efficiency_model",  # str
     "generator_efficiency_curve_csv": "gp_generator_efficiency_curve_csv",  # str
     "fuel_label": "gp_fuel_label",  # str
+    "csv_delimiter": "gp_csv_delimiter",  # str
+    "csv_decimal": "gp_csv_decimal",  # str
+    "csv_format_project_hint": "gp_csv_format_project_hint",  # str
 
     # metadata
     "project_name": "gp_project_name",
@@ -147,6 +157,8 @@ class PageConfig:
     generator_efficiency_model: str
     generator_efficiency_curve_csv: str
     fuel_label: str
+    csv_delimiter: str
+    csv_decimal: str
     renewable_vintage_labels_by_step: Dict[str, Dict[str, str]]
     battery_vintage_labels_by_step: Dict[str, str]
     generator_vintage_labels_by_step: Dict[str, str]
@@ -235,6 +247,9 @@ def init_session_state_defaults() -> None:
         K["generator_efficiency_model"]: "constant_efficiency",
         K["generator_efficiency_curve_csv"]: "generator_efficiency_curve.csv",
         K["fuel_label"]: "Fuel",
+        K["csv_delimiter"]: ",",
+        K["csv_decimal"]: ".",
+        K["csv_format_project_hint"]: "",
 
         # metadata
         K["project_name"]: "",
@@ -294,6 +309,10 @@ def write_formulation_file(*, project_name: str, project_description: str, cfg: 
         },
         "generator_model": {
             "efficiency_model": str(cfg.generator_efficiency_model or "constant_efficiency"),
+        },
+        "csv_format": {
+            "delimiter": normalize_csv_delimiter(cfg.csv_delimiter),
+            "decimal": normalize_csv_decimal(cfg.csv_decimal),
         },
     }
 
@@ -356,6 +375,8 @@ def create_or_overwrite_project(*, project_name: str, project_description: str, 
         generator_efficiency_model=cfg.generator_efficiency_model,
         generator_efficiency_curve_csv=cfg.generator_efficiency_curve_csv,
         fuel_label=cfg.fuel_label,
+        csv_delimiter=normalize_csv_delimiter(cfg.csv_delimiter),
+        csv_decimal=normalize_csv_decimal(cfg.csv_decimal),
         renewable_vintage_labels_by_step=cfg.renewable_vintage_labels_by_step,
         battery_vintage_labels_by_step=cfg.battery_vintage_labels_by_step,
         generator_vintage_labels_by_step=cfg.generator_vintage_labels_by_step,
@@ -369,7 +390,7 @@ def create_or_overwrite_project(*, project_name: str, project_description: str, 
     st.success("Input templates are ready (and were overwritten if the project already existed).")
 
 
-def load_project(*, project_name: str) -> None:
+def load_project(*, project_name: str, csv_delimiter: str, csv_decimal: str) -> None:
     if not project_name:
         st.error("Select a project to load.")
         return
@@ -378,8 +399,21 @@ def load_project(*, project_name: str) -> None:
         return
 
     paths = _activate_project(project_name)
+    try:
+        payload = {}
+        if paths.formulation_json.exists():
+            payload = json.loads(paths.formulation_json.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            payload = {}
+        payload["csv_format"] = {
+            "delimiter": normalize_csv_delimiter(csv_delimiter),
+            "decimal": normalize_csv_decimal(csv_decimal),
+        }
+        write_json(paths.formulation_json, payload)
+    except Exception as exc:
+        st.warning(f"Project loaded, but failed to update `{paths.formulation_json.name}` with CSV format: {exc}")
     st.success(f"Project loaded: {paths.root}")
-    st.info("No files were modified. Proceed to fill/validate/run using the existing project inputs.")
+    st.info("No templates were modified. The selected CSV format was saved for subsequent input loading.")
 
 
 # =============================================================================
@@ -465,6 +499,60 @@ def _list_existing_projects() -> List[str]:
         return names
     except Exception:
         return []
+
+
+def render_csv_format_section(section_key: str) -> tuple[str, str]:
+    st.caption(
+        "Choose the CSV delimiter and decimal separator to match how you edit time-series files, for example in Excel."
+    )
+    col_delimiter, col_decimal = st.columns(2)
+
+    delimiter_values = list(CSV_DELIMITER_OPTIONS.values())
+    delimiter_labels = {value: label for label, value in CSV_DELIMITER_OPTIONS.items()}
+    decimal_values = list(CSV_DECIMAL_OPTIONS.values())
+    decimal_labels = {value: label for label, value in CSV_DECIMAL_OPTIONS.items()}
+
+    current_delimiter = normalize_csv_delimiter(st.session_state.get(K["csv_delimiter"], ","))
+    current_decimal = normalize_csv_decimal(st.session_state.get(K["csv_decimal"], "."))
+
+    with col_delimiter:
+        delimiter = st.selectbox(
+            "Delimiter",
+            options=delimiter_values,
+            index=delimiter_values.index(current_delimiter),
+            format_func=lambda value: delimiter_labels[value],
+            key=f"gp_csv_delimiter_select_{section_key}",
+        )
+
+    with col_decimal:
+        decimal = st.selectbox(
+            "Decimal",
+            options=decimal_values,
+            index=decimal_values.index(current_decimal),
+            format_func=lambda value: decimal_labels[value],
+            key=f"gp_csv_decimal_select_{section_key}",
+        )
+
+    st.session_state[K["csv_delimiter"]] = delimiter
+    st.session_state[K["csv_decimal"]] = decimal
+    return delimiter, decimal
+
+
+def _load_csv_format_from_project(project_name: str) -> tuple[str, str]:
+    try:
+        formulation_path = project_paths(project_name).formulation_json
+        if not formulation_path.exists():
+            return ",", "."
+        payload = json.loads(formulation_path.read_text(encoding="utf-8"))
+        csv_format = payload.get("csv_format", {}) if isinstance(payload, dict) else {}
+        if not isinstance(csv_format, dict):
+            csv_format = {}
+        return (
+            normalize_csv_delimiter(csv_format.get("delimiter")),
+            normalize_csv_decimal(csv_format.get("decimal")),
+        )
+    except Exception:
+        return ",", "."
 
 
 # =============================================================================
@@ -1241,6 +1329,7 @@ def render_project_setup_page() -> None:
             key="gp_project_desc_text",
         )
         st.session_state[K["project_desc"]] = desc.strip()
+        render_csv_format_section("create")
 
         # Configuration sections appear only after a project name is provided
         if not project_name:
@@ -1330,6 +1419,8 @@ def render_project_setup_page() -> None:
                 generator_efficiency_model=generator_efficiency_model,
                 generator_efficiency_curve_csv=generator_efficiency_curve_csv,
                 fuel_label=fuel_label,
+                csv_delimiter=normalize_csv_delimiter(st.session_state.get(K["csv_delimiter"], ",")),
+                csv_decimal=normalize_csv_decimal(st.session_state.get(K["csv_decimal"], ".")),
                 renewable_vintage_labels_by_step=renewable_vintage_labels_by_step,
                 battery_vintage_labels_by_step=battery_vintage_labels_by_step,
                 generator_vintage_labels_by_step=generator_vintage_labels_by_step,
@@ -1358,8 +1449,7 @@ def render_project_setup_page() -> None:
         if not existing:
             st.warning("No existing projects found. Create a new project using the form above.")
             st.info(
-                "The selected project will be set as **active**. No templates will be overwritten, "
-                "and the current form values will remain unchanged."
+                "The selected project will be set as **active**. No templates will be overwritten."
             )
             st.button("Load project", type="primary", key="gp_load_confirm", disabled=True)
         else:
@@ -1371,14 +1461,23 @@ def render_project_setup_page() -> None:
             )
             pick = sanitize_project_name(pick)
             st.session_state[K["project_name"]] = pick
+            if st.session_state.get(K["csv_format_project_hint"], "") != pick:
+                saved_delimiter, saved_decimal = _load_csv_format_from_project(pick)
+                st.session_state[K["csv_delimiter"]] = saved_delimiter
+                st.session_state[K["csv_decimal"]] = saved_decimal
+                st.session_state[K["csv_format_project_hint"]] = pick
+            render_csv_format_section("load")
 
             st.info(
                 "The selected project will be set as **active**. No templates will be overwritten, "
-                "and the current form values will remain unchanged."
+                "and the CSV format choice below will be saved for future input loading."
             )
 
             if st.button("Load project", type="primary", key="gp_load_confirm"):
-                load_project(project_name=pick)
+                load_project(
+                    project_name=pick,
+                    csv_delimiter=st.session_state.get(K["csv_delimiter"], ","),
+                    csv_decimal=st.session_state.get(K["csv_decimal"], "."),
+                )
 
 render_project_setup_page()
-
