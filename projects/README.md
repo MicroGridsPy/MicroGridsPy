@@ -1,4 +1,4 @@
-# projects/ – Example Projects
+# Example Projects
 
 This folder contains a curated set of **reference example projects** designed to demonstrate the capabilities of the MicroGridsPy planning framework.
 
