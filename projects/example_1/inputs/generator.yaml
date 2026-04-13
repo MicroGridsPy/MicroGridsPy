@@ -1,3 +1,8 @@
+# -----------------------------------------------------------------------------
+# Metadata reference section.
+# Units, context, and descriptions below are informational and normally do not
+# need to be edited during project setup.
+# -----------------------------------------------------------------------------
 meta:
   units:
     generator_nominal_capacity_kw: kW
@@ -43,6 +48,10 @@ meta:
       fuel_direct_emissions_kgco2e_per_unit_fuel: Direct combustion emissions per
         unit of fuel.
       fuel_fuel_cost_per_unit_fuel: Fuel price in the steady-state formulation.
+# -----------------------------------------------------------------------------
+# Editable generator inputs.
+# Update the values below to define the backup generation technology.
+# -----------------------------------------------------------------------------
 generator:
   label: Generator
   investment:
@@ -58,6 +67,10 @@ generator:
     nominal_efficiency_full_load: 0.3
     efficiency_curve_csv: null
     max_installable_capacity_kw: null
+# -----------------------------------------------------------------------------
+# Editable fuel inputs.
+# Update the fuel properties and fuel-cost values used by the generator.
+# -----------------------------------------------------------------------------
 fuel:
   label: Diesel
   by_scenario:

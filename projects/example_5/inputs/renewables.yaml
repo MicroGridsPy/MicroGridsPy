@@ -1,3 +1,8 @@
+# -----------------------------------------------------------------------------
+# Metadata reference section.
+# Units, context, and descriptions below are informational and normally do not
+# need to be edited during project setup.
+# -----------------------------------------------------------------------------
 meta:
   units:
     res_nominal_capacity_kw: kW
@@ -43,6 +48,10 @@ meta:
         generation.
       res_capacity_degradation_rate_per_year: Annual reduction in effective renewable
         capacity used in the dynamic formulation.
+# -----------------------------------------------------------------------------
+# Editable renewable inputs.
+# Update the values below to define the renewable technologies in your project.
+# -----------------------------------------------------------------------------
 renewables:
 - id: res_1
   conversion_technology: Solar_PV

@@ -1,3 +1,8 @@
+# -----------------------------------------------------------------------------
+# Metadata reference section.
+# Units, context, and descriptions below are informational and normally do not
+# need to be edited during project setup.
+# -----------------------------------------------------------------------------
 meta:
   context:
     formulation: dynamic
@@ -54,6 +59,10 @@ meta:
       grid_first_year_connection: First model year in which the grid connection becomes
         available. Use an exact year label from sets.year when possible; integer calendar
         years are supported only when the model year labels are themselves integer-like.
+# -----------------------------------------------------------------------------
+# Editable grid inputs.
+# Update the values below to define line limits, outages, and connection timing.
+# -----------------------------------------------------------------------------
 grid:
   by_scenario:
     scenario_1:

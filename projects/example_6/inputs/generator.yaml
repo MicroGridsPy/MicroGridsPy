@@ -1,3 +1,8 @@
+# -----------------------------------------------------------------------------
+# Metadata reference section.
+# Units, context, and descriptions below are informational and normally do not
+# need to be edited during project setup.
+# -----------------------------------------------------------------------------
 meta:
   units:
     generator_nominal_capacity_kw: kW
@@ -57,6 +62,10 @@ meta:
         generator capacity in the dynamic formulation.
       fuel_cost_by_year: Fuel price trajectory aligned with the dynamic model year
         labels.
+# -----------------------------------------------------------------------------
+# Editable generator inputs.
+# Update the values below to define the backup generation technology.
+# -----------------------------------------------------------------------------
 generator:
   label: Generator
   investment:
@@ -73,6 +82,10 @@ generator:
     efficiency_curve_csv: generator_efficiency_curve.csv
     max_installable_capacity_kw: null
     capacity_degradation_rate_per_year: 0.0
+# -----------------------------------------------------------------------------
+# Editable fuel inputs.
+# Update the fuel properties and fuel-cost values used by the generator.
+# -----------------------------------------------------------------------------
 fuel:
   label: Diesel
   technical:

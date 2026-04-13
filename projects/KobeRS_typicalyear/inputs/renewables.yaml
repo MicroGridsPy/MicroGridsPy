@@ -1,3 +1,8 @@
+# -----------------------------------------------------------------------------
+# Metadata reference section.
+# Units, context, and descriptions below are informational and normally do not
+# need to be edited during project setup.
+# -----------------------------------------------------------------------------
 meta:
   units:
     res_nominal_capacity_kw: kW
@@ -40,6 +45,10 @@ meta:
         CAPEX. In the typical-year formulation this input is scenario-independent.
       res_production_subsidy_per_kwh: Operating subsidy earned per unit of renewable
         generation.
+# -----------------------------------------------------------------------------
+# Editable renewable inputs.
+# Update the values below to define the renewable technologies in your project.
+# -----------------------------------------------------------------------------
 renewables:
 - id: res_1
   conversion_technology: Solar_PV

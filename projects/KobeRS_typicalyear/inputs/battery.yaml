@@ -1,3 +1,8 @@
+# -----------------------------------------------------------------------------
+# Metadata reference section.
+# Units, context, and descriptions below are informational and normally do not
+# need to be edited during project setup.
+# -----------------------------------------------------------------------------
 meta:
   units:
     battery_nominal_capacity_kwh: kWh
@@ -53,6 +58,10 @@ meta:
       battery_efficiency_curve_csv: 'CSV file containing the battery charge/discharge
         efficiency shape used by the advanced convex loss model. Preferred semantics:
         normalized multipliers relative to the scalar efficiencies above.'
+# -----------------------------------------------------------------------------
+# Editable battery inputs.
+# Update the values below to define the storage technology in your project.
+# -----------------------------------------------------------------------------
 battery:
   label: Battery
   investment:
