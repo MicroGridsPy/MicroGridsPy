@@ -665,22 +665,24 @@ def _write_renewables_yaml(path: Path, settings: TemplateSettings, overwrite: bo
             # sizing (design-side)
             "nominal_capacity_kw": 1.0,                         # kW per unit (or per continuous "unit")
 
-            # economics (investment-side)
+            # base asset economics (investment-side)
             "specific_investment_cost_per_kw": 0.0,             # currency/kW
             "wacc": 0.0,                                        # -
             "grant_share_of_capex": 0.0,                        # share (0..1)
-
-            # lifetime / replacement modelling (still investment-side)
             "lifetime_years": 25,                               # years
-
-            # sustainability (investment-side; embodied per installed capacity)
             "embedded_emissions_kgco2e_per_kw": 0.0,            # kgCO2e/kW
             "fixed_om_share_per_year": 0.0,                     # share of CAPEX per year
+
+            # inverter economics (investment-side)
+            "inverter_specific_investment_cost_per_kw_ac": 0.0, # currency/kW_ac
+            "inverter_lifetime_years": 15,                      # years
+            "inverter_fixed_om_share_per_year": 0.0,            # share of inverter CAPEX per year
             "production_subsidy_per_kwh": 0.0,                  # currency/kWh
         }
 
     def _default_technical_params() -> dict:
         params = {
+            "dc_ac_ratio": 1.0,                                 # deterministic inverter sizing rule
             "inverter_efficiency": 1.0,                         # -
             "specific_area_m2_per_kw": None,                    # optional (m2/kW) -> allow null 
             "max_installable_capacity_kw": None,                # optional (kW) -> allow null
@@ -713,12 +715,15 @@ def _write_renewables_yaml(path: Path, settings: TemplateSettings, overwrite: bo
     units = {
         "res_nominal_capacity_kw": "kW",
         "res_specific_investment_cost_per_kw": "currency_per_kW",
+        "res_inverter_specific_investment_cost_per_kw_ac": "currency_per_kW_ac",
         "res_wacc": "-",
         "res_grant_share_of_capex": "share",
         "res_lifetime_years": "years",
         "res_embedded_emissions_kgco2e_per_kw": "kgCO2e_per_kW",
         "res_fixed_om_share_per_year": "share_per_year",
+        "res_inverter_fixed_om_share_per_year": "share_per_year",
         "res_production_subsidy_per_kwh": "currency_per_kWh",
+        "res_dc_ac_ratio": "-",
         "res_inverter_efficiency": "-",
         "res_specific_area_m2_per_kw": "m2_per_kW",
         "res_max_installable_capacity_kw": "kW",
@@ -733,14 +738,17 @@ def _write_renewables_yaml(path: Path, settings: TemplateSettings, overwrite: bo
         "parameters": {
             "res_nominal_capacity_kw": "Nominal capacity represented by one renewable unit.",
             "res_specific_investment_cost_per_kw": "Specific investment cost of installed renewable capacity.",
+            "res_inverter_specific_investment_cost_per_kw_ac": "Specific investment cost of the deterministic renewable inverter AC capacity.",
             "res_wacc": "Weighted average cost of capital used for annualizing renewable CAPEX.",
             "res_grant_share_of_capex": "Fraction of renewable CAPEX covered by grants or subsidies.",
             "res_lifetime_years": "Technical/economic lifetime used for replacement and annuity calculations.",
             "res_embedded_emissions_kgco2e_per_kw": "Embodied emissions associated with installing renewable capacity.",
+            "res_dc_ac_ratio": "Deterministic DC/AC sizing ratio used to derive renewable inverter AC capacity for costing/reporting.",
             "res_inverter_efficiency": "Conversion efficiency applied to renewable output.",
             "res_specific_area_m2_per_kw": "Land requirement per unit of renewable installed capacity.",
             "res_max_installable_capacity_kw": "Upper bound on renewable installed capacity for the resource.",
             "res_fixed_om_share_per_year": "Fixed annual O&M cost expressed as a share of renewable CAPEX. In the typical-year formulation this input is scenario-independent.",
+            "res_inverter_fixed_om_share_per_year": "Fixed annual O&M cost expressed as a share of deterministic inverter CAPEX.",
             "res_production_subsidy_per_kwh": "Operating subsidy earned per unit of renewable generation.",
         },
     }
@@ -827,16 +835,17 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
             # sizing (per unit)
             "nominal_capacity_kwh": 1.0,                      # kWh per unit (or continuous unit)
 
-            # economics (investment-related)
+            # base asset economics (investment-related)
             "specific_investment_cost_per_kwh": 0.0,          # currency/kWh
             "wacc": 0.0,                                      # -
-
-            # lifetime / limits (can differ by cohort/product)
             "calendar_lifetime_years": 10,                    # years
-
-            # sustainability (manufacturing / embodied, cohort-side)
             "embedded_emissions_kgco2e_per_kwh": 0.0,         # kgCO2e/kWh of capacity
             "fixed_om_share_per_year": 0.0,                   # share of CAPEX per year
+
+            # inverter economics (investment-related)
+            "inverter_specific_investment_cost_per_kw": 0.0,  # currency/kW
+            "inverter_lifetime_years": 15,                    # years
+            "inverter_fixed_om_share_per_year": 0.0,          # share of inverter CAPEX per year
         }
 
     # Step-invariant technical parameters (shared across cohorts)
@@ -850,8 +859,8 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
             "discharge_efficiency": 0.96,                     # full-load one-way discharge efficiency
             "initial_soc": 0.5,                               # fraction of usable capacity (0..1)
             "depth_of_discharge": 0.8,                        # fraction (0..1), usable fraction of nominal capacity
-            "max_discharge_time_hours": 5.0,                  # hours (C-rate proxy)
-            "max_charge_time_hours": 5.0,                     # hours (C-rate proxy)
+            "max_discharge_c_rate": None,                     # optional upper bound on inverter power / energy
+            "max_charge_c_rate": None,                        # optional upper bound on inverter power / energy
             "max_installable_capacity_kwh": max_installable_capacity_kwh,  # optional total battery capacity upper bound
             "efficiency_curve_csv": (
                 _safe_battery_efficiency_curve_csv(settings)
@@ -891,16 +900,18 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
             "units": {
                 "battery_nominal_capacity_kwh": "kWh",
                 "battery_specific_investment_cost_per_kwh": "currency_per_kWh",
+                "battery_inverter_specific_investment_cost_per_kw": "currency_per_kW",
                 "battery_wacc": "-",
                 "battery_calendar_lifetime_years": "years",
                 "battery_embedded_emissions_kgco2e_per_kwh": "kgCO2e_per_kWh",
                 "battery_fixed_om_share_per_year": "share_per_year",
+                "battery_inverter_fixed_om_share_per_year": "share_per_year",
                 "battery_charge_efficiency": "-",
                 "battery_discharge_efficiency": "-",
                 "battery_initial_soc": "share",
                 "battery_depth_of_discharge": "share",
-                "battery_max_discharge_time_hours": "hours",
-                "battery_max_charge_time_hours": "hours",
+                "battery_max_discharge_c_rate": "per_hour",
+                "battery_max_charge_c_rate": "per_hour",
                 "battery_max_installable_capacity_kwh": "kWh",
                 **(
                     {"battery_efficiency_curve_csv": "csv_path"}
@@ -951,16 +962,18 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
                 "parameters": {
                     "battery_nominal_capacity_kwh": "Nominal energy capacity represented by one battery unit.",
                     "battery_specific_investment_cost_per_kwh": "Specific investment cost of battery capacity.",
+                    "battery_inverter_specific_investment_cost_per_kw": "Specific investment cost of the explicit battery converter/inverter power capacity used as the charge/discharge reference.",
                     "battery_wacc": "Weighted average cost of capital used for battery annuities.",
                     "battery_calendar_lifetime_years": "Calendar lifetime used for battery replacement economics.",
                     "battery_embedded_emissions_kgco2e_per_kwh": "Embodied emissions associated with battery capacity.",
                     "battery_fixed_om_share_per_year": "Fixed annual O&M cost expressed as a share of battery CAPEX. In the typical-year formulation this input is scenario-independent.",
+                    "battery_inverter_fixed_om_share_per_year": "Fixed annual O&M cost expressed as a share of battery inverter CAPEX.",
                     "battery_charge_efficiency": "Battery one-way charging efficiency used directly in constant-efficiency mode and as the full-load baseline in curve mode.",
                     "battery_discharge_efficiency": "Battery one-way discharging efficiency used directly in constant-efficiency mode and as the full-load baseline in curve mode.",
                     "battery_initial_soc": "Initial state of charge as a share of usable capacity.",
                     "battery_depth_of_discharge": "Usable fraction of nominal battery capacity. When cycle fade is enabled, the same value is also used as the reference DoD for deriving the internal cycle-fade coefficient from cycle life and end-of-life SoH.",
-                    "battery_max_discharge_time_hours": "Minimum time needed to fully discharge at nominal power.",
-                    "battery_max_charge_time_hours": "Minimum time needed to fully charge at nominal power.",
+                    "battery_max_discharge_c_rate": "Optional upper bound on explicit battery inverter discharge power relative to installed battery energy capacity. Use this as the primary discharge-side power-to-energy coupling input in the typical-year formulation.",
+                    "battery_max_charge_c_rate": "Optional upper bound on explicit battery inverter charge power relative to installed battery energy capacity. Use this as the primary charge-side power-to-energy coupling input in the typical-year formulation.",
                     "battery_max_installable_capacity_kwh": (
                         "Optional upper bound on total installed battery capacity used as a planning/siting limit. "
                         "It is not the physics reference for the current endogenous degradation model."
