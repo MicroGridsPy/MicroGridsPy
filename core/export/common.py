@@ -62,6 +62,23 @@ def get_var_solution(
     prefer_solution_dataset: bool = True,
 ) -> Optional[xr.DataArray]:
     """Resolve a solved variable from the solution dataset or the linopy variable dict."""
+    def _coerce_solution_array(var_obj: Any, raw: Any) -> Optional[xr.DataArray]:
+        if isinstance(raw, xr.DataArray):
+            return raw
+        if raw is None:
+            return None
+        try:
+            labels = getattr(var_obj, "labels", None)
+            values = np.asarray(raw, dtype=float)
+            if isinstance(labels, xr.DataArray):
+                reshaped = values.reshape(labels.shape)
+                return xr.DataArray(reshaped, dims=labels.dims, coords=labels.coords, name=name)
+            if values.ndim == 0:
+                return xr.DataArray(float(values.reshape(-1)[0]), name=name)
+            return xr.DataArray(values, name=name)
+        except Exception:
+            return None
+
     if prefer_solution_dataset and isinstance(solution, xr.Dataset) and name in solution:
         da = solution[name]
         if isinstance(da, xr.DataArray):
@@ -70,8 +87,10 @@ def get_var_solution(
     if isinstance(vars_dict, dict):
         var = vars_dict.get(name, None)
         try:
-            if var is not None and hasattr(var, "solution") and isinstance(var.solution, xr.DataArray):
-                return var.solution
+            if var is not None and hasattr(var, "solution"):
+                coerced = _coerce_solution_array(var, var.solution)
+                if isinstance(coerced, xr.DataArray):
+                    return coerced
         except Exception:
             pass
 

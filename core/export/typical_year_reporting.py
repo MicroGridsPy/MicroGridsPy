@@ -47,6 +47,15 @@ def weights_map(data: xr.Dataset) -> Dict[str, float]:
     return {str(s): equal for s in scenario_values}
 
 
+def _renewable_display_label(data: xr.Dataset, resource: str) -> str:
+    mapping = (data.attrs or {}).get("conversion_technology_by_resource", {})
+    if isinstance(mapping, dict):
+        label = str(mapping.get(str(resource), "") or "").strip()
+        if label:
+            return label
+    return str(resource)
+
+
 def select_dispatch_view(dispatch: pd.DataFrame, data: xr.Dataset, *, mode: str, scenario_label: Optional[str]) -> pd.DataFrame:
     frame = dispatch.copy()
     frame["scenario"] = frame["scenario"].astype(str)
@@ -162,14 +171,13 @@ def build_reporting_tables(
         r: float(pd.to_numeric(pd.Series([row.get(f"res_installed_kw__{r}", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
         for r in resources
     }
-    res_units = {
-        r: float(pd.to_numeric(pd.Series([row.get(f"res_units__{r}", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
+    res_inv_caps = {
+        r: float(pd.to_numeric(pd.Series([row.get(f"res_inverter_installed_kw_ac__{r}", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
         for r in resources
     }
     cap_bat_kwh = float(pd.to_numeric(pd.Series([row.get("battery_installed_kwh", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
+    cap_bat_inv_kw = float(pd.to_numeric(pd.Series([row.get("battery_inverter_power_kw", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
     cap_gen_kw = float(pd.to_numeric(pd.Series([row.get("generator_installed_kw", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
-    battery_units = float(pd.to_numeric(pd.Series([row.get("battery_units", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
-    generator_units = float(pd.to_numeric(pd.Series([row.get("generator_units", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
 
     for col in (
         "grid_import",
@@ -209,23 +217,48 @@ def build_reporting_tables(
     expected_fom_rows: list[dict[str, Any]] = []
 
     res_annuity_total = 0.0
+    res_inverter_annuity_total = 0.0
+    res_fom_total = 0.0
+    res_inverter_fom_total = 0.0
     for r in resources:
+        r_label = _renewable_display_label(data, r)
         res_capex = scalarize(data["res_specific_investment_cost_per_kw"], resource=r)
+        res_inv_capex = scalarize(data["res_inverter_specific_investment_cost_per_kw_ac"], resource=r)
         res_grant = scalarize(data["res_grant_share_of_capex"], resource=r)
         res_life = scalarize(data["res_lifetime_years"], resource=r)
+        res_inv_life = scalarize(data["res_inverter_lifetime_years"], resource=r) if "res_inverter_lifetime_years" in data else res_life
         res_wacc = scalarize(data["res_wacc"], resource=r)
+        res_fom_share = scalarize(data["res_fixed_om_share_per_year"], resource=r)
+        res_inv_fom_share = scalarize(data["res_inverter_fixed_om_share_per_year"], resource=r)
         res_ann = res_caps[r] * res_capex * (1.0 - res_grant) * _crf(res_wacc, res_life)
+        res_inv_ann = res_inv_caps[r] * res_inv_capex * (1.0 - res_grant) * _crf(res_wacc, res_inv_life)
+        res_fom = res_caps[r] * res_capex * res_fom_share
+        res_inv_fom = res_inv_caps[r] * res_inv_capex * res_inv_fom_share
         res_annuity_total += res_ann
-        annualized_capex += res_ann
-        annuity_rows.append({"Technology (lifetime)": f"{r} ({int(res_life)}y)", "Annuity [/yr]": res_ann})
+        res_inverter_annuity_total += res_inv_ann
+        res_fom_total += res_fom
+        res_inverter_fom_total += res_inv_fom
+        annualized_capex += res_ann + res_inv_ann
+        annuity_rows.append({"Technology (lifetime)": f"{r_label} ({int(res_life)}y)", "Annuity [/yr]": res_ann})
+        annuity_rows.append({"Technology (lifetime)": f"{r_label} inverter ({int(res_inv_life)}y)", "Annuity [/yr]": res_inv_ann})
         upfront_rows.append(
             {
-                "Technology": r,
+                "Technology": r_label,
                 "Capacity": res_caps[r],
                 "Unit": "kW",
                 "Grant share": res_grant,
                 "Upfront gross [thousand]": res_caps[r] * res_capex / 1e3,
                 "Upfront net [thousand]": res_caps[r] * res_capex * (1.0 - res_grant) / 1e3,
+            }
+        )
+        upfront_rows.append(
+            {
+                "Technology": f"{r_label} inverter",
+                "Capacity": res_inv_caps[r],
+                "Unit": "kW_ac",
+                "Grant share": res_grant,
+                "Upfront gross [thousand]": res_inv_caps[r] * res_inv_capex / 1e3,
+                "Upfront net [thousand]": res_inv_caps[r] * res_inv_capex * (1.0 - res_grant) / 1e3,
             }
         )
 
@@ -242,7 +275,7 @@ def build_reporting_tables(
             cost_exp += weights.get(s, 0.0) * kg_s * emission_cost_s
         embodied_rows.append(
             {
-                "Technology": r,
+                "Technology": r_label,
                 "Lifetime [y]": int(res_life),
                 "Embodied Emissions [kg/yr]": kg_exp,
                 "Embodied Cost [/yr]": cost_exp,
@@ -250,11 +283,15 @@ def build_reporting_tables(
         )
 
     bat_capex = float(safe_float(data["battery_specific_investment_cost_per_kwh"]))
+    bat_inv_capex = float(safe_float(data["battery_inverter_specific_investment_cost_per_kw"]))
     bat_life = float(safe_float(data["battery_calendar_lifetime_years"]))
+    bat_inv_life = float(safe_float(data["battery_inverter_lifetime_years"])) if "battery_inverter_lifetime_years" in data else bat_life
     bat_wacc = float(safe_float(data["battery_wacc"]))
     ann_bat = cap_bat_kwh * bat_capex * _crf(bat_wacc, bat_life)
-    annualized_capex += ann_bat
+    ann_bat_inv = cap_bat_inv_kw * bat_inv_capex * _crf(bat_wacc, bat_inv_life)
+    annualized_capex += ann_bat + ann_bat_inv
     annuity_rows.append({"Technology (lifetime)": f"Battery ({int(bat_life)}y)", "Annuity [/yr]": ann_bat})
+    annuity_rows.append({"Technology (lifetime)": f"Battery inverter ({int(bat_inv_life)}y)", "Annuity [/yr]": ann_bat_inv})
     upfront_rows.append(
         {
             "Technology": "Battery",
@@ -263,6 +300,16 @@ def build_reporting_tables(
             "Grant share": np.nan,
             "Upfront gross [thousand]": cap_bat_kwh * bat_capex / 1e3,
             "Upfront net [thousand]": cap_bat_kwh * bat_capex / 1e3,
+        }
+    )
+    upfront_rows.append(
+        {
+            "Technology": "Battery inverter",
+            "Capacity": cap_bat_inv_kw,
+            "Unit": "kW",
+            "Grant share": np.nan,
+            "Upfront gross [thousand]": cap_bat_inv_kw * bat_inv_capex / 1e3,
+            "Upfront net [thousand]": cap_bat_inv_kw * bat_inv_capex / 1e3,
         }
     )
 
@@ -298,6 +345,10 @@ def build_reporting_tables(
     embodied_rows.append({"Technology": "Generator", "Lifetime [y]": int(gen_life), "Embodied Emissions [kg/yr]": gen_emb_exp, "Embodied Cost [/yr]": gen_emb_cost_exp})
     embodied_rows.append({"Technology": "Battery", "Lifetime [y]": int(bat_life), "Embodied Emissions [kg/yr]": bat_emb_exp, "Embodied Cost [/yr]": bat_emb_cost_exp})
 
+    bat_fom = cap_bat_kwh * bat_capex * scalarize(data["battery_fixed_om_share_per_year"])
+    bat_inv_fom = cap_bat_inv_kw * bat_inv_capex * scalarize(data["battery_inverter_fixed_om_share_per_year"])
+    gen_fom = cap_gen_kw * gen_capex * scalarize(data["generator_fixed_om_share_per_year"])
+
     kpi_rows: list[dict[str, Any]] = []
     for s in scenarios:
         scen_dispatch = dispatch[dispatch["scenario"] == s].sort_values("period").reset_index(drop=True)
@@ -318,10 +369,14 @@ def build_reporting_tables(
         ren_pen = safe_share(ren_num, ren_denom)
 
         res_potential = 0.0
+        res_inverter_clipping = 0.0
         if "resource_availability" in data and "res_inverter_efficiency" in data:
             for r in resources:
                 avail = np.asarray(data["resource_availability"].sel(scenario=s, resource=r).values, dtype=float)
-                res_potential += float(avail.sum()) * res_caps[r] * scalarize(data["res_inverter_efficiency"], resource=r)
+                raw_ac_potential = avail * res_caps[r] * scalarize(data["res_inverter_efficiency"], resource=r)
+                inverter_cap = res_inv_caps[r]
+                res_potential += float(np.minimum(raw_ac_potential, inverter_cap).sum())
+                res_inverter_clipping += float(np.maximum(raw_ac_potential - inverter_cap, 0.0).sum())
         res_curtailment = max(res_potential - total_res, 0.0)
         res_curtailment_share = safe_share(res_curtailment, res_potential)
 
@@ -344,15 +399,7 @@ def build_reporting_tables(
                     subsidy = scalarize(data["res_production_subsidy_per_kwh"], scenario=s, resource=r)
                     res_subsidy_revenue += float(np.sum(scen_dispatch[col].to_numpy(dtype=float) * subsidy))
 
-        fixed_om = 0.0
-        res_fom_s = 0.0
-        for r in resources:
-            res_capex = scalarize(data["res_specific_investment_cost_per_kw"], resource=r)
-            fom_share = scalarize(data["res_fixed_om_share_per_year"], resource=r)
-        res_fom_s += res_caps[r] * res_capex * fom_share
-        bat_fom_s = cap_bat_kwh * bat_capex * scalarize(data["battery_fixed_om_share_per_year"])
-        gen_fom_s = cap_gen_kw * gen_capex * scalarize(data["generator_fixed_om_share_per_year"])
-        fixed_om = res_fom_s + bat_fom_s + gen_fom_s
+        fixed_om = res_fom_total + res_inverter_fom_total + bat_fom + bat_inv_fom + gen_fom
 
         scope1 = fuel * scalarize(data["fuel_direct_emissions_kgco2e_per_unit_fuel"], scenario=s)
         grid_em_factor = scalarize(data["grid_emissions_factor_kgco2e_per_kwh"], scenario=s) if "grid_emissions_factor_kgco2e_per_kwh" in data else 0.0
@@ -379,6 +426,7 @@ def build_reporting_tables(
                 "total_res_kwh": total_res,
                 "generator_generation_kwh": total_gen,
                 "renewable_potential_kwh": res_potential,
+                "renewable_inverter_clipping_kwh": res_inverter_clipping,
                 "renewable_curtailment_kwh": res_curtailment,
                 "renewable_curtailment_share": res_curtailment_share,
                 "grid_import_raw_kwh": grid_import_raw,
@@ -393,7 +441,17 @@ def build_reporting_tables(
                 "scope3_emissions_kgco2e": scope3,
                 "emissions_kgco2e": emissions,
                 "investment_annuity_cost": annualized_capex,
+                "res_investment_annuity_cost": res_annuity_total,
+                "res_inverter_investment_annuity_cost": res_inverter_annuity_total,
+                "battery_investment_annuity_cost": ann_bat,
+                "battery_inverter_investment_annuity_cost": ann_bat_inv,
+                "generator_investment_annuity_cost": ann_gen,
                 "fixed_om_cost": fixed_om,
+                "res_fixed_om_cost": res_fom_total,
+                "res_inverter_fixed_om_cost": res_inverter_fom_total,
+                "battery_fixed_om_cost": bat_fom,
+                "battery_inverter_fixed_om_cost": bat_inv_fom,
+                "generator_fixed_om_cost": gen_fom,
                 "fuel_cost": fuel_cost,
                 "grid_import_cost": grid_import_cost,
                 "grid_export_revenue": grid_export_revenue,
@@ -409,7 +467,16 @@ def build_reporting_tables(
             }
         )
 
-        expected_fom_rows.append({"scenario": s, "res_fom": res_fom_s, "bat_fom": bat_fom_s, "gen_fom": gen_fom_s})
+        expected_fom_rows.append(
+            {
+                "scenario": s,
+                "res_fom": res_fom_total,
+                "res_inverter_fom": res_inverter_fom_total,
+                "bat_fom": bat_fom,
+                "bat_inverter_fom": bat_inv_fom,
+                "gen_fom": gen_fom,
+            }
+        )
 
     kpis = pd.DataFrame(kpi_rows)
     if not kpis.empty:
@@ -428,8 +495,16 @@ def build_reporting_tables(
     upfront = pd.DataFrame(upfront_rows)
     expected_cost_components = pd.DataFrame(
         [
-            {"Component": "Annualized CAPEX (annuity)", "Value": float(safe_float(expected_row.get("investment_annuity_cost", 0.0))), "Unit": "/yr"},
-            {"Component": "Fixed O&M", "Value": float(safe_float(expected_row.get("fixed_om_cost", 0.0))), "Unit": "/yr"},
+            {"Component": "Annualized renewable CAPEX", "Value": float(safe_float(expected_row.get("res_investment_annuity_cost", 0.0))), "Unit": "/yr"},
+            {"Component": "Annualized renewable inverter CAPEX", "Value": float(safe_float(expected_row.get("res_inverter_investment_annuity_cost", 0.0))), "Unit": "/yr"},
+            {"Component": "Annualized battery CAPEX", "Value": float(safe_float(expected_row.get("battery_investment_annuity_cost", 0.0))), "Unit": "/yr"},
+            {"Component": "Annualized battery inverter CAPEX", "Value": float(safe_float(expected_row.get("battery_inverter_investment_annuity_cost", 0.0))), "Unit": "/yr"},
+            {"Component": "Annualized generator CAPEX", "Value": float(safe_float(expected_row.get("generator_investment_annuity_cost", 0.0))), "Unit": "/yr"},
+            {"Component": "Renewable fixed O&M", "Value": float(safe_float(expected_row.get("res_fixed_om_cost", 0.0))), "Unit": "/yr"},
+            {"Component": "Renewable inverter fixed O&M", "Value": float(safe_float(expected_row.get("res_inverter_fixed_om_cost", 0.0))), "Unit": "/yr"},
+            {"Component": "Battery fixed O&M", "Value": float(safe_float(expected_row.get("battery_fixed_om_cost", 0.0))), "Unit": "/yr"},
+            {"Component": "Battery inverter fixed O&M", "Value": float(safe_float(expected_row.get("battery_inverter_fixed_om_cost", 0.0))), "Unit": "/yr"},
+            {"Component": "Generator fixed O&M", "Value": float(safe_float(expected_row.get("generator_fixed_om_cost", 0.0))), "Unit": "/yr"},
             {"Component": "Fuel cost (expected)", "Value": float(safe_float(expected_row.get("fuel_cost", 0.0))), "Unit": "/yr"},
             {"Component": "Grid import cost (expected)", "Value": float(safe_float(expected_row.get("grid_import_cost", 0.0))), "Unit": "/yr"},
             {"Component": "Grid export revenue (expected)", "Value": -float(safe_float(expected_row.get("grid_export_revenue", 0.0))), "Unit": "/yr"},
@@ -444,12 +519,13 @@ def build_reporting_tables(
     if fom_df.empty:
         expected_fixed_om = pd.DataFrame(columns=["Technology", "Annual FOM [/yr]"])
     else:
-        first = fom_df.iloc[0]
         expected_fixed_om = pd.DataFrame(
             [
-                {"Technology": "Renewables", "Annual FOM [/yr]": float(safe_float(first.get("res_fom", 0.0)))},
-                {"Technology": "Battery", "Annual FOM [/yr]": float(safe_float(first.get("bat_fom", 0.0)))},
-                {"Technology": "Generator", "Annual FOM [/yr]": float(safe_float(first.get("gen_fom", 0.0)))},
+                {"Technology": "Renewables", "Annual FOM [/yr]": float(safe_float(expected_row.get("res_fixed_om_cost", 0.0)))},
+                {"Technology": "Renewable inverters", "Annual FOM [/yr]": float(safe_float(expected_row.get("res_inverter_fixed_om_cost", 0.0)))},
+                {"Technology": "Battery", "Annual FOM [/yr]": float(safe_float(expected_row.get("battery_fixed_om_cost", 0.0)))},
+                {"Technology": "Battery inverter", "Annual FOM [/yr]": float(safe_float(expected_row.get("battery_inverter_fixed_om_cost", 0.0)))},
+                {"Technology": "Generator", "Annual FOM [/yr]": float(safe_float(expected_row.get("generator_fixed_om_cost", 0.0)))},
             ]
         )
 
