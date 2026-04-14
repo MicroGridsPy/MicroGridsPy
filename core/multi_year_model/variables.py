@@ -95,6 +95,12 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> Dict
         integer=is_integer,
         name="battery_units",
     )
+    vars["battery_inverter_power"] = model.add_variables(
+        lower=0.0,
+        dims=("inv_step",),
+        coords={"inv_step": inv_step},
+        name="battery_inverter_power",
+    )
 
     # Generator installed power capacity [kW] (scalar)
     vars["generator_units"] = model.add_variables(

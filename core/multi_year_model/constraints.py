@@ -110,6 +110,7 @@ def validate_constraint_shapes(
     required_vars = (
         "res_units",
         "battery_units",
+        "battery_inverter_power",
         "generator_units",
         "res_generation",
         "generator_generation",
@@ -191,6 +192,7 @@ def initialize_constraints(
     max_ll_frac = _require_da("max_lost_load_fraction", p.max_lost_load_fraction)
 
     res_nom_kw = _require_da("res_nominal_capacity_kw", p.res_nominal_capacity_kw)
+    res_dc_ac_ratio = _require_da("res_dc_ac_ratio", p.res_dc_ac_ratio)
     res_inv_eta = _require_da("res_inverter_efficiency", p.res_inverter_efficiency)
     res_max_kw = _require_da("res_max_installable_capacity_kw", p.res_max_installable_capacity_kw)
 
@@ -203,8 +205,8 @@ def initialize_constraints(
     soc0_scalar = float(soc0.item()) if getattr(soc0, "dims", ()) == () else soc0
     soh0_scalar = float(soh0.item()) if (degradation_state_enabled and getattr(soh0, "dims", ()) == ()) else soh0
     dod = _require_da("battery_depth_of_discharge", p.battery_depth_of_discharge)
-    t_ch = _require_da("battery_max_charge_time_hours", p.battery_max_charge_time_hours)
-    t_dis = _require_da("battery_max_discharge_time_hours", p.battery_max_discharge_time_hours)
+    bat_max_charge_c_rate = p.battery_max_charge_c_rate
+    bat_max_discharge_c_rate = p.battery_max_discharge_c_rate
     cycle_fade_coeff = (
         _require_da("battery_cycle_fade_coefficient_per_kwh_throughput", p.battery_cycle_fade_coefficient_per_kwh_throughput)
         if cycle_fade_enabled
@@ -231,6 +233,7 @@ def initialize_constraints(
 
     res_units = vars["res_units"]  # (inv_step, resource)
     bat_units = vars["battery_units"]  # (inv_step,)
+    bat_inv_power = vars["battery_inverter_power"]  # (inv_step,)
     gen_units = vars["generator_units"]  # (inv_step,)
 
     res_gen = vars["res_generation"]  # (period, year, scenario, resource)
@@ -255,16 +258,21 @@ def initialize_constraints(
     # ------------------------------------------------------------------
     # 1) Renewable generation capacity with year availability
     # ------------------------------------------------------------------
-    res_cap_available = _available_capacity_by_year(
+    res_cap_available_dc = _available_capacity_by_year(
         sets=sets,
         units=res_units,
         nominal_capacity=res_nom_kw,
         lifetime_years=p.res_lifetime_years,
         degradation_rate=p.res_capacity_degradation_rate_per_year,
-    ) * res_inv_eta
+    )
+    res_cap_available_ac = res_cap_available_dc / res_dc_ac_ratio
     model.add_constraints(
-        res_gen <= (resource_availability * res_cap_available),
+        res_gen <= (resource_availability * res_cap_available_dc * res_inv_eta),
         name="res_generation_cap",
+    )
+    model.add_constraints(
+        res_gen <= res_cap_available_ac,
+        name="res_generation_inverter_cap",
     )
 
     finite_res_max = np.isfinite(res_max_kw)
@@ -367,13 +375,26 @@ def initialize_constraints(
             name="battery_max_installable_capacity",
         )
 
-    bat_power_cap = (
-        bat_eff_cap.expand_dims(period=period)
-        if (degradation_state_enabled and bat_eff_cap is not None)
-        else bat_cap_available
-    )
-    model.add_constraints(bat_ch <= (bat_power_cap / t_ch), name="battery_charge_limit")
-    model.add_constraints(bat_dis <= (bat_power_cap / t_dis), name="battery_discharge_limit")
+    # Broadcast the step-level inverter design variable through the same
+    # vintage activity mask already expanded to operational dimensions.
+    bat_inv_active = bat_inv_power * bat_active
+    model.add_constraints(bat_ch <= bat_inv_active, name="battery_charge_limit")
+    model.add_constraints(bat_dis <= bat_inv_active, name="battery_discharge_limit")
+    bat_nominal_energy = bat_units * bat_nom_kwh
+    if isinstance(bat_max_charge_c_rate, xr.DataArray):
+        finite_charge_rate = xr.where(np.isfinite(bat_max_charge_c_rate), bat_max_charge_c_rate, 0.0)
+        if np.any(np.isfinite(np.asarray(bat_max_charge_c_rate.values, dtype=float))):
+            model.add_constraints(
+                bat_inv_power <= (bat_nominal_energy * finite_charge_rate),
+                name="battery_max_charge_c_rate",
+            )
+    if isinstance(bat_max_discharge_c_rate, xr.DataArray):
+        finite_discharge_rate = xr.where(np.isfinite(bat_max_discharge_c_rate), bat_max_discharge_c_rate, 0.0)
+        if np.any(np.isfinite(np.asarray(bat_max_discharge_c_rate.values, dtype=float))):
+            model.add_constraints(
+                bat_inv_power <= (bat_nominal_energy * finite_discharge_rate),
+                name="battery_max_discharge_c_rate",
+            )
 
     T = int(period.size)
     year_values = year.values.tolist()
@@ -405,8 +426,8 @@ def initialize_constraints(
         dis_intercept = data["battery_discharge_loss_intercept"]
         # The battery curve is normalized on DC-side power relative to the same
         # charge/discharge reference used by the public AC-side power caps.
-        p_ref_ch = bat_power_cap / t_ch
-        p_ref_dis = bat_power_cap / t_dis
+        p_ref_ch = bat_inv_active
+        p_ref_dis = bat_inv_active
 
         # The curve is defined on relative DC-side power in [0, 1], so keep
         # the internal DC powers within the same normalized reference range.

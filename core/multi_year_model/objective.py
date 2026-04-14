@@ -99,6 +99,7 @@ def initialize_objective(
     # ------------------------------------------------------------------
     res_units = vars["res_units"]                 # (inv_step, resource)
     bat_units = vars["battery_units"]             # (inv_step,)
+    bat_inv_power = vars["battery_inverter_power"]  # (inv_step,)
     gen_units = vars["generator_units"]           # (inv_step,)
 
     res_gen = vars["res_generation"]              # (period, year, scenario, resource)
@@ -114,13 +115,18 @@ def initialize_objective(
     # ------------------------------------------------------------------
     res_nom_kw = _require_finite_da("res_nominal_capacity_kw", p.res_nominal_capacity_kw)
     res_capex_kw = _require_finite_da("res_specific_investment_cost_per_kw", p.res_specific_investment_cost_per_kw)
+    res_inv_capex_kw_ac = _require_finite_da("res_inverter_specific_investment_cost_per_kw_ac", p.res_inverter_specific_investment_cost_per_kw_ac)
     res_life_y = _require_finite_da("res_lifetime_years", p.res_lifetime_years)
+    res_inv_life_y = _require_finite_da("res_inverter_lifetime_years", p.res_inverter_lifetime_years)
     res_wacc = _require_finite_da("res_wacc", p.res_wacc)
     res_grant = _require_finite_da("res_grant_share_of_capex", p.res_grant_share_of_capex)
+    res_dc_ac_ratio = _require_finite_da("res_dc_ac_ratio", p.res_dc_ac_ratio)
 
     bat_nom_kwh = _require_finite_da("battery_nominal_capacity_kwh", p.battery_nominal_capacity_kwh)
     bat_capex_kwh = _require_finite_da("battery_specific_investment_cost_per_kwh", p.battery_specific_investment_cost_per_kwh)
+    bat_inv_capex_kw = _require_finite_da("battery_inverter_specific_investment_cost_per_kw", p.battery_inverter_specific_investment_cost_per_kw)
     bat_life_y = _require_finite_da("battery_calendar_lifetime_years", p.battery_calendar_lifetime_years)
+    bat_inv_life_y = _require_finite_da("battery_inverter_lifetime_years", p.battery_inverter_lifetime_years)
     bat_wacc = _require_finite_da("battery_wacc", p.battery_wacc)
 
     gen_nom_kw = _require_finite_da("generator_nominal_capacity_kw", p.generator_nominal_capacity_kw)
@@ -132,11 +138,15 @@ def initialize_objective(
     # Investment annuities
     # ------------------------------------------------------------------
     res_inv_present = res_units * res_nom_kw * res_capex_kw * (1.0 - res_grant)
+    res_inv_ac_present = (res_units * res_nom_kw / res_dc_ac_ratio) * res_inv_capex_kw_ac * (1.0 - res_grant)
     bat_inv_present = bat_units * bat_nom_kwh * bat_capex_kwh
+    bat_inv_power_present = bat_inv_power * bat_inv_capex_kw
     gen_inv_present = gen_units * gen_nom_kw * gen_capex_kw
 
     res_annuity = res_inv_present * _crf(res_wacc, res_life_y)
+    res_inv_ac_annuity = res_inv_ac_present * _crf(res_wacc, res_inv_life_y)
     bat_annuity = bat_inv_present * _crf(bat_wacc, bat_life_y)
+    bat_inv_power_annuity = bat_inv_power_present * _crf(bat_wacc, bat_inv_life_y)
     gen_annuity = gen_inv_present * _crf(gen_wacc, gen_life_y)
 
     # Automatic like-for-like replacements keep each investment cohort active
@@ -145,8 +155,8 @@ def initialize_objective(
     bat_active = replacement_active_mask(sets)
     gen_active = replacement_active_mask(sets)
 
-    ann_res_y = (res_annuity * res_active).sum("inv_step").sum("resource")
-    ann_bat_y = (bat_annuity * bat_active).sum("inv_step")
+    ann_res_y = ((res_annuity + res_inv_ac_annuity) * res_active).sum("inv_step").sum("resource")
+    ann_bat_y = ((bat_annuity + bat_inv_power_annuity) * bat_active).sum("inv_step")
     ann_gen_y = (gen_annuity * gen_active).sum("inv_step")
     annuity_y = ann_res_y + ann_bat_y + ann_gen_y  # (year,)
 
@@ -189,6 +199,12 @@ def initialize_objective(
         res_fom_y_s = (res_capex_base * res_active * res_fom_share).sum("inv_step").sum("resource")
     else:
         res_fom_y_s = 0.0
+    if p.res_inverter_fixed_om_share_per_year is not None:
+        res_inv_fom_share = _finite_or_zero(p.res_inverter_fixed_om_share_per_year)
+        res_inv_capex_base = (res_units * res_nom_kw / res_dc_ac_ratio) * res_inv_capex_kw_ac
+        res_inv_fom_y_s = (res_inv_capex_base * res_active * res_inv_fom_share).sum("inv_step").sum("resource")
+    else:
+        res_inv_fom_y_s = 0.0
 
     if p.battery_fixed_om_share_per_year is not None:
         bat_fom_share = _finite_or_zero(p.battery_fixed_om_share_per_year)
@@ -196,6 +212,11 @@ def initialize_objective(
         bat_fom_y_s = (bat_capex_base * bat_active * bat_fom_share).sum("inv_step")
     else:
         bat_fom_y_s = 0.0
+    if p.battery_inverter_fixed_om_share_per_year is not None:
+        bat_inv_fom_share = _finite_or_zero(p.battery_inverter_fixed_om_share_per_year)
+        bat_inv_fom_y_s = (bat_inv_power_present * bat_active * bat_inv_fom_share).sum("inv_step")
+    else:
+        bat_inv_fom_y_s = 0.0
 
     if p.generator_fixed_om_share_per_year is not None:
         gen_fom_share = _finite_or_zero(p.generator_fixed_om_share_per_year)
@@ -211,6 +232,8 @@ def initialize_objective(
         - res_subsidy_rev_y_s
         + res_fom_y_s
         + bat_fom_y_s
+        + res_inv_fom_y_s
+        + bat_inv_fom_y_s
         + gen_fom_y_s
     )
 
@@ -290,7 +313,9 @@ def initialize_objective(
     # would mix annuity accounting with a full-CAPEX residual-value convention.
     post_horizon_annuity_tail_memo = (
         discounted_annuity_tail_memo(sets, res_annuity, res_life_y, rs).sum("inv_step").sum("resource")
+        + discounted_annuity_tail_memo(sets, res_inv_ac_annuity, res_inv_life_y, rs).sum("inv_step").sum("resource")
         + discounted_annuity_tail_memo(sets, bat_annuity, bat_life_y, rs).sum("inv_step")
+        + discounted_annuity_tail_memo(sets, bat_inv_power_annuity, bat_inv_life_y, rs).sum("inv_step")
         + discounted_annuity_tail_memo(sets, gen_annuity, gen_life_y, rs).sum("inv_step")
     )
 

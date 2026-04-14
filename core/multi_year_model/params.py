@@ -26,11 +26,15 @@ class Params:
     res_nominal_capacity_kw: Optional[xr.DataArray]
     res_lifetime_years: Optional[xr.DataArray]
     res_specific_investment_cost_per_kw: Optional[xr.DataArray]
+    res_inverter_specific_investment_cost_per_kw_ac: Optional[xr.DataArray]
+    res_inverter_lifetime_years: Optional[xr.DataArray]
     res_wacc: Optional[xr.DataArray]
     res_grant_share_of_capex: Optional[xr.DataArray]
     res_embedded_emissions_kgco2e_per_kw: Optional[xr.DataArray]
     res_fixed_om_share_per_year: Optional[xr.DataArray]
+    res_inverter_fixed_om_share_per_year: Optional[xr.DataArray]
     res_production_subsidy_per_kwh: Optional[xr.DataArray]
+    res_dc_ac_ratio: Optional[xr.DataArray]
     res_inverter_efficiency: Optional[xr.DataArray]
     res_specific_area_m2_per_kw: Optional[xr.DataArray]
     res_max_installable_capacity_kw: Optional[xr.DataArray]
@@ -39,9 +43,12 @@ class Params:
     # Battery
     battery_nominal_capacity_kwh: Optional[xr.DataArray]
     battery_specific_investment_cost_per_kwh: Optional[xr.DataArray]
+    battery_inverter_specific_investment_cost_per_kw: Optional[xr.DataArray]
+    battery_inverter_lifetime_years: Optional[xr.DataArray]
     battery_wacc: Optional[xr.DataArray]
     battery_calendar_lifetime_years: Optional[xr.DataArray]
     battery_fixed_om_share_per_year: Optional[xr.DataArray]
+    battery_inverter_fixed_om_share_per_year: Optional[xr.DataArray]
     battery_embedded_emissions_kgco2e_per_kwh: Optional[xr.DataArray]
     battery_max_installable_capacity_kwh: Optional[xr.DataArray]
     battery_charge_efficiency: Optional[xr.DataArray]
@@ -49,8 +56,8 @@ class Params:
     battery_initial_soc: Optional[xr.DataArray]
     battery_initial_soh: Optional[xr.DataArray]
     battery_depth_of_discharge: Optional[xr.DataArray]
-    battery_max_charge_time_hours: Optional[xr.DataArray]
-    battery_max_discharge_time_hours: Optional[xr.DataArray]
+    battery_max_charge_c_rate: Optional[xr.DataArray]
+    battery_max_discharge_c_rate: Optional[xr.DataArray]
     battery_cycle_fade_coefficient_per_kwh_throughput: Optional[xr.DataArray]
     battery_calendar_time_increment_per_year: Optional[xr.DataArray]
     battery_capacity_degradation_rate_per_year: Optional[xr.DataArray]
@@ -115,20 +122,27 @@ def get_params(ds: xr.Dataset) -> Params:
         res_nominal_capacity_kw=_opt("res_nominal_capacity_kw"),
         res_lifetime_years=_opt("res_lifetime_years"),
         res_specific_investment_cost_per_kw=_opt("res_specific_investment_cost_per_kw"),
+        res_inverter_specific_investment_cost_per_kw_ac=_opt("res_inverter_specific_investment_cost_per_kw_ac"),
+        res_inverter_lifetime_years=_opt("res_inverter_lifetime_years"),
         res_wacc=_opt("res_wacc"),
         res_grant_share_of_capex=_opt("res_grant_share_of_capex"),
         res_embedded_emissions_kgco2e_per_kw=_opt("res_embedded_emissions_kgco2e_per_kw"),
         res_fixed_om_share_per_year=_opt("res_fixed_om_share_per_year"),
+        res_inverter_fixed_om_share_per_year=_opt("res_inverter_fixed_om_share_per_year"),
         res_production_subsidy_per_kwh=_opt("res_production_subsidy_per_kwh"),
+        res_dc_ac_ratio=_opt("res_dc_ac_ratio"),
         res_inverter_efficiency=_opt("res_inverter_efficiency"),
         res_specific_area_m2_per_kw=_opt("res_specific_area_m2_per_kw"),
         res_max_installable_capacity_kw=_opt("res_max_installable_capacity_kw"),
         res_capacity_degradation_rate_per_year=_opt("res_capacity_degradation_rate_per_year"),
         battery_nominal_capacity_kwh=_opt("battery_nominal_capacity_kwh"),
         battery_specific_investment_cost_per_kwh=_opt("battery_specific_investment_cost_per_kwh"),
+        battery_inverter_specific_investment_cost_per_kw=_opt("battery_inverter_specific_investment_cost_per_kw"),
+        battery_inverter_lifetime_years=_opt("battery_inverter_lifetime_years"),
         battery_wacc=_opt("battery_wacc"),
         battery_calendar_lifetime_years=_opt("battery_calendar_lifetime_years"),
         battery_fixed_om_share_per_year=_opt("battery_fixed_om_share_per_year"),
+        battery_inverter_fixed_om_share_per_year=_opt("battery_inverter_fixed_om_share_per_year"),
         battery_embedded_emissions_kgco2e_per_kwh=_opt("battery_embedded_emissions_kgco2e_per_kwh"),
         battery_max_installable_capacity_kwh=_opt("battery_max_installable_capacity_kwh"),
         battery_charge_efficiency=_opt("battery_charge_efficiency"),
@@ -136,8 +150,8 @@ def get_params(ds: xr.Dataset) -> Params:
         battery_initial_soc=_opt("battery_initial_soc"),
         battery_initial_soh=_opt("battery_initial_soh"),
         battery_depth_of_discharge=_opt("battery_depth_of_discharge"),
-        battery_max_charge_time_hours=_opt("battery_max_charge_time_hours"),
-        battery_max_discharge_time_hours=_opt("battery_max_discharge_time_hours"),
+        battery_max_charge_c_rate=_opt("battery_max_charge_c_rate"),
+        battery_max_discharge_c_rate=_opt("battery_max_discharge_c_rate"),
         battery_cycle_fade_coefficient_per_kwh_throughput=_opt("battery_cycle_fade_coefficient_per_kwh_throughput"),
         battery_calendar_time_increment_per_year=_opt("battery_calendar_time_increment_per_year"),
         battery_capacity_degradation_rate_per_year=_opt("battery_capacity_degradation_rate_per_year"),

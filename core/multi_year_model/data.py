@@ -615,19 +615,25 @@ def _load_renewables_yaml(
         "nominal_capacity_kw",
         "lifetime_years",
         "specific_investment_cost_per_kw",
+        "inverter_specific_investment_cost_per_kw_ac",
+        "inverter_lifetime_years",
         "wacc",
         "grant_share_of_capex",
         "embedded_emissions_kgco2e_per_kw",   # embodied per kW installed (investment-side)
         "fixed_om_share_per_year",
+        "inverter_fixed_om_share_per_year",
         "production_subsidy_per_kwh",
     ]
     OPTIONAL_INVESTMENT_BY_STEP = {
         "fixed_om_share_per_year": 0.0,
+        "inverter_specific_investment_cost_per_kw_ac": 0.0,
+        "inverter_fixed_om_share_per_year": 0.0,
         "production_subsidy_per_kwh": 0.0,
     }
 
     # technical, step-invariant (single technology physics)
     PARAMS_TECHNICAL_INVARIANT = [
+        "dc_ac_ratio",
         "inverter_efficiency",
         "specific_area_m2_per_kw",            # physical land-use coefficient (resource-level)
         "max_installable_capacity_kw",        # allow None -> NaN
@@ -642,8 +648,10 @@ def _load_renewables_yaml(
     tech_arr = {k: np.full((n_r,), np.nan, dtype=float) for k in PARAMS_TECHNICAL_INVARIANT}
     op_arr = {
         "fixed_om_share_per_year": np.full((n_k, n_r), np.nan, dtype=float),
+        "inverter_fixed_om_share_per_year": np.full((n_k, n_r), np.nan, dtype=float),
         "production_subsidy_per_kwh": np.full((n_k, n_r), np.nan, dtype=float),
     }
+    conversion_technology_by_resource: Dict[str, str] = {}
 
     # -----------------------------
     # Load each renewable entry
@@ -662,6 +670,7 @@ def _load_renewables_yaml(
                 f"{path.name}: renewable.resource='{res_label}' not found in sets.resource={resource_labels}."
             )
         j = res_to_idx[res_label]
+        conversion_technology_by_resource[res_label] = str(item.get("conversion_technology", "") or "").strip()
 
         if "by_step" in item:
             raise InputValidationError(
@@ -752,6 +761,7 @@ def _load_renewables_yaml(
         for st in step_labels:
             si = step_to_idx[st]
             op_arr["fixed_om_share_per_year"][si, j] = inv_arr["fixed_om_share_per_year"][si, j]
+            op_arr["inverter_fixed_om_share_per_year"][si, j] = inv_arr["inverter_fixed_om_share_per_year"][si, j]
             op_arr["production_subsidy_per_kwh"][si, j] = inv_arr["production_subsidy_per_kwh"][si, j]
 
         if "operation" in item:
@@ -788,7 +798,7 @@ def _load_renewables_yaml(
         )
 
     # investment-side shared economic terms by cohort/resource
-    for k in ("fixed_om_share_per_year", "production_subsidy_per_kwh"):
+    for k in ("fixed_om_share_per_year", "inverter_fixed_om_share_per_year", "production_subsidy_per_kwh"):
         var_name = f"res_{k}"
         data_vars[var_name] = xr.DataArray(
             op_arr[k],
@@ -803,6 +813,7 @@ def _load_renewables_yaml(
         "inputs_loaded": {"renewables_yaml": str(path)},
         "schema": "shared_technology_capacity_expansion",
     }
+    ds.attrs["conversion_technology_by_resource"] = conversion_technology_by_resource
     return ds
 
 def _load_battery_yaml(
@@ -837,23 +848,32 @@ def _load_battery_yaml(
     INVESTMENT_BY_STEP = [
         "nominal_capacity_kwh",
         "specific_investment_cost_per_kwh",
+        "inverter_specific_investment_cost_per_kw",
+        "inverter_lifetime_years",
         "wacc",
         "calendar_lifetime_years",
         "embedded_emissions_kgco2e_per_kwh",
         "fixed_om_share_per_year",
+        "inverter_fixed_om_share_per_year",
     ]
-    OPTIONAL_INVESTMENT_BY_STEP = {"fixed_om_share_per_year": 0.0}
+    OPTIONAL_INVESTMENT_BY_STEP = {
+        "inverter_specific_investment_cost_per_kw": 0.0,
+        "fixed_om_share_per_year": 0.0,
+        "inverter_fixed_om_share_per_year": 0.0,
+    }
     SHARED_TECHNICAL_KEYS = [
         "charge_efficiency",
         "discharge_efficiency",
         "initial_soc",
         "depth_of_discharge",
-        "max_discharge_time_hours",
-        "max_charge_time_hours",
+        "max_discharge_c_rate",
+        "max_charge_c_rate",
         "max_installable_capacity_kwh",
         "capacity_degradation_rate_per_year",
     ]
     OPTIONAL_SHARED_TECHNICAL = {
+        "max_discharge_c_rate": np.nan,
+        "max_charge_c_rate": np.nan,
         "capacity_degradation_rate_per_year": 0.0,
     }
     CONDITIONAL_TECHNICAL_DEFAULTS = {
@@ -928,6 +948,18 @@ def _load_battery_yaml(
             and "calendar_time_increment_per_step" in legacy_tech
         ):
             legacy_tech["calendar_time_increment_per_year"] = legacy_tech["calendar_time_increment_per_step"]
+        if "max_discharge_c_rate" not in legacy_tech and "max_discharge_time_hours" in legacy_tech:
+            legacy_hours = _as_float_or_nan(
+                legacy_tech.get("max_discharge_time_hours"),
+                name="battery/technical/max_discharge_time_hours",
+            )
+            legacy_tech["max_discharge_c_rate"] = (1.0 / legacy_hours) if np.isfinite(legacy_hours) and legacy_hours > 0.0 else np.nan
+        if "max_charge_c_rate" not in legacy_tech and "max_charge_time_hours" in legacy_tech:
+            legacy_hours = _as_float_or_nan(
+                legacy_tech.get("max_charge_time_hours"),
+                name="battery/technical/max_charge_time_hours",
+            )
+            legacy_tech["max_charge_c_rate"] = (1.0 / legacy_hours) if np.isfinite(legacy_hours) and legacy_hours > 0.0 else np.nan
         for k in SHARED_TECHNICAL_KEYS:
             if k not in legacy_tech:
                 if k in OPTIONAL_SHARED_TECHNICAL:
@@ -2008,6 +2040,9 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
         battery_curve_ds,
         battery_calendar_curve_ds,
         compat="override",
+    )
+    data.attrs["conversion_technology_by_resource"] = dict(
+        (ren_params_ds.attrs or {}).get("conversion_technology_by_resource", {}) or {}
     )
 
     on_grid = bool(formulation.get("on_grid", False))
