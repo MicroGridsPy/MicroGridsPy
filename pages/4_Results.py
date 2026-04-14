@@ -13,6 +13,7 @@ from core.export.results_bundle import ResultsBundle
 from core.export.results_page_helpers import (
     build_energy_balance_dataframe,
     export_results_from_bundle,
+    get_multi_year_results_from_session,
     get_results_bundle_from_session,
     get_typical_year_results_from_session,
     load_multi_year_results_from_files,
@@ -364,7 +365,16 @@ def render_generation_planning_results_page() -> None:
     settings = get_dataset_settings(data)
     formulation = str(settings.get("formulation", "steady_state"))
     if formulation == "dynamic":
-        render_multi_year_results(bundle, project_name)
+        multi_year_results = get_multi_year_results_from_session(st.session_state, active_project=project_name)
+        if multi_year_results is not None:
+            render_multi_year_results(multi_year_results, project_name)
+            return
+        if project_name:
+            file_results = load_multi_year_results_from_files(project_name)
+            if file_results is not None:
+                render_multi_year_results_from_files(file_results, project_name)
+                return
+        st.error("No multi-year results found. Please run the optimization first (solve step).")
         return
 
     on_grid = get_nested_flag(settings, ("grid", "on_grid"), default=False)
