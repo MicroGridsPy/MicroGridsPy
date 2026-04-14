@@ -1,63 +1,0 @@
-Writing constraints.:   0%|[38;2;128;191;255m                                                                     [0m| 0/12 [00:00<?, ?it/s][0mWriting constraints.:  33%|[38;2;128;191;255m####################3                                        [0m| 4/12 [00:00<00:00, 36.59it/s][0mWriting constraints.:  83%|[38;2;128;191;255m##################################################          [0m| 10/12 [00:00<00:00, 45.75it/s][0mWriting constraints.: 100%|[38;2;128;191;255m############################################################[0m| 12/12 [00:00<00:00, 44.26it/s][0m
-Writing continuous variables.:   0%|[38;2;128;191;255m                                                            [0m| 0/10 [00:00<?, ?it/s][0mWriting continuous variables.: 100%|[38;2;128;191;255m##################################################[0m| 10/10 [00:00<00:00, 256.49it/s][0m
-Writing integer variables.:   0%|[38;2;128;191;255m                                                                [0m| 0/3 [00:00<?, ?it/s][0mWriting integer variables.: 100%|[38;2;128;191;255m#######################################################[0m| 3/3 [00:00<00:00, 601.39it/s][0m
-Set parameter Username
-Academic license - for non-commercial use only - expires 2026-12-02
-Read LP format model from file C:\Users\onori\AppData\Local\Temp\linopy-problem-rmp90c8q.lp
-Reading time = 0.18 seconds
-obj: 78842 rows, 61323 columns, 205717 nonzeros
-Set parameter Presolve to value -1
-Gurobi Optimizer version 13.0.0 build v13.0.0rc1 (win64 - Windows 11+.0 (26200.2))
-
-CPU model: 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz, instruction set [SSE2|AVX|AVX2|AVX512]
-Thread count: 8 physical cores, 16 logical processors, using up to 16 threads
-
-Optimize a model with 78842 rows, 61323 columns and 205717 nonzeros (Min)
-Model fingerprint: 0x16ff20ab
-Model has 35043 linear objective coefficients
-Variable types: 61320 continuous, 3 integer (0 binary)
-Coefficient statistics:
-  Matrix range     [9e-04, 4e+00]
-  Objective range  [1e-04, 7e+01]
-  Bounds range     [0e+00, 0e+00]
-  RHS range        [4e-01, 8e+03]
-Presolve removed 13288 rows and 13286 columns
-Presolve time: 0.17s
-Presolved: 65554 rows, 48037 columns, 179141 nonzeros
-Variable types: 48034 continuous, 3 integer (0 binary)
-Deterministic concurrent LP optimizer: primal and dual simplex
-Showing primal log only...
-
-
-Root simplex log...
-
-Iteration    Objective       Primal Inf.    Dual Inf.      Time
-   23660    3.3605324e+04   0.000000e+00   7.924743e+03      5s
-   29500    3.3226548e+04   0.000000e+00   1.115031e+03     10s
-   32370    3.3226266e+04   0.000000e+00   1.738727e+03     15s
-Concurrent spin time: 0.00s
-
-Solved with dual simplex
-
-Root simplex log...
-
-Iteration    Objective       Primal Inf.    Dual Inf.      Time
-   18626    1.8762545e+04   0.000000e+00   0.000000e+00     17s
-
-Root relaxation: objective 1.876255e+04, 18626 iterations, 16.36 seconds (22.07 work units)
-
-    Nodes    |    Current Node    |     Objective Bounds      |     Work
- Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
-
-     0     0 18762.5453    0    2          - 18762.5453      -     -   16s
-H    0     0                    18768.577112 18762.5453  0.03%     -   18s
-H    0     0                    18762.918850 18762.5453  0.00%     -   18s
-
-Explored 1 nodes (18626 simplex iterations) in 18.34 seconds (23.33 work units)
-Thread count was 16 (of 16 available processors)
-
-Solution count 2: 18762.9 18768.6 
-
-Optimal solution found (tolerance 1.00e-04)
-Best objective 1.876291884956e+04, best bound 1.876254527819e+04, gap 0.0020%
-Dual values of MILP couldn't be parsed

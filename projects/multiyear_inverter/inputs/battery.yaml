@@ -10,7 +10,6 @@ meta:
     battery_inverter_specific_investment_cost_per_kw: currency_per_kW
     battery_wacc: '-'
     battery_calendar_lifetime_years: years
-    battery_inverter_lifetime_years: years
     battery_embedded_emissions_kgco2e_per_kwh: kgCO2e_per_kWh
     battery_fixed_om_share_per_year: share_per_year
     battery_inverter_fixed_om_share_per_year: share_per_year
@@ -22,8 +21,9 @@ meta:
     battery_max_discharge_c_rate: per_hour
     battery_max_charge_c_rate: per_hour
     battery_max_installable_capacity_kwh: kWh
+    battery_capacity_degradation_rate_per_year: per_year
   context:
-    formulation: steady_state
+    formulation: dynamic
     multi_scenario: false
     capacity_expansion: false
     investment_steps: null
@@ -41,8 +41,6 @@ meta:
       battery_wacc: Weighted average cost of capital used for battery annuities.
       battery_calendar_lifetime_years: Calendar lifetime used for battery replacement
         economics.
-      battery_inverter_lifetime_years: Lifetime used to annualize explicit battery
-        inverter CAPEX.
       battery_embedded_emissions_kgco2e_per_kwh: Embodied emissions associated with
         battery capacity.
       battery_fixed_om_share_per_year: Fixed annual O&M cost expressed as a share
@@ -71,6 +69,10 @@ meta:
       battery_max_installable_capacity_kwh: Optional upper bound on total installed
         battery capacity used as a planning/siting limit. It is not the physics reference
         for the current endogenous degradation model.
+      battery_capacity_degradation_rate_per_year: Simplified exogenous annual reduction
+        in effective battery capacity. It remains active in the dynamic formulation
+        unless calendar fade is enabled; when calendar fade is enabled, this linear
+        term is ignored to avoid double-counting background ageing.
 
 # -----------------------------------------------------------------------------
 # Editable battery inputs.
@@ -80,7 +82,7 @@ battery:
   label: Battery
   investment:
     by_step:
-      base:
+      '1':
         nominal_capacity_kwh: 1.0
         specific_investment_cost_per_kwh: 350
         wacc: 0.05
@@ -100,3 +102,4 @@ battery:
     max_charge_c_rate: 0.25
     max_installable_capacity_kwh: null
     efficiency_curve_csv: null
+    capacity_degradation_rate_per_year: 0.0

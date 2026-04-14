@@ -1,0 +1,4 @@
+inv_step,inv_step_start_year,technology,technology_label,vintage_label,display_label,fuel_vintage_label,resource,units,installed_capacity,capacity_unit,installed_inverter_capacity_ac,inverter_capacity_unit
+1,2026,renewable,Solar PV,Renewable technology 1,Renewable technology 1 (step 1),,Solar,742.9605637806582,742.9605637806582,kW,619.1338031505485,kW_ac
+1,2026,battery,Battery,Storage technology 1,Storage technology 1 (step 1),,,1889.7010104523429,1889.7010104523429,kWh,326.3097017507936,kW
+1,2026,generator,Generator,Backup technology 1,Backup technology 1 (step 1),Fuel 1,,68.43060254482394,68.43060254482394,kW,,

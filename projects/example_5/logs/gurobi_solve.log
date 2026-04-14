@@ -1,95 +1,0 @@
-Writing constraints.:   0%|[38;2;128;191;255m                                                                     [0m| 0/20 [00:00<?, ?it/s][0mWriting constraints.:   5%|[38;2;128;191;255m###                                                          [0m| 1/20 [00:00<00:06,  2.90it/s][0mWriting constraints.:  10%|[38;2;128;191;255m######1                                                      [0m| 2/20 [00:00<00:06,  2.72it/s][0mWriting constraints.:  15%|[38;2;128;191;255m#########1                                                   [0m| 3/20 [00:01<00:06,  2.62it/s][0mWriting constraints.:  20%|[38;2;128;191;255m############2                                                [0m| 4/20 [00:01<00:06,  2.62it/s][0mWriting constraints.:  25%|[38;2;128;191;255m###############2                                             [0m| 5/20 [00:01<00:05,  2.54it/s][0mWriting constraints.:  35%|[38;2;128;191;255m#####################3                                       [0m| 7/20 [00:02<00:04,  2.74it/s][0mWriting constraints.:  85%|[38;2;128;191;255m###################################################         [0m| 17/20 [00:03<00:00,  8.50it/s][0mWriting constraints.:  90%|[38;2;128;191;255m######################################################      [0m| 18/20 [00:03<00:00,  6.77it/s][0mWriting constraints.:  95%|[38;2;128;191;255m#########################################################   [0m| 19/20 [00:04<00:00,  4.50it/s][0mWriting constraints.: 100%|[38;2;128;191;255m############################################################[0m| 20/20 [00:04<00:00,  4.89it/s][0mWriting constraints.: 100%|[38;2;128;191;255m############################################################[0m| 20/20 [00:04<00:00,  4.59it/s][0m
-Writing continuous variables.:   0%|[38;2;128;191;255m                                                            [0m| 0/10 [00:00<?, ?it/s][0mWriting continuous variables.:  50%|[38;2;128;191;255m##########################                          [0m| 5/10 [00:00<00:00, 49.97it/s][0mWriting continuous variables.: 100%|[38;2;128;191;255m###################################################[0m| 10/10 [00:00<00:00, 31.73it/s][0mWriting continuous variables.: 100%|[38;2;128;191;255m###################################################[0m| 10/10 [00:00<00:00, 33.56it/s][0m
-Set parameter Username
-Academic license - for non-commercial use only - expires 2026-12-02
-Read LP format model from file C:\Users\onori\AppData\Local\Temp\linopy-problem-gni2775x.lp
-Reading time = 7.29 seconds
-obj: 2365230 rows, 1839603 columns, 6171954 nonzeros
-Set parameter Presolve to value -1
-Gurobi Optimizer version 13.0.0 build v13.0.0rc1 (win64 - Windows 11+.0 (26200.2))
-
-CPU model: 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz, instruction set [SSE2|AVX|AVX2|AVX512]
-Thread count: 8 physical cores, 16 logical processors, using up to 16 threads
-
-Optimize a model with 2365230 rows, 1839603 columns and 6171954 nonzeros (Min)
-Model fingerprint: 0xb1662cbe
-Model has 1051203 linear objective coefficients
-Coefficient statistics:
-  Matrix range     [1e-05, 3e+00]
-  Objective range  [2e-07, 5e+02]
-  Bounds range     [0e+00, 0e+00]
-  RHS range        [1e+00, 4e+02]
-Presolve removed 660872 rows and 871080 columns
-Presolve time: 9.10s
-Presolved: 653163 rows, 1967151 columns, 5766204 nonzeros
-
-Concurrent LP optimizer: primal simplex, dual simplex, and barrier
-Showing barrier log only...
-
-Ordering time: 0.62s
-
-Barrier statistics:
- AA' NZ     : 2.477e+06
- Factor NZ  : 1.049e+07 (roughly 1.1 GB of memory)
- Factor Ops : 2.125e+08 (less than 1 second per iteration)
- Threads    : 1
-
-                  Objective                Residual
-Iter       Primal          Dual         Primal    Dual     Compl     Time
-   0   6.96032071e+05  3.36746035e+06  2.71e+07 2.69e+02  1.39e+05    16s
-   1  -2.14601493e+09  4.27968011e+07  1.03e+07 1.56e+02  4.79e+04    18s
-   2  -2.06472329e+09  5.48811862e+07  5.36e+06 7.17e+01  2.55e+04    20s
-   3  -9.80338406e+08  6.62574224e+07  7.11e+05 2.67e+00  3.59e+03    22s
-   4  -1.65101510e+07  5.40345963e+07  7.78e+03 9.09e-13  5.82e+01    24s
-   5  -1.45213281e+05  8.41360062e+06  1.08e+03 7.96e-13  7.21e+00    26s
-   6   6.32507799e+05  5.48361968e+06  5.73e+02 6.82e-13  3.66e+00    28s
-   7   8.61505786e+05  3.40185961e+06  3.23e+02 1.02e-12  1.96e+00    30s
-   8   8.49907506e+05  2.48058521e+06  1.45e+02 1.04e-12  1.03e+00    32s
-   9   9.38650439e+05  2.12748097e+06  5.87e+01 1.28e-12  5.82e-01    34s
-  10   1.03984260e+06  1.84332775e+06  3.47e+01 1.17e-12  3.71e-01    35s
-  11   1.18167585e+06  1.66802178e+06  1.66e+01 1.12e-12  2.09e-01    37s
-  12   1.28699014e+06  1.60066587e+06  8.16e+00 1.22e-12  1.27e-01    39s
-  13   1.32163984e+06  1.55843040e+06  5.98e+00 1.06e-12  9.55e-02    42s
-  14   1.34023915e+06  1.55035338e+06  4.95e+00 1.19e-12  8.37e-02    43s
-  15   1.36435475e+06  1.53604009e+06  3.83e+00 1.14e-12  6.78e-02    45s
-  16   1.39609581e+06  1.49810923e+06  2.51e+00 1.12e-12  4.09e-02    47s
-  17   1.42184297e+06  1.48185625e+06  1.44e+00 9.66e-13  2.40e-02    49s
-  18   1.43973930e+06  1.47149874e+06  7.22e-01 9.81e-13  1.26e-02    52s
-  19   1.45138251e+06  1.46639449e+06  2.87e-01 1.01e-12  5.80e-03    55s
-  20   1.45542544e+06  1.46281980e+06  1.38e-01 1.25e-12  2.85e-03    56s
-  21   1.45680665e+06  1.46118443e+06  8.68e-02 1.18e-12  1.70e-03    58s
-  22   1.45774298e+06  1.46036879e+06  5.47e-02 1.08e-12  1.03e-03    60s
-  23   1.45825380e+06  1.45995732e+06  3.74e-02 9.24e-13  6.72e-04    62s
-  24   1.45851675e+06  1.45973642e+06  2.85e-02 1.26e-12  4.86e-04    63s
-  25   1.45871618e+06  1.45952291e+06  2.18e-02 1.15e-12  3.30e-04    65s
-  26   1.45904409e+06  1.45944706e+06  1.08e-02 1.07e-12  1.65e-04    66s
-  27   1.45929159e+06  1.45941363e+06  2.47e-03 9.95e-13  4.75e-05    68s
-  28   1.45934428e+06  1.45939114e+06  7.09e-04 1.06e-12  1.76e-05    70s
-  29   1.45936203e+06  1.45937322e+06  1.75e-04 1.18e-12  4.21e-06    72s
-  30   1.45936876e+06  1.45936998e+06  2.04e-06 1.15e-12  4.10e-07    74s
-  31   1.45936877e+06  1.45936995e+06  1.97e-06 1.38e-12  3.96e-07    77s
-  32   1.45936897e+06  1.45936924e+06  6.41e-07 1.19e-12  8.96e-08    79s
-  33   1.45936902e+06  1.45936908e+06  3.58e-07 1.19e-12  2.04e-08    81s
-  34   1.45936907e+06  1.45936908e+06  4.29e-08 1.07e-12  2.42e-09    84s
-
-Barrier solved model in 34 iterations and 83.90 seconds (27.89 work units)
-Optimal objective 1.45936907e+06
-
-Crossover log...
-
-  260473 DPushes remaining with DInf 0.0000000e+00                85s
-       0 DPushes remaining with DInf 0.0000000e+00                89s
-
-      44 PPushes remaining with PInf 0.0000000e+00                89s
-       0 PPushes remaining with PInf 0.0000000e+00                89s
-
-  Push phase complete: Pinf 0.0000000e+00, Dinf 1.0059832e-08     89s
-
-Crossover time: 5.50 seconds (1.55 work units)
-
-Solved with barrier
-Iteration    Objective       Primal Inf.    Dual Inf.      Time
-  260313    1.4593691e+06   0.000000e+00   0.000000e+00     92s
-
-Solved in 260313 iterations and 92.34 seconds (30.76 work units)
-Optimal objective  1.459369075e+06

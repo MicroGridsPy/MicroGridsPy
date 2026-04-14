@@ -1,0 +1,2 @@
+inv_step,inv_step_start_year,technology_label,installed_inverter_power_kw,specific_investment_cost_per_kw,lifetime_years,fixed_om_share_per_year
+1,2026,Battery inverter,326.3097017507936,160.0,15.0,0.02

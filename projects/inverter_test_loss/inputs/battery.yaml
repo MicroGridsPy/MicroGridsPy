@@ -17,6 +17,7 @@ meta:
     battery_discharge_efficiency: '-'
     battery_initial_soc: share
     battery_depth_of_discharge: share
+    battery_inverter_nominal_power_kw: kW
     battery_max_discharge_c_rate: per_hour
     battery_max_charge_c_rate: per_hour
     battery_max_installable_capacity_kwh: kWh
@@ -55,6 +56,9 @@ meta:
         cycle fade is enabled, the same value is also used as the reference DoD for
         deriving the internal cycle-fade coefficient from cycle life and end-of-life
         SoH.
+      battery_inverter_nominal_power_kw: Nominal inverter/converter power represented
+        by one battery inverter unit. Installed battery inverter power equals inverter
+        units multiplied by this value.
       battery_max_discharge_c_rate: Optional upper bound on explicit battery inverter
         discharge power relative to installed battery energy capacity. Use this as
         the primary discharge-side power-to-energy coupling input in the typical-year
@@ -92,6 +96,7 @@ battery:
     discharge_efficiency: 0.96
     initial_soc: 0.5
     depth_of_discharge: 0.8
+    inverter_nominal_power_kw: 1.0
     max_discharge_c_rate: 0.25
     max_charge_c_rate: 0.25
     max_installable_capacity_kwh: null
