@@ -65,6 +65,7 @@ def _base_data(
     loss_model: str = "constant_efficiency",
     battery_capex_kwh: float = 0.0,
     battery_inverter_capex_kw: float = 0.0,
+    battery_inverter_nominal_power_kw: float = 1.0,
     renewable_capex_kw: float = 0.0,
     renewable_inverter_capex_kw_ac: float = 0.0,
     renewable_inverter_lifetime_years: float = 10.0,
@@ -76,6 +77,7 @@ def _base_data(
     battery_inverter_lifetime_years: float = 10.0,
     max_charge_c_rate: float | None = None,
     max_discharge_c_rate: float | None = None,
+    discrete_unit_sizing: bool = False,
 ) -> xr.Dataset:
     scenario = ["scenario_1"]
     resource = ["Solar"]
@@ -118,6 +120,7 @@ def _base_data(
             "battery_discharge_efficiency": xr.DataArray([1.0], dims=("scenario",), coords={"scenario": scenario}),
             "battery_initial_soc": xr.DataArray([0.0], dims=("scenario",), coords={"scenario": scenario}),
             "battery_depth_of_discharge": xr.DataArray([1.0], dims=("scenario",), coords={"scenario": scenario}),
+            "battery_inverter_nominal_power_kw": xr.DataArray(battery_inverter_nominal_power_kw),
             "battery_max_charge_c_rate": xr.DataArray(np.nan if max_charge_c_rate is None else max_charge_c_rate),
             "battery_max_discharge_c_rate": xr.DataArray(np.nan if max_discharge_c_rate is None else max_discharge_c_rate),
             "generator_nominal_capacity_kw": xr.DataArray(1.0),
@@ -142,6 +145,7 @@ def _base_data(
                 "grid": {"on_grid": False, "allow_export": False},
                 "optimization_constraints": {"enforcement": "scenario_wise"},
                 "battery_model": {"loss_model": loss_model},
+                "unit_commitment": discrete_unit_sizing,
             },
             "conversion_technology_by_resource": {"Solar": "Solar PV"},
         },
@@ -229,6 +233,7 @@ def test_backward_compatibility_defaults_for_missing_inverter_fields(tmp_path: P
     assert float(bat_ds["battery_inverter_specific_investment_cost_per_kw"]) == pytest.approx(0.0)
     assert float(bat_ds["battery_inverter_lifetime_years"]) == pytest.approx(10.0)
     assert float(bat_ds["battery_inverter_fixed_om_share_per_year"]) == pytest.approx(0.0)
+    assert float(bat_ds["battery_inverter_nominal_power_kw"]) == pytest.approx(1.0)
     assert np.isnan(float(bat_ds["battery_max_charge_c_rate"]))
     assert np.isnan(float(bat_ds["battery_max_discharge_c_rate"]))
 
@@ -255,6 +260,7 @@ def test_battery_legacy_time_inputs_are_ignored_for_typical_year(tmp_path: Path)
                 discharge_efficiency: 0.96
                 initial_soc: 0.5
                 depth_of_discharge: 0.8
+                inverter_nominal_power_kw: 1.0
                 max_discharge_time_hours: 0.0
                 max_charge_time_hours: 5.0
                 max_installable_capacity_kwh: null
@@ -284,11 +290,12 @@ def test_constant_efficiency_battery_inverter_limits_and_soc_recursion() -> None
     )
     model, vars_dict, solution, _ = _build_and_solve_case(data)
 
-    bat_inv = _scalar_value(solution["battery_inverter_power"])
+    bat_inv_units = _scalar_value(solution["battery_inverter_units"])
     bat_ch = np.asarray(solution["battery_charge"].values, dtype=float).reshape(-1)
     bat_dis = np.asarray(solution["battery_discharge"].values, dtype=float).reshape(-1)
     soc = np.asarray(solution["battery_soc"].values, dtype=float).reshape(-1)
     e_cap = _scalar_value(solution["battery_units"]) * float(data["battery_nominal_capacity_kwh"])
+    bat_inv = bat_inv_units * float(data["battery_inverter_nominal_power_kw"])
 
     assert np.all(bat_ch <= bat_inv + 1e-7)
     assert np.all(bat_dis <= bat_inv + 1e-7)
@@ -314,7 +321,8 @@ def test_convex_loss_mode_respects_explicit_battery_inverter_reference() -> None
     )
     model, _, solution, _ = _build_and_solve_case(data)
 
-    bat_inv = _scalar_value(solution["battery_inverter_power"])
+    bat_inv_units = _scalar_value(solution["battery_inverter_units"])
+    bat_inv = bat_inv_units * float(data["battery_inverter_nominal_power_kw"])
     bat_ch_dc = np.asarray(solution["battery_charge_dc"].values, dtype=float).reshape(-1)
     bat_dis_dc = np.asarray(solution["battery_discharge_dc"].values, dtype=float).reshape(-1)
     bat_ch_loss = np.asarray(solution["battery_charge_loss"].values, dtype=float).reshape(-1)
@@ -342,11 +350,39 @@ def test_battery_energy_and_inverter_power_can_diverge_economically() -> None:
     design_df = build_design_summary_table(data=data, vars=vars_dict, solution=solution)
 
     battery_energy = float(design_df.loc[0, "battery_installed_kwh"])
+    battery_inverter_units = float(design_df.loc[0, "battery_inverter_units"])
     battery_inverter = float(design_df.loc[0, "battery_inverter_power_kw"])
 
+    assert battery_inverter_units > 0.0
     assert battery_inverter > 0.0
     assert battery_energy > battery_inverter
     assert battery_energy >= (5.0 * battery_inverter) - 1e-4
+
+
+def test_discrete_sizing_makes_battery_inverter_unit_count_integral() -> None:
+    data = _base_data(
+        periods=4,
+        load=[0.0, 0.0, 0.5, 0.5],
+        availability=[1.0, 1.0, 0.0, 0.0],
+        loss_model="constant_efficiency",
+        battery_capex_kwh=0.0,
+        battery_inverter_capex_kw=100.0,
+        battery_inverter_nominal_power_kw=2.0,
+        max_charge_c_rate=0.2,
+        max_discharge_c_rate=0.2,
+        discrete_unit_sizing=True,
+    )
+    _, vars_dict, solution, _ = _build_and_solve_case(data)
+    design_df = build_design_summary_table(data=data, vars=vars_dict, solution=solution)
+
+    battery_inverter_units = float(design_df.loc[0, "battery_inverter_units"])
+    battery_inverter_power_kw = float(design_df.loc[0, "battery_inverter_power_kw"])
+
+    assert battery_inverter_units == pytest.approx(round(battery_inverter_units), abs=1e-7)
+    assert battery_inverter_power_kw == pytest.approx(
+        battery_inverter_units * float(data["battery_inverter_nominal_power_kw"]),
+        abs=1e-7,
+    )
 
 
 def test_renewable_inverter_accounting_and_outputs_are_reported() -> None:
@@ -409,6 +445,7 @@ def test_inverter_capex_uses_explicit_inverter_lifetime() -> None:
     res_capacity_kw = float(design_df.loc[0, "res_installed_kw__Solar"])
     res_inverter_kw = float(design_df.loc[0, "res_inverter_installed_kw_ac__Solar"])
     battery_inverter_kw = float(design_df.loc[0, "battery_inverter_power_kw"])
+    battery_inverter_units = float(design_df.loc[0, "battery_inverter_units"])
 
     expected_res_inv_annuity = float(_crf(0.05, 20.0)) * 40.0 * res_inverter_kw
     expected_bat_inv_annuity = float(_crf(0.05, 15.0)) * 100.0 * battery_inverter_kw
@@ -455,10 +492,12 @@ def test_canonical_typical_year_results_are_self_sufficient_and_exportable(tmp_p
     assert not results.inverter_metrics.empty
     assert "Installed inverter AC capacity [kW_ac]" in results.renewable_inverter_design.columns
     assert "Peak utilization [%]" in results.inverter_metrics.columns
+    assert "Installed inverter units" in results.battery_inverter_design.columns
 
     renewable_inverter_kw = float(results.renewable_inverter_design.loc[0, "Installed inverter AC capacity [kW_ac]"])
     peak_dispatch_kw = float(results.dispatch["res_generation__Solar"].max())
     assert peak_dispatch_kw <= renewable_inverter_kw + 1e-7
+    assert float(results.battery_inverter_design.loc[0, "Installed inverter units"]) >= 0.0
 
     written = export_typical_year_results_package(results=results, out_dir=tmp_path)
     assert (tmp_path / "renewable_inverter_design.csv").exists()
