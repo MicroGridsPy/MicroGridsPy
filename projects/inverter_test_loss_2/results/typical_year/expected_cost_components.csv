@@ -1,0 +1,18 @@
+Component,Value,Unit
+Annualized renewable CAPEX,50744.87757285858,/yr
+Annualized renewable inverter CAPEX,11483.928290184149,/yr
+Annualized battery CAPEX,89347.6107636509,/yr
+Annualized battery inverter CAPEX,5362.449134929656,/yr
+Annualized generator CAPEX,5461.511563212089,/yr
+Renewable fixed O&M,14303.90983045194,/yr
+Renewable inverter fixed O&M,2383.98497174199,/yr
+Battery fixed O&M,13798.37133745785,/yr
+Battery inverter fixed O&M,1113.2077653541442,/yr
+Generator fixed O&M,1150.7811540289922,/yr
+Fuel cost (expected),37479.29375577659,/yr
+Grid import cost (expected),0.0,/yr
+Grid export revenue (expected),-0.0,/yr
+RES production subsidy (expected),-0.0,/yr
+Lost load penalty (expected),0.0,/yr
+"Emissions cost (scope 1 + 2 + 3, expected)",0.0,/yr
+TOTAL (Expected),232629.92613964688,/yr

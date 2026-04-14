@@ -1,0 +1,127 @@
+Writing constraints.:   0%|[38;2;128;191;255m                                                                     [0m| 0/21 [00:00<?, ?it/s][0mWriting constraints.:  19%|[38;2;128;191;255m###########6                                                 [0m| 4/21 [00:00<00:00, 29.95it/s][0mWriting constraints.:  52%|[38;2;128;191;255m###############################4                            [0m| 11/21 [00:00<00:00, 47.36it/s][0mWriting constraints.:  76%|[38;2;128;191;255m#############################################7              [0m| 16/21 [00:00<00:00, 32.25it/s][0mWriting constraints.: 100%|[38;2;128;191;255m############################################################[0m| 21/21 [00:00<00:00, 36.86it/s][0mWriting constraints.: 100%|[38;2;128;191;255m############################################################[0m| 21/21 [00:00<00:00, 36.56it/s][0m
+Writing continuous variables.:   0%|[38;2;128;191;255m                                                            [0m| 0/15 [00:00<?, ?it/s][0mWriting continuous variables.: 100%|[38;2;128;191;255m##################################################[0m| 15/15 [00:00<00:00, 260.74it/s][0m
+Set parameter Username
+Academic license - for non-commercial use only - expires 2026-12-02
+Warning: row 43800 (name "c43800") contains 1 small (<= 1e-13) coefficient(s), ignored
+Warning: row 43801 (name "c43801") contains 2 small (<= 1e-13) coefficient(s), ignored
+Warning: row 43802 (name "c43802") contains 3 small (<= 1e-13) coefficient(s), ignored
+Warning: row 43803 (name "c43803") contains 4 small (<= 1e-13) coefficient(s), ignored
+Warning: row 43804 (name "c43804") contains 5 small (<= 1e-13) coefficient(s), ignored
+Warning: row 43805 (name "c43805") contains 6 small (<= 1e-13) coefficient(s), ignored
+Warning: row 43806 (name "c43806") contains 7 small (<= 1e-13) coefficient(s), ignored
+Warning: row 43807 (name "c43807") contains 8 small (<= 1e-13) coefficient(s), ignored
+Warning: row 43808 (name "c43808") contains 9 small (<= 1e-13) coefficient(s), ignored
+Warning: row 43809 (name "c43809") contains 10 small (<= 1e-13) coefficient(s), ignored
+skipping further warning of this kind
+Warning: row 43810 (name "c43810") contains 11 small (<= 1e-13) coefficient(s), ignored
+Warning: lp file contains 17520 small (<= 1e-13) coefficient(s), ignored
+Read LP format model from file C:\Users\onori\AppData\Local\Temp\linopy-problem-63tj87wn.lp
+Reading time = 0.78 seconds
+obj: 254044 rows, 96364 columns, 670018 nonzeros
+Set parameter Presolve to value -1
+Gurobi Optimizer version 13.0.0 build v13.0.0rc1 (win64 - Windows 11+.0 (26200.2))
+
+CPU model: 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz, instruction set [SSE2|AVX|AVX2|AVX512]
+Thread count: 8 physical cores, 16 logical processors, using up to 16 threads
+
+Optimize a model with 254044 rows, 96364 columns and 670018 nonzeros (Min)
+Model fingerprint: 0xb8d0a97d
+Model has 26284 linear objective coefficients
+Coefficient statistics:
+  Matrix range     [1e-05, 1e+00]
+  Objective range  [1e-04, 1e+02]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+00, 3e+02]
+Presolve removed 94868 rows and 51065 columns
+Presolve time: 0.87s
+Presolved: 42215 rows, 174943 columns, 623594 nonzeros
+
+Concurrent LP optimizer: primal simplex, dual simplex, and barrier
+Showing barrier log only...
+
+Ordering time: 0.02s
+
+Barrier statistics:
+ Free vars  : 2920
+ AA' NZ     : 2.636e+05
+ Factor NZ  : 5.795e+05 (roughly 100 MB of memory)
+ Factor Ops : 8.991e+06 (less than 1 second per iteration)
+ Threads    : 6
+
+                  Objective                Residual
+Iter       Primal          Dual         Primal    Dual     Compl     Time
+   0   4.46139984e+09  2.04343821e+09  7.71e+07 7.60e+01  2.26e+05     1s
+   1   1.21373832e+09  1.90365270e+09  1.85e+07 3.90e+01  5.74e+04     1s
+   2   3.54190986e+08  1.92159463e+09  4.68e+06 3.44e+01  2.06e+04     1s
+   3   5.10916442e+07  2.20712771e+08  7.03e+05 4.24e-01  2.51e+03     1s
+   4   3.48235989e+06  5.86523921e+06  4.35e+04 6.65e-04  1.22e+02     2s
+   5   1.88190375e+06  2.47669038e+06  2.18e+04 9.08e-05  5.55e+01     2s
+   6   1.26331132e+06  1.92056949e+06  1.35e+04 5.50e-05  3.41e+01     2s
+   7   7.32049345e+05  1.46952589e+06  6.34e+03 3.19e-05  1.66e+01     2s
+   8   5.15037912e+05  1.07068354e+06  3.45e+03 1.83e-05  8.94e+00     2s
+   9   3.74932220e+05  8.13174007e+05  1.70e+03 1.27e-05  4.88e+00     2s
+  10   3.36144173e+05  6.36711376e+05  1.24e+03 8.88e-06  3.45e+00     2s
+  11   2.86000125e+05  4.77918021e+05  6.90e+02 5.58e-06  1.97e+00     2s
+  12   2.71243293e+05  4.11359681e+05  5.73e+02 4.11e-06  1.52e+00     2s
+  13   2.55662455e+05  3.51388470e+05  4.48e+02 2.68e-06  1.08e+00     2s
+  14   2.48185673e+05  3.27600455e+05  3.84e+02 2.02e-06  8.84e-01     2s
+  15   2.26103064e+05  2.92512637e+05  1.78e+02 1.07e-06  4.96e-01     2s
+  16   2.22205589e+05  2.76624064e+05  1.14e+02 9.38e-07  3.54e-01     2s
+  17   2.21876817e+05  2.67011197e+05  8.96e+01 1.35e-06  2.84e-01     2s
+  18   2.22060153e+05  2.55635934e+05  7.67e+01 3.27e-06  2.20e-01     2s
+  19   2.22931024e+05  2.51012975e+05  6.42e+01 3.14e-06  1.83e-01     2s
+  20   2.24205256e+05  2.46224090e+05  5.05e+01 3.57e-06  1.42e-01     3s
+  21   2.25389725e+05  2.39247589e+05  4.10e+01 3.38e-06  9.93e-02     3s
+  22   2.27639381e+05  2.37784911e+05  2.44e+01 3.19e-06  6.57e-02     3s
+  23   2.28122251e+05  2.36153875e+05  2.15e+01 2.96e-06  5.43e-02     3s
+  24   2.29299926e+05  2.34915841e+05  1.50e+01 4.78e-06  3.78e-02     3s
+  25   2.30076418e+05  2.34173888e+05  1.11e+01 3.25e-06  2.77e-02     3s
+  26   2.30309539e+05  2.33787292e+05  1.01e+01 3.43e-06  2.42e-02     3s
+  27   2.30908538e+05  2.33539031e+05  7.36e+00 2.84e-06  1.80e-02     3s
+  28   2.31157681e+05  2.33337361e+05  6.44e+00 3.16e-06  1.53e-02     3s
+  29   2.31258757e+05  2.33153865e+05  6.04e+00 3.48e-06  1.38e-02     3s
+  30   2.31651471e+05  2.33080223e+05  4.43e+00 2.79e-06  1.02e-02     3s
+  31   2.31795351e+05  2.32993677e+05  3.85e+00 2.31e-06  8.73e-03     3s
+  32   2.31890597e+05  2.32935962e+05  3.43e+00 1.80e-06  7.69e-03     4s
+  33   2.32102966e+05  2.32863303e+05  2.61e+00 2.26e-06  5.72e-03     4s
+  34   2.32232400e+05  2.32853560e+05  2.14e+00 1.89e-06  4.67e-03     4s
+  35   2.32363353e+05  2.32811938e+05  1.58e+00 1.56e-06  3.41e-03     4s
+  36   2.32556170e+05  2.32794140e+05  8.44e-01 5.38e-06  1.81e-03     4s
+  37   2.32635872e+05  2.32780271e+05  4.56e-01 3.54e-06  1.04e-03     4s
+  38   2.32692515e+05  2.32767215e+05  1.93e-01 2.13e-06  4.85e-04     4s
+  39   2.32707347e+05  2.32750528e+05  1.24e-01 8.33e-07  2.91e-04     4s
+  40   2.32717163e+05  2.32742080e+05  7.59e-02 3.81e-07  1.71e-04     4s
+  41   2.32721593e+05  2.32736658e+05  4.93e-02 1.60e-07  1.06e-04     4s
+  42   2.32725775e+05  2.32733997e+05  2.66e-02 1.09e-07  5.75e-05     4s
+  43   2.32728520e+05  2.32732570e+05  1.26e-02 6.08e-08  2.78e-05     4s
+  44   2.32729897e+05  2.32732177e+05  6.32e-03 3.76e-08  1.48e-05     4s
+  45   2.32730793e+05  2.32731923e+05  2.84e-03 2.18e-08  7.04e-06     4s
+  46   2.32731200e+05  2.32731837e+05  1.46e-03 1.60e-08  3.82e-06     4s
+  47   2.32731412e+05  2.32731778e+05  7.45e-04 1.06e-08  2.10e-06     5s
+  48   2.32731492e+05  2.32731750e+05  5.07e-04 7.72e-09  1.46e-06     5s
+  49   2.32731597e+05  2.32731722e+05  1.93e-04 4.65e-09  6.52e-07     5s
+  50   2.32731647e+05  2.32731697e+05  6.31e-05 2.20e-09  2.46e-07     5s
+  51   2.32731667e+05  2.32731682e+05  1.44e-05 6.48e-10  6.63e-08     5s
+  52   2.32731673e+05  2.32731677e+05  3.23e-06 2.12e-10  1.81e-08     5s
+  53   2.32731674e+05  2.32731675e+05  8.06e-07 8.94e-11  6.24e-09     5s
+
+Barrier solved model in 53 iterations and 4.87 seconds (3.48 work units)
+Optimal objective 2.32731674e+05
+
+Crossover log...
+
+    5285 DPushes remaining with DInf 0.0000000e+00                 5s
+    1886 DPushes remaining with DInf 0.0000000e+00                 5s
+       0 DPushes remaining with DInf 0.0000000e+00                 5s
+
+     653 PPushes remaining with PInf 1.2571249e-06                 5s
+Crossover changed status from Optimal to Interrupted
+
+Solved with primal simplex
+
+Extra simplex iterations after uncrush: 8665
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+   74895    2.3273167e+05   0.000000e+00   0.000000e+00      6s
+
+Solved in 74895 iterations and 6.30 seconds (5.62 work units)
+Optimal objective  2.327316744e+05
