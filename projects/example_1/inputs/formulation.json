@@ -43,5 +43,9 @@
   },
   "generator_model": {
     "efficiency_model": "constant_efficiency"
+  },
+  "csv_format": {
+    "delimiter": ",",
+    "decimal": "."
   }
 }
