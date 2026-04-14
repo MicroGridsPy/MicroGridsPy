@@ -543,11 +543,13 @@ def _load_battery_yaml(
         "discharge_efficiency",
         "initial_soc",
         "depth_of_discharge",
+        "inverter_nominal_power_kw",
         "max_discharge_c_rate",
         "max_charge_c_rate",
         "max_installable_capacity_kwh",      # allow None -> NaN
     ]
     OPTIONAL_TECHNICAL = {
+        "inverter_nominal_power_kw": 1.0,
         "max_discharge_c_rate": np.nan,
         "max_charge_c_rate": np.nan,
     }
@@ -618,6 +620,8 @@ def _load_battery_yaml(
         raise InputValidationError(f"{path.name}: battery investment 'inverter_specific_investment_cost_per_kw' must be >= 0.")
     if float(inv_vals["inverter_fixed_om_share_per_year"]) < 0.0:
         raise InputValidationError(f"{path.name}: battery investment 'inverter_fixed_om_share_per_year' must be >= 0.")
+    if float(tech_vals["inverter_nominal_power_kw"]) <= 0.0:
+        raise InputValidationError(f"{path.name}: battery technical 'inverter_nominal_power_kw' must be > 0.")
     for key in ("max_charge_c_rate", "max_discharge_c_rate"):
         value = float(tech_vals[key])
         if np.isfinite(value) and value < 0.0:
