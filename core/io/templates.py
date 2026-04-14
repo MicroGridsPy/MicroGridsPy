@@ -859,6 +859,7 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
             "discharge_efficiency": 0.96,                     # full-load one-way discharge efficiency
             "initial_soc": 0.5,                               # fraction of usable capacity (0..1)
             "depth_of_discharge": 0.8,                        # fraction (0..1), usable fraction of nominal capacity
+            "inverter_nominal_power_kw": 1.0,                 # kW per inverter unit
             "max_discharge_c_rate": None,                     # optional upper bound on inverter power / energy
             "max_charge_c_rate": None,                        # optional upper bound on inverter power / energy
             "max_installable_capacity_kwh": max_installable_capacity_kwh,  # optional total battery capacity upper bound
@@ -910,6 +911,7 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
                 "battery_discharge_efficiency": "-",
                 "battery_initial_soc": "share",
                 "battery_depth_of_discharge": "share",
+                "battery_inverter_nominal_power_kw": "kW",
                 "battery_max_discharge_c_rate": "per_hour",
                 "battery_max_charge_c_rate": "per_hour",
                 "battery_max_installable_capacity_kwh": "kWh",
@@ -972,6 +974,7 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
                     "battery_discharge_efficiency": "Battery one-way discharging efficiency used directly in constant-efficiency mode and as the full-load baseline in curve mode.",
                     "battery_initial_soc": "Initial state of charge as a share of usable capacity.",
                     "battery_depth_of_discharge": "Usable fraction of nominal battery capacity. When cycle fade is enabled, the same value is also used as the reference DoD for deriving the internal cycle-fade coefficient from cycle life and end-of-life SoH.",
+                    "battery_inverter_nominal_power_kw": "Nominal inverter/converter power represented by one battery inverter unit. Installed battery inverter power equals inverter units multiplied by this value.",
                     "battery_max_discharge_c_rate": "Optional upper bound on explicit battery inverter discharge power relative to installed battery energy capacity. Use this as the primary discharge-side power-to-energy coupling input in the typical-year formulation.",
                     "battery_max_charge_c_rate": "Optional upper bound on explicit battery inverter charge power relative to installed battery energy capacity. Use this as the primary charge-side power-to-energy coupling input in the typical-year formulation.",
                     "battery_max_installable_capacity_kwh": (
