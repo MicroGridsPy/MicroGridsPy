@@ -4,6 +4,22 @@ MicroGridsPy Planning is an open-source optimization tool for the techno-economi
 
 The tool is designed as a guided planning workspace: users define a project, generate structured input templates, audit the data, run the optimization, and explore results within the same application.
 
+## Recent Advancements
+
+Recent development work has strengthened inverter modeling and results reliability across both planning modes.
+
+- Typical-Year renewable inverter sizing is now physically consistent across constraints, objective accounting, exports, and the Results page.
+- Typical-Year battery inverter sizing now follows the same component-based philosophy as the other core assets:
+  - `battery inverter installed power = battery_inverter_units x battery_inverter_nominal_power_kw`
+  - discrete sizing therefore applies naturally to battery inverter components as integer unit counts.
+- Typical-Year reporting now exposes structured inverter outputs directly, including renewable inverter design, battery inverter design, and inverter metrics.
+- Typical-Year results are packaged through a cleaner canonical solved-results object, improving robustness when reloading or rendering saved outputs.
+- Multi-Year now includes a first inverter pass with:
+  - renewable inverter/converter treatment per renewable technology/resource
+  - explicit battery inverter sizing by investment step
+  - inverter-aware objective accounting and structured exports.
+- Multi-Year results have also been refactored toward a cleaner canonical pipeline so that solve, export, live rendering, and file-backed rendering are better aligned.
+
 The reference energy system can include:
 - Renewable generation
 - Battery storage
