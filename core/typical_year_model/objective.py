@@ -92,7 +92,7 @@ def initialize_objective(
     # ------------------------------------------------------------------
     res_units = vars["res_units"]                # (resource,)
     bat_units = vars["battery_units"]            # scalar
-    bat_inv_power = vars["battery_inverter_power"]  # scalar
+    bat_inv_units = vars["battery_inverter_units"]  # scalar
     gen_units = vars["generator_units"]          # scalar
 
     res_gen = vars["res_generation"]             # (period, scenario, resource)
@@ -126,6 +126,7 @@ def initialize_objective(
 
     # Battery
     bat_nom_kwh = p.battery_nominal_capacity_kwh                   # scalar
+    bat_inv_nom_kw = p.battery_inverter_nominal_power_kw           # scalar
     bat_capex_kwh = p.battery_specific_investment_cost_per_kwh     # scalar
     bat_inv_capex_kw = p.battery_inverter_specific_investment_cost_per_kw  # scalar
     bat_life_y = p.battery_calendar_lifetime_years                 # scalar
@@ -170,7 +171,7 @@ def initialize_objective(
     cap_res_kw = res_units * res_nom_kw                               # (resource,)
     cap_res_inv_kw_ac = cap_res_kw / res_dc_ac_ratio                  # (resource,)
     cap_bat_kwh = bat_units * bat_nom_kwh                             # scalar
-    cap_bat_inv_kw = bat_inv_power                                    # scalar
+    cap_bat_inv_kw = bat_inv_units * bat_inv_nom_kw                   # scalar
     cap_gen_kw = gen_units * gen_nom_kw                               # scalar
 
     # CRFs

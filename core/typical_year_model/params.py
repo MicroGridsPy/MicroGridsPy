@@ -57,6 +57,7 @@ class Params:
     battery_discharge_efficiency: xr.DataArray
     battery_initial_soc: xr.DataArray
     battery_depth_of_discharge: xr.DataArray
+    battery_inverter_nominal_power_kw: xr.DataArray
     battery_max_charge_c_rate: Optional[xr.DataArray]
     battery_max_discharge_c_rate: Optional[xr.DataArray]
     battery_cycle_fade_coefficient_per_kwh_throughput: Optional[xr.DataArray]
@@ -148,6 +149,7 @@ def get_params(ds: xr.Dataset) -> Params:
         battery_discharge_efficiency=ds["battery_discharge_efficiency"],
         battery_initial_soc=ds["battery_initial_soc"],
         battery_depth_of_discharge=ds["battery_depth_of_discharge"],
+        battery_inverter_nominal_power_kw=ds["battery_inverter_nominal_power_kw"],
         battery_max_charge_c_rate=_opt("battery_max_charge_c_rate"),
         battery_max_discharge_c_rate=_opt("battery_max_discharge_c_rate"),
         battery_cycle_fade_coefficient_per_kwh_throughput=_opt("battery_cycle_fade_coefficient_per_kwh_throughput"),

@@ -103,6 +103,7 @@ def initialize_constraints(
 
     # Battery params
     bat_nom_kwh = p.battery_nominal_capacity_kwh  # ()
+    bat_inv_nom_kw = p.battery_inverter_nominal_power_kw  # ()
     bat_max_installable_kwh = p.battery_max_installable_capacity_kwh  # scalar or None
     eta_c = p.battery_charge_efficiency  # (scenario,)
     eta_d = p.battery_discharge_efficiency  # (scenario,)
@@ -127,7 +128,7 @@ def initialize_constraints(
     # ---------------------------------------------------------------------
     res_units = vars["res_units"]  # (resource,)
     bat_units = vars["battery_units"]  # scalar
-    bat_inv_power = vars["battery_inverter_power"]  # scalar
+    bat_inv_units = vars["battery_inverter_units"]  # scalar
     gen_units = vars["generator_units"]  # scalar
 
     res_gen = vars["res_generation"]  # (period, scenario, resource)
@@ -285,6 +286,7 @@ def initialize_constraints(
     # ---------------------------------------------------------------------
     T = int(period.size)
     Ecap = bat_units * bat_nom_kwh
+    bat_inv_power = bat_inv_units * bat_inv_nom_kw
     bat_charge_c_rate_limit = (
         finite_nonnegative_scalar_limit(
             bat_max_charge_c_rate.values,
