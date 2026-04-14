@@ -14,6 +14,7 @@ import xarray as xr
 from core.typical_year_model.model import SteadyStateModel
 from core.multi_year_model.model import MultiYearModel
 from core.export.results_bundle import build_results_bundle
+from core.export.multi_year_results import build_multi_year_results
 from core.export.typical_year_results import build_typical_year_results
 from core.io.jsonio import write_json
 from core.io.utils import project_paths
@@ -64,6 +65,7 @@ KEYS = {
     "log_path": "gp_log_path",
     "results_bundle": "gp_results_bundle",
     "typical_year_results": "gp_typical_year_results",
+    "multi_year_results": "gp_multi_year_results",
 }
 
 RESULT_STATE_KEYS = (
@@ -76,6 +78,7 @@ RESULT_STATE_KEYS = (
     KEYS["log_path"],
     KEYS["results_bundle"],
     KEYS["typical_year_results"],
+    KEYS["multi_year_results"],
 )
 
 
@@ -738,6 +741,7 @@ def _store_solve_outputs(
     st.session_state[KEYS["log_path"]] = str(model._last_log_path) if model._last_log_path else str(fallback_log_path)
     st.session_state[KEYS["solution_summary"]] = _extract_solution_summary(model)
     st.session_state[KEYS["typical_year_results"]] = None
+    st.session_state[KEYS["multi_year_results"]] = None
     st.session_state[KEYS["results_bundle"]] = build_results_bundle(
         sets=model.sets,
         data=model.data,
@@ -763,6 +767,20 @@ def _store_solve_outputs(
         live_solution = getattr(model.model, "solution", None) if model.model is not None else None
         st.session_state[KEYS["typical_year_results"]] = build_typical_year_results(
             project_name=str(((model.data.attrs or {}).get("settings", {}) or {}).get("project_name", model.project_name)),
+            data=model.data,
+            vars=model.vars,
+            solution=live_solution if isinstance(live_solution, xr.Dataset) else None,
+            objective_value=st.session_state[KEYS["solution_summary"]].get("objective_value"),
+            status=st.session_state[KEYS["solution_summary"]].get("status"),
+            solver=solver,
+            results_dir=None,
+            source="session",
+        )
+    else:
+        live_solution = getattr(model.model, "solution", None) if model.model is not None else None
+        st.session_state[KEYS["multi_year_results"]] = build_multi_year_results(
+            project_name=str(((model.data.attrs or {}).get("settings", {}) or {}).get("project_name", model.project_name)),
+            sets=model.sets,
             data=model.data,
             vars=model.vars,
             solution=live_solution if isinstance(live_solution, xr.Dataset) else None,
