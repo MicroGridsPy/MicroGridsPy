@@ -330,11 +330,13 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
         "resources": {
             "n_resources": int(sets.sizes.get("resource", 0)),
             "resource_labels": sets.coords.get("resource", []).values.tolist(),
+            "conversion_technology_by_resource": ren_params_ds.attrs.get("conversion_technology_by_resource", {}),
         },
         "optimization_constraints": {"enforcement": enforcement},
         "modeling_notes": {
             "unit_commitment_semantics": "In typical-year mode, `unit_commitment` enables integer sizing variables only; chronological generator commitment binaries are not part of this formulation.",
             "land_constraint_semantics": "Land availability is enforced only when a finite non-negative `land_availability_m2` value is provided; omitted values leave the constraint inactive.",
+            "battery_power_semantics": "Battery inverter power is modeled explicitly; legacy battery max charge/discharge time inputs are retained only as optional upper-bound references for backward compatibility.",
         },
         "inputs_loaded": {"load_demand_csv": str(load_path), "renewable_availability_csv": str(resource_path)},
     }

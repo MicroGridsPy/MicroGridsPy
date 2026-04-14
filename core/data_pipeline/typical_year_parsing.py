@@ -333,19 +333,29 @@ def _load_renewables_yaml(
     PARAMS_INVESTMENT = [
         "nominal_capacity_kw",
         "lifetime_years",
+        "inverter_lifetime_years",
         "specific_investment_cost_per_kw",
+        "inverter_specific_investment_cost_per_kw_ac",
         "wacc",
         "grant_share_of_capex",
         "embedded_emissions_kgco2e_per_kw",
         "fixed_om_share_per_year",
+        "inverter_fixed_om_share_per_year",
         "production_subsidy_per_kwh",
     ]
-    OPTIONAL_INVESTMENT = {"fixed_om_share_per_year": 0.0, "production_subsidy_per_kwh": 0.0}
+    OPTIONAL_INVESTMENT = {
+        "fixed_om_share_per_year": 0.0,
+        "inverter_fixed_om_share_per_year": 0.0,
+        "inverter_specific_investment_cost_per_kw_ac": 0.0,
+        "production_subsidy_per_kwh": 0.0,
+    }
     PARAMS_TECHNICAL = [
+        "dc_ac_ratio",
         "inverter_efficiency",
         "specific_area_m2_per_kw",
         "max_installable_capacity_kw",
     ]
+    OPTIONAL_TECHNICAL = {"dc_ac_ratio": 1.0}
     n_r = len(resource_labels)
     n_s = len(scenario_labels)
 
@@ -353,6 +363,7 @@ def _load_renewables_yaml(
     tech_arr = {k: np.full((n_r,), np.nan, dtype=float) for k in PARAMS_TECHNICAL}
     fom_arr = np.full((n_r,), np.nan, dtype=float)
     subsidy_arr = np.full((n_s, n_r), np.nan, dtype=float)
+    conversion_technology_by_resource: Dict[str, str] = {}
 
     for item in ren_list:
         if not isinstance(item, dict):
@@ -362,6 +373,7 @@ def _load_renewables_yaml(
         if res_label is None:
             raise InputValidationError(f"{path.name}: a renewable entry is missing required key 'resource'.")
         res_label = str(res_label)
+        conversion_technology_by_resource[res_label] = str(item.get("conversion_technology", "") or "").strip()
 
         if res_label not in res_to_idx:
             raise InputValidationError(
@@ -382,6 +394,9 @@ def _load_renewables_yaml(
 
         for k in PARAMS_INVESTMENT:
             if k not in base:
+                if k == "inverter_lifetime_years":
+                    inv_arr[k][j] = _as_float(base.get("lifetime_years"), name=f"{res_label}/investment/{first_step_key}/lifetime_years", default=0.0)
+                    continue
                 if k in OPTIONAL_INVESTMENT:
                     inv_arr[k][j] = float(OPTIONAL_INVESTMENT[k])
                     continue
@@ -398,6 +413,9 @@ def _load_renewables_yaml(
 
         for k in PARAMS_TECHNICAL:
             if k not in tech_block:
+                if k in OPTIONAL_TECHNICAL:
+                    tech_arr[k][j] = float(OPTIONAL_TECHNICAL[k])
+                    continue
                 raise InputValidationError(
                     f"{path.name}: missing technical param '{k}' in resource '{res_label}' (technical.{k})."
                 )
@@ -416,6 +434,17 @@ def _load_renewables_yaml(
                 "in the steady_state typical-year schema. Move fixed O&M and production subsidy into "
                 "`investment.by_step.<step>`."
             )
+
+    if np.any(~np.isfinite(tech_arr["dc_ac_ratio"])) or np.any(tech_arr["dc_ac_ratio"] <= 0.0):
+        raise InputValidationError(f"{path.name}: renewable technical 'dc_ac_ratio' must be > 0 for every resource.")
+    if np.any(np.isfinite(inv_arr["inverter_specific_investment_cost_per_kw_ac"]) & (inv_arr["inverter_specific_investment_cost_per_kw_ac"] < 0.0)):
+        raise InputValidationError(
+            f"{path.name}: renewable investment 'inverter_specific_investment_cost_per_kw_ac' must be >= 0."
+        )
+    if np.any(np.isfinite(inv_arr["inverter_fixed_om_share_per_year"]) & (inv_arr["inverter_fixed_om_share_per_year"] < 0.0)):
+        raise InputValidationError(
+            f"{path.name}: renewable investment 'inverter_fixed_om_share_per_year' must be >= 0."
+        )
 
     # -----------------------------
     # Build xr.Dataset
@@ -458,6 +487,7 @@ def _load_renewables_yaml(
     )
 
     ds = xr.Dataset(data_vars=data_vars)
+    ds.attrs["conversion_technology_by_resource"] = conversion_technology_by_resource
     ds.attrs["settings"] = {"inputs_loaded": {"renewables_yaml": str(path)}, "schema": "new_cohort_investment_only"}
     return ds
 
@@ -495,21 +525,32 @@ def _load_battery_yaml(
     INVESTMENT = [
         "nominal_capacity_kwh",
         "specific_investment_cost_per_kwh",
+        "inverter_specific_investment_cost_per_kw",
         "wacc",
         "calendar_lifetime_years",
+        "inverter_lifetime_years",
         "embedded_emissions_kgco2e_per_kwh",
         "fixed_om_share_per_year",
+        "inverter_fixed_om_share_per_year",
     ]
-    OPTIONAL_INVESTMENT = {"fixed_om_share_per_year": 0.0}
+    OPTIONAL_INVESTMENT = {
+        "fixed_om_share_per_year": 0.0,
+        "inverter_specific_investment_cost_per_kw": 0.0,
+        "inverter_fixed_om_share_per_year": 0.0,
+    }
     TECHNICAL = [
         "charge_efficiency",
         "discharge_efficiency",
         "initial_soc",
         "depth_of_discharge",
-        "max_discharge_time_hours",
-        "max_charge_time_hours",
+        "max_discharge_c_rate",
+        "max_charge_c_rate",
         "max_installable_capacity_kwh",      # allow None -> NaN
     ]
+    OPTIONAL_TECHNICAL = {
+        "max_discharge_c_rate": np.nan,
+        "max_charge_c_rate": np.nan,
+    }
     # -----------------------------
     # investment.by_step -> take a single base block
     # -----------------------------
@@ -526,6 +567,13 @@ def _load_battery_yaml(
     inv_vals = {}
     for k in INVESTMENT:
         if k not in inv_base:
+            if k == "inverter_lifetime_years":
+                inv_vals[k] = _as_float(
+                    inv_base.get("calendar_lifetime_years"),
+                    name=f"battery/investment/{step_label}/calendar_lifetime_years",
+                    default=0.0,
+                )
+                continue
             if k in OPTIONAL_INVESTMENT:
                 inv_vals[k] = float(OPTIONAL_INVESTMENT[k])
                 continue
@@ -546,6 +594,7 @@ def _load_battery_yaml(
     calendar_curve_file = (
         raw_calendar_curve.strip() if isinstance(raw_calendar_curve, str) and raw_calendar_curve.strip() else None
     )
+    legacy_time_fields = [key for key in ("max_charge_time_hours", "max_discharge_time_hours") if key in tech]
 
     tech_vals = {}
     if "initial_soh" in tech:
@@ -555,12 +604,24 @@ def _load_battery_yaml(
         )
     for k in TECHNICAL:
         if k not in tech:
+            if k in OPTIONAL_TECHNICAL:
+                tech_vals[k] = float(OPTIONAL_TECHNICAL[k])
+                continue
             raise InputValidationError(f"{path.name}: missing technical param '{k}' in battery.technical.")
 
         if k in ("max_installable_capacity_kwh",):
             tech_vals[k] = _as_float_or_nan(tech.get(k), name=f"battery/technical/{k}")
         else:
             tech_vals[k] = _as_float(tech.get(k), name=f"battery/technical/{k}", default=0.0)
+
+    if float(inv_vals["inverter_specific_investment_cost_per_kw"]) < 0.0:
+        raise InputValidationError(f"{path.name}: battery investment 'inverter_specific_investment_cost_per_kw' must be >= 0.")
+    if float(inv_vals["inverter_fixed_om_share_per_year"]) < 0.0:
+        raise InputValidationError(f"{path.name}: battery investment 'inverter_fixed_om_share_per_year' must be >= 0.")
+    for key in ("max_charge_c_rate", "max_discharge_c_rate"):
+        value = float(tech_vals[key])
+        if np.isfinite(value) and value < 0.0:
+            raise InputValidationError(f"{path.name}: battery technical '{key}' must be >= 0 when provided.")
 
     fom_value = float(inv_vals["fixed_om_share_per_year"])
     if bat.get("operation", None) is not None:
@@ -610,6 +671,8 @@ def _load_battery_yaml(
         ds.attrs["battery_calendar_time_increment_mode_override"] = tech.get("calendar_time_increment_mode")
     if "calendar_time_increment_per_step" in tech:
         ds.attrs["battery_calendar_time_increment_per_step_override"] = tech.get("calendar_time_increment_per_step")
+    if legacy_time_fields:
+        ds.attrs["ignored_legacy_technical_keys"] = legacy_time_fields
     ds.attrs["settings"] = {"inputs_loaded": {"battery_yaml": str(path)}, "formulation": "steady_state"}
     return ds
 
@@ -1121,4 +1184,3 @@ def _write_grid_availability_csv(
 
     path.parent.mkdir(parents=True, exist_ok=True)
     write_csv_with_format(df, path, index=False)
-
