@@ -9,17 +9,11 @@ import pandas as pd
 import streamlit as st
 import xarray as xr
 
-from core.export.common import get_var_solution, require_data_array, safe_float
-from core.export.results_page_helpers import MultiYearFileResults, export_results_from_bundle
+from core.export.common import safe_float
+from core.export.results_page_helpers import export_multi_year_results_from_object
 from core.export.multi_year_results import (
-    build_design_by_step_table_multi_year,
-    build_discounted_cashflows_table_multi_year,
-    build_dispatch_timeseries_table_multi_year,
-    build_scenario_costs_table_multi_year,
-    build_yearly_kpis_table_multi_year,
+    MultiYearResults,
 )
-from core.export.results_bundle import ResultsBundle
-from core.multi_year_model.lifecycle import inv_step_start_ordinal, replacement_active_mask, replacement_commission_mask
 from core.multi_year_model.params import get_params
 
 
@@ -37,12 +31,10 @@ C_SCOPE3 = "#2E7D32"
 
 @dataclass(frozen=True)
 class MultiYearResultsContext:
-    bundle: ResultsBundle
+    results: MultiYearResults
     data: xr.Dataset
     sets: xr.Dataset
     settings: Dict[str, Any]
-    vars_dict: Dict[str, Any]
-    solution: Optional[xr.Dataset]
     dispatch: pd.DataFrame
     design: pd.DataFrame
     kpis: pd.DataFrame
@@ -161,25 +153,6 @@ def _plot_dispatch_stack(*, ax: Any, profile: pd.DataFrame, title_suffix: str) -
     ax.legend(ncols=4, fontsize=9, loc="lower center", bbox_to_anchor=(0.5, 1.22))
 
 
-def _as_year_scenario_da(x: Any, sets: xr.Dataset) -> xr.DataArray:
-    year = sets.coords["year"]
-    scenario = sets.coords["scenario"]
-    if isinstance(x, xr.DataArray):
-        da = x
-    else:
-        da = xr.DataArray(float(safe_float(x)))
-    if "year" not in da.dims:
-        da = da.expand_dims(year=year)
-    else:
-        da = da.sel(year=year)
-    if "scenario" not in da.dims:
-        da = da.expand_dims(scenario=scenario)
-    else:
-        da = da.sel(scenario=scenario)
-    ordered_dims = ["year", "scenario"] + [dim for dim in da.dims if dim not in {"year", "scenario"}]
-    return da.transpose(*ordered_dims)
-
-
 def _weights_da(data: xr.Dataset) -> xr.DataArray:
     scenario = data.coords["scenario"]
     if "scenario_weight" in data:
@@ -225,274 +198,23 @@ def _ensure_delivered_grid_columns(dispatch: pd.DataFrame, data: xr.Dataset) -> 
     return df
 
 
-def _capacity_by_year(sets_ds: xr.Dataset, design_df: pd.DataFrame) -> pd.DataFrame:
-    years = [str(y) for y in sets_ds.coords["year"].values.tolist()]
-    rows = []
-    for year in years:
-        active = design_df[design_df["inv_step_start_year"].astype(str) <= year].copy()
-        rows.append(
-            {
-                "year": year,
-                "renewables_kw": float(active.loc[active["technology"] == "renewable", "installed_capacity"].sum()),
-                "battery_kwh": float(active.loc[active["technology"] == "battery", "installed_capacity"].sum()),
-                "generator_kw": float(active.loc[active["technology"] == "generator", "installed_capacity"].sum()),
-            }
-        )
-    return pd.DataFrame(rows)
-
-
-def _append_expected_rows(df: pd.DataFrame, *, numeric_cols: list[str]) -> pd.DataFrame:
-    if df.empty:
-        return df
-    expected_rows = []
-    for year, group in df.groupby("year", sort=False):
-        row = {"year": year, "scenario": "Expected", "weight": 1.0}
-        weights = group["weight"].to_numpy(dtype=float)
-        for col in numeric_cols:
-            row[col] = float(np.sum(group[col].to_numpy(dtype=float) * weights))
-        expected_rows.append(row)
-    return pd.concat([df, pd.DataFrame(expected_rows)], ignore_index=True)
-
-
-def _scalar_float(x: Any) -> float:
-    if isinstance(x, xr.DataArray):
-        values = np.asarray(x.values, dtype=float).reshape(-1)
-        return float(values[0]) if values.size else float("nan")
-    return float(safe_float(x))
-
-
-def _normalize_dim_selector(da: xr.DataArray, dim: str, value: Any) -> Any:
-    if dim not in da.dims:
-        return value
-
-    coord_values = da.coords[dim].values.tolist()
-    if not coord_values:
-        return value
-
-    if value in coord_values:
-        return value
-
-    value_str = str(value)
-    for candidate in coord_values:
-        if str(candidate) == value_str:
-            return candidate
-
-    if value_str.lower() == "base" and len(coord_values) == 1:
-        return coord_values[0]
-
-    try:
-        value_int = int(value)
-    except Exception:
-        return value
-
-    for candidate in coord_values:
-        try:
-            if int(candidate) == value_int:
-                return candidate
-        except Exception:
-            continue
-    return value
-
-
-def _scalar_param(x: Any, **indexers: Any) -> float:
-    if not isinstance(x, xr.DataArray):
-        return float(safe_float(x))
-    da = x
-    valid_indexers = {
-        k: _normalize_dim_selector(da, k, v)
-        for k, v in indexers.items()
-        if k in da.dims
-    }
-    if valid_indexers:
-        da = da.sel(**valid_indexers)
-    extra_dims = [d for d in da.dims if da.sizes.get(d, 1) > 1]
-    if extra_dims:
-        da = da.isel({d: 0 for d in extra_dims})
-    return _scalar_float(da)
-
-
-def _build_investment_summary_from_design(*, sets: xr.Dataset, data: xr.Dataset, design_df: pd.DataFrame) -> pd.DataFrame:
-    p = get_params(data)
-    rs = float((p.settings.get("social_discount_rate", 0.0) or 0.0))
-    years = [str(y) for y in sets.coords["year"].values.tolist()]
-    start_year_map = {str(step): str(sets["inv_step_start_year"].sel(inv_step=step).item()) for step in sets.coords["inv_step"].values} if "inv_step_start_year" in sets else {}
-    year_to_ordinal = {year: idx for idx, year in enumerate(years)}
-
-    rows = []
-    for _, row in design_df.iterrows():
-        technology = str(row.get("technology", "")).strip().lower()
-        inv_step = str(row.get("inv_step", ""))
-        resource = str(row.get("resource", "")).strip()
-        installed_capacity = float(pd.to_numeric(pd.Series([row.get("installed_capacity", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
-        if installed_capacity == 0.0:
-            continue
-        start_year = str(row.get("inv_step_start_year", start_year_map.get(inv_step, years[0] if years else "")))
-        discount_factor = 1.0 / ((1.0 + rs) ** year_to_ordinal.get(start_year, 0))
-
-        if technology == "renewable":
-            capex = _scalar_param(p.res_specific_investment_cost_per_kw, inv_step=inv_step, resource=resource)
-            grant = _scalar_param(p.res_grant_share_of_capex, inv_step=inv_step, resource=resource)
-            nominal = installed_capacity * capex * (1.0 - grant)
-            label = resource
-            unit = "kW"
-        elif technology == "battery":
-            capex = _scalar_param(p.battery_specific_investment_cost_per_kwh, inv_step=inv_step)
-            nominal = installed_capacity * capex
-            label = "Battery"
-            unit = "kWh"
-        elif technology == "generator":
-            capex = _scalar_param(p.generator_specific_investment_cost_per_kw, inv_step=inv_step)
-            nominal = installed_capacity * capex
-            label = "Generator"
-            unit = "kW"
-        else:
-            continue
-
-        rows.append(
-            {
-                "Technology": label,
-                "Capacity unit": unit,
-                "Nominal investment cost": nominal,
-                "Present-value investment cost": nominal * discount_factor,
-            }
-        )
-
-    if not rows:
-        return pd.DataFrame(columns=["Technology", "Capacity unit", "Nominal investment cost", "Present-value investment cost"])
-
-    out = pd.DataFrame(rows)
-    return out.groupby(["Technology", "Capacity unit"], as_index=False)[["Nominal investment cost", "Present-value investment cost"]].sum()
-
-
-def _build_investment_summary(
-    *,
-    sets: xr.Dataset,
-    data: xr.Dataset,
-    vars_dict: Dict[str, Any],
-    solution: Optional[xr.Dataset],
-) -> pd.DataFrame:
-    p = get_params(data)
-    rs = float((p.settings.get("social_discount_rate", 0.0) or 0.0))
-    step_disc = 1.0 / ((1.0 + rs) ** inv_step_start_ordinal(sets))
-
-    res_units = require_data_array("res_units", get_var_solution(vars_dict=vars_dict, solution=solution, name="res_units"))
-    bat_units = require_data_array("battery_units", get_var_solution(vars_dict=vars_dict, solution=solution, name="battery_units"))
-    gen_units = require_data_array("generator_units", get_var_solution(vars_dict=vars_dict, solution=solution, name="generator_units"))
-
-    res_nom = require_data_array("res_nominal_capacity_kw", p.res_nominal_capacity_kw)
-    res_capex = require_data_array("res_specific_investment_cost_per_kw", p.res_specific_investment_cost_per_kw)
-    res_grant = require_data_array("res_grant_share_of_capex", p.res_grant_share_of_capex)
-    bat_nom = require_data_array("battery_nominal_capacity_kwh", p.battery_nominal_capacity_kwh)
-    bat_capex = require_data_array("battery_specific_investment_cost_per_kwh", p.battery_specific_investment_cost_per_kwh)
-    gen_nom = require_data_array("generator_nominal_capacity_kw", p.generator_nominal_capacity_kw)
-    gen_capex = require_data_array("generator_specific_investment_cost_per_kw", p.generator_specific_investment_cost_per_kw)
-
-    res_inv = res_units * res_nom * res_capex * (1.0 - res_grant)
-    bat_inv = bat_units * bat_nom * bat_capex
-    gen_inv = gen_units * gen_nom * gen_capex
-
-    rows = []
-    for resource in res_inv.coords["resource"].values:
-        resource_inv = res_inv.sel(resource=resource)
-        rows.append(
-            {
-                "Technology": str(resource),
-                "Capacity unit": "kW",
-                "Nominal investment cost": float(resource_inv.sum()),
-                "Present-value investment cost": float((resource_inv * step_disc).sum()),
-            }
-        )
-    rows.append(
-        {
-            "Technology": "Battery",
-            "Capacity unit": "kWh",
-            "Nominal investment cost": float(bat_inv.sum()),
-            "Present-value investment cost": float((bat_inv * step_disc).sum()),
-        }
-    )
-    rows.append(
-        {
-            "Technology": "Generator",
-            "Capacity unit": "kW",
-            "Nominal investment cost": float(gen_inv.sum()),
-            "Present-value investment cost": float((gen_inv * step_disc).sum()),
-        }
-    )
-    return pd.DataFrame(rows)
-
-
-def _build_scenario_costs(
-    *,
-    sets: xr.Dataset,
-    data: xr.Dataset,
-    vars_dict: Dict[str, Any],
-    solution: Optional[xr.Dataset],
-) -> pd.DataFrame:
-    return build_scenario_costs_table_multi_year(
-        sets=sets,
-        data=data,
-        vars=vars_dict,
-        solution=solution,
-    )
-
-
-def _build_yearly_expected(cash: pd.DataFrame, scenario_costs: pd.DataFrame) -> pd.DataFrame:
-    cash = cash.copy()
-    cash["year"] = cash["year"].astype(str)
-    expected = scenario_costs[scenario_costs["scenario"] == "Expected"].copy()
-    expected["year"] = expected["year"].astype(str)
-    expected = expected.drop(columns=["scenario", "weight"], errors="ignore")
-    yearly = cash.copy().merge(expected, on="year", how="left")
-    yearly["annuity_total"] = yearly[["annuity_res", "annuity_battery", "annuity_generator"]].sum(axis=1)
-    yearly["renewables_cost"] = (
-        yearly["annuity_res"]
-        + yearly["fixed_om_res"]
-        - yearly["res_subsidy_revenue"]
-        + yearly["scope3_res_emissions_cost"]
-    )
-    yearly["battery_cost"] = (
-        yearly["annuity_battery"]
-        + yearly["fixed_om_battery"]
-        + yearly["scope3_battery_emissions_cost"]
-    )
-    yearly["generator_cost"] = (
-        yearly["annuity_generator"]
-        + yearly["fixed_om_generator"]
-        + yearly["fuel_cost"]
-        + yearly["scope1_emissions_cost"]
-        + yearly["scope3_generator_emissions_cost"]
-    )
-    yearly["grid_cost"] = yearly["grid_import_cost"] - yearly["grid_export_revenue"]
-    yearly["reliability_cost"] = yearly["lost_load_penalty"] + yearly["scope2_emissions_cost"]
-    return yearly
-
-
-def _build_context(bundle: ResultsBundle) -> MultiYearResultsContext:
-    data = bundle.data
-    if not isinstance(data, xr.Dataset):
-        raise RuntimeError("Missing data dataset.")
-    vars_dict = bundle.vars if isinstance(bundle.vars, dict) else {}
-    solution = bundle.solution if isinstance(bundle.solution, xr.Dataset) else None
-    sets = bundle.sets if isinstance(bundle.sets, xr.Dataset) else xr.Dataset()
+def _build_context(results: MultiYearResults) -> MultiYearResultsContext:
+    data = results.data
+    sets = results.sets
     settings = _get_settings(data)
-    dispatch = _ensure_delivered_grid_columns(
-        build_dispatch_timeseries_table_multi_year(sets=sets, data=data, vars=vars_dict, solution=solution),
-        data,
-    )
-    design = build_design_by_step_table_multi_year(sets=sets, data=data, vars=vars_dict, solution=solution)
-    kpis = build_yearly_kpis_table_multi_year(sets=sets, data=data, vars=vars_dict, solution=solution, objective_value=bundle.objective_value)
-    cash = build_discounted_cashflows_table_multi_year(sets=sets, data=data, vars=vars_dict, solution=solution)
-    capacity = _capacity_by_year(sets, design)
-    scenario_costs = _build_scenario_costs(sets=sets, data=data, vars_dict=vars_dict, solution=solution)
-    yearly_expected = _build_yearly_expected(cash, scenario_costs)
-    investment_summary = _build_investment_summary(sets=sets, data=data, vars_dict=vars_dict, solution=solution)
+    dispatch = _ensure_delivered_grid_columns(results.dispatch.copy(), data)
+    design = results.design_by_step.copy()
+    kpis = results.kpis_yearly.copy()
+    cash = results.cashflows_discounted.copy()
+    capacity = results.capacity_by_year.copy()
+    scenario_costs = results.scenario_costs_yearly.copy()
+    yearly_expected = results.yearly_expected.copy()
+    investment_summary = results.investment_summary.copy()
     return MultiYearResultsContext(
-        bundle=bundle,
+        results=results,
         data=data,
         sets=sets,
         settings=settings,
-        vars_dict=vars_dict,
-        solution=solution,
         dispatch=dispatch,
         design=design,
         kpis=kpis,
@@ -508,61 +230,27 @@ def _build_context(bundle: ResultsBundle) -> MultiYearResultsContext:
     )
 
 
-def _build_context_from_files(file_results: MultiYearFileResults) -> MultiYearResultsContext:
-    data = file_results.data
-    sets = file_results.sets
-    settings = _get_settings(data)
-    dispatch = _ensure_delivered_grid_columns(file_results.dispatch.copy(), data)
-    design = file_results.design.copy()
-    kpis = file_results.kpis.copy()
-    cash = file_results.cash.copy()
-    scenario_costs = file_results.scenario_costs.copy()
-
-    for frame in (dispatch, design, kpis, cash, scenario_costs):
-        if "year" in frame.columns:
-            frame["year"] = frame["year"].astype(str)
-        if "scenario" in frame.columns:
-            frame["scenario"] = frame["scenario"].astype(str)
-        if "inv_step" in frame.columns:
-            frame["inv_step"] = frame["inv_step"].astype(str)
-        if "inv_step_start_year" in frame.columns:
-            frame["inv_step_start_year"] = frame["inv_step_start_year"].astype(str)
-
-    capacity = _capacity_by_year(sets, design)
-    yearly_expected = _build_yearly_expected(cash, scenario_costs)
-    investment_summary = _build_investment_summary_from_design(sets=sets, data=data, design_df=design)
-    objective_value = float(safe_float(cash["discounted_objective_contribution"].sum())) if "discounted_objective_contribution" in cash.columns else None
-    bundle = ResultsBundle(
-        formulation_mode="dynamic",
-        sets=sets,
-        data=data,
-        vars=None,
-        solution=None,
-        objective_value=objective_value,
-        status=None,
-        metadata={"source": "files"},
-    )
+def _build_context_from_files(results: MultiYearResults) -> MultiYearResultsContext:
+    ctx = _build_context(results)
     return MultiYearResultsContext(
-        bundle=bundle,
-        data=data,
-        sets=sets,
-        settings=settings,
-        vars_dict={},
-        solution=None,
-        dispatch=dispatch,
-        design=design,
-        kpis=kpis,
-        cash=cash,
-        capacity_by_year=capacity,
-        yearly_expected=yearly_expected,
-        scenario_costs=scenario_costs,
-        investment_summary=investment_summary,
-        on_grid=bool(((settings.get("grid", {}) or {}).get("on_grid", False))),
-        allow_export=bool(((settings.get("grid", {}) or {}).get("allow_export", False))),
-        years=[str(y) for y in sets.coords["year"].values.tolist()],
-        scenarios=[str(s) for s in sets.coords["scenario"].values.tolist()],
+        results=ctx.results,
+        data=ctx.data,
+        sets=ctx.sets,
+        settings=ctx.settings,
+        dispatch=ctx.dispatch,
+        design=ctx.design,
+        kpis=ctx.kpis,
+        cash=ctx.cash,
+        capacity_by_year=ctx.capacity_by_year,
+        yearly_expected=ctx.yearly_expected,
+        scenario_costs=ctx.scenario_costs,
+        investment_summary=ctx.investment_summary,
+        on_grid=ctx.on_grid,
+        allow_export=ctx.allow_export,
+        years=ctx.years,
+        scenarios=ctx.scenarios,
         file_backed=True,
-        results_dir=str(file_results.results_dir),
+        results_dir=str(results.results_dir) if results.results_dir is not None else None,
     )
 
 
@@ -745,7 +433,9 @@ def _render_sizing_summary(ctx: MultiYearResultsContext) -> None:
         ctx.capacity_by_year.style.format(
             {
                 "renewables_kw": "{:,.1f}",
+                "renewable_inverter_kw_ac": "{:,.1f}",
                 "battery_kwh": "{:,.1f}",
+                "battery_inverter_kw": "{:,.1f}",
                 "generator_kw": "{:,.1f}",
             }
         ),
@@ -755,21 +445,28 @@ def _render_sizing_summary(ctx: MultiYearResultsContext) -> None:
 
     if len(ctx.design["inv_step"].astype(str).unique()) > 1:
         st.caption("Capacity evolution across the planning horizon.")
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11, 7), sharex=True, height_ratios=[2, 1.4])
+        fig, axes = plt.subplots(3, 1, figsize=(11, 9), sharex=True, height_ratios=[2, 1.2, 1.2])
         years = ctx.capacity_by_year["year"].tolist()
         x = np.arange(len(years))
-        ax1.bar(x, ctx.capacity_by_year["renewables_kw"], color=C_RES, alpha=0.85, label="Renewables [kW]")
+        ax1, ax2, ax3 = axes
+        ax1.bar(x, ctx.capacity_by_year["renewables_kw"], color=C_RES, alpha=0.85, label="Renewables DC [kW]")
         ax1.bar(x, ctx.capacity_by_year["generator_kw"], bottom=ctx.capacity_by_year["renewables_kw"], color=C_GEN, alpha=0.85, label="Generator [kW]")
         ax1.set_ylabel("kW")
-        ax1.set_title("Installed power capacity by year")
+        ax1.set_title("Installed generation capacity by year")
         ax1.grid(True, axis="y", alpha=0.25, linestyle=":")
         ax1.legend()
-        ax2.bar(x, ctx.capacity_by_year["battery_kwh"], color=C_BAT, alpha=0.85, label="Battery [kWh]")
-        ax2.set_ylabel("kWh")
-        ax2.set_title("Installed battery energy capacity by year")
-        ax2.set_xticks(x, years)
+        ax2.bar(x, ctx.capacity_by_year["renewable_inverter_kw_ac"], color="#F4A261", alpha=0.85, label="Renewable inverter AC [kW_ac]")
+        ax2.bar(x, ctx.capacity_by_year["battery_inverter_kw"], bottom=ctx.capacity_by_year["renewable_inverter_kw_ac"], color="#2A9D8F", alpha=0.85, label="Battery inverter [kW]")
+        ax2.set_ylabel("kW")
+        ax2.set_title("Installed inverter/converter capacity by year")
         ax2.grid(True, axis="y", alpha=0.25, linestyle=":")
         ax2.legend()
+        ax3.bar(x, ctx.capacity_by_year["battery_kwh"], color=C_BAT, alpha=0.85, label="Battery energy [kWh]")
+        ax3.set_ylabel("kWh")
+        ax3.set_title("Installed battery energy capacity by year")
+        ax3.set_xticks(x, years)
+        ax3.grid(True, axis="y", alpha=0.25, linestyle=":")
+        ax3.legend()
         plt.tight_layout()
         st.pyplot(fig)
 
@@ -906,7 +603,7 @@ def _render_energy_mix(ctx: MultiYearResultsContext) -> None:
 def _render_costs_and_cashflow(ctx: MultiYearResultsContext) -> None:
     st.subheader("Cost summary & Cash-flow")
 
-    npc = float(safe_float(ctx.bundle.objective_value))
+    npc = float(safe_float(ctx.results.metadata.get("objective_value")))
     if not np.isfinite(npc):
         npc = float(ctx.yearly_expected["discounted_objective_contribution"].sum())
 
@@ -967,7 +664,9 @@ def _render_costs_and_cashflow(ctx: MultiYearResultsContext) -> None:
     fixed_om = pd.DataFrame(
         [
             {"Technology": "Renewables", "Annual fixed O&M": float(selected["fixed_om_res"])},
+            {"Technology": "Renewables inverter", "Annual fixed O&M": float(selected.get("fixed_om_res_inverter", 0.0))},
             {"Technology": "Battery", "Annual fixed O&M": float(selected["fixed_om_battery"])},
+            {"Technology": "Battery inverter", "Annual fixed O&M": float(selected.get("fixed_om_battery_inverter", 0.0))},
             {"Technology": "Generator", "Annual fixed O&M": float(selected["fixed_om_generator"])},
         ]
     )
@@ -1175,8 +874,7 @@ def _render_export_section(ctx: MultiYearResultsContext, project_name: Optional[
             return
         try:
             with st.spinner("Exporting multi-year results..."):
-                model_obj = st.session_state.get("gp_model_obj")
-                written = export_results_from_bundle(project_name, ctx.bundle, model_obj=model_obj)
+                written = export_multi_year_results_from_object(ctx.results)
             st.success("Export completed.")
             st.json(written)
             st.markdown("**Generated files**")
@@ -1187,10 +885,10 @@ def _render_export_section(ctx: MultiYearResultsContext, project_name: Optional[
             st.error(f"Export failed: {exc}")
 
 
-def render_multi_year_results(bundle: ResultsBundle, project_name: Optional[str]) -> None:
+def render_multi_year_results(results: MultiYearResults, project_name: Optional[str]) -> None:
     _ = project_name
     try:
-        ctx = _build_context(bundle)
+        ctx = _build_context(results)
     except Exception as exc:
         st.error(f"Unable to render multi-year results: {exc}")
         return
@@ -1203,7 +901,7 @@ def render_multi_year_results(bundle: ResultsBundle, project_name: Optional[str]
     _render_export_section(ctx, project_name)
 
 
-def render_multi_year_results_from_files(file_results: MultiYearFileResults, project_name: Optional[str]) -> None:
+def render_multi_year_results_from_files(file_results: MultiYearResults, project_name: Optional[str]) -> None:
     _ = project_name
     try:
         ctx = _build_context_from_files(file_results)

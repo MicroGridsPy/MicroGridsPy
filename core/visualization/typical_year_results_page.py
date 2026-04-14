@@ -311,7 +311,7 @@ def render_typical_year_results(results: TypicalYearResults, project_name: Optio
             {"Component": "Renewables (total)", "Installed units": total_res_units, "Capacity": total_res_dc_kw, "Unit": "kW_dc"},
             {"Component": "Renewable inverter/converter (total)", "Installed units": np.nan, "Capacity": total_res_inv_kw, "Unit": "kW_ac"},
             {"Component": "Battery", "Installed units": float(_safe_float(battery_row.get("Installed units", 0.0))), "Capacity": float(_safe_float(battery_row.get("Installed energy capacity [kWh]", 0.0))), "Unit": "kWh"},
-            {"Component": "Battery converter/inverter power", "Installed units": np.nan, "Capacity": float(_safe_float(battery_inv_row.get("Installed inverter power [kW]", 0.0))), "Unit": "kW"},
+            {"Component": "Battery converter/inverter power", "Installed units": float(_safe_float(battery_inv_row.get("Installed inverter units", 0.0))), "Capacity": float(_safe_float(battery_inv_row.get("Installed inverter power [kW]", 0.0))), "Unit": "kW"},
             {"Component": "Generator", "Installed units": float(_safe_float(generator_row.get("Installed units", 0.0))), "Capacity": float(_safe_float(generator_row.get("Installed capacity [kW]", 0.0))), "Unit": "kW"},
         ]
     )
@@ -321,6 +321,7 @@ def render_typical_year_results(results: TypicalYearResults, project_name: Optio
     inverter_summary = pd.DataFrame(
         [
             {"Component": "Renewable inverter/converter (total)", "Capacity": total_res_inv_kw, "Unit": "kW_ac"},
+            {"Component": "Battery inverter units", "Capacity": float(_safe_float(battery_inv_row.get("Installed inverter units", 0.0))), "Unit": "units"},
             {"Component": "Battery converter/inverter power", "Capacity": float(_safe_float(battery_inv_row.get("Installed inverter power [kW]", 0.0))), "Unit": "kW"},
         ]
     )
@@ -345,6 +346,13 @@ def render_typical_year_results(results: TypicalYearResults, project_name: Optio
                 "Effective inverter-limited renewable potential [kWh]": "{:,.2f}",
                 "Inverter clipping potential [kWh]": "{:,.2f}",
             }).hide(axis="index"), width="stretch")
+
+    with st.expander("Battery inverter breakdown", expanded=False):
+        st.dataframe(results.battery_inverter_design.style.format({
+            "Installed inverter units": "{:,.3g}",
+            "Nominal inverter power per unit [kW]": "{:,.3g}",
+            "Installed inverter power [kW]": "{:,.3g}",
+        }).hide(axis="index"), width="stretch")
 
     st.subheader("Performance KPIs")
     mode, scen_label = _scenario_selector(settings, data, key="gp_kpi_view_sel_canonical")
