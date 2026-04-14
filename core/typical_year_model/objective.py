@@ -92,6 +92,7 @@ def initialize_objective(
     # ------------------------------------------------------------------
     res_units = vars["res_units"]                # (resource,)
     bat_units = vars["battery_units"]            # scalar
+    bat_inv_power = vars["battery_inverter_power"]  # scalar
     gen_units = vars["generator_units"]          # scalar
 
     res_gen = vars["res_generation"]             # (period, scenario, resource)
@@ -111,20 +112,27 @@ def initialize_objective(
     # Renewables
     res_nom_kw = p.res_nominal_capacity_kw                         # (resource,)
     res_capex_kw = p.res_specific_investment_cost_per_kw           # (resource,)
+    res_inv_capex_kw_ac = p.res_inverter_specific_investment_cost_per_kw_ac  # (resource,)
     res_life_y = p.res_lifetime_years                              # (resource,)
+    res_inv_life_y = p.res_inverter_lifetime_years                 # (resource,)
     res_wacc = p.res_wacc                                           # (resource,)
     res_grant = p.res_grant_share_of_capex                         # (resource,)
     # scenario-dependent subsidy, but scenario-independent fixed O&M
     res_fom_share = p.res_fixed_om_share_per_year                  # (resource,)
+    res_inv_fom_share = p.res_inverter_fixed_om_share_per_year     # (resource,)
     res_subsidy_kwh = p.res_production_subsidy_per_kwh             # (scenario, resource)
     res_emb_kg_per_kw = p.res_embedded_emissions_kgco2e_per_kw      # (scenario, resource)
+    res_dc_ac_ratio = p.res_dc_ac_ratio                            # (resource,)
 
     # Battery
     bat_nom_kwh = p.battery_nominal_capacity_kwh                   # scalar
     bat_capex_kwh = p.battery_specific_investment_cost_per_kwh     # scalar
+    bat_inv_capex_kw = p.battery_inverter_specific_investment_cost_per_kw  # scalar
     bat_life_y = p.battery_calendar_lifetime_years                 # scalar
+    bat_inv_life_y = p.battery_inverter_lifetime_years             # scalar
     bat_wacc = p.battery_wacc                                       # scalar
     bat_fom_share = p.battery_fixed_om_share_per_year              # scalar
+    bat_inv_fom_share = p.battery_inverter_fixed_om_share_per_year  # scalar
     bat_emb_kg_per_kwh = p.battery_embedded_emissions_kgco2e_per_kwh  # (scenario,)
 
     # Generator
@@ -160,28 +168,49 @@ def initialize_objective(
     # ------------------------------------------------------------------
     # Installed capacities
     cap_res_kw = res_units * res_nom_kw                               # (resource,)
+    cap_res_inv_kw_ac = cap_res_kw / res_dc_ac_ratio                  # (resource,)
     cap_bat_kwh = bat_units * bat_nom_kwh                             # scalar
+    cap_bat_inv_kw = bat_inv_power                                    # scalar
     cap_gen_kw = gen_units * gen_nom_kw                               # scalar
 
     # CRFs
     res_crf = _crf(res_wacc, res_life_y)                              # (resource,)
+    res_inv_crf = _crf(res_wacc, res_inv_life_y)                      # (resource,)
     bat_crf = _crf(bat_wacc, bat_life_y)                              # scalar
+    bat_inv_crf = _crf(bat_wacc, bat_inv_life_y)                      # scalar
     gen_crf = _crf(gen_wacc, gen_life_y)                              # scalar
 
     # Effective CAPEX after grant
     res_capex_eff_kw = (1.0 - res_grant) * res_capex_kw               # (resource,)
+    res_inv_capex_eff_kw_ac = (1.0 - res_grant) * res_inv_capex_kw_ac  # (resource,)
 
     # Annualized CAPEX via CRF
     annual_res_capex = (res_crf * res_capex_eff_kw * cap_res_kw).sum("resource")         # scalar
+    annual_res_inv_capex = (res_inv_crf * res_inv_capex_eff_kw_ac * cap_res_inv_kw_ac).sum("resource")  # scalar
     annual_bat_capex = bat_crf * bat_capex_kwh * cap_bat_kwh                             # scalar
+    annual_bat_inv_capex = bat_inv_crf * bat_inv_capex_kw * cap_bat_inv_kw               # scalar
     annual_gen_capex = gen_crf * gen_capex_kw * cap_gen_kw                               # scalar
-    annualized_investment_cost = annual_res_capex + annual_bat_capex + annual_gen_capex  # scalar
+    annualized_investment_cost = (
+        annual_res_capex
+        + annual_res_inv_capex
+        + annual_bat_capex
+        + annual_bat_inv_capex
+        + annual_gen_capex
+    )  # scalar
 
     # Fixed O&M
     annual_res_fom = (res_capex_kw * res_fom_share * cap_res_kw).sum("resource")  # scalar
+    annual_res_inv_fom = (res_inv_capex_kw_ac * res_inv_fom_share * cap_res_inv_kw_ac).sum("resource")  # scalar
     annual_bat_fom = bat_capex_kwh * bat_fom_share * cap_bat_kwh                   # scalar
+    annual_bat_inv_fom = bat_inv_capex_kw * bat_inv_fom_share * cap_bat_inv_kw     # scalar
     annual_gen_fom = gen_capex_kw * gen_fom_share * cap_gen_kw                     # scalar
-    annual_fixed_om_cost = annual_res_fom + annual_bat_fom + annual_gen_fom        # scalar
+    annual_fixed_om_cost = (
+        annual_res_fom
+        + annual_res_inv_fom
+        + annual_bat_fom
+        + annual_bat_inv_fom
+        + annual_gen_fom
+    )  # scalar
 
     # ------------------------------------------------------------------
     # 2) Annual operating cost per scenario (then expected value)
@@ -290,4 +319,3 @@ def initialize_objective(
         + grid_reg_cost
     )
     model.add_objective(total_annual_cost, overwrite=True)
-

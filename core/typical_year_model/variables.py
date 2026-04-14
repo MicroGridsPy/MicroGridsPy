@@ -36,6 +36,7 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> Dict
     Design variables (scenario-invariant):
       - res_units(resource)
       - battery_units()
+      - battery_inverter_power()
       - generator_units()
 
     In this formulation, the `unit_commitment` setting only makes sizing
@@ -114,6 +115,13 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> Dict
         lower=0.0,
         integer=is_integer,
         name="battery_units",
+    )
+
+    # Battery inverter power capacity [kW ~= kWh/h] (scalar, symmetric for charge/discharge)
+    vars["battery_inverter_power"] = model.add_variables(
+        lower=0.0,
+        integer=is_integer,
+        name="battery_inverter_power",
     )
 
     # Generator installed power capacity [kW] (scalar)

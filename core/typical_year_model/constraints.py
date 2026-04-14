@@ -87,6 +87,7 @@ def initialize_constraints(
 
     # Renewables tech params
     res_nom_kw = p.res_nominal_capacity_kw  # (resource)
+    res_dc_ac_ratio = p.res_dc_ac_ratio  # (resource)
     res_inv_eta = p.res_inverter_efficiency  # (resource)
 
     # Optional land and max installable
@@ -107,8 +108,8 @@ def initialize_constraints(
     eta_d = p.battery_discharge_efficiency  # (scenario,)
     soc0 = p.battery_initial_soc  # (scenario,) fraction
     dod = p.battery_depth_of_discharge  # (scenario,) fraction
-    t_ch = p.battery_max_charge_time_hours  # (scenario,)
-    t_dis = p.battery_max_discharge_time_hours  # (scenario,)
+    bat_max_charge_c_rate = p.battery_max_charge_c_rate  # optional scalar
+    bat_max_discharge_c_rate = p.battery_max_discharge_c_rate  # optional scalar
 
     # System constraints params
     min_res_pen = p.min_renewable_penetration  # scalar or (scenario,)
@@ -126,6 +127,7 @@ def initialize_constraints(
     # ---------------------------------------------------------------------
     res_units = vars["res_units"]  # (resource,)
     bat_units = vars["battery_units"]  # scalar
+    bat_inv_power = vars["battery_inverter_power"]  # scalar
     gen_units = vars["generator_units"]  # scalar
 
     res_gen = vars["res_generation"]  # (period, scenario, resource)
@@ -152,6 +154,10 @@ def initialize_constraints(
     # ---------------------------------------------------------------------
     rhs_res = resource_availability * res_units * res_nom_kw * res_inv_eta
     model.add_constraints(res_gen <= rhs_res, name="res_generation_cap")
+    model.add_constraints(
+        res_gen <= (res_units * res_nom_kw / res_dc_ac_ratio),
+        name="res_inverter_ac_cap",
+    )
 
     # ---------------------------------------------------------------------
     # 2) Renewable max installable capacity (if provided)
@@ -263,14 +269,11 @@ def initialize_constraints(
             name="fuel_to_power_nominal_eta",
         )
     # ---------------------------------------------------------------------
-    # 5) Battery charge/discharge power limits
+    # 5) Battery explicit inverter sizing
     #
-    # battery_charge(t,s)    <= (battery_units * bat_nom_kwh) / t_ch
-    # battery_discharge(t,s) <= (battery_units * bat_nom_kwh) / t_dis
+    # The battery inverter power is now an explicit design variable. Optional
+    # engineering limits can still tie it to energy capacity via C-rates.
     # ---------------------------------------------------------------------
-    if battery_loss_model != CONVEX_LOSS_EPIGRAPH:
-        model.add_constraints(bat_ch <= (bat_units * bat_nom_kwh) / t_ch, name="battery_charge_limit")
-        model.add_constraints(bat_dis <= (bat_units * bat_nom_kwh) / t_dis, name="battery_discharge_limit")
 
     # ---------------------------------------------------------------------
     # 6) Battery SOC dynamics (hourly Δt=1h) with cyclic end condition
@@ -282,6 +285,24 @@ def initialize_constraints(
     # ---------------------------------------------------------------------
     T = int(period.size)
     Ecap = bat_units * bat_nom_kwh
+    bat_charge_c_rate_limit = (
+        finite_nonnegative_scalar_limit(
+            bat_max_charge_c_rate.values,
+            name="battery_max_charge_c_rate",
+            error_cls=InputValidationError,
+        )
+        if bat_max_charge_c_rate is not None
+        else None
+    )
+    bat_discharge_c_rate_limit = (
+        finite_nonnegative_scalar_limit(
+            bat_max_discharge_c_rate.values,
+            name="battery_max_discharge_c_rate",
+            error_cls=InputValidationError,
+        )
+        if bat_max_discharge_c_rate is not None
+        else None
+    )
     if bat_max_installable_kwh is not None:
         battery_cap_limit = finite_nonnegative_scalar_limit(
             bat_max_installable_kwh.values,
@@ -293,6 +314,17 @@ def initialize_constraints(
                 Ecap <= battery_cap_limit,
                 name="battery_max_installable_capacity",
             )
+
+    if bat_charge_c_rate_limit is not None:
+        model.add_constraints(
+            bat_inv_power <= bat_charge_c_rate_limit * Ecap,
+            name="battery_inverter_charge_c_rate_limit",
+        )
+    if bat_discharge_c_rate_limit is not None:
+        model.add_constraints(
+            bat_inv_power <= bat_discharge_c_rate_limit * Ecap,
+            name="battery_inverter_discharge_c_rate_limit",
+        )
 
     if battery_loss_model == CONVEX_LOSS_EPIGRAPH:
         if not all(v is not None for v in (bat_ch_dc, bat_dis_dc, bat_ch_loss, bat_dis_loss)):
@@ -317,11 +349,10 @@ def initialize_constraints(
         dis_slope = data["battery_discharge_loss_slope"]
         dis_intercept = data["battery_discharge_loss_intercept"]
 
-        # In advanced mode the internal battery power reference is the DC-side
-        # power derived from energy capacity and max charge/discharge time.
-        # Public AC powers are then coupled through explicit loss variables.
-        p_ref_ch = (Ecap / t_ch)
-        p_ref_dis = (Ecap / t_dis)
+        # In advanced mode the explicit inverter sizing variable becomes the
+        # DC-side reference power used by the normalized convex loss curve.
+        p_ref_ch = bat_inv_power
+        p_ref_dis = bat_inv_power
 
         model.add_constraints(
             bat_ch_dc <= p_ref_ch,
@@ -352,13 +383,15 @@ def initialize_constraints(
         bat_ch_loss_b = bat_ch_loss.expand_dims({"battery_loss_segment": seg})
         bat_dis_dc_b = bat_dis_dc.expand_dims({"battery_loss_segment": seg})
         bat_dis_loss_b = bat_dis_loss.expand_dims({"battery_loss_segment": seg})
+        p_ref_ch_b = p_ref_ch.expand_dims({"battery_loss_segment": seg})
+        p_ref_dis_b = p_ref_dis.expand_dims({"battery_loss_segment": seg})
 
         model.add_constraints(
-            bat_ch_loss_b >= (ch_slope * bat_ch_dc_b) + (ch_intercept * p_ref_ch),
+            bat_ch_loss_b >= (ch_slope * bat_ch_dc_b) + (ch_intercept * p_ref_ch_b),
             name="battery_charge_loss_epigraph",
         )
         model.add_constraints(
-            bat_dis_loss_b >= (dis_slope * bat_dis_dc_b) + (dis_intercept * p_ref_dis),
+            bat_dis_loss_b >= (dis_slope * bat_dis_dc_b) + (dis_intercept * p_ref_dis_b),
             name="battery_discharge_loss_epigraph",
         )
 
@@ -382,6 +415,8 @@ def initialize_constraints(
         soc_upper_bound = Ecap
         soc_lower_bound = (1.0 - dod) * Ecap
     else:
+        model.add_constraints(bat_ch <= bat_inv_power, name="battery_charge_limit")
+        model.add_constraints(bat_dis <= bat_inv_power, name="battery_discharge_limit")
         model.add_constraints(soc.isel(period=0) == soc0 * Ecap, name="soc_initial")
         if T > 1:
             model.add_constraints(
@@ -521,6 +556,3 @@ def initialize_constraints(
     if land_limit is not None:
         area_used = (res_units * res_nom_kw * res_area_m2_per_kw).sum("resource") # scalar
         model.add_constraints(area_used <= land_limit, name="land_availability")
-
-
-

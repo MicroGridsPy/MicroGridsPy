@@ -28,12 +28,16 @@ class Params:
     # Renewables
     res_nominal_capacity_kw: xr.DataArray
     res_specific_investment_cost_per_kw: xr.DataArray
+    res_inverter_specific_investment_cost_per_kw_ac: xr.DataArray
     res_lifetime_years: xr.DataArray
+    res_inverter_lifetime_years: xr.DataArray
     res_wacc: xr.DataArray
     res_grant_share_of_capex: xr.DataArray
     res_fixed_om_share_per_year: xr.DataArray
+    res_inverter_fixed_om_share_per_year: xr.DataArray
     res_production_subsidy_per_kwh: xr.DataArray
     res_embedded_emissions_kgco2e_per_kw: xr.DataArray
+    res_dc_ac_ratio: xr.DataArray
     res_inverter_efficiency: xr.DataArray
     res_specific_area_m2_per_kw: xr.DataArray
     res_max_installable_capacity_kw: xr.DataArray
@@ -41,17 +45,20 @@ class Params:
     # Battery
     battery_nominal_capacity_kwh: xr.DataArray
     battery_specific_investment_cost_per_kwh: xr.DataArray
+    battery_inverter_specific_investment_cost_per_kw: xr.DataArray
     battery_calendar_lifetime_years: xr.DataArray
+    battery_inverter_lifetime_years: xr.DataArray
     battery_wacc: xr.DataArray
     battery_fixed_om_share_per_year: xr.DataArray
+    battery_inverter_fixed_om_share_per_year: xr.DataArray
     battery_embedded_emissions_kgco2e_per_kwh: xr.DataArray
     battery_max_installable_capacity_kwh: Optional[xr.DataArray]
     battery_charge_efficiency: xr.DataArray
     battery_discharge_efficiency: xr.DataArray
     battery_initial_soc: xr.DataArray
     battery_depth_of_discharge: xr.DataArray
-    battery_max_charge_time_hours: xr.DataArray
-    battery_max_discharge_time_hours: xr.DataArray
+    battery_max_charge_c_rate: Optional[xr.DataArray]
+    battery_max_discharge_c_rate: Optional[xr.DataArray]
     battery_cycle_fade_coefficient_per_kwh_throughput: Optional[xr.DataArray]
     battery_calendar_time_increment_per_step: Optional[xr.DataArray]
 
@@ -114,28 +121,35 @@ def get_params(ds: xr.Dataset) -> Params:
         emission_cost_per_kgco2e=ds["emission_cost_per_kgco2e"],
         res_nominal_capacity_kw=ds["res_nominal_capacity_kw"],
         res_specific_investment_cost_per_kw=ds["res_specific_investment_cost_per_kw"],
+        res_inverter_specific_investment_cost_per_kw_ac=ds["res_inverter_specific_investment_cost_per_kw_ac"],
         res_lifetime_years=ds["res_lifetime_years"],
+        res_inverter_lifetime_years=ds["res_inverter_lifetime_years"],
         res_wacc=ds["res_wacc"],
         res_grant_share_of_capex=ds["res_grant_share_of_capex"],
         res_fixed_om_share_per_year=ds["res_fixed_om_share_per_year"],
+        res_inverter_fixed_om_share_per_year=ds["res_inverter_fixed_om_share_per_year"],
         res_production_subsidy_per_kwh=ds["res_production_subsidy_per_kwh"],
         res_embedded_emissions_kgco2e_per_kw=ds["res_embedded_emissions_kgco2e_per_kw"],
+        res_dc_ac_ratio=ds["res_dc_ac_ratio"],
         res_inverter_efficiency=ds["res_inverter_efficiency"],
         res_specific_area_m2_per_kw=ds["res_specific_area_m2_per_kw"],
         res_max_installable_capacity_kw=ds["res_max_installable_capacity_kw"],
         battery_nominal_capacity_kwh=ds["battery_nominal_capacity_kwh"],
         battery_specific_investment_cost_per_kwh=ds["battery_specific_investment_cost_per_kwh"],
+        battery_inverter_specific_investment_cost_per_kw=ds["battery_inverter_specific_investment_cost_per_kw"],
         battery_calendar_lifetime_years=ds["battery_calendar_lifetime_years"],
+        battery_inverter_lifetime_years=ds["battery_inverter_lifetime_years"],
         battery_wacc=ds["battery_wacc"],
         battery_fixed_om_share_per_year=ds["battery_fixed_om_share_per_year"],
+        battery_inverter_fixed_om_share_per_year=ds["battery_inverter_fixed_om_share_per_year"],
         battery_embedded_emissions_kgco2e_per_kwh=ds["battery_embedded_emissions_kgco2e_per_kwh"],
         battery_max_installable_capacity_kwh=_opt("battery_max_installable_capacity_kwh"),
         battery_charge_efficiency=ds["battery_charge_efficiency"],
         battery_discharge_efficiency=ds["battery_discharge_efficiency"],
         battery_initial_soc=ds["battery_initial_soc"],
         battery_depth_of_discharge=ds["battery_depth_of_discharge"],
-        battery_max_charge_time_hours=ds["battery_max_charge_time_hours"],
-        battery_max_discharge_time_hours=ds["battery_max_discharge_time_hours"],
+        battery_max_charge_c_rate=_opt("battery_max_charge_c_rate"),
+        battery_max_discharge_c_rate=_opt("battery_max_discharge_c_rate"),
         battery_cycle_fade_coefficient_per_kwh_throughput=_opt("battery_cycle_fade_coefficient_per_kwh_throughput"),
         battery_calendar_time_increment_per_step=_opt("battery_calendar_time_increment_per_step"),
         generator_nominal_capacity_kw=ds["generator_nominal_capacity_kw"],
@@ -157,4 +171,3 @@ def get_params(ds: xr.Dataset) -> Params:
         generator_eff_curve_eff=_opt("generator_eff_curve_eff"),
         generator_fuel_curve_rel_fuel_use=_opt("generator_fuel_curve_rel_fuel_use"),
     )
-
