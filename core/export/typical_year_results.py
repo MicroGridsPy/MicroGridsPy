@@ -129,20 +129,26 @@ def build_design_summary_table(
     p = get_params(data)
     res_units = require_data_array("res_units", get_var_solution(vars_dict=vars, solution=solution, name="res_units", prefer_solution_dataset=False))
     bat_units = require_data_array("battery_units", get_var_solution(vars_dict=vars, solution=solution, name="battery_units", prefer_solution_dataset=False))
-    bat_inv_power_raw = get_var_solution(vars_dict=vars, solution=solution, name="battery_inverter_power", prefer_solution_dataset=False)
-    if isinstance(bat_inv_power_raw, xr.DataArray):
-        bat_inv_power = require_data_array("battery_inverter_power", bat_inv_power_raw)
+    bat_inv_units_raw = get_var_solution(vars_dict=vars, solution=solution, name="battery_inverter_units", prefer_solution_dataset=False)
+    if isinstance(bat_inv_units_raw, xr.DataArray):
+        bat_inv_units = require_data_array("battery_inverter_units", bat_inv_units_raw)
     else:
-        bat_inv_power = xr.DataArray(0.0, name="battery_inverter_power")
+        legacy_bat_inv_power = get_var_solution(vars_dict=vars, solution=solution, name="battery_inverter_power", prefer_solution_dataset=False)
+        if isinstance(legacy_bat_inv_power, xr.DataArray):
+            bat_inv_units = require_data_array("battery_inverter_power", legacy_bat_inv_power)
+        else:
+            bat_inv_units = xr.DataArray(0.0, name="battery_inverter_units")
     gen_units = require_data_array("generator_units", get_var_solution(vars_dict=vars, solution=solution, name="generator_units", prefer_solution_dataset=False))
 
     res_cap = res_units * p.res_nominal_capacity_kw
     res_inv_cap = res_cap / p.res_dc_ac_ratio
     bat_cap = bat_units * p.battery_nominal_capacity_kwh
+    bat_inv_power = bat_inv_units * p.battery_inverter_nominal_power_kw
     gen_cap = gen_units * p.generator_nominal_capacity_kw
 
     row: Dict[str, Any] = {
         "battery_units": safe_float(bat_units),
+        "battery_inverter_units": safe_float(bat_inv_units),
         "battery_installed_kwh": safe_float(bat_cap),
         "battery_inverter_power_kw": safe_float(bat_inv_power),
         "generator_units": safe_float(gen_units),
@@ -196,8 +202,10 @@ def build_structured_design_tables(
         )
 
     battery_units = float(pd.to_numeric(pd.Series([row.get("battery_units", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
+    battery_inverter_units = float(pd.to_numeric(pd.Series([row.get("battery_inverter_units", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
     battery_kwh = float(pd.to_numeric(pd.Series([row.get("battery_installed_kwh", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
     battery_inv_kw = float(pd.to_numeric(pd.Series([row.get("battery_inverter_power_kw", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
+    battery_inv_nom_kw = float(safe_float(data["battery_inverter_nominal_power_kw"])) if "battery_inverter_nominal_power_kw" in data else float("nan")
     generator_units = float(pd.to_numeric(pd.Series([row.get("generator_units", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
     generator_kw = float(pd.to_numeric(pd.Series([row.get("generator_installed_kw", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
 
@@ -226,6 +234,8 @@ def build_structured_design_tables(
             [
                 {
                     "Component": "Battery inverter",
+                    "Installed inverter units": battery_inverter_units,
+                    "Nominal inverter power per unit [kW]": battery_inv_nom_kw,
                     "Installed inverter power [kW]": battery_inv_kw,
                 }
             ]

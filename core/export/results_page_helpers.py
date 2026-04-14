@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Mapping, Optional
 
@@ -25,24 +24,14 @@ from core.export.typical_year_results import (
     export_typical_year_results_package,
 )
 from core.export.multi_year_results import (
+    MultiYearResults,
     build_dispatch_timeseries_table_multi_year,
     build_energy_balance_table_multi_year,
+    build_multi_year_results,
+    build_multi_year_results_from_tables,
     export_multi_year_results,
+    export_multi_year_results_package,
 )
-
-
-@dataclass
-class MultiYearFileResults:
-    project_name: str
-    results_dir: Path
-    sets: xr.Dataset
-    data: xr.Dataset
-    dispatch: pd.DataFrame
-    energy_balance: pd.DataFrame
-    design: pd.DataFrame
-    kpis: pd.DataFrame
-    cash: pd.DataFrame
-    scenario_costs: pd.DataFrame
 
 
 def _resolve_typical_year_results_dir(project_name: str) -> Optional[Path]:
@@ -126,7 +115,7 @@ def _resolve_multi_year_results_dir(project_name: str) -> Optional[Path]:
     return None
 
 
-def load_multi_year_results_from_files(project_name: str) -> Optional[MultiYearFileResults]:
+def load_multi_year_results_from_files(project_name: str) -> Optional[MultiYearResults]:
     paths = project_paths(project_name)
     if not paths.formulation_json.exists():
         return None
@@ -146,17 +135,36 @@ def load_multi_year_results_from_files(project_name: str) -> Optional[MultiYearF
     sets = initialize_multi_year_sets(project_name)
     data = load_project_dataset(project_name, sets, mode="multi_year")
 
-    return MultiYearFileResults(
+    optional_frames: Dict[str, pd.DataFrame] = {}
+    optional_files = {
+        "renewable_inverter_design_by_step_df": "renewable_inverter_design_by_step.csv",
+        "battery_inverter_design_by_step_df": "battery_inverter_design_by_step.csv",
+        "inverter_capacity_by_year_df": "inverter_capacity_by_year.csv",
+        "inverter_metrics_yearly_df": "inverter_metrics_yearly.csv",
+        "capacity_by_year_df": "capacity_by_year.csv",
+        "investment_summary_df": "investment_summary.csv",
+        "yearly_expected_df": "yearly_expected.csv",
+        "reporting_summary_df": "reporting_summary.csv",
+    }
+    for key, filename in optional_files.items():
+        path = results_dir / filename
+        if path.exists():
+            optional_frames[key] = pd.read_csv(path)
+
+    return build_multi_year_results_from_tables(
         project_name=project_name,
-        results_dir=results_dir,
-        sets=sets,
         data=data,
-        dispatch=pd.read_csv(results_dir / "dispatch_timeseries.csv"),
-        energy_balance=pd.read_csv(results_dir / "energy_balance.csv"),
-        design=pd.read_csv(results_dir / "design_by_step.csv"),
-        kpis=pd.read_csv(results_dir / "kpis_yearly.csv"),
-        cash=pd.read_csv(results_dir / "cashflows_discounted.csv"),
-        scenario_costs=pd.read_csv(results_dir / "scenario_costs_yearly.csv"),
+        sets=sets,
+        dispatch_df=pd.read_csv(results_dir / "dispatch_timeseries.csv"),
+        energy_balance_df=pd.read_csv(results_dir / "energy_balance.csv"),
+        design_by_step_df=pd.read_csv(results_dir / "design_by_step.csv"),
+        kpis_yearly_df=pd.read_csv(results_dir / "kpis_yearly.csv"),
+        cashflows_discounted_df=pd.read_csv(results_dir / "cashflows_discounted.csv"),
+        scenario_costs_yearly_df=pd.read_csv(results_dir / "scenario_costs_yearly.csv"),
+        results_dir=results_dir,
+        source="files",
+        metadata={"project_name": project_name, "formulation": "dynamic"},
+        **optional_frames,
     )
 
 
@@ -236,6 +244,40 @@ def get_typical_year_results_from_session(
         source="session_legacy",
     )
 
+
+def get_multi_year_results_from_session(
+    session_state: Mapping[str, Any],
+    *,
+    active_project: str | None = None,
+) -> Optional[MultiYearResults]:
+    raw = session_state.get("gp_multi_year_results")
+    if isinstance(raw, MultiYearResults):
+        raw_project = str(raw.metadata.get("project_name") or raw.project_name)
+        if active_project is not None and raw_project not in {None, "", active_project}:
+            return None
+        return raw
+
+    bundle = get_results_bundle_from_session(session_state, active_project=active_project)
+    if bundle is None or not isinstance(bundle.data, xr.Dataset) or not isinstance(bundle.vars, dict):
+        return None
+    if str(((bundle.data.attrs or {}).get("settings", {}) or {}).get("formulation", "steady_state")) != "dynamic":
+        return None
+    summary = session_state.get("gp_solution_summary")
+    objective_value = summary.get("objective_value") if isinstance(summary, dict) else bundle.objective_value
+    status = summary.get("status") if isinstance(summary, dict) else bundle.status
+    return build_multi_year_results(
+        project_name=str(active_project or _dataset_project_name(bundle.data) or ""),
+        sets=bundle.sets if isinstance(bundle.sets, xr.Dataset) else xr.Dataset(),
+        data=bundle.data,
+        vars=bundle.vars,
+        solution=bundle.solution if isinstance(bundle.solution, xr.Dataset) else None,
+        objective_value=objective_value,
+        status=status,
+        solver=bundle.metadata.get("solver") if isinstance(bundle.metadata, dict) else None,
+        results_dir=None,
+        source="session_legacy",
+    )
+
 def get_var_solution(*, bundle: ResultsBundle, name: str) -> Optional[xr.DataArray]:
     return _get_var_solution_common(
         vars_dict=bundle.vars if isinstance(bundle.vars, dict) else None,
@@ -297,3 +339,7 @@ def export_results_from_bundle(
 
 def export_typical_year_results_from_object(results: TypicalYearResults) -> Dict[str, str]:
     return export_typical_year_results_package(results=results, out_dir=None)
+
+
+def export_multi_year_results_from_object(results: MultiYearResults) -> Dict[str, str]:
+    return export_multi_year_results_package(results=results, out_dir=None)
