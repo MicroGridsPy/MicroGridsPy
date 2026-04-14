@@ -14,6 +14,7 @@ import xarray as xr
 from core.typical_year_model.model import SteadyStateModel
 from core.multi_year_model.model import MultiYearModel
 from core.export.results_bundle import build_results_bundle
+from core.export.typical_year_results import build_typical_year_results
 from core.io.jsonio import write_json
 from core.io.utils import project_paths
 from core.visualization.page_helpers import get_dataset_settings, read_json_file
@@ -62,6 +63,7 @@ KEYS = {
     "model_obj": "gp_model_obj",
     "log_path": "gp_log_path",
     "results_bundle": "gp_results_bundle",
+    "typical_year_results": "gp_typical_year_results",
 }
 
 RESULT_STATE_KEYS = (
@@ -73,6 +75,7 @@ RESULT_STATE_KEYS = (
     KEYS["model_obj"],
     KEYS["log_path"],
     KEYS["results_bundle"],
+    KEYS["typical_year_results"],
 )
 
 
@@ -628,6 +631,90 @@ def _render_solver_log(log_path_value: Any) -> None:
         st.text_area("Log content", value=txt, height=260)
 
 
+def _read_solver_log_text(log_path_value: Any) -> Optional[str]:
+    if not log_path_value:
+        return None
+    p = Path(str(log_path_value))
+    if not p.exists() or not p.is_file():
+        return None
+    try:
+        return p.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return None
+
+
+def _status_indicates_success(status: Any) -> bool:
+    text = str(status or "").strip().lower()
+    if not text:
+        return False
+    if "optimal" in text or "feasible" in text:
+        if "infeasible" not in text:
+            return True
+    return False
+
+
+def _status_indicates_infeasible(status: Any) -> bool:
+    text = str(status or "").strip().lower()
+    return "infeasible" in text
+
+
+def _extract_termination_hint_from_log(log_path_value: Any) -> Optional[str]:
+    text = _read_solver_log_text(log_path_value)
+    if not text:
+        return None
+
+    patterns = (
+        "termination condition",
+        "model status",
+        "solver status",
+        "problem status",
+        "status            ",
+        "status:",
+        "termination:",
+        "infeasible",
+        "no feasible",
+    )
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        lower = line.lower()
+        if any(pattern in lower for pattern in patterns):
+            return line
+    return None
+
+
+def _log_indicates_optimal(log_path_value: Any) -> bool:
+    text = _read_solver_log_text(log_path_value)
+    if not text:
+        return False
+    lower = text.lower()
+    return ("optimal objective" in lower) or ("solved with barrier" in lower and "optimal" in lower)
+
+
+def _has_usable_solution(*, model: Any, solution_summary: Optional[Dict[str, Any]], log_path_value: Any) -> bool:
+    if isinstance(solution_summary, dict):
+        obj = solution_summary.get("objective_value")
+        if isinstance(obj, (int, float)) and np.isfinite(float(obj)):
+            sol = getattr(getattr(model, "model", None), "solution", None)
+            if isinstance(sol, xr.Dataset) and len(sol.data_vars) > 0:
+                return True
+    return _log_indicates_optimal(log_path_value)
+
+
+def _format_unsolved_message(*, solution_summary: Optional[Dict[str, Any]], log_path_value: Any) -> str:
+    status = None
+    if isinstance(solution_summary, dict):
+        status = solution_summary.get("status")
+    status_text = str(status).strip() if status is not None else ""
+    termination_hint = _extract_termination_hint_from_log(log_path_value)
+
+    if _status_indicates_infeasible(status_text) or (termination_hint and "infeasible" in termination_hint.lower()):
+        detail = termination_hint or status_text or "Solver reported infeasibility."
+        return f"Optimization completed, but the model is infeasible. {detail}"
+
+    detail = termination_hint or status_text or "No feasible solved result is available."
+    return f"Optimization completed, but no feasible solution is available. {detail}"
+
+
 def _build_model(project_name: str, formulation_mode: str) -> SteadyStateModel | MultiYearModel:
     if formulation_mode == "steady_state":
         return SteadyStateModel(project_name=project_name)
@@ -650,6 +737,7 @@ def _store_solve_outputs(
     st.session_state[KEYS["model_obj"]] = model
     st.session_state[KEYS["log_path"]] = str(model._last_log_path) if model._last_log_path else str(fallback_log_path)
     st.session_state[KEYS["solution_summary"]] = _extract_solution_summary(model)
+    st.session_state[KEYS["typical_year_results"]] = None
     st.session_state[KEYS["results_bundle"]] = build_results_bundle(
         sets=model.sets,
         data=model.data,
@@ -659,6 +747,31 @@ def _store_solve_outputs(
         solution_summary=st.session_state[KEYS["solution_summary"]],
         solver=solver,
     )
+
+    if not (
+        _status_indicates_success(st.session_state[KEYS["solution_summary"]].get("status"))
+        or _has_usable_solution(
+            model=model,
+            solution_summary=st.session_state[KEYS["solution_summary"]],
+            log_path_value=st.session_state.get(KEYS["log_path"]),
+        )
+    ):
+        return
+
+    formulation = str(((model.data.attrs or {}).get("settings", {}) or {}).get("formulation", "steady_state"))
+    if formulation == "steady_state":
+        live_solution = getattr(model.model, "solution", None) if model.model is not None else None
+        st.session_state[KEYS["typical_year_results"]] = build_typical_year_results(
+            project_name=str(((model.data.attrs or {}).get("settings", {}) or {}).get("project_name", model.project_name)),
+            data=model.data,
+            vars=model.vars,
+            solution=live_solution if isinstance(live_solution, xr.Dataset) else None,
+            objective_value=st.session_state[KEYS["solution_summary"]].get("objective_value"),
+            status=st.session_state[KEYS["solution_summary"]].get("status"),
+            solver=solver,
+            results_dir=None,
+            source="session",
+        )
 
 
 # =============================================================================
@@ -808,7 +921,18 @@ def render_generation_planning_optimization_page() -> None:
             )
 
         elapsed = time.time() - t0
-        st.success(f"Solve completed. Runtime: {elapsed:.2f} s")
+        summary = st.session_state.get(KEYS["solution_summary"])
+        if (
+            _status_indicates_success(summary.get("status") if isinstance(summary, dict) else None)
+            or _has_usable_solution(
+                model=st.session_state.get(KEYS["model_obj"]),
+                solution_summary=summary if isinstance(summary, dict) else None,
+                log_path_value=st.session_state.get(KEYS["log_path"]),
+            )
+        ):
+            st.success(f"Solve completed. Runtime: {elapsed:.2f} s")
+        else:
+            st.error(_format_unsolved_message(solution_summary=summary, log_path_value=st.session_state.get(KEYS["log_path"])))
 
     _render_solver_log(st.session_state.get(KEYS["log_path"]))
 

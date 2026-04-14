@@ -14,6 +14,7 @@ from core.export.results_page_helpers import (
     build_energy_balance_dataframe,
     export_results_from_bundle,
     get_results_bundle_from_session,
+    get_typical_year_results_from_session,
     load_multi_year_results_from_files,
     load_typical_year_results_from_files,
 )
@@ -25,7 +26,7 @@ from core.export.typical_year_reporting import (
 from core.export.typical_year_results import build_design_summary_table, build_dispatch_timeseries_table
 from core.visualization.page_helpers import get_dataset_settings, get_nested_flag, safe_float as _safe_float
 from core.visualization.multi_year_results_page import render_multi_year_results, render_multi_year_results_from_files
-from core.visualization.typical_year_file_results_page import render_typical_year_results_from_files
+from core.visualization.typical_year_results_page import render_typical_year_results
 
 
 # Keep aligned with your Optimization page
@@ -328,6 +329,11 @@ def render_generation_planning_results_page() -> None:
     if project_name:
         st.success(f"Active project: {project_name}")
 
+    typical_results = get_typical_year_results_from_session(st.session_state, active_project=project_name)
+    if typical_results is not None:
+        render_typical_year_results(typical_results, project_name)
+        return
+
     # Canonical source for all sections: model.solution -> vars -> data via ResultsBundle helper.
     bundle = get_results_bundle_from_session(st.session_state, active_project=project_name)
     if bundle is None or not isinstance(bundle.data, xr.Dataset) or not isinstance(bundle.vars, dict):
@@ -338,7 +344,7 @@ def render_generation_planning_results_page() -> None:
                 file_results = None
                 st.warning(f"Saved results could not be loaded from files: {exc}")
             if file_results is not None:
-                render_typical_year_results_from_files(file_results, project_name)
+                render_typical_year_results(file_results, project_name)
                 return
             try:
                 multi_year_file_results = load_multi_year_results_from_files(project_name)
@@ -372,30 +378,60 @@ def render_generation_planning_results_page() -> None:
         w_s = xr.DataArray(np.ones(int(scen.size)) / float(scen.size), dims=("scenario",), coords={"scenario": scen})
 
     # -----------------------------------------------------------------------------
-    # Read solved variables (design + ops)
-    # -----------------------------------------------------------------------------
-    res_units = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="res_units")
-    battery_units = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="battery_units")
-    generator_units = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="generator_units")
-
-    if res_units is None or battery_units is None or generator_units is None:
-        st.error("Design variables not found in results. Ensure the model solved and variables are stored in session.")
-        return
-
-    # -----------------------------------------------------------------------------
     # Sizing summary
     # -----------------------------------------------------------------------------
     st.subheader("Sizing summary")
 
-    res_nom_kw = data["res_nominal_capacity_kw"]  # (resource,)
-    bat_nom_kwh = data["battery_nominal_capacity_kwh"]  # scalar
-    gen_nom_kw = data["generator_nominal_capacity_kw"]  # scalar
+    try:
+        dispatch_df = build_dispatch_timeseries_table(data=data, vars=vars_dict, solution=sol_ds)
+        design_df = build_design_summary_table(data=data, vars=vars_dict, solution=sol_ds)
+    except Exception as first_exc:
+        model_obj = st.session_state.get("gp_model_obj")
+        live_vars = getattr(model_obj, "vars", None)
+        live_solution = getattr(getattr(model_obj, "model", None), "solution", None)
+        try:
+            dispatch_df = build_dispatch_timeseries_table(
+                data=data,
+                vars=live_vars if isinstance(live_vars, dict) else vars_dict,
+                solution=live_solution if isinstance(live_solution, xr.Dataset) else sol_ds,
+            )
+            design_df = build_design_summary_table(
+                data=data,
+                vars=live_vars if isinstance(live_vars, dict) else vars_dict,
+                solution=live_solution if isinstance(live_solution, xr.Dataset) else sol_ds,
+            )
+            vars_dict = live_vars if isinstance(live_vars, dict) else vars_dict
+            sol_ds = live_solution if isinstance(live_solution, xr.Dataset) else sol_ds
+        except Exception as second_exc:
+            st.error("Design variables not found in results. Ensure the model solved and variables are stored in session.")
+            with st.expander("Technical details", expanded=False):
+                st.write(f"First error: {first_exc}")
+                st.write(f"Retry error: {second_exc}")
+            return
 
-    cap_res_kw = (res_units * res_nom_kw)
-    cap_bat_kwh = (battery_units * bat_nom_kwh)
-    cap_gen_kw = (generator_units * gen_nom_kw)
-    dispatch_df = build_dispatch_timeseries_table(data=data, vars=vars_dict, solution=sol_ds)
-    design_df = build_design_summary_table(data=data, vars=vars_dict, solution=sol_ds)
+    row = design_df.iloc[0] if not design_df.empty else pd.Series(dtype=float)
+    resources = [str(r) for r in data.coords["resource"].values.tolist()] if "resource" in data.coords else []
+    res_units = xr.DataArray(
+        [float(pd.to_numeric(pd.Series([row.get(f"res_units__{r}", 0.0)]), errors="coerce").fillna(0.0).iloc[0]) for r in resources],
+        dims=("resource",),
+        coords={"resource": resources},
+    )
+    cap_res_kw = xr.DataArray(
+        [float(pd.to_numeric(pd.Series([row.get(f"res_installed_kw__{r}", 0.0)]), errors="coerce").fillna(0.0).iloc[0]) for r in resources],
+        dims=("resource",),
+        coords={"resource": resources},
+    )
+    cap_res_inv_kw = xr.DataArray(
+        [float(pd.to_numeric(pd.Series([row.get(f"res_inverter_installed_kw_ac__{r}", 0.0)]), errors="coerce").fillna(0.0).iloc[0]) for r in resources],
+        dims=("resource",),
+        coords={"resource": resources},
+    )
+    battery_units = xr.DataArray(float(pd.to_numeric(pd.Series([row.get("battery_units", 0.0)]), errors="coerce").fillna(0.0).iloc[0]))
+    battery_inverter_power = xr.DataArray(float(pd.to_numeric(pd.Series([row.get("battery_inverter_power_kw", 0.0)]), errors="coerce").fillna(0.0).iloc[0]))
+    cap_bat_kwh = xr.DataArray(float(pd.to_numeric(pd.Series([row.get("battery_installed_kwh", 0.0)]), errors="coerce").fillna(0.0).iloc[0]))
+    generator_units = xr.DataArray(float(pd.to_numeric(pd.Series([row.get("generator_units", 0.0)]), errors="coerce").fillna(0.0).iloc[0]))
+    cap_gen_kw = xr.DataArray(float(pd.to_numeric(pd.Series([row.get("generator_installed_kw", 0.0)]), errors="coerce").fillna(0.0).iloc[0]))
+
     reporting = build_reporting_tables(
         data=data,
         dispatch_df=dispatch_df,
@@ -412,10 +448,22 @@ def render_generation_planning_results_page() -> None:
                 "Unit": "kW",
             },
             {
+                "Component": "Renewable inverter/converter (derived total)",
+                "Installed units": np.nan,
+                "Capacity": _safe_float(cap_res_inv_kw.sum("resource")),
+                "Unit": "kW_ac",
+            },
+            {
                 "Component": "Battery",
                 "Installed units": _safe_float(battery_units),
                 "Capacity": _safe_float(cap_bat_kwh),
                 "Unit": "kWh",
+            },
+            {
+                "Component": "Battery converter/inverter power",
+                "Installed units": np.nan,
+                "Capacity": _safe_float(battery_inverter_power),
+                "Unit": "kW",
             },
             {
                 "Component": "Generator",
@@ -431,16 +479,39 @@ def render_generation_planning_results_page() -> None:
         width="stretch",
     )
 
+    st.markdown("**Inverter sizing**")
+    df_inverters = pd.DataFrame(
+        [
+            {
+                "Component": "Renewable inverter/converter (derived total)",
+                "Capacity": _safe_float(cap_res_inv_kw.sum("resource")),
+                "Unit": "kW_ac",
+            },
+            {
+                "Component": "Battery converter/inverter power",
+                "Capacity": _safe_float(battery_inverter_power),
+                "Unit": "kW",
+            },
+        ]
+    )
+    st.dataframe(
+        df_inverters.style.format({"Capacity": "{:,.3g}"}).hide(axis="index"),
+        width="stretch",
+    )
+
     with st.expander("Per-renewable breakdown", expanded=False):
         df_res = pd.DataFrame(
             {
                 "Resource": [str(r) for r in cap_res_kw.coords["resource"].values.tolist()],
                 "Installed units": [float(v) for v in res_units.values.tolist()],
                 "Capacity [kW]": [float(v) for v in cap_res_kw.values.tolist()],
+                "Derived inverter size [kW_ac]": [float(v) for v in cap_res_inv_kw.values.tolist()],
             }
         )
         st.dataframe(
-            df_res.style.format({"Installed units": "{:,.3g}", "Capacity [kW]": "{:,.3g}"}).hide(axis="index"),
+            df_res.style.format(
+                {"Installed units": "{:,.3g}", "Capacity [kW]": "{:,.3g}", "Derived inverter size [kW_ac]": "{:,.3g}"}
+            ).hide(axis="index"),
             width="stretch",
         )
 
@@ -634,6 +705,21 @@ def render_generation_planning_results_page() -> None:
         }).hide(axis="index"),
         width="stretch",
     )
+
+    inverter_upfront = reporting.upfront[
+        reporting.upfront["Technology"].astype(str).str.contains("inverter", case=False, na=False)
+    ].copy()
+    if not inverter_upfront.empty:
+        st.markdown("**Upfront investment** *(inverters only)*")
+        st.dataframe(
+            inverter_upfront.style.format({
+                "Capacity": "{:,.3g}",
+                "Grant share": "{:.0%}",
+                "Upfront gross [thousand]": "{:,.0f}",
+                "Upfront net [thousand]": "{:,.0f}",
+            }).hide(axis="index"),
+            width="stretch",
+        )
 
     st.markdown("**Expected annual cost composition** *(objective-consistent)*")
     st.dataframe(
