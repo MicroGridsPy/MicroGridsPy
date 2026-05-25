@@ -8,6 +8,7 @@ import linopy as lp
 
 from core.multi_year_model.lifecycle import (
     discounted_annuity_tail_memo,
+    map_inv_step_to_year,
     replacement_active_mask,
     replacement_commission_mask,
     year_ordinal,
@@ -183,12 +184,14 @@ def initialize_objective(
         grid_import_cost_y_s = 0.0
         grid_export_rev_y_s = 0.0
 
-    # Renewable production subsidy (optional, scenario-dependent)
+    # Renewable production subsidy (optional, step-period dependent)
     if p.res_production_subsidy_per_kwh is not None:
-        subsidy = p.res_production_subsidy_per_kwh
-        if "inv_step" in subsidy.dims:
-            subsidy = subsidy.isel(inv_step=0, drop=True)
-        res_subsidy_rev_y_s = (res_gen * _finite_or_zero(subsidy)).sum("period").sum("resource")
+        subsidy = map_inv_step_to_year(
+            sets,
+            _finite_or_zero(p.res_production_subsidy_per_kwh),
+            name="res_production_subsidy_per_kwh",
+        )
+        res_subsidy_rev_y_s = (res_gen * subsidy).sum("period").sum("resource")
     else:
         res_subsidy_rev_y_s = 0.0
 

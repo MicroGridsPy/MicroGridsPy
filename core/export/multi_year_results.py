@@ -22,6 +22,7 @@ from core.export.common import (
 )
 from core.multi_year_model.lifecycle import (
     discounted_annuity_tail_memo,
+    map_inv_step_to_year,
     replacement_active_mask,
     replacement_commission_mask,
     repeating_degradation_factor,
@@ -144,6 +145,18 @@ def _as_year_scenario_da(x: Any, sets: xr.Dataset) -> xr.DataArray:
         da = da.sel(scenario=scenario)
     ordered_dims = ["year", "scenario"] + [dim for dim in da.dims if dim not in {"year", "scenario"}]
     return da.transpose(*ordered_dims)
+
+
+def _renewable_subsidy_by_year(
+    sets: xr.Dataset,
+    subsidy: xr.DataArray,
+) -> xr.DataArray:
+    mapped = map_inv_step_to_year(
+        sets,
+        require_data_array("res_production_subsidy_per_kwh", subsidy),
+        name="res_production_subsidy_per_kwh",
+    )
+    return xr.where(np.isfinite(mapped), mapped, 0.0)
 
 
 def _append_expected_rows(df: pd.DataFrame, *, numeric_cols: list[str]) -> pd.DataFrame:
@@ -968,9 +981,7 @@ def build_discounted_cashflows_table_multi_year(
     if p.is_grid_export_enabled() and isinstance(gexp, xr.DataArray) and p.grid_export_price is not None:
         opex_y_s = opex_y_s - (gexp * p.grid_export_price).sum("period")
     if p.res_production_subsidy_per_kwh is not None:
-        subsidy = p.res_production_subsidy_per_kwh
-        if "inv_step" in subsidy.dims:
-            subsidy = subsidy.isel(inv_step=0, drop=True)
+        subsidy = _renewable_subsidy_by_year(sets, p.res_production_subsidy_per_kwh)
         opex_y_s = opex_y_s - (res_gen * subsidy).sum("period").sum("resource")
 
     ext_y_s = xr.DataArray(0.0).broadcast_like(opex_y_s)
@@ -1087,9 +1098,7 @@ def build_scenario_costs_table_multi_year(
 
     res_subsidy_y_s = _as_year_scenario_da(0.0, sets)
     if p.res_production_subsidy_per_kwh is not None:
-        subsidy = p.res_production_subsidy_per_kwh
-        if "inv_step" in subsidy.dims:
-            subsidy = subsidy.isel(inv_step=0, drop=True)
+        subsidy = _renewable_subsidy_by_year(sets, p.res_production_subsidy_per_kwh)
         res_subsidy_y_s = _as_year_scenario_da((res_gen * subsidy).sum("period").sum("resource"), sets)
 
     res_inv = res_units * res_nom * res_capex * (1.0 - res_grant)

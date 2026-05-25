@@ -45,6 +45,53 @@ def service_years_matrix(sets: xr.Dataset) -> xr.DataArray:
     return (y_ord - start_ord + 1.0).transpose("inv_step", "year")
 
 
+def map_inv_step_to_year(
+    sets: xr.Dataset,
+    da: xr.DataArray,
+    *,
+    name: str = "parameter",
+) -> xr.DataArray:
+    """
+    Expand a step-indexed parameter into a year-indexed parameter using
+    `sets.year_inv_step`.
+
+    Example:
+      da(inv_step, resource) -> da(year, resource)
+
+    Any additional dimensions (for example `scenario` or `resource`) are
+    preserved. Parameters that do not carry `inv_step` are returned unchanged.
+    """
+    if "inv_step" not in da.dims:
+        return da
+    if "year" not in sets.coords:
+        raise InputValidationError(f"Cannot map '{name}' from inv_step to year: missing sets.year coord.")
+    if "year_inv_step" not in sets:
+        raise InputValidationError(f"Cannot map '{name}' from inv_step to year: missing sets.year_inv_step mapping.")
+
+    year = sets.coords["year"]
+    year_inv_step = sets["year_inv_step"].sel(year=year)
+
+    try:
+        mapped = da.sel(inv_step=year_inv_step)
+    except Exception as exc:
+        raise InputValidationError(
+            f"Cannot map '{name}' from inv_step to year using sets.year_inv_step."
+        ) from exc
+
+    mapped = mapped.assign_coords(year=year)
+
+    ordered_dims = []
+    for dim in da.dims:
+        if dim == "inv_step":
+            ordered_dims.append("year")
+        else:
+            ordered_dims.append(dim)
+    for dim in mapped.dims:
+        if dim not in ordered_dims:
+            ordered_dims.append(dim)
+    return mapped.transpose(*ordered_dims)
+
+
 def replacement_active_mask(sets: xr.Dataset) -> xr.DataArray:
     svc = service_years_matrix(sets)
     return (svc >= 1.0).astype(float)

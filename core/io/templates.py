@@ -740,7 +740,7 @@ def _write_renewables_yaml(path: Path, settings: TemplateSettings, overwrite: bo
             "res_specific_investment_cost_per_kw": "Specific investment cost of installed renewable capacity.",
             "res_inverter_specific_investment_cost_per_kw_ac": "Specific investment cost of the deterministic renewable inverter AC capacity.",
             "res_wacc": "Weighted average cost of capital used for annualizing renewable CAPEX.",
-            "res_grant_share_of_capex": "Fraction of renewable CAPEX covered by grants or subsidies.",
+            "res_grant_share_of_capex": "Fraction of renewable CAPEX covered by grants or subsidies for capacity commissioned in that investment step.",
             "res_lifetime_years": "Technical/economic lifetime used for replacement and annuity calculations.",
             "res_embedded_emissions_kgco2e_per_kw": "Embodied emissions associated with installing renewable capacity.",
             "res_dc_ac_ratio": "Deterministic DC/AC sizing ratio used to derive renewable inverter AC capacity for costing/reporting.",
@@ -749,7 +749,7 @@ def _write_renewables_yaml(path: Path, settings: TemplateSettings, overwrite: bo
             "res_max_installable_capacity_kw": "Upper bound on renewable installed capacity for the resource.",
             "res_fixed_om_share_per_year": "Fixed annual O&M cost expressed as a share of renewable CAPEX. In the typical-year formulation this input is scenario-independent.",
             "res_inverter_fixed_om_share_per_year": "Fixed annual O&M cost expressed as a share of deterministic inverter CAPEX.",
-            "res_production_subsidy_per_kwh": "Operating subsidy earned per unit of renewable generation.",
+            "res_production_subsidy_per_kwh": "Operating subsidy earned per unit of renewable generation in years belonging to that investment step.",
         },
     }
     if is_dynamic:

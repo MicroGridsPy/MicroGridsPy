@@ -797,7 +797,10 @@ def _load_renewables_yaml(
             attrs={"source_file": str(path), "component": "renewable", "original_key": k, "scenario_dependent": False},
         )
 
-    # investment-side shared economic terms by cohort/resource
+    # step-indexed renewable economic terms:
+    # - fixed O&M shares remain tied to the commissioning step
+    # - production subsidy is interpreted as a step-period tariff and mapped to
+    #   model years in the objective/reporting layers
     for k in ("fixed_om_share_per_year", "inverter_fixed_om_share_per_year", "production_subsidy_per_kwh"):
         var_name = f"res_{k}"
         data_vars[var_name] = xr.DataArray(
