@@ -22,6 +22,12 @@ meta:
     battery_max_charge_c_rate: per_hour
     battery_max_installable_capacity_kwh: kWh
     battery_efficiency_curve_csv: csv_path
+
+    #  battery_nominal_capacity_kwh: kWh
+    # battery_specific_investment_cost_per_kwh: currency_per_kWh
+    # battery_inverter_specific_investment_cost_per_kw: currency_per_kW
+    #battery_wacc: '-'
+    
   context:
     formulation: steady_state
     multi_scenario: false
