@@ -22,10 +22,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Home page: the PDF previews were replaced with a documentation-link placeholder.
 - The `formulation.json` builder is shared between the GUI and the library.
 - Whole codebase formatted and linted with ruff.
+- Added a package-level test suite (`tests/test_public_api.py`); `ruff check`,
+  `ruff format --check`, and `pytest` all pass.
 
 ### Fixed
 - `results_summary()` now reads the objective from `model.objective.value`, so the
   headline objective value is populated instead of `None`.
+- Restored 3 multi-year inverter tests whose fixture was missing the
+  `year_inv_step` mapping.
 
 ## [0.1.0] - 2026-08-24
 
