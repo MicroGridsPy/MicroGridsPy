@@ -5,7 +5,6 @@ import numpy as np
 import xarray as xr
 
 from microgridspy.multi_year_model.lifecycle import (
-    discounted_annuity_tail_memo,
     map_inv_step_to_year,
     replacement_active_mask,
     replacement_commission_mask,
@@ -354,27 +353,13 @@ def initialize_objective(
             "scenario"
         )
 
-    # Reporting-only memo: discounted value of the annuity payments that would
-    # fall beyond the modeled horizon for the last active replacement cycle of
-    # each cohort. This is not a salvage credit in the optimization objective.
-    #
-    # In the current multi-year formulation we optimize discounted in-horizon
-    # annual cashflows only. Because out-of-horizon annuity payments are never
-    # charged to the objective, subtracting an additional salvage term here
-    # would mix annuity accounting with a full-CAPEX residual-value convention.
-    post_horizon_annuity_tail_memo = (
-        discounted_annuity_tail_memo(sets, res_annuity, res_life_y, rs)
-        .sum("inv_step")
-        .sum("resource")
-        + discounted_annuity_tail_memo(sets, res_inv_ac_annuity, res_inv_life_y, rs)
-        .sum("inv_step")
-        .sum("resource")
-        + discounted_annuity_tail_memo(sets, bat_annuity, bat_life_y, rs).sum("inv_step")
-        + discounted_annuity_tail_memo(sets, bat_inv_power_annuity, bat_inv_life_y, rs).sum(
-            "inv_step"
-        )
-        + discounted_annuity_tail_memo(sets, gen_annuity, gen_life_y, rs).sum("inv_step")
-    )
+    # Reporting-only note: the discounted value of annuity payments that would
+    # fall beyond the modeled horizon (a salvage / residual-value term) is
+    # intentionally NOT subtracted from the objective. In the current multi-year
+    # formulation we optimize discounted in-horizon annual cashflows only;
+    # charging an out-of-horizon salvage term here would mix annuity accounting
+    # with a full-CAPEX residual-value convention. (The previously computed
+    # `post_horizon_annuity_tail_memo` was unused and has been removed.)
 
     npwc = (
         (total_cashflow_y + bat_reg_cost_y + cal_fade_reg_cost_y + eff_cap_reg_credit_y) * disc_y

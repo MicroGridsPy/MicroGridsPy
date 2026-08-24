@@ -545,10 +545,8 @@ def test_inverter_capex_uses_explicit_inverter_lifetime() -> None:
         solver_objective_value=float(model.objective.value),
     )
 
-    res_capacity_kw = float(design_df.loc[0, "res_installed_kw__Solar"])
     res_inverter_kw = float(design_df.loc[0, "res_inverter_installed_kw_ac__Solar"])
     battery_inverter_kw = float(design_df.loc[0, "battery_inverter_power_kw"])
-    battery_inverter_units = float(design_df.loc[0, "battery_inverter_units"])
 
     expected_res_inv_annuity = float(_crf(0.05, 20.0)) * 40.0 * res_inverter_kw
     expected_bat_inv_annuity = float(_crf(0.05, 15.0)) * 100.0 * battery_inverter_kw
