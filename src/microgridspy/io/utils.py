@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import os
 import re
 import sys
 from pathlib import Path
@@ -50,9 +51,18 @@ def sanitize_project_name(name: str) -> str:
 
 
 def get_projects_root(base_dir: Path | None = None) -> Path:
-    """Get the root directory where projects are stored."""
+    """Get the root directory where projects are stored.
+
+    Resolution order for ``base_dir`` when not passed explicitly:
+    1. the ``MICROGRIDSPY_WORKSPACE`` environment variable, if set;
+    2. the current working directory (backward-compatible default).
+
+    The workspace override lets an installed copy of MicroGridsPy point at any
+    project directory, since the code no longer lives next to ``projects/``.
+    """
     if base_dir is None:
-        base_dir = Path.cwd()
+        env_workspace = os.environ.get("MICROGRIDSPY_WORKSPACE")
+        base_dir = Path(env_workspace) if env_workspace else Path.cwd()
     return base_dir / "projects"
 
 

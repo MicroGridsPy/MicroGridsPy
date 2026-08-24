@@ -1,0 +1,66 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "microgridspy"
+description = "Bottom-up, open-source optimization tool for planning mini-grids in remote areas."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Alessandro Onori" },
+    { name = "MicroGridsPy contributors" },
+]
+keywords = ["energy", "mini-grid", "optimization", "linopy", "rural electrification"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+]
+dynamic = ["version"]                       # version is derived from git tags (hatch-vcs)
+
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "xarray>=2024.1",
+    "linopy>=0.3",
+    "matplotlib>=3.7",
+    "PyYAML>=6.0",
+    "openpyxl>=3.1",                        # Excel result export (pandas ExcelWriter)
+]
+
+[project.optional-dependencies]
+gui    = ["streamlit>=1.36"]
+highs  = ["highspy>=1.7"]                   # open-source solver
+gurobi = ["gurobipy>=11"]                   # commercial solver (license required)
+dev    = ["pytest>=8", "ruff>=0.4", "pre-commit", "coverage[toml]", "build"]
+all    = ["microgridspy[gui,highs,dev]"]
+
+[project.scripts]
+microgridspy-gui = "microgridspy.app.launcher:main"
+
+[project.urls]
+Homepage = "https://github.com/MicroGridsPy/MicroGridsPy"
+Source = "https://github.com/MicroGridsPy/MicroGridsPy"
+
+[tool.hatch.version]
+source = "vcs"                              # derive version from git tag vX.Y.Z
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/microgridspy"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]         # errors, pyflakes, isort, pyupgrade, bugbear
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
