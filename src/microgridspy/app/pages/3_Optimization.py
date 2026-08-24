@@ -18,7 +18,7 @@ from microgridspy.export.multi_year_results import build_multi_year_results
 from microgridspy.export.typical_year_results import build_typical_year_results
 from microgridspy.io.jsonio import write_json
 from microgridspy.io.utils import project_paths
-from microgridspy.visualization.page_helpers import get_dataset_settings, read_json_file
+from microgridspy.app.page_helpers import get_dataset_settings, read_json_file
 
 class InputValidationError(RuntimeError):
     pass

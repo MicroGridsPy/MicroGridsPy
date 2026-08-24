@@ -11,7 +11,7 @@ import xarray as xr
 from microgridspy.export.results_page_helpers import export_typical_year_results_from_object
 from microgridspy.export.typical_year_reporting import select_dispatch_view, select_kpi_row
 from microgridspy.export.typical_year_results import TypicalYearResults
-from microgridspy.visualization.page_helpers import get_dataset_settings, get_nested_flag, safe_float as _safe_float
+from microgridspy.app.page_helpers import get_dataset_settings, get_nested_flag, safe_float as _safe_float
 
 
 C_RES = "#FFD700"

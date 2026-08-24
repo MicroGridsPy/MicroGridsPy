@@ -18,7 +18,7 @@ from microgridspy.io.vintage_labels import load_multi_year_vintage_labels, vinta
 from microgridspy.multi_year_model.data import regenerate_grid_availability_dynamic
 from microgridspy.multi_year_model.sets import initialize_sets as initialize_multi_year_sets
 from microgridspy.typical_year_model.sets import initialize_sets as initialize_typical_year_sets
-from microgridspy.visualization.page_helpers import read_json_file, resolve_active_project_from_session
+from microgridspy.app.page_helpers import read_json_file, resolve_active_project_from_session
 from microgridspy.visualization.input_plots import (
     build_timeseries_figures,
     compute_series_stats,

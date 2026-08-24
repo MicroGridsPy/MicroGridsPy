@@ -25,9 +25,9 @@ from microgridspy.export.typical_year_reporting import (
     select_kpi_row as select_reporting_kpi_row,
 )
 from microgridspy.export.typical_year_results import build_design_summary_table, build_dispatch_timeseries_table
-from microgridspy.visualization.page_helpers import get_dataset_settings, get_nested_flag, safe_float as _safe_float
-from microgridspy.visualization.multi_year_results_page import render_multi_year_results, render_multi_year_results_from_files
-from microgridspy.visualization.typical_year_results_page import render_typical_year_results
+from microgridspy.app.page_helpers import get_dataset_settings, get_nested_flag, safe_float as _safe_float
+from microgridspy.app.multi_year_results_page import render_multi_year_results, render_multi_year_results_from_files
+from microgridspy.app.typical_year_results_page import render_typical_year_results
 
 
 # Keep aligned with your Optimization page
