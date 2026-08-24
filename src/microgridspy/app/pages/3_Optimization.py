@@ -694,12 +694,20 @@ def _log_indicates_optimal(log_path_value: Any) -> bool:
 
 
 def _has_usable_solution(*, model: Any, solution_summary: Optional[Dict[str, Any]], log_path_value: Any) -> bool:
+    # Primary, solver-independent signal: linopy assigned a solution back onto the
+    # model. Infeasible/unsolved runs do not populate this, so a non-empty solution
+    # Dataset is sound evidence of a usable result for both HiGHS and Gurobi.
+    sol = getattr(getattr(model, "model", None), "solution", None)
+    if isinstance(sol, xr.Dataset) and len(sol.data_vars) > 0:
+        return True
+    # Secondary: a finite objective value reported in the summary.
     if isinstance(solution_summary, dict):
         obj = solution_summary.get("objective_value")
         if isinstance(obj, (int, float)) and np.isfinite(float(obj)):
-            sol = getattr(getattr(model, "model", None), "solution", None)
-            if isinstance(sol, xr.Dataset) and len(sol.data_vars) > 0:
-                return True
+            return True
+    # Last resort: a solver-log optimal marker (e.g. Gurobi's "Optimal objective").
+    # HiGHS logs its status to the C-level stdout, which never reaches this file,
+    # so the in-memory checks above are what make HiGHS results usable.
     return _log_indicates_optimal(log_path_value)
 
 
