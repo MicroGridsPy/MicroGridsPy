@@ -55,6 +55,17 @@ class MultiYearResults:
     results_dir: Path | None = None
     source: str = "session"
 
+    def to_excel(self, out_dir: Path | None = None) -> dict:
+        """Write these results to CSV/Excel files.
+
+        Args:
+            out_dir: destination directory; defaults to the project's ``results/``.
+
+        Returns:
+            dict: mapping of output name to the written file path.
+        """
+        return export_multi_year_results_package(results=self, out_dir=out_dir)
+
 
 def _sanitize_sheet_name(name: Any) -> str:
     text = str(name)

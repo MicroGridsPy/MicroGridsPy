@@ -15,6 +15,7 @@ techno-economic parameters before solving.
 from __future__ import annotations
 
 import json
+import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping, Optional, Sequence
@@ -299,3 +300,70 @@ def validate_project(project_name: str) -> ProjectPaths:
             f"Project '{name}' is missing required input files: {', '.join(missing)}."
         )
     return paths
+
+
+def delete_project(project_name: str, *, missing_ok: bool = False) -> None:
+    """Delete a project folder and everything in it.
+
+    Args:
+        project_name: the project to delete.
+        missing_ok: if True, return quietly when the project does not exist;
+            otherwise raise ``FileNotFoundError``.
+
+    Raises:
+        FileNotFoundError: if the project does not exist and ``missing_ok`` is False.
+    """
+    name = sanitize_project_name(project_name)
+    root = project_paths(name).root
+    if not root.exists():
+        if missing_ok:
+            return
+        raise FileNotFoundError(f"Project '{name}' does not exist at {root}.")
+    shutil.rmtree(root)
+
+
+def copy_project(source: str, dest: str, *, overwrite: bool = False) -> ProjectPaths:
+    """Copy a project to a new name within the same workspace.
+
+    Args:
+        source: the existing project to copy from.
+        dest: the new project name.
+        overwrite: replace ``dest`` if it already exists.
+
+    Returns:
+        ProjectPaths: the paths of the new project.
+
+    Raises:
+        FileNotFoundError: if ``source`` does not exist.
+        FileExistsError: if ``dest`` exists and ``overwrite`` is False.
+    """
+    src_name = sanitize_project_name(source)
+    dst_name = sanitize_project_name(dest)
+    src_root = project_paths(src_name).root
+    dst = project_paths(dst_name)
+    if not src_root.exists():
+        raise FileNotFoundError(f"Source project '{src_name}' does not exist at {src_root}.")
+    if dst.root.exists():
+        if not overwrite:
+            raise FileExistsError(
+                f"Project '{dst_name}' already exists. Pass overwrite=True to replace it."
+            )
+        shutil.rmtree(dst.root)
+    shutil.copytree(src_root, dst.root)
+    return dst
+
+
+def rename_project(source: str, dest: str, *, overwrite: bool = False) -> ProjectPaths:
+    """Rename a project (copy to the new name, then delete the old one).
+
+    Args:
+        source: the existing project name.
+        dest: the new project name.
+        overwrite: replace ``dest`` if it already exists.
+
+    Returns:
+        ProjectPaths: the paths of the renamed project.
+    """
+    dst = copy_project(source, dest, overwrite=overwrite)
+    delete_project(source, missing_ok=True)
+    return dst

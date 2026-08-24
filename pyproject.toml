@@ -43,6 +43,7 @@ dev    = ["pytest>=8", "ruff>=0.4", "pre-commit", "coverage[toml]", "build"]
 all    = ["microgridspy[gui,highs,dev]"]
 
 [project.scripts]
+microgridspy = "microgridspy.cli:main"
 microgridspy-gui = "microgridspy.app.launcher:main"
 
 [project.urls]

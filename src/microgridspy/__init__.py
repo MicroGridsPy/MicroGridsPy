@@ -31,14 +31,27 @@ from microgridspy.typical_year_model.model import SteadyStateModel, InputValidat
 from microgridspy.multi_year_model.model import MultiYearModel
 
 # --- Convenience API --------------------------------------------------------
-from microgridspy.api import solve, load_results, export_results
+from microgridspy.api import (
+    solve,
+    load_results,
+    export_results,
+    load_inputs,
+    list_input_timeseries,
+    plot_input_timeseries,
+)
 
 # --- Structured results (provisional) ---------------------------------------
 from microgridspy.export.typical_year_results import TypicalYearResults
 from microgridspy.export.multi_year_results import MultiYearResults
 
-# --- Project scaffolding ----------------------------------------------------
-from microgridspy.io.project_setup import create_project, validate_project
+# --- Project scaffolding & management ---------------------------------------
+from microgridspy.io.project_setup import (
+    create_project,
+    validate_project,
+    delete_project,
+    copy_project,
+    rename_project,
+)
 from microgridspy.io.templates import TemplateSettings
 
 # --- Workspace helpers ------------------------------------------------------
@@ -50,8 +63,14 @@ __all__ = [
     "solve",
     "load_results",
     "export_results",
+    "load_inputs",
+    "list_input_timeseries",
+    "plot_input_timeseries",
     "create_project",
     "validate_project",
+    "delete_project",
+    "copy_project",
+    "rename_project",
     "TemplateSettings",
     "TypicalYearResults",
     "MultiYearResults",

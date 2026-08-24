@@ -15,6 +15,8 @@ import json
 from pathlib import Path
 from typing import Any, Optional, Union
 
+import xarray as xr
+
 from microgridspy.typical_year_model.model import SteadyStateModel, InputValidationError
 from microgridspy.multi_year_model.model import MultiYearModel
 from microgridspy.export.typical_year_results import TypicalYearResults
@@ -133,3 +135,77 @@ def export_results(results: AnyResults, out_dir: Optional[Path] = None) -> dict[
     raise TypeError(
         f"export_results expects TypicalYearResults or MultiYearResults, got {type(results).__name__}"
     )
+
+
+def load_inputs(project_name: str, *, formulation: Optional[str] = None) -> xr.Dataset:
+    """Assemble and return a project's input dataset, without solving.
+
+    Builds the sets and data layers (the same inputs a model would use), so you
+    can inspect the assembled xarray Dataset directly.
+
+    Args:
+        project_name: the project to read.
+        formulation: ``"steady_state"`` or ``"dynamic"``; auto-detected when None.
+
+    Returns:
+        xr.Dataset: the assembled input dataset.
+    """
+    if formulation is None:
+        formulation = _detect_formulation(project_name)
+    model = _model_for(project_name, formulation)
+    model._initialize_data()  # builds sets + data, no optimization model
+    return model.data
+
+
+def list_input_timeseries(project_name: str, *, formulation: Optional[str] = None) -> list[str]:
+    """List the time-series input variables available to plot for a project."""
+    from microgridspy.visualization.input_plots import list_timeseries_options
+
+    ds = load_inputs(project_name, formulation=formulation)
+    return [opt.variable for opt in list_timeseries_options(ds)]
+
+
+def plot_input_timeseries(
+    project_name: str,
+    variable: Optional[str] = None,
+    *,
+    formulation: Optional[str] = None,
+    scenario: Optional[str] = None,
+    year: Optional[Union[str, int]] = None,
+    **selectors: Any,
+):
+    """Plot an input time series as ``(hourly, daily)`` matplotlib figures.
+
+    Args:
+        project_name: the project to read.
+        variable: the time-series variable to plot; defaults to the first
+            available (see :func:`list_input_timeseries`).
+        formulation: auto-detected when None.
+        scenario, year: optional selectors when the variable has those dimensions.
+        **selectors: further dimension selectors (e.g. ``resource="solar"``).
+
+    Returns:
+        tuple[matplotlib.figure.Figure, matplotlib.figure.Figure]: hourly and
+        average-daily figures.
+    """
+    from microgridspy.visualization.input_plots import (
+        build_timeseries_figures,
+        list_timeseries_options,
+        slice_timeseries,
+    )
+
+    ds = load_inputs(project_name, formulation=formulation)
+    names = [opt.variable for opt in list_timeseries_options(ds)]
+    if not names:
+        raise InputValidationError(f"No plottable time-series inputs found for '{project_name}'.")
+    if variable is None:
+        variable = names[0]
+    elif variable not in names:
+        raise InputValidationError(
+            f"'{variable}' is not a plottable time series for '{project_name}'. Available: {names}"
+        )
+    da = slice_timeseries(
+        ds, variable=variable, scenario=scenario, year=year, selectors=selectors or None
+    )
+    label = variable.replace("_", " ")
+    return build_timeseries_figures(da, title_prefix=label, y_label=label)
