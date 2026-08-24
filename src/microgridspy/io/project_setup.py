@@ -184,8 +184,11 @@ def create_project(
         investment_steps_years: step durations, e.g. ``[5, 5, 5, 5]``.
         start_year_label: header for the first year; defaults to
             ``"typical_year"`` (steady-state) or ``"2026"`` (dynamic).
-        battery_label, generator_label, fuel_label: component display names.
-        csv_delimiter, csv_decimal: CSV formatting for the templates.
+        battery_label: battery component display name.
+        generator_label: generator component display name.
+        fuel_label: fuel display name.
+        csv_delimiter: CSV field delimiter written into the templates.
+        csv_decimal: CSV decimal separator written into the templates.
         settings: a fully-built :class:`TemplateSettings` for complete control;
             when given, the individual template arguments above are ignored.
         overwrite: overwrite existing input templates if the project exists.

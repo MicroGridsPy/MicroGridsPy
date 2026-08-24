@@ -17,6 +17,7 @@ htmlcov/
 
 # Docs build output
 docs/_build/
+site/
 
 # Virtual environments
 .venv/
