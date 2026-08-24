@@ -12,12 +12,12 @@ st.set_page_config(
 
 
 ASSETS_DIR = Path(__file__).resolve().parent / "assets"
-DOCS_DIR = Path(__file__).resolve().parent / "docs"
 REPOSITORY_URL = "https://github.com/AleOnori98/microgridspy-planning"
 RAMP_URL = "https://github.com/AleOnori98/RAMP-Streamlit"
 PVGIS_URL = "https://github.com/AleOnori98/PVGIS-Streamlit-App"
 LV_TOPOLOGY_URL = "https://github.com/AleOnori98/LV-Distribution-Topology-Streamlit"
-ONLINE_DOCS_URL = "https://microgridspy-documentation.readthedocs.io/en/latest/index.html"
+# Placeholder for the official documentation site (Docusaurus, coming soon).
+DOCS_URL = "https://microgridspy.github.io/MicroGridsPy"
 
 ECOSYSTEM_TOOL_ROWS = (
     (
@@ -63,37 +63,16 @@ APP_PAGE_LINKS = (
 REPOSITORY_REFERENCES = (
     "`README.md`: overall project scope and workflow",
     "`docs/DATA_CONTRACT.md`: canonical dataset contract",
-    "`docs/Mathematical_Formulation.pdf`: formulation reference",
-    "`docs/User_Guide.pdf`: user guide draft",
     "`projects/`: example projects and input templates",
 )
 
-PDF_PREVIEWS = (
-    {
-        "title": "Mathematical Formulation",
-        "caption": "Complete formulation reference with the current model structure and equations.",
-        "file_name": "Mathematical_Formulation.pdf",
-        "key": "mathematical_formulation_preview",
-    },
-    {
-        "title": "User Guide",
-        "caption": "Working user guide preview. The document is available here, but it is still being updated.",
-        "file_name": "User_Guide.pdf",
-        "key": "user_guide_preview",
-    },
-)
-
 USEFUL_LINKS = (
-    ("Online Read-the-Docs Documentation (work in progress)", ONLINE_DOCS_URL),
+    ("Official documentation (coming soon)", DOCS_URL),
 )
 
 
 def _asset(name: str) -> str:
     return str(ASSETS_DIR / name)
-
-
-def _doc(name: str) -> Path:
-    return DOCS_DIR / name
 
 
 def _inject_css() -> None:
@@ -179,39 +158,6 @@ def _tool_card(
             st.markdown(f"[GitHub repository]({repo_url})")
 
 
-def _render_pdf_preview(*, title: str, caption: str, file_name: str, key: str) -> None:
-    pdf_path = _doc(file_name)
-    with st.container(border=True):
-        st.markdown(f"**{title}**")
-        st.caption(caption)
-        if not pdf_path.exists():
-            st.warning(f"Missing file: `{pdf_path.name}`")
-            return
-
-        if hasattr(st, "pdf"):
-            try:
-                st.pdf(str(pdf_path), height=520, key=key)
-            except Exception:
-                st.info(
-                    "PDF preview is unavailable in this Streamlit environment. "
-                    "Install the PDF extra to enable embedded previews."
-                )
-        else:
-            st.info(
-                "This Streamlit version does not expose `st.pdf()` yet, so the embedded preview is not available."
-            )
-
-        with pdf_path.open("rb") as pdf_file:
-            st.download_button(
-                "Download PDF",
-                data=pdf_file.read(),
-                file_name=pdf_path.name,
-                mime="application/pdf",
-                key=f"{key}_download",
-                use_container_width=True,
-            )
-
-
 def _render_markdown_bullets(title: str, items: tuple[str, ...]) -> None:
     bullet_lines = "\n".join(f"- {item}" for item in items)
     st.markdown(f"**{title}**\n\n{bullet_lines}")
@@ -270,11 +216,11 @@ def _render_resources() -> None:
         st.info("Use together: Resource, demand, planning, network, and dispatch modules can be combined at increasing levels of detail.")
 
     st.write("")
-    st.markdown("**Documentation preview**")
-    pdf_cols = st.columns(2, gap="large")
-    for column, preview in zip(pdf_cols, PDF_PREVIEWS):
-        with column:
-            _render_pdf_preview(**preview)
+    st.markdown("**Documentation**")
+    st.info(
+        f"Full documentation is moving to a dedicated site — [{DOCS_URL}]({DOCS_URL}) "
+        "_(coming soon)_."
+    )
 
     st.write("")
     _render_useful_links()
