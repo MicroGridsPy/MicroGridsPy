@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 import xarray as xr
 import linopy as lp
@@ -13,6 +13,9 @@ from microgridspy.multi_year_model.variables import initialize_vars
 from microgridspy.multi_year_model.constraints import initialize_constraints
 from microgridspy.multi_year_model.objective import initialize_objective
 from microgridspy.io.utils import tee_console_output
+
+if TYPE_CHECKING:
+    from microgridspy.export.multi_year_results import MultiYearResults
 
 
 class InputValidationError(RuntimeError):
@@ -340,9 +343,13 @@ class MultiYearModel:
         sol = getattr(self.model, "solution", None)
         ds = xr.Dataset()
 
-        # objective
+        # objective (linopy exposes it reliably on model.objective.value)
         obj_val = None
-        if sol is not None:
+        try:
+            obj_val = float(self.model.objective.value)
+        except Exception:
+            pass
+        if obj_val is None and sol is not None:
             for attr in ("objective_value", "objective", "obj_value"):
                 if hasattr(sol, attr):
                     try:
