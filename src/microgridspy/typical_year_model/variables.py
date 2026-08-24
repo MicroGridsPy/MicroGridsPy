@@ -66,9 +66,7 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict
     # --- required coords (per your sets.py)
     for c in ("period", "scenario", "resource"):
         if c not in sets.coords:
-            raise InputValidationError(
-                f"initialize_vars: missing required coord in sets: '{c}'"
-            )
+            raise InputValidationError(f"initialize_vars: missing required coord in sets: '{c}'")
 
     period = sets.coords["period"]
     scenario = sets.coords["scenario"]

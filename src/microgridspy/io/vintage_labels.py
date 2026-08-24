@@ -66,13 +66,15 @@ def _sanitize_nested_step_map(raw: object) -> dict[str, dict[str, str]]:
 
 def load_multi_year_vintage_labels(project_name: str) -> dict[str, dict[str, str]]:
     paths = project_paths(project_name)
-    renewables_meta = (_read_yaml_optional(paths.inputs_dir / "renewables.yaml").get("meta", {}) or {})
-    battery_meta = (_read_yaml_optional(paths.inputs_dir / "battery.yaml").get("meta", {}) or {})
-    generator_meta = (_read_yaml_optional(paths.inputs_dir / "generator.yaml").get("meta", {}) or {})
+    renewables_meta = (
+        _read_yaml_optional(paths.inputs_dir / "renewables.yaml").get("meta", {}) or {}
+    )
+    battery_meta = _read_yaml_optional(paths.inputs_dir / "battery.yaml").get("meta", {}) or {}
+    generator_meta = _read_yaml_optional(paths.inputs_dir / "generator.yaml").get("meta", {}) or {}
 
-    renewables_labels = (renewables_meta.get("labels", {}) or {})
-    battery_labels = (battery_meta.get("labels", {}) or {})
-    generator_labels = (generator_meta.get("labels", {}) or {})
+    renewables_labels = renewables_meta.get("labels", {}) or {}
+    battery_labels = battery_meta.get("labels", {}) or {}
+    generator_labels = generator_meta.get("labels", {}) or {}
 
     return {
         "renewable": _sanitize_nested_step_map(renewables_labels.get("renewable_vintage_by_step")),
@@ -110,6 +112,7 @@ def vintage_label_for_step(
     if "base" in family_map:
         return family_map["base"]
     return fallback_vintage_label(str(family), normalized)
+
 
 def vintage_display_for_step(
     *,

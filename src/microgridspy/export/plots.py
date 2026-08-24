@@ -46,4 +46,3 @@ def plot_daily_profile_band(series, *, title: str, y_label: str):
     ax.grid(True, alpha=0.25)
     fig.tight_layout()
     return fig
-

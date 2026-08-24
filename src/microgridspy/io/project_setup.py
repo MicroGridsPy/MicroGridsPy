@@ -12,6 +12,7 @@ Streamlit ``Project Setup`` page, so it can be driven programmatically:
 the modeller still supplies the real load demand, resource availability, and
 techno-economic parameters before solving.
 """
+
 from __future__ import annotations
 
 import json
@@ -128,7 +129,9 @@ def build_formulation_payload(
     }
 
 
-def _normalize_scenarios(scenarios: int | Sequence[str]) -> tuple[bool, int, list[str], list[float]]:
+def _normalize_scenarios(
+    scenarios: int | Sequence[str],
+) -> tuple[bool, int, list[str], list[float]]:
     """Turn a scenario count or label list into (enabled, n, labels, weights)."""
     if isinstance(scenarios, int):
         if scenarios <= 1:
@@ -205,7 +208,11 @@ def create_project(
     resolved_start = start_year_label or ("2026" if is_dynamic else "typical_year")
     multi, n_scen, labels, weights = _normalize_scenarios(scenarios)
     res_labels = list(resources)
-    conv_labels = list(conversions) if conversions else [f"Technology_{i + 1}" for i in range(len(res_labels))]
+    conv_labels = (
+        list(conversions)
+        if conversions
+        else [f"Technology_{i + 1}" for i in range(len(res_labels))]
+    )
 
     paths = ensure_project_structure(name)
 

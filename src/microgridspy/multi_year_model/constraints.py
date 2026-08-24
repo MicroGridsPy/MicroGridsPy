@@ -108,7 +108,9 @@ def validate_constraint_shapes(
     required_sets = ("period", "year", "inv_step", "scenario", "resource")
     for c in required_sets:
         if c not in sets.coords:
-            raise InputValidationError(f"initialize_constraints: missing required coord in sets: '{c}'")
+            raise InputValidationError(
+                f"initialize_constraints: missing required coord in sets: '{c}'"
+            )
 
     required_vars = (
         "res_units",
@@ -129,7 +131,11 @@ def validate_constraint_shapes(
 
     required_data = (
         ("load_demand", p.load_demand, {"period", "year", "scenario"}),
-        ("resource_availability", p.resource_availability, {"period", "year", "scenario", "resource"}),
+        (
+            "resource_availability",
+            p.resource_availability,
+            {"period", "year", "scenario", "resource"},
+        ),
         ("scenario_weight", p.scenario_weight, {"scenario"}),
         ("min_renewable_penetration", p.min_renewable_penetration, set()),
         ("max_lost_load_fraction", p.max_lost_load_fraction, set()),
@@ -153,7 +159,9 @@ def initialize_constraints(
     if not isinstance(data, xr.Dataset):
         raise InputValidationError("initialize_constraints: `data` must be an xarray.Dataset.")
     if not isinstance(vars, dict):
-        raise InputValidationError("initialize_constraints: `vars` must be a dict of linopy variables.")
+        raise InputValidationError(
+            "initialize_constraints: `vars` must be a dict of linopy variables."
+        )
 
     period = sets.coords["period"]
     year = sets.coords["year"]
@@ -167,20 +175,24 @@ def initialize_constraints(
         ((p.settings.get("battery_model", {}) or {}).get("loss_model")),
         default="constant_efficiency",
     )
-    battery_model_settings = (p.settings.get("battery_model", {}) or {})
-    degradation_settings = (battery_model_settings.get("degradation_model", {}) or {})
+    battery_model_settings = p.settings.get("battery_model", {}) or {}
+    degradation_settings = battery_model_settings.get("degradation_model", {}) or {}
     cycle_fade_enabled = bool(degradation_settings.get("cycle_fade_enabled", False))
     calendar_fade_enabled = bool(degradation_settings.get("calendar_fade_enabled", False))
     degradation_state_enabled = cycle_fade_enabled or calendar_fade_enabled
-    battery_capacity_degradation_rate, _ = suppress_exogenous_battery_capacity_degradation_when_endogenous(
-        p.battery_capacity_degradation_rate_per_year,
-        calendar_fade_enabled=calendar_fade_enabled,
+    battery_capacity_degradation_rate, _ = (
+        suppress_exogenous_battery_capacity_degradation_when_endogenous(
+            p.battery_capacity_degradation_rate_per_year,
+            calendar_fade_enabled=calendar_fade_enabled,
+        )
     )
     if degradation_state_enabled and battery_loss_model != CONVEX_LOSS_EPIGRAPH:
         raise InputValidationError(
             "Battery degradation tracking requires battery_model.loss_model='convex_loss_epigraph'."
         )
-    enforcement = str((p.settings.get("optimization_constraints", {}) or {}).get("enforcement", "scenario_wise"))
+    enforcement = str(
+        (p.settings.get("optimization_constraints", {}) or {}).get("enforcement", "scenario_wise")
+    )
     if enforcement not in ("expected", "scenario_wise"):
         raise InputValidationError(
             f"Invalid optimization_constraints.enforcement='{enforcement}'. "
@@ -204,25 +216,42 @@ def initialize_constraints(
     eta_c = _require_da("battery_charge_efficiency", p.battery_charge_efficiency)
     eta_d = _require_da("battery_discharge_efficiency", p.battery_discharge_efficiency)
     soc0 = _require_da("battery_initial_soc", p.battery_initial_soc)
-    soh0 = _require_da("battery_initial_soh", p.battery_initial_soh) if degradation_state_enabled else p.battery_initial_soh
+    soh0 = (
+        _require_da("battery_initial_soh", p.battery_initial_soh)
+        if degradation_state_enabled
+        else p.battery_initial_soh
+    )
     soc0_scalar = float(soc0.item()) if getattr(soc0, "dims", ()) == () else soc0
-    soh0_scalar = float(soh0.item()) if (degradation_state_enabled and getattr(soh0, "dims", ()) == ()) else soh0
+    soh0_scalar = (
+        float(soh0.item())
+        if (degradation_state_enabled and getattr(soh0, "dims", ()) == ())
+        else soh0
+    )
     dod = _require_da("battery_depth_of_discharge", p.battery_depth_of_discharge)
     bat_max_charge_c_rate = p.battery_max_charge_c_rate
     bat_max_discharge_c_rate = p.battery_max_discharge_c_rate
     cycle_fade_coeff = (
-        _require_da("battery_cycle_fade_coefficient_per_kwh_throughput", p.battery_cycle_fade_coefficient_per_kwh_throughput)
+        _require_da(
+            "battery_cycle_fade_coefficient_per_kwh_throughput",
+            p.battery_cycle_fade_coefficient_per_kwh_throughput,
+        )
         if cycle_fade_enabled
         else p.battery_cycle_fade_coefficient_per_kwh_throughput
     )
     calendar_time_increment = (
-        _require_da("battery_calendar_time_increment_per_year", p.battery_calendar_time_increment_per_year)
+        _require_da(
+            "battery_calendar_time_increment_per_year", p.battery_calendar_time_increment_per_year
+        )
         if calendar_fade_enabled
         else p.battery_calendar_time_increment_per_year
     )
     gen_nom_kw = _require_da("generator_nominal_capacity_kw", p.generator_nominal_capacity_kw)
-    gen_max_kw = _require_da("generator_max_installable_capacity_kw", p.generator_max_installable_capacity_kw)
-    gen_eta_full = _require_da("generator_nominal_efficiency_full_load", p.generator_nominal_efficiency_full_load)
+    gen_max_kw = _require_da(
+        "generator_max_installable_capacity_kw", p.generator_max_installable_capacity_kw
+    )
+    gen_eta_full = _require_da(
+        "generator_nominal_efficiency_full_load", p.generator_nominal_efficiency_full_load
+    )
     fuel_lhv = _require_da("fuel_lhv_kwh_per_unit_fuel", p.fuel_lhv_kwh_per_unit_fuel)
 
     land_m2 = _require_da("land_availability_m2", p.land_availability_m2)
@@ -281,8 +310,12 @@ def initialize_constraints(
     finite_res_max = np.isfinite(res_max_kw)
     res_max_kw_finite = res_max_kw.where(finite_res_max, drop=True)
     if res_max_kw_finite.sizes.get("resource", 0) > 0:
-        lhs_res_total = (res_units * res_nom_kw).sum("inv_step").sel(resource=res_max_kw_finite.resource)
-        model.add_constraints(lhs_res_total <= res_max_kw_finite, name="res_max_installable_capacity")
+        lhs_res_total = (
+            (res_units * res_nom_kw).sum("inv_step").sel(resource=res_max_kw_finite.resource)
+        )
+        model.add_constraints(
+            lhs_res_total <= res_max_kw_finite, name="res_max_installable_capacity"
+        )
 
     # ------------------------------------------------------------------
     # 2) Generator capacity with year availability (by vintage)
@@ -306,7 +339,10 @@ def initialize_constraints(
     # ------------------------------------------------------------------
     # 3) Fuel-to-power relation
     # ------------------------------------------------------------------
-    if p.generator_fuel_curve_rel_fuel_use is not None and p.generator_eff_curve_rel_power is not None:
+    if (
+        p.generator_fuel_curve_rel_fuel_use is not None
+        and p.generator_eff_curve_rel_power is not None
+    ):
         pl_rel = p.generator_eff_curve_rel_power
         pl_fuel_rel = p.generator_fuel_curve_rel_fuel_use
         P = int(pl_rel.sizes["curve_point"])
@@ -316,15 +352,21 @@ def initialize_constraints(
             lhv_k = fuel_lhv.sel(inv_step=inv) if "inv_step" in fuel_lhv.dims else fuel_lhv
             cap_k = gen_cap_available.sel(inv_step=inv)
             r_full = pl_rel.sel(inv_step=inv) if "inv_step" in pl_rel.dims else pl_rel
-            phi_full = pl_fuel_rel.sel(inv_step=inv) if "inv_step" in pl_fuel_rel.dims else pl_fuel_rel
+            phi_full = (
+                pl_fuel_rel.sel(inv_step=inv) if "inv_step" in pl_fuel_rel.dims else pl_fuel_rel
+            )
 
             if not (np.isfinite(r_full.values).all() and np.isfinite(phi_full.values).all()):
                 raise InputValidationError("Generator partial-load fuel-use curve contains NaNs.")
             if np.any(np.diff(r_full.values.astype(float)) < 0.0):
-                raise InputValidationError("Generator partial-load curve must be sorted by increasing relative power output.")
+                raise InputValidationError(
+                    "Generator partial-load curve must be sorted by increasing relative power output."
+                )
             positive_power_mask = np.asarray(r_full.values, dtype=float) > 0.0
             if np.any(np.asarray(phi_full.values, dtype=float)[positive_power_mask] <= 0.0):
-                raise InputValidationError("Generator partial-load fuel-use curve contains non-positive values at positive output.")
+                raise InputValidationError(
+                    "Generator partial-load fuel-use curve contains non-positive values at positive output."
+                )
 
             rel0 = r_full.isel(curve_point=seg)
             rel1 = r_full.isel(curve_point=seg + 1)
@@ -332,7 +374,9 @@ def initialize_constraints(
             phi1 = phi_full.isel(curve_point=seg + 1)
             rel_span = rel1 - rel0
             if np.any(np.isclose(rel_span.values.astype(float), 0.0)):
-                raise InputValidationError("Generator partial-load curve contains repeated relative-power points.")
+                raise InputValidationError(
+                    "Generator partial-load curve contains repeated relative-power points."
+                )
 
             alpha0 = phi0 / float(lhv_k)
             alpha1 = phi1 / float(lhv_k)
@@ -362,16 +406,17 @@ def initialize_constraints(
     )
     bat_active_year = replacement_active_mask(sets)
     bat_commission_year = replacement_commission_mask(sets, p.battery_calendar_lifetime_years)
-    bat_active = (
-        bat_active_year.expand_dims(period=period, scenario=sets.coords["scenario"])
-        .transpose("period", "year", "scenario", "inv_step")
-    )
+    bat_active = bat_active_year.expand_dims(
+        period=period, scenario=sets.coords["scenario"]
+    ).transpose("period", "year", "scenario", "inv_step")
     bat_max_installable_shared = _shared_scalar_from_da(
         "battery_max_installable_capacity_kwh",
         bat_max_installable_kwh,
     )
     if bat_max_installable_shared is not None and float(bat_max_installable_shared) < 0.0:
-        raise InputValidationError("battery_max_installable_capacity_kwh must be >= 0 when provided.")
+        raise InputValidationError(
+            "battery_max_installable_capacity_kwh must be >= 0 when provided."
+        )
     if bat_max_installable_shared is not None:
         model.add_constraints(
             (bat_units * bat_nom_kwh).sum("inv_step") <= float(bat_max_installable_shared),
@@ -385,14 +430,18 @@ def initialize_constraints(
     model.add_constraints(bat_dis <= bat_inv_active, name="battery_discharge_limit")
     bat_nominal_energy = bat_units * bat_nom_kwh
     if isinstance(bat_max_charge_c_rate, xr.DataArray):
-        finite_charge_rate = xr.where(np.isfinite(bat_max_charge_c_rate), bat_max_charge_c_rate, 0.0)
+        finite_charge_rate = xr.where(
+            np.isfinite(bat_max_charge_c_rate), bat_max_charge_c_rate, 0.0
+        )
         if np.any(np.isfinite(np.asarray(bat_max_charge_c_rate.values, dtype=float))):
             model.add_constraints(
                 bat_inv_power <= (bat_nominal_energy * finite_charge_rate),
                 name="battery_max_charge_c_rate",
             )
     if isinstance(bat_max_discharge_c_rate, xr.DataArray):
-        finite_discharge_rate = xr.where(np.isfinite(bat_max_discharge_c_rate), bat_max_discharge_c_rate, 0.0)
+        finite_discharge_rate = xr.where(
+            np.isfinite(bat_max_discharge_c_rate), bat_max_discharge_c_rate, 0.0
+        )
         if np.any(np.isfinite(np.asarray(bat_max_discharge_c_rate.values, dtype=float))):
             model.add_constraints(
                 bat_inv_power <= (bat_nominal_energy * finite_discharge_rate),
@@ -468,7 +517,12 @@ def initialize_constraints(
         )
 
         if degradation_state_enabled:
-            if bat_cycle_fade is None or bat_avg_soc is None or bat_calendar_fade is None or bat_eff_cap is None:
+            if (
+                bat_cycle_fade is None
+                or bat_avg_soc is None
+                or bat_calendar_fade is None
+                or bat_eff_cap is None
+            ):
                 raise InputValidationError(
                     "Battery degradation mode is active, but battery_cycle_fade/battery_average_soc/battery_calendar_fade/"
                     "battery_effective_energy_capacity variables are missing."
@@ -503,7 +557,9 @@ def initialize_constraints(
                     "battery_calendar_fade_slope",
                     "battery_calendar_fade_intercept",
                 )
-                missing_calendar_vars = [name for name in required_calendar_vars if name not in data.data_vars]
+                missing_calendar_vars = [
+                    name for name in required_calendar_vars if name not in data.data_vars
+                ]
                 if missing_calendar_vars:
                     raise InputValidationError(
                         f"Battery calendar-fade mode is active, but required calendar curve variables are missing: {missing_calendar_vars}"
@@ -513,13 +569,16 @@ def initialize_constraints(
                 cal_intercept = data["battery_calendar_fade_intercept"]
                 avg_soc_y_s_k = soc.sum("period") / float(T)
                 model.add_constraints(
-                    bat_avg_soc
-                    == (avg_soc_y_s_k * scenario_weight).sum("scenario"),
+                    bat_avg_soc == (avg_soc_y_s_k * scenario_weight).sum("scenario"),
                     name="battery_average_soc_definition",
                 )
-                bat_calendar_fade_b = bat_calendar_fade.expand_dims({"battery_calendar_segment": cal_seg})
+                bat_calendar_fade_b = bat_calendar_fade.expand_dims(
+                    {"battery_calendar_segment": cal_seg}
+                )
                 bat_avg_soc_b = bat_avg_soc.expand_dims({"battery_calendar_segment": cal_seg})
-                bat_cap_available_b = bat_cap_available.expand_dims({"battery_calendar_segment": cal_seg})
+                bat_cap_available_b = bat_cap_available.expand_dims(
+                    {"battery_calendar_segment": cal_seg}
+                )
                 bat_active_b = bat_active_year.expand_dims({"battery_calendar_segment": cal_seg})
                 # The calendar-fade curve is provided as a yearly capacity-fade
                 # coefficient versus yearly average SoC fraction. In absolute
@@ -529,7 +588,9 @@ def initialize_constraints(
                 # E_nom is the cohort's nominal available energy for that year.
                 model.add_constraints(
                     bat_calendar_fade_b
-                    >= bat_active_b * calendar_time_increment * ((cal_slope * bat_avg_soc_b) + (cal_intercept * bat_cap_available_b)),
+                    >= bat_active_b
+                    * calendar_time_increment
+                    * ((cal_slope * bat_avg_soc_b) + (cal_intercept * bat_cap_available_b)),
                     name="battery_calendar_fade_epigraph",
                 )
             else:
@@ -543,11 +604,13 @@ def initialize_constraints(
                     name="battery_calendar_fade_definition",
                 )
             model.add_constraints(
-                bat_eff_cap.sel(year=first_year) == soh0_scalar * bat_cap_available.sel(year=first_year),
+                bat_eff_cap.sel(year=first_year)
+                == soh0_scalar * bat_cap_available.sel(year=first_year),
                 name="battery_effective_energy_capacity_initial",
             )
             model.add_constraints(
-                soc.sel(year=first_year).isel(period=0) == soc0_scalar * bat_eff_cap.sel(year=first_year),
+                soc.sel(year=first_year).isel(period=0)
+                == soc0_scalar * bat_eff_cap.sel(year=first_year),
                 name="soc_initial",
             )
             for idx in range(1, len(year_values)):
@@ -558,10 +621,14 @@ def initialize_constraints(
                 continued_eff_cap = (
                     bat_eff_cap.sel(year=prev_year)
                     - bat_cycle_fade.sel(year=prev_year).sum("period")
-                    - bat_calendar_fade.sel(year=prev_year).expand_dims(scenario=sets.coords["scenario"])
+                    - bat_calendar_fade.sel(year=prev_year).expand_dims(
+                        scenario=sets.coords["scenario"]
+                    )
                 )
                 reset_eff_cap = soh0_scalar * bat_cap_available.sel(year=cur_year)
-                target_eff_cap = continued_eff_cap + commission_cur_state * (reset_eff_cap - continued_eff_cap)
+                target_eff_cap = continued_eff_cap + commission_cur_state * (
+                    reset_eff_cap - continued_eff_cap
+                )
                 # When exogenous annual degradation is active, bat_cap_available
                 # can decline between years even if endogenous fade is small.
                 # Using equality here would incorrectly force the carried
@@ -574,8 +641,7 @@ def initialize_constraints(
                 # while still resetting to the commissioned value in replacement
                 # years.
                 model.add_constraints(
-                    bat_eff_cap.sel(year=cur_year)
-                    <= target_eff_cap,
+                    bat_eff_cap.sel(year=cur_year) <= target_eff_cap,
                     name=f"battery_effective_energy_capacity_year_link_{cur_year}",
                 )
                 reset_soc = soc0_scalar * bat_eff_cap.sel(year=cur_year)
@@ -586,8 +652,7 @@ def initialize_constraints(
                 )
                 target_soc = continued_soc + commission_cur_state * (reset_soc - continued_soc)
                 model.add_constraints(
-                    soc.sel(year=cur_year).isel(period=0)
-                    == target_soc,
+                    soc.sel(year=cur_year).isel(period=0) == target_soc,
                     name=f"soc_year_link_{cur_year}",
                 )
             soc_upper_bound = bat_eff_cap
@@ -605,7 +670,8 @@ def initialize_constraints(
             )
         if not degradation_state_enabled:
             model.add_constraints(
-                soc.sel(year=first_year).isel(period=0) == soc0_scalar * bat_cap_available.sel(year=first_year),
+                soc.sel(year=first_year).isel(period=0)
+                == soc0_scalar * bat_cap_available.sel(year=first_year),
                 name="soc_initial",
             )
             for idx in range(1, len(year_values)):
@@ -621,15 +687,15 @@ def initialize_constraints(
                 )
                 target_soc = continued_soc + commission_cur_state * (reset_soc - continued_soc)
                 model.add_constraints(
-                    soc.sel(year=cur_year).isel(period=0)
-                    == target_soc,
+                    soc.sel(year=cur_year).isel(period=0) == target_soc,
                     name=f"soc_year_link_{cur_year}",
                 )
             soc_upper_bound = bat_cap_available
             soc_lower_bound = (1.0 - dod) * bat_cap_available
     else:
         model.add_constraints(
-            soc.sel(year=first_year).isel(period=0) == soc0_scalar * bat_cap_available.sel(year=first_year),
+            soc.sel(year=first_year).isel(period=0)
+            == soc0_scalar * bat_cap_available.sel(year=first_year),
             name="soc_initial",
         )
         if T > 1:
@@ -653,8 +719,7 @@ def initialize_constraints(
             )
             target_soc = continued_soc + commission_cur_state * (reset_soc - continued_soc)
             model.add_constraints(
-                soc.sel(year=cur_year).isel(period=0)
-                == target_soc,
+                soc.sel(year=cur_year).isel(period=0) == target_soc,
                 name=f"soc_year_link_{cur_year}",
             )
         soc_upper_bound = bat_cap_available
@@ -724,7 +789,9 @@ def initialize_constraints(
         e_total = e_res + e_gen + e_grid
         e_renew = e_res + e_grid_ren
         if enforcement == "scenario_wise":
-            model.add_constraints(e_renew >= (min_res_pen * e_total), name="min_renewable_penetration")
+            model.add_constraints(
+                e_renew >= (min_res_pen * e_total), name="min_renewable_penetration"
+            )
         else:
             lhs_res = (e_renew * scenario_weight).sum("scenario")
             if "scenario" in min_res_pen.dims:

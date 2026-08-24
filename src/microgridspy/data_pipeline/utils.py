@@ -50,7 +50,9 @@ def read_csv_or_raise(
         raise error_cls(f"Cannot parse CSV: {path}\nerror: {e}")
 
 
-def as_float(x: Any, *, name: str, default: float = 0.0, error_cls: type[Exception] = RuntimeError) -> float:
+def as_float(
+    x: Any, *, name: str, default: float = 0.0, error_cls: type[Exception] = RuntimeError
+) -> float:
     """Convert x to float, with default if None. Raise error_cls on failure."""
     if x is None:
         return float(default)
@@ -70,7 +72,9 @@ def as_float_or_nan(x: Any, *, name: str, error_cls: type[Exception] = RuntimeEr
         raise error_cls(f"Invalid numeric value for '{name}': {x!r} (error: {e})")
 
 
-def as_str(x: Any, *, name: str, default: str = "", error_cls: type[Exception] = RuntimeError) -> str:
+def as_str(
+    x: Any, *, name: str, default: str = "", error_cls: type[Exception] = RuntimeError
+) -> str:
     """Convert x to str, with default if None. Raise error_cls on failure."""
     if x is None:
         return default

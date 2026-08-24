@@ -39,12 +39,12 @@ def derive_cycle_fade_coefficient_from_cycle_life(
         cycle_lifetime_f = float(cycle_lifetime_to_eol_cycles)
         dod_f = float(reference_depth_of_discharge)
     except Exception as exc:
-        raise InputValidationError(
-            "Battery cycle-fade derivation inputs must be numeric."
-        ) from exc
+        raise InputValidationError("Battery cycle-fade derivation inputs must be numeric.") from exc
 
     if not (0.0 < initial_soh_f <= 1.0):
-        raise InputValidationError("Battery initial SoH used for cycle-fade derivation must be within (0, 1].")
+        raise InputValidationError(
+            "Battery initial SoH used for cycle-fade derivation must be within (0, 1]."
+        )
     if not (0.0 < end_of_life_soh_f <= initial_soh_f):
         raise InputValidationError(
             "Battery end-of-life SoH used for cycle-fade derivation must be within (0, initial_soh]."
@@ -52,7 +52,9 @@ def derive_cycle_fade_coefficient_from_cycle_life(
     if cycle_lifetime_f <= 0.0:
         raise InputValidationError("Battery cycle lifetime to end of life must be > 0.")
     if not (0.0 < dod_f <= 1.0):
-        raise InputValidationError("Battery depth_of_discharge used for cycle-fade derivation must be within (0, 1].")
+        raise InputValidationError(
+            "Battery depth_of_discharge used for cycle-fade derivation must be within (0, 1]."
+        )
 
     return (initial_soh_f - end_of_life_soh_f) / (cycle_lifetime_f * dod_f * initial_soh_f)
 
@@ -70,7 +72,9 @@ def get_battery_degradation_settings(
 ) -> dict[str, Any]:
     if not isinstance(formulation, dict):
         formulation = {}
-    formulation_mode = str(formulation.get("core_formulation", "steady_state") or "steady_state").strip().lower()
+    formulation_mode = (
+        str(formulation.get("core_formulation", "steady_state") or "steady_state").strip().lower()
+    )
     battery_model = formulation.get("battery_model", {}) or {}
     if not isinstance(battery_model, dict):
         battery_model = {}
@@ -125,26 +129,37 @@ def get_battery_degradation_settings(
             calendar_curve_csv = str(calendar_curve_csv).strip() or None
 
     if battery_calendar_time_increment_mode_override is not None:
-        calendar_time_increment_mode = str(
-            battery_calendar_time_increment_mode_override or "constant_per_year"
-        ).strip().lower()
+        calendar_time_increment_mode = (
+            str(battery_calendar_time_increment_mode_override or "constant_per_year")
+            .strip()
+            .lower()
+        )
     else:
-        calendar_time_increment_mode = str(
-            degradation_model.get("battery_calendar_time_increment_mode", "constant_per_year") or "constant_per_year"
-        ).strip().lower()
+        calendar_time_increment_mode = (
+            str(
+                degradation_model.get("battery_calendar_time_increment_mode", "constant_per_year")
+                or "constant_per_year"
+            )
+            .strip()
+            .lower()
+        )
     if calendar_time_increment_mode == "constant_per_step":
         calendar_time_increment_mode = "constant_per_year"
 
     if battery_calendar_time_increment_per_year_override is not None:
         try:
-            calendar_time_increment_per_year = float(battery_calendar_time_increment_per_year_override)
+            calendar_time_increment_per_year = float(
+                battery_calendar_time_increment_per_year_override
+            )
         except Exception as exc:
             raise InputValidationError(
                 "battery.technical.calendar_time_increment_per_year in inputs/battery.yaml must be numeric."
             ) from exc
     elif battery_calendar_time_increment_per_step_override is not None:
         try:
-            calendar_time_increment_per_year = float(battery_calendar_time_increment_per_step_override)
+            calendar_time_increment_per_year = float(
+                battery_calendar_time_increment_per_step_override
+            )
         except Exception as exc:
             raise InputValidationError(
                 "battery.technical.calendar_time_increment_per_year in inputs/battery.yaml must be numeric."
@@ -169,7 +184,9 @@ def get_battery_degradation_settings(
         try:
             end_of_life_soh = float(raw_end_of_life_soh)
         except Exception as exc:
-            raise InputValidationError("battery_model.degradation_model.end_of_life_soh must be numeric.") from exc
+            raise InputValidationError(
+                "battery_model.degradation_model.end_of_life_soh must be numeric."
+            ) from exc
 
     raw_cycle_lifetime = degradation_model.get("cycle_lifetime_to_eol_cycles", None)
     cycle_lifetime_to_eol_cycles = None
@@ -200,13 +217,9 @@ def get_battery_degradation_settings(
             "must be >= 0."
         )
     if not (0.0 <= initial_soh <= 1.0):
-        raise InputValidationError(
-            "Battery initial SoH must be within [0, 1]."
-        )
+        raise InputValidationError("Battery initial SoH must be within [0, 1].")
     if end_of_life_soh is not None and not (0.0 < end_of_life_soh <= initial_soh):
-        raise InputValidationError(
-            "Battery end-of-life SoH must be within (0, initial_soh]."
-        )
+        raise InputValidationError("Battery end-of-life SoH must be within (0, initial_soh].")
     if cycle_lifetime_to_eol_cycles is not None and cycle_lifetime_to_eol_cycles <= 0.0:
         raise InputValidationError(
             "battery_model.degradation_model.cycle_lifetime_to_eol_cycles must be > 0."

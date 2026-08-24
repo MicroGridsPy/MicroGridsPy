@@ -177,7 +177,7 @@ def simulate_grid_availability_typical_year(
         samples_od.append(od)
         sum_od += od
         if sum_od > total_outage_hours:
-            samples_od[-1] -= (sum_od - total_outage_hours)
+            samples_od[-1] -= sum_od - total_outage_hours
             sum_od = total_outage_hours
         it += 1
 
@@ -214,6 +214,7 @@ def simulate_grid_availability_typical_year(
             seq.extend([1.0] * (periods_per_year - len(seq)))
 
     return np.asarray(seq[:periods_per_year], dtype=float)
+
 
 def simulate_grid_availability_dynamic(
     avg_outages_per_year: float,
@@ -298,7 +299,7 @@ def simulate_grid_availability_dynamic(
             samples_od.append(od)
             sum_od += od
             if sum_od > total_outage_hours:
-                samples_od[-1] -= (sum_od - total_outage_hours)
+                samples_od[-1] -= sum_od - total_outage_hours
                 sum_od = total_outage_hours
             it += 1
 

@@ -79,11 +79,11 @@ import microgridspy as mgp
 mgp.create_project("my_site", formulation="steady_state", resources=["solar", "wind"])
 # ...fill in projects/my_site/inputs (load demand, resource availability, *.yaml)...
 
-mgp.validate_project("my_site")               # pre-flight input check
+mgp.validate_project("my_site")  # pre-flight input check
 model = mgp.solve("my_site", solver="highs")  # build + solve
-results = model.results()                     # analysis-ready pandas tables
+results = model.results()  # analysis-ready pandas tables
 print(results.kpis)
-mgp.export_results(results)                   # write CSV/Excel to the project folder
+mgp.export_results(results)  # write CSV/Excel to the project folder
 ```
 
 Key entry points: `solve`, `create_project`, `validate_project`, `load_results`, `export_results`, `list_projects`, `set_workspace`, and the model classes `SteadyStateModel` / `MultiYearModel`. See the `examples/` folder for a runnable script.

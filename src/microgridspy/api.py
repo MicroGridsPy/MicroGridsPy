@@ -9,6 +9,7 @@ users a short path from a project name to solved, analysis-ready results::
     results.kpis                      # pandas DataFrame
     mgp.export_results(results)       # write CSV/Excel to the project folder
 """
+
 from __future__ import annotations
 
 import json
@@ -52,8 +53,7 @@ def _model_for(project_name: str, formulation: str) -> AnyModel:
     if formulation in _DYNAMIC:
         return MultiYearModel(project_name)
     raise InputValidationError(
-        f"Unknown formulation '{formulation}' (expected one of "
-        f"{sorted(_STEADY | _DYNAMIC)})."
+        f"Unknown formulation '{formulation}' (expected one of {sorted(_STEADY | _DYNAMIC)})."
     )
 
 

@@ -122,7 +122,9 @@ def get_params(ds: xr.Dataset) -> Params:
         emission_cost_per_kgco2e=ds["emission_cost_per_kgco2e"],
         res_nominal_capacity_kw=ds["res_nominal_capacity_kw"],
         res_specific_investment_cost_per_kw=ds["res_specific_investment_cost_per_kw"],
-        res_inverter_specific_investment_cost_per_kw_ac=ds["res_inverter_specific_investment_cost_per_kw_ac"],
+        res_inverter_specific_investment_cost_per_kw_ac=ds[
+            "res_inverter_specific_investment_cost_per_kw_ac"
+        ],
         res_lifetime_years=ds["res_lifetime_years"],
         res_inverter_lifetime_years=ds["res_inverter_lifetime_years"],
         res_wacc=ds["res_wacc"],
@@ -137,7 +139,9 @@ def get_params(ds: xr.Dataset) -> Params:
         res_max_installable_capacity_kw=ds["res_max_installable_capacity_kw"],
         battery_nominal_capacity_kwh=ds["battery_nominal_capacity_kwh"],
         battery_specific_investment_cost_per_kwh=ds["battery_specific_investment_cost_per_kwh"],
-        battery_inverter_specific_investment_cost_per_kw=ds["battery_inverter_specific_investment_cost_per_kw"],
+        battery_inverter_specific_investment_cost_per_kw=ds[
+            "battery_inverter_specific_investment_cost_per_kw"
+        ],
         battery_calendar_lifetime_years=ds["battery_calendar_lifetime_years"],
         battery_inverter_lifetime_years=ds["battery_inverter_lifetime_years"],
         battery_wacc=ds["battery_wacc"],
@@ -152,7 +156,9 @@ def get_params(ds: xr.Dataset) -> Params:
         battery_inverter_nominal_power_kw=ds["battery_inverter_nominal_power_kw"],
         battery_max_charge_c_rate=_opt("battery_max_charge_c_rate"),
         battery_max_discharge_c_rate=_opt("battery_max_discharge_c_rate"),
-        battery_cycle_fade_coefficient_per_kwh_throughput=_opt("battery_cycle_fade_coefficient_per_kwh_throughput"),
+        battery_cycle_fade_coefficient_per_kwh_throughput=_opt(
+            "battery_cycle_fade_coefficient_per_kwh_throughput"
+        ),
         battery_calendar_time_increment_per_step=_opt("battery_calendar_time_increment_per_step"),
         generator_nominal_capacity_kw=ds["generator_nominal_capacity_kw"],
         generator_max_installable_capacity_kw=ds["generator_max_installable_capacity_kw"],

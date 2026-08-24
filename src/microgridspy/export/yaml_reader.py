@@ -12,5 +12,11 @@ def read_yaml(path: Path) -> dict:
 
 def flatten_yaml_placeholder(path: Path) -> pd.DataFrame:
     payload = read_yaml(path)
-    return pd.DataFrame([{"path": str(path), "top_keys": list(payload.keys()) if isinstance(payload, dict) else None}])
-
+    return pd.DataFrame(
+        [
+            {
+                "path": str(path),
+                "top_keys": list(payload.keys()) if isinstance(payload, dict) else None,
+            }
+        ]
+    )

@@ -22,6 +22,7 @@ Stability: ``SteadyStateModel``, ``MultiYearModel`` and ``InputValidationError``
 are the stable core. The results dataclasses are provisional (their tables may
 grow) until the 1.0 release.
 """
+
 from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError

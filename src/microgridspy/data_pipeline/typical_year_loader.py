@@ -122,7 +122,9 @@ def _assemble_grid_block(
             exp_path = None
             grid_export_price = None
 
-        grid_availability = regenerate_grid_availability_typical_year(project_name=project_name, sets=sets)
+        grid_availability = regenerate_grid_availability_typical_year(
+            project_name=project_name, sets=sets
+        )
         grid_avail_csv_path = paths.inputs_dir / "grid_availability.csv"
 
         to_merge = [
@@ -218,7 +220,9 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
     paths = project_paths(project_name)
     formulation = p._read_json(paths.formulation_json)
 
-    formulation_mode = p._as_str(formulation.get("core_formulation", "steady_state"), name="core_formulation")
+    formulation_mode = p._as_str(
+        formulation.get("core_formulation", "steady_state"), name="core_formulation"
+    )
     if formulation_mode != "steady_state":
         raise InputValidationError("This data initializer is for steady_state only.")
 
@@ -240,7 +244,9 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
     )
 
     optc = formulation.get("optimization_constraints", {}) or {}
-    enforcement = p._as_str(optc.get("enforcement", None), name="optimization_constraints.enforcement")
+    enforcement = p._as_str(
+        optc.get("enforcement", None), name="optimization_constraints.enforcement"
+    )
     if not enforcement:
         enforcement = "expected" if ms_enabled else "scenario_wise"
     if enforcement not in ("expected", "scenario_wise"):
@@ -252,10 +258,18 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
     min_res_pen = p._as_float(
         optc.get("min_renewable_penetration", 0.0), name="min_renewable_penetration", default=0.0
     )
-    max_ll_frac = p._as_float(optc.get("max_lost_load_fraction", 0.0), name="max_lost_load_fraction", default=0.0)
-    lolc = p._as_float(optc.get("lost_load_cost_per_kwh", 0.0), name="lost_load_cost_per_kwh", default=0.0)
-    land_m2 = p._as_float_or_nan(optc.get("land_availability_m2", None), name="land_availability_m2")
-    em_cost = p._as_float(optc.get("emission_cost_per_kgco2e", 0.0), name="emission_cost_per_kgco2e", default=0.0)
+    max_ll_frac = p._as_float(
+        optc.get("max_lost_load_fraction", 0.0), name="max_lost_load_fraction", default=0.0
+    )
+    lolc = p._as_float(
+        optc.get("lost_load_cost_per_kwh", 0.0), name="lost_load_cost_per_kwh", default=0.0
+    )
+    land_m2 = p._as_float_or_nan(
+        optc.get("land_availability_m2", None), name="land_availability_m2"
+    )
+    em_cost = p._as_float(
+        optc.get("emission_cost_per_kgco2e", 0.0), name="emission_cost_per_kgco2e", default=0.0
+    )
 
     da_min_res_pen = xr.DataArray(min_res_pen, name="min_renewable_penetration")
     da_max_ll_frac = xr.DataArray(max_ll_frac, name="max_lost_load_fraction")
@@ -294,7 +308,9 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
 
     renewables_path = paths.inputs_dir / "renewables.yaml"
     ren_params_ds = p._load_renewables_yaml(
-        renewables_path, scenario_coord=sets.coords["scenario"], resource_coord=sets.coords["resource"]
+        renewables_path,
+        scenario_coord=sets.coords["scenario"],
+        resource_coord=sets.coords["resource"],
     )
     battery_path = paths.inputs_dir / "battery.yaml"
     bat_params_ds = p._load_battery_yaml(battery_path, scenario_coord=sets.coords["scenario"])
@@ -335,7 +351,9 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
         "resources": {
             "n_resources": int(sets.sizes.get("resource", 0)),
             "resource_labels": sets.coords.get("resource", []).values.tolist(),
-            "conversion_technology_by_resource": ren_params_ds.attrs.get("conversion_technology_by_resource", {}),
+            "conversion_technology_by_resource": ren_params_ds.attrs.get(
+                "conversion_technology_by_resource", {}
+            ),
         },
         "optimization_constraints": {"enforcement": enforcement},
         "modeling_notes": {
@@ -343,14 +361,21 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
             "land_constraint_semantics": "Land availability is enforced only when a finite non-negative `land_availability_m2` value is provided; omitted values leave the constraint inactive.",
             "battery_power_semantics": "Battery inverter power is modeled explicitly; legacy battery max charge/discharge time inputs are retained only as optional upper-bound references for backward compatibility.",
         },
-        "inputs_loaded": {"load_demand_csv": str(load_path), "renewable_availability_csv": str(resource_path)},
+        "inputs_loaded": {
+            "load_demand_csv": str(load_path),
+            "renewable_availability_csv": str(resource_path),
+        },
     }
     data.attrs["settings"]["inputs_loaded"]["renewables_yaml"] = str(renewables_path)
     data.attrs["settings"]["inputs_loaded"]["battery_yaml"] = str(battery_path)
     if battery_curve_path is not None:
-        data.attrs["settings"]["inputs_loaded"]["battery_efficiency_curve_csv"] = str(battery_curve_path)
+        data.attrs["settings"]["inputs_loaded"]["battery_efficiency_curve_csv"] = str(
+            battery_curve_path
+        )
     if battery_calendar_curve_path is not None:
-        data.attrs["settings"]["inputs_loaded"]["battery_calendar_fade_curve_csv"] = str(battery_calendar_curve_path)
+        data.attrs["settings"]["inputs_loaded"]["battery_calendar_fade_curve_csv"] = str(
+            battery_calendar_curve_path
+        )
     data.attrs["settings"]["battery_label"] = bat_params_ds.attrs.get("battery_label", "Battery")
     data.attrs["settings"]["battery_model"] = {
         "loss_model": battery_loss_model,
@@ -362,12 +387,16 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
     data.attrs["settings"]["generator"]["partial_load_modelling_enabled"] = bool(
         genfuel_meta.get("partial_load_modelling_enabled", False)
     )
-    data.attrs["settings"]["generator"]["efficiency_curve_file"] = genfuel_meta.get("efficiency_curve_file")
+    data.attrs["settings"]["generator"]["efficiency_curve_file"] = genfuel_meta.get(
+        "efficiency_curve_file"
+    )
     data.attrs["settings"]["generator"]["label"] = genfuel_meta.get("generator_label", "Generator")
     data.attrs["settings"]["fuel"] = {"label": genfuel_meta.get("fuel_label", "Fuel")}
     data.attrs["settings"].setdefault("inputs_loaded", {})
     data.attrs["settings"]["inputs_loaded"]["generator_yaml"] = str(genfuel_path)
 
-    data = _assemble_grid_block(project_name=project_name, sets=sets, formulation=formulation, data=data)
+    data = _assemble_grid_block(
+        project_name=project_name, sets=sets, formulation=formulation, data=data
+    )
 
     return data

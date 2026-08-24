@@ -38,7 +38,10 @@ def _solve_with_highs_or_skip(model: lp.Model) -> xr.Dataset:
             model.solve("highs")
     except Exception as exc:  # pragma: no cover - environment dependent
         msg = str(exc).lower()
-        if any(token in msg for token in ("highs", "solver", "not installed", "not available", "executable")):
+        if any(
+            token in msg
+            for token in ("highs", "solver", "not installed", "not available", "executable")
+        ):
             pytest.skip(f"HiGHS solver unavailable in this environment: {exc}")
         raise
     assert isinstance(model.solution, xr.Dataset)
@@ -48,7 +51,9 @@ def _solve_with_highs_or_skip(model: lp.Model) -> xr.Dataset:
 def _base_sets(periods: int = 2) -> xr.Dataset:
     return xr.Dataset(
         data_vars={
-            "inv_step_start_year": xr.DataArray(["2026"], dims=("inv_step",), coords={"inv_step": ["1"]}),
+            "inv_step_start_year": xr.DataArray(
+                ["2026"], dims=("inv_step",), coords={"inv_step": ["1"]}
+            ),
         },
         coords={
             "period": ("period", np.arange(periods, dtype=int)),
@@ -64,39 +69,126 @@ def _base_data() -> xr.Dataset:
     sets = _base_sets()
     data = xr.Dataset(
         data_vars={
-            "load_demand": xr.DataArray([[[0.0], [1.0]]], dims=("year", "period", "scenario"), coords={"year": sets.year, "period": sets.period, "scenario": sets.scenario}),
-            "resource_availability": xr.DataArray([[[[1.0]], [[0.0]]]], dims=("year", "period", "scenario", "resource"), coords={"year": sets.year, "period": sets.period, "scenario": sets.scenario, "resource": sets.resource}),
-            "scenario_weight": xr.DataArray([1.0], dims=("scenario",), coords={"scenario": sets.scenario}),
+            "load_demand": xr.DataArray(
+                [[[0.0], [1.0]]],
+                dims=("year", "period", "scenario"),
+                coords={"year": sets.year, "period": sets.period, "scenario": sets.scenario},
+            ),
+            "resource_availability": xr.DataArray(
+                [[[[1.0]], [[0.0]]]],
+                dims=("year", "period", "scenario", "resource"),
+                coords={
+                    "year": sets.year,
+                    "period": sets.period,
+                    "scenario": sets.scenario,
+                    "resource": sets.resource,
+                },
+            ),
+            "scenario_weight": xr.DataArray(
+                [1.0], dims=("scenario",), coords={"scenario": sets.scenario}
+            ),
             "min_renewable_penetration": xr.DataArray(0.0),
             "max_lost_load_fraction": xr.DataArray(0.0),
             "lost_load_cost_per_kwh": xr.DataArray(1.0e6),
             "land_availability_m2": xr.DataArray(np.nan),
             "emission_cost_per_kgco2e": xr.DataArray(0.0),
-            "res_nominal_capacity_kw": xr.DataArray([[1.0]], dims=("inv_step", "resource"), coords={"inv_step": sets.inv_step, "resource": sets.resource}),
-            "res_lifetime_years": xr.DataArray([[20.0]], dims=("inv_step", "resource"), coords={"inv_step": sets.inv_step, "resource": sets.resource}),
-            "res_specific_investment_cost_per_kw": xr.DataArray([[50.0]], dims=("inv_step", "resource"), coords={"inv_step": sets.inv_step, "resource": sets.resource}),
-            "res_inverter_specific_investment_cost_per_kw_ac": xr.DataArray([[25.0]], dims=("inv_step", "resource"), coords={"inv_step": sets.inv_step, "resource": sets.resource}),
-            "res_inverter_lifetime_years": xr.DataArray([[15.0]], dims=("inv_step", "resource"), coords={"inv_step": sets.inv_step, "resource": sets.resource}),
-            "res_wacc": xr.DataArray([[0.05]], dims=("inv_step", "resource"), coords={"inv_step": sets.inv_step, "resource": sets.resource}),
-            "res_grant_share_of_capex": xr.DataArray([[0.0]], dims=("inv_step", "resource"), coords={"inv_step": sets.inv_step, "resource": sets.resource}),
-            "res_embedded_emissions_kgco2e_per_kw": xr.DataArray([[0.0]], dims=("inv_step", "resource"), coords={"inv_step": sets.inv_step, "resource": sets.resource}),
-            "res_fixed_om_share_per_year": xr.DataArray([[0.0]], dims=("inv_step", "resource"), coords={"inv_step": sets.inv_step, "resource": sets.resource}),
-            "res_inverter_fixed_om_share_per_year": xr.DataArray([[0.0]], dims=("inv_step", "resource"), coords={"inv_step": sets.inv_step, "resource": sets.resource}),
-            "res_production_subsidy_per_kwh": xr.DataArray([[0.0]], dims=("inv_step", "resource"), coords={"inv_step": sets.inv_step, "resource": sets.resource}),
-            "res_dc_ac_ratio": xr.DataArray([2.0], dims=("resource",), coords={"resource": sets.resource}),
-            "res_inverter_efficiency": xr.DataArray([1.0], dims=("resource",), coords={"resource": sets.resource}),
-            "res_specific_area_m2_per_kw": xr.DataArray([0.0], dims=("resource",), coords={"resource": sets.resource}),
-            "res_max_installable_capacity_kw": xr.DataArray([np.nan], dims=("resource",), coords={"resource": sets.resource}),
-            "res_capacity_degradation_rate_per_year": xr.DataArray([0.0], dims=("resource",), coords={"resource": sets.resource}),
-            "battery_nominal_capacity_kwh": xr.DataArray([1.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}),
-            "battery_specific_investment_cost_per_kwh": xr.DataArray([1.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}),
-            "battery_inverter_specific_investment_cost_per_kw": xr.DataArray([1.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}),
-            "battery_inverter_lifetime_years": xr.DataArray([12.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}),
-            "battery_wacc": xr.DataArray([0.05], dims=("inv_step",), coords={"inv_step": sets.inv_step}),
-            "battery_calendar_lifetime_years": xr.DataArray([12.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}),
-            "battery_fixed_om_share_per_year": xr.DataArray([0.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}),
-            "battery_inverter_fixed_om_share_per_year": xr.DataArray([0.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}),
-            "battery_embedded_emissions_kgco2e_per_kwh": xr.DataArray([0.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}),
+            "res_nominal_capacity_kw": xr.DataArray(
+                [[1.0]],
+                dims=("inv_step", "resource"),
+                coords={"inv_step": sets.inv_step, "resource": sets.resource},
+            ),
+            "res_lifetime_years": xr.DataArray(
+                [[20.0]],
+                dims=("inv_step", "resource"),
+                coords={"inv_step": sets.inv_step, "resource": sets.resource},
+            ),
+            "res_specific_investment_cost_per_kw": xr.DataArray(
+                [[50.0]],
+                dims=("inv_step", "resource"),
+                coords={"inv_step": sets.inv_step, "resource": sets.resource},
+            ),
+            "res_inverter_specific_investment_cost_per_kw_ac": xr.DataArray(
+                [[25.0]],
+                dims=("inv_step", "resource"),
+                coords={"inv_step": sets.inv_step, "resource": sets.resource},
+            ),
+            "res_inverter_lifetime_years": xr.DataArray(
+                [[15.0]],
+                dims=("inv_step", "resource"),
+                coords={"inv_step": sets.inv_step, "resource": sets.resource},
+            ),
+            "res_wacc": xr.DataArray(
+                [[0.05]],
+                dims=("inv_step", "resource"),
+                coords={"inv_step": sets.inv_step, "resource": sets.resource},
+            ),
+            "res_grant_share_of_capex": xr.DataArray(
+                [[0.0]],
+                dims=("inv_step", "resource"),
+                coords={"inv_step": sets.inv_step, "resource": sets.resource},
+            ),
+            "res_embedded_emissions_kgco2e_per_kw": xr.DataArray(
+                [[0.0]],
+                dims=("inv_step", "resource"),
+                coords={"inv_step": sets.inv_step, "resource": sets.resource},
+            ),
+            "res_fixed_om_share_per_year": xr.DataArray(
+                [[0.0]],
+                dims=("inv_step", "resource"),
+                coords={"inv_step": sets.inv_step, "resource": sets.resource},
+            ),
+            "res_inverter_fixed_om_share_per_year": xr.DataArray(
+                [[0.0]],
+                dims=("inv_step", "resource"),
+                coords={"inv_step": sets.inv_step, "resource": sets.resource},
+            ),
+            "res_production_subsidy_per_kwh": xr.DataArray(
+                [[0.0]],
+                dims=("inv_step", "resource"),
+                coords={"inv_step": sets.inv_step, "resource": sets.resource},
+            ),
+            "res_dc_ac_ratio": xr.DataArray(
+                [2.0], dims=("resource",), coords={"resource": sets.resource}
+            ),
+            "res_inverter_efficiency": xr.DataArray(
+                [1.0], dims=("resource",), coords={"resource": sets.resource}
+            ),
+            "res_specific_area_m2_per_kw": xr.DataArray(
+                [0.0], dims=("resource",), coords={"resource": sets.resource}
+            ),
+            "res_max_installable_capacity_kw": xr.DataArray(
+                [np.nan], dims=("resource",), coords={"resource": sets.resource}
+            ),
+            "res_capacity_degradation_rate_per_year": xr.DataArray(
+                [0.0], dims=("resource",), coords={"resource": sets.resource}
+            ),
+            "battery_nominal_capacity_kwh": xr.DataArray(
+                [1.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}
+            ),
+            "battery_specific_investment_cost_per_kwh": xr.DataArray(
+                [1.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}
+            ),
+            "battery_inverter_specific_investment_cost_per_kw": xr.DataArray(
+                [1.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}
+            ),
+            "battery_inverter_lifetime_years": xr.DataArray(
+                [12.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}
+            ),
+            "battery_wacc": xr.DataArray(
+                [0.05], dims=("inv_step",), coords={"inv_step": sets.inv_step}
+            ),
+            "battery_calendar_lifetime_years": xr.DataArray(
+                [12.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}
+            ),
+            "battery_fixed_om_share_per_year": xr.DataArray(
+                [0.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}
+            ),
+            "battery_inverter_fixed_om_share_per_year": xr.DataArray(
+                [0.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}
+            ),
+            "battery_embedded_emissions_kgco2e_per_kwh": xr.DataArray(
+                [0.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}
+            ),
             "battery_max_installable_capacity_kwh": xr.DataArray(np.nan),
             "battery_charge_efficiency": xr.DataArray(1.0),
             "battery_discharge_efficiency": xr.DataArray(1.0),
@@ -108,15 +200,27 @@ def _base_data() -> xr.Dataset:
             "battery_cycle_fade_coefficient_per_kwh_throughput": xr.DataArray(0.0),
             "battery_calendar_time_increment_per_year": xr.DataArray(1.0),
             "battery_capacity_degradation_rate_per_year": xr.DataArray(0.0),
-            "generator_nominal_capacity_kw": xr.DataArray([1.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}),
+            "generator_nominal_capacity_kw": xr.DataArray(
+                [1.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}
+            ),
             "generator_max_installable_capacity_kw": xr.DataArray(0.0),
             "generator_nominal_efficiency_full_load": xr.DataArray(1.0),
             "generator_capacity_degradation_rate_per_year": xr.DataArray(0.0),
-            "generator_specific_investment_cost_per_kw": xr.DataArray([1.0e5], dims=("inv_step",), coords={"inv_step": sets.inv_step}),
-            "generator_lifetime_years": xr.DataArray([20.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}),
-            "generator_wacc": xr.DataArray([0.05], dims=("inv_step",), coords={"inv_step": sets.inv_step}),
-            "generator_fixed_om_share_per_year": xr.DataArray([0.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}),
-            "generator_embedded_emissions_kgco2e_per_kw": xr.DataArray([0.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}),
+            "generator_specific_investment_cost_per_kw": xr.DataArray(
+                [1.0e5], dims=("inv_step",), coords={"inv_step": sets.inv_step}
+            ),
+            "generator_lifetime_years": xr.DataArray(
+                [20.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}
+            ),
+            "generator_wacc": xr.DataArray(
+                [0.05], dims=("inv_step",), coords={"inv_step": sets.inv_step}
+            ),
+            "generator_fixed_om_share_per_year": xr.DataArray(
+                [0.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}
+            ),
+            "generator_embedded_emissions_kgco2e_per_kw": xr.DataArray(
+                [0.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}
+            ),
             "fuel_lhv_kwh_per_unit_fuel": xr.DataArray(1.0),
             "fuel_cost_per_unit_fuel": xr.DataArray(0.0),
             "fuel_fuel_cost_per_unit_fuel": xr.DataArray(0.0),
@@ -203,14 +307,24 @@ def test_multi_year_parsers_read_inverter_fields_and_conversion_metadata(tmp_pat
     resource = xr.DataArray(["Solar"], dims=("resource",))
     inv_step = xr.DataArray(["1"], dims=("inv_step",))
 
-    res_ds = _load_renewables_yaml(renewables_yaml, scenario_coord=scenario, resource_coord=resource, inv_step_coord=inv_step)
+    res_ds = _load_renewables_yaml(
+        renewables_yaml, scenario_coord=scenario, resource_coord=resource, inv_step_coord=inv_step
+    )
     bat_ds = _load_battery_yaml(battery_yaml, scenario_coord=scenario, inv_step_coord=inv_step)
 
     assert float(res_ds["res_dc_ac_ratio"].sel(resource="Solar")) == pytest.approx(1.2)
-    assert float(res_ds["res_inverter_specific_investment_cost_per_kw_ac"].sel(inv_step="1", resource="Solar")) == pytest.approx(25.0)
-    assert float(res_ds["res_inverter_lifetime_years"].sel(inv_step="1", resource="Solar")) == pytest.approx(15.0)
+    assert float(
+        res_ds["res_inverter_specific_investment_cost_per_kw_ac"].sel(
+            inv_step="1", resource="Solar"
+        )
+    ) == pytest.approx(25.0)
+    assert float(
+        res_ds["res_inverter_lifetime_years"].sel(inv_step="1", resource="Solar")
+    ) == pytest.approx(15.0)
     assert res_ds.attrs["conversion_technology_by_resource"]["Solar"] == "Solar PV"
-    assert float(bat_ds["battery_inverter_specific_investment_cost_per_kw"].sel(inv_step="1")) == pytest.approx(50.0)
+    assert float(
+        bat_ds["battery_inverter_specific_investment_cost_per_kw"].sel(inv_step="1")
+    ) == pytest.approx(50.0)
     assert float(bat_ds["battery_inverter_lifetime_years"].sel(inv_step="1")) == pytest.approx(12.0)
     assert float(bat_ds["battery_max_charge_c_rate"]) == pytest.approx(0.5)
     assert float(bat_ds["battery_max_discharge_c_rate"]) == pytest.approx(0.4)
@@ -225,16 +339,30 @@ def test_multi_year_inverter_outputs_are_consistent(tmp_path: Path) -> None:
     initialize_objective(sets, data, vars_dict, model)
     solution = _solve_with_highs_or_skip(model)
 
-    design = build_design_by_step_table_multi_year(sets=sets, data=data, vars=vars_dict, solution=solution)
-    cash = build_discounted_cashflows_table_multi_year(sets=sets, data=data, vars=vars_dict, solution=solution)
-    kpis = build_yearly_kpis_table_multi_year(sets=sets, data=data, vars=vars_dict, solution=solution)
+    design = build_design_by_step_table_multi_year(
+        sets=sets, data=data, vars=vars_dict, solution=solution
+    )
+    cash = build_discounted_cashflows_table_multi_year(
+        sets=sets, data=data, vars=vars_dict, solution=solution
+    )
+    kpis = build_yearly_kpis_table_multi_year(
+        sets=sets, data=data, vars=vars_dict, solution=solution
+    )
     investment = build_investment_summary_table_multi_year(sets=sets, data=data, design_df=design)
-    renewable_inverter = build_inverter_capacity_by_year_table_multi_year(sets=sets, data=data, vars=vars_dict, solution=solution)
-    battery_inverter = build_battery_inverter_design_by_step_table_multi_year(sets=sets, data=data, vars=vars_dict, solution=solution)
-    inverter_metrics = build_inverter_metrics_table_multi_year(sets=sets, data=data, vars=vars_dict, solution=solution)
+    renewable_inverter = build_inverter_capacity_by_year_table_multi_year(
+        sets=sets, data=data, vars=vars_dict, solution=solution
+    )
+    battery_inverter = build_battery_inverter_design_by_step_table_multi_year(
+        sets=sets, data=data, vars=vars_dict, solution=solution
+    )
+    inverter_metrics = build_inverter_metrics_table_multi_year(
+        sets=sets, data=data, vars=vars_dict, solution=solution
+    )
 
     solar_row = design[design["technology"] == "renewable"].iloc[0]
-    assert float(solar_row["installed_inverter_capacity_ac"]) == pytest.approx(float(solar_row["installed_capacity"]) / 2.0, abs=1e-7)
+    assert float(solar_row["installed_inverter_capacity_ac"]) == pytest.approx(
+        float(solar_row["installed_capacity"]) / 2.0, abs=1e-7
+    )
     assert "annuity_res_inverter" in cash.columns
     assert "annuity_battery_inverter" in cash.columns
     assert "renewable_inverter_clipping_potential_kwh" in kpis.columns
@@ -338,8 +466,12 @@ def test_multi_year_file_tables_round_trip_preserves_inverter_outputs(tmp_path: 
         dispatch_df=pd.read_csv(tmp_path / "dispatch_timeseries.csv"),
         energy_balance_df=pd.read_csv(tmp_path / "energy_balance.csv"),
         design_by_step_df=pd.read_csv(tmp_path / "design_by_step.csv"),
-        renewable_inverter_design_by_step_df=pd.read_csv(tmp_path / "renewable_inverter_design_by_step.csv"),
-        battery_inverter_design_by_step_df=pd.read_csv(tmp_path / "battery_inverter_design_by_step.csv"),
+        renewable_inverter_design_by_step_df=pd.read_csv(
+            tmp_path / "renewable_inverter_design_by_step.csv"
+        ),
+        battery_inverter_design_by_step_df=pd.read_csv(
+            tmp_path / "battery_inverter_design_by_step.csv"
+        ),
         inverter_capacity_by_year_df=pd.read_csv(tmp_path / "inverter_capacity_by_year.csv"),
         inverter_metrics_yearly_df=pd.read_csv(tmp_path / "inverter_metrics_yearly.csv"),
         capacity_by_year_df=pd.read_csv(tmp_path / "capacity_by_year.csv"),
@@ -360,7 +492,9 @@ def test_multi_year_file_tables_round_trip_preserves_inverter_outputs(tmp_path: 
     assert rebuilt.results_dir == tmp_path
 
 
-def test_multi_year_file_loader_reads_dedicated_inverter_csvs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_multi_year_file_loader_reads_dedicated_inverter_csvs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     sets = _base_sets()
     data = _base_data()
     model = lp.Model()
@@ -374,7 +508,9 @@ def test_multi_year_file_loader_reads_dedicated_inverter_csvs(tmp_path: Path, mo
     results_dir = project_root / "results"
     inputs_dir.mkdir(parents=True, exist_ok=True)
     results_dir.mkdir(parents=True, exist_ok=True)
-    (inputs_dir / "formulation.json").write_text('{"core_formulation": "dynamic"}', encoding="utf-8")
+    (inputs_dir / "formulation.json").write_text(
+        '{"core_formulation": "dynamic"}', encoding="utf-8"
+    )
 
     export_multi_year_results(
         project_name="loader_case",

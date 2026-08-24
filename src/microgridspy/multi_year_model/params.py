@@ -122,7 +122,9 @@ def get_params(ds: xr.Dataset) -> Params:
         res_nominal_capacity_kw=_opt("res_nominal_capacity_kw"),
         res_lifetime_years=_opt("res_lifetime_years"),
         res_specific_investment_cost_per_kw=_opt("res_specific_investment_cost_per_kw"),
-        res_inverter_specific_investment_cost_per_kw_ac=_opt("res_inverter_specific_investment_cost_per_kw_ac"),
+        res_inverter_specific_investment_cost_per_kw_ac=_opt(
+            "res_inverter_specific_investment_cost_per_kw_ac"
+        ),
         res_inverter_lifetime_years=_opt("res_inverter_lifetime_years"),
         res_wacc=_opt("res_wacc"),
         res_grant_share_of_capex=_opt("res_grant_share_of_capex"),
@@ -137,7 +139,9 @@ def get_params(ds: xr.Dataset) -> Params:
         res_capacity_degradation_rate_per_year=_opt("res_capacity_degradation_rate_per_year"),
         battery_nominal_capacity_kwh=_opt("battery_nominal_capacity_kwh"),
         battery_specific_investment_cost_per_kwh=_opt("battery_specific_investment_cost_per_kwh"),
-        battery_inverter_specific_investment_cost_per_kw=_opt("battery_inverter_specific_investment_cost_per_kw"),
+        battery_inverter_specific_investment_cost_per_kw=_opt(
+            "battery_inverter_specific_investment_cost_per_kw"
+        ),
         battery_inverter_lifetime_years=_opt("battery_inverter_lifetime_years"),
         battery_wacc=_opt("battery_wacc"),
         battery_calendar_lifetime_years=_opt("battery_calendar_lifetime_years"),
@@ -152,22 +156,32 @@ def get_params(ds: xr.Dataset) -> Params:
         battery_depth_of_discharge=_opt("battery_depth_of_discharge"),
         battery_max_charge_c_rate=_opt("battery_max_charge_c_rate"),
         battery_max_discharge_c_rate=_opt("battery_max_discharge_c_rate"),
-        battery_cycle_fade_coefficient_per_kwh_throughput=_opt("battery_cycle_fade_coefficient_per_kwh_throughput"),
+        battery_cycle_fade_coefficient_per_kwh_throughput=_opt(
+            "battery_cycle_fade_coefficient_per_kwh_throughput"
+        ),
         battery_calendar_time_increment_per_year=_opt("battery_calendar_time_increment_per_year"),
-        battery_capacity_degradation_rate_per_year=_opt("battery_capacity_degradation_rate_per_year"),
+        battery_capacity_degradation_rate_per_year=_opt(
+            "battery_capacity_degradation_rate_per_year"
+        ),
         generator_nominal_capacity_kw=_opt("generator_nominal_capacity_kw"),
         generator_max_installable_capacity_kw=_opt("generator_max_installable_capacity_kw"),
         generator_nominal_efficiency_full_load=_opt("generator_nominal_efficiency_full_load"),
-        generator_capacity_degradation_rate_per_year=_opt("generator_capacity_degradation_rate_per_year"),
+        generator_capacity_degradation_rate_per_year=_opt(
+            "generator_capacity_degradation_rate_per_year"
+        ),
         generator_specific_investment_cost_per_kw=_opt("generator_specific_investment_cost_per_kw"),
         generator_lifetime_years=_opt("generator_lifetime_years"),
         generator_wacc=_opt("generator_wacc"),
         generator_fixed_om_share_per_year=_opt("generator_fixed_om_share_per_year"),
-        generator_embedded_emissions_kgco2e_per_kw=_opt("generator_embedded_emissions_kgco2e_per_kw"),
+        generator_embedded_emissions_kgco2e_per_kw=_opt(
+            "generator_embedded_emissions_kgco2e_per_kw"
+        ),
         fuel_lhv_kwh_per_unit_fuel=_opt("fuel_lhv_kwh_per_unit_fuel"),
         fuel_cost_per_unit_fuel=_opt("fuel_cost_per_unit_fuel"),
         fuel_fuel_cost_per_unit_fuel=_opt("fuel_fuel_cost_per_unit_fuel"),
-        fuel_direct_emissions_kgco2e_per_unit_fuel=_opt("fuel_direct_emissions_kgco2e_per_unit_fuel"),
+        fuel_direct_emissions_kgco2e_per_unit_fuel=_opt(
+            "fuel_direct_emissions_kgco2e_per_unit_fuel"
+        ),
         grid_line_capacity_kw=_opt("grid_line_capacity_kw"),
         grid_transmission_efficiency=_opt("grid_transmission_efficiency"),
         grid_renewable_share=_opt("grid_renewable_share"),

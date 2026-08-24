@@ -69,22 +69,86 @@ def build_dispatch_timeseries_table(
 ) -> pd.DataFrame:
     p = get_params(data)
     load = p.load_demand
-    res = require_data_array("res_generation", get_var_solution(vars_dict=vars, solution=solution, name="res_generation", prefer_solution_dataset=False))
-    gen = require_data_array("generator_generation", get_var_solution(vars_dict=vars, solution=solution, name="generator_generation", prefer_solution_dataset=False))
-    bch = require_data_array("battery_charge", get_var_solution(vars_dict=vars, solution=solution, name="battery_charge", prefer_solution_dataset=False))
-    bdis = require_data_array("battery_discharge", get_var_solution(vars_dict=vars, solution=solution, name="battery_discharge", prefer_solution_dataset=False))
-    bsoc = require_data_array("battery_soc", get_var_solution(vars_dict=vars, solution=solution, name="battery_soc", prefer_solution_dataset=False))
-    bch_dc = get_var_solution(vars_dict=vars, solution=solution, name="battery_charge_dc", prefer_solution_dataset=False)
-    bdis_dc = get_var_solution(vars_dict=vars, solution=solution, name="battery_discharge_dc", prefer_solution_dataset=False)
-    bch_loss = get_var_solution(vars_dict=vars, solution=solution, name="battery_charge_loss", prefer_solution_dataset=False)
-    bdis_loss = get_var_solution(vars_dict=vars, solution=solution, name="battery_discharge_loss", prefer_solution_dataset=False)
-    fuel_cons = get_var_solution(vars_dict=vars, solution=solution, name="fuel_consumption", prefer_solution_dataset=False)
-    ll = require_data_array("lost_load", get_var_solution(vars_dict=vars, solution=solution, name="lost_load", prefer_solution_dataset=False))
+    res = require_data_array(
+        "res_generation",
+        get_var_solution(
+            vars_dict=vars, solution=solution, name="res_generation", prefer_solution_dataset=False
+        ),
+    )
+    gen = require_data_array(
+        "generator_generation",
+        get_var_solution(
+            vars_dict=vars,
+            solution=solution,
+            name="generator_generation",
+            prefer_solution_dataset=False,
+        ),
+    )
+    bch = require_data_array(
+        "battery_charge",
+        get_var_solution(
+            vars_dict=vars, solution=solution, name="battery_charge", prefer_solution_dataset=False
+        ),
+    )
+    bdis = require_data_array(
+        "battery_discharge",
+        get_var_solution(
+            vars_dict=vars,
+            solution=solution,
+            name="battery_discharge",
+            prefer_solution_dataset=False,
+        ),
+    )
+    bsoc = require_data_array(
+        "battery_soc",
+        get_var_solution(
+            vars_dict=vars, solution=solution, name="battery_soc", prefer_solution_dataset=False
+        ),
+    )
+    bch_dc = get_var_solution(
+        vars_dict=vars, solution=solution, name="battery_charge_dc", prefer_solution_dataset=False
+    )
+    bdis_dc = get_var_solution(
+        vars_dict=vars,
+        solution=solution,
+        name="battery_discharge_dc",
+        prefer_solution_dataset=False,
+    )
+    bch_loss = get_var_solution(
+        vars_dict=vars, solution=solution, name="battery_charge_loss", prefer_solution_dataset=False
+    )
+    bdis_loss = get_var_solution(
+        vars_dict=vars,
+        solution=solution,
+        name="battery_discharge_loss",
+        prefer_solution_dataset=False,
+    )
+    fuel_cons = get_var_solution(
+        vars_dict=vars, solution=solution, name="fuel_consumption", prefer_solution_dataset=False
+    )
+    ll = require_data_array(
+        "lost_load",
+        get_var_solution(
+            vars_dict=vars, solution=solution, name="lost_load", prefer_solution_dataset=False
+        ),
+    )
 
     on_grid = p.is_grid_on()
     allow_export = p.is_grid_export_enabled()
-    gimp = get_var_solution(vars_dict=vars, solution=solution, name="grid_import", prefer_solution_dataset=False) if on_grid else None
-    gexp = get_var_solution(vars_dict=vars, solution=solution, name="grid_export", prefer_solution_dataset=False) if (on_grid and allow_export) else None
+    gimp = (
+        get_var_solution(
+            vars_dict=vars, solution=solution, name="grid_import", prefer_solution_dataset=False
+        )
+        if on_grid
+        else None
+    )
+    gexp = (
+        get_var_solution(
+            vars_dict=vars, solution=solution, name="grid_export", prefer_solution_dataset=False
+        )
+        if (on_grid and allow_export)
+        else None
+    )
 
     records = []
     res_total = res.sum("resource")
@@ -106,11 +170,19 @@ def build_dispatch_timeseries_table(
                     if isinstance(fuel_cons, xr.DataArray)
                     else 0.0
                 ),
-                "grid_import": gimp.sel(scenario=s).values.astype(float) if isinstance(gimp, xr.DataArray) else 0.0,
-                "grid_export": gexp.sel(scenario=s).values.astype(float) if isinstance(gexp, xr.DataArray) else 0.0,
+                "grid_import": gimp.sel(scenario=s).values.astype(float)
+                if isinstance(gimp, xr.DataArray)
+                else 0.0,
+                "grid_export": gexp.sel(scenario=s).values.astype(float)
+                if isinstance(gexp, xr.DataArray)
+                else 0.0,
             }
         )
-        grid_eta = float(p.grid_transmission_efficiency.sel(scenario=s)) if p.grid_transmission_efficiency is not None else 1.0
+        grid_eta = (
+            float(p.grid_transmission_efficiency.sel(scenario=s))
+            if p.grid_transmission_efficiency is not None
+            else 1.0
+        )
         d["grid_import_delivered"] = d["grid_import"] * grid_eta
         d["grid_export_delivered"] = d["grid_export"] * grid_eta
         for r in res.coords["resource"].values:
@@ -139,18 +211,43 @@ def build_design_summary_table(
     solution: xr.Dataset | None,
 ) -> pd.DataFrame:
     p = get_params(data)
-    res_units = require_data_array("res_units", get_var_solution(vars_dict=vars, solution=solution, name="res_units", prefer_solution_dataset=False))
-    bat_units = require_data_array("battery_units", get_var_solution(vars_dict=vars, solution=solution, name="battery_units", prefer_solution_dataset=False))
-    bat_inv_units_raw = get_var_solution(vars_dict=vars, solution=solution, name="battery_inverter_units", prefer_solution_dataset=False)
+    res_units = require_data_array(
+        "res_units",
+        get_var_solution(
+            vars_dict=vars, solution=solution, name="res_units", prefer_solution_dataset=False
+        ),
+    )
+    bat_units = require_data_array(
+        "battery_units",
+        get_var_solution(
+            vars_dict=vars, solution=solution, name="battery_units", prefer_solution_dataset=False
+        ),
+    )
+    bat_inv_units_raw = get_var_solution(
+        vars_dict=vars,
+        solution=solution,
+        name="battery_inverter_units",
+        prefer_solution_dataset=False,
+    )
     if isinstance(bat_inv_units_raw, xr.DataArray):
         bat_inv_units = require_data_array("battery_inverter_units", bat_inv_units_raw)
     else:
-        legacy_bat_inv_power = get_var_solution(vars_dict=vars, solution=solution, name="battery_inverter_power", prefer_solution_dataset=False)
+        legacy_bat_inv_power = get_var_solution(
+            vars_dict=vars,
+            solution=solution,
+            name="battery_inverter_power",
+            prefer_solution_dataset=False,
+        )
         if isinstance(legacy_bat_inv_power, xr.DataArray):
             bat_inv_units = require_data_array("battery_inverter_power", legacy_bat_inv_power)
         else:
             bat_inv_units = xr.DataArray(0.0, name="battery_inverter_units")
-    gen_units = require_data_array("generator_units", get_var_solution(vars_dict=vars, solution=solution, name="generator_units", prefer_solution_dataset=False))
+    gen_units = require_data_array(
+        "generator_units",
+        get_var_solution(
+            vars_dict=vars, solution=solution, name="generator_units", prefer_solution_dataset=False
+        ),
+    )
 
     res_cap = res_units * p.res_nominal_capacity_kw
     res_inv_cap = res_cap / p.res_dc_ac_ratio
@@ -183,16 +280,45 @@ def build_structured_design_tables(
     design_summary_df: pd.DataFrame,
 ) -> dict[str, pd.DataFrame]:
     row = design_summary_df.iloc[0] if not design_summary_df.empty else pd.Series(dtype=float)
-    resources = [str(r) for r in data.coords["resource"].values.tolist()] if "resource" in data.coords else []
+    resources = (
+        [str(r) for r in data.coords["resource"].values.tolist()]
+        if "resource" in data.coords
+        else []
+    )
 
     renewable_rows = []
     renewable_inverter_rows = []
     for resource in resources:
-        renewable_dc_kw = float(pd.to_numeric(pd.Series([row.get(f"res_installed_kw__{resource}", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
-        renewable_units = float(pd.to_numeric(pd.Series([row.get(f"res_units__{resource}", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
-        inverter_ac_kw = float(pd.to_numeric(pd.Series([row.get(f"res_inverter_installed_kw_ac__{resource}", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
-        dc_ac_ratio = float(safe_float(data["res_dc_ac_ratio"].sel(resource=resource))) if "res_dc_ac_ratio" in data else float("nan")
-        inverter_efficiency = float(safe_float(data["res_inverter_efficiency"].sel(resource=resource))) if "res_inverter_efficiency" in data else float("nan")
+        renewable_dc_kw = float(
+            pd.to_numeric(
+                pd.Series([row.get(f"res_installed_kw__{resource}", 0.0)]), errors="coerce"
+            )
+            .fillna(0.0)
+            .iloc[0]
+        )
+        renewable_units = float(
+            pd.to_numeric(pd.Series([row.get(f"res_units__{resource}", 0.0)]), errors="coerce")
+            .fillna(0.0)
+            .iloc[0]
+        )
+        inverter_ac_kw = float(
+            pd.to_numeric(
+                pd.Series([row.get(f"res_inverter_installed_kw_ac__{resource}", 0.0)]),
+                errors="coerce",
+            )
+            .fillna(0.0)
+            .iloc[0]
+        )
+        dc_ac_ratio = (
+            float(safe_float(data["res_dc_ac_ratio"].sel(resource=resource)))
+            if "res_dc_ac_ratio" in data
+            else float("nan")
+        )
+        inverter_efficiency = (
+            float(safe_float(data["res_inverter_efficiency"].sel(resource=resource)))
+            if "res_inverter_efficiency" in data
+            else float("nan")
+        )
         renewable_rows.append(
             {
                 "Resource": resource,
@@ -213,13 +339,41 @@ def build_structured_design_tables(
             }
         )
 
-    battery_units = float(pd.to_numeric(pd.Series([row.get("battery_units", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
-    battery_inverter_units = float(pd.to_numeric(pd.Series([row.get("battery_inverter_units", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
-    battery_kwh = float(pd.to_numeric(pd.Series([row.get("battery_installed_kwh", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
-    battery_inv_kw = float(pd.to_numeric(pd.Series([row.get("battery_inverter_power_kw", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
-    battery_inv_nom_kw = float(safe_float(data["battery_inverter_nominal_power_kw"])) if "battery_inverter_nominal_power_kw" in data else float("nan")
-    generator_units = float(pd.to_numeric(pd.Series([row.get("generator_units", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
-    generator_kw = float(pd.to_numeric(pd.Series([row.get("generator_installed_kw", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
+    battery_units = float(
+        pd.to_numeric(pd.Series([row.get("battery_units", 0.0)]), errors="coerce")
+        .fillna(0.0)
+        .iloc[0]
+    )
+    battery_inverter_units = float(
+        pd.to_numeric(pd.Series([row.get("battery_inverter_units", 0.0)]), errors="coerce")
+        .fillna(0.0)
+        .iloc[0]
+    )
+    battery_kwh = float(
+        pd.to_numeric(pd.Series([row.get("battery_installed_kwh", 0.0)]), errors="coerce")
+        .fillna(0.0)
+        .iloc[0]
+    )
+    battery_inv_kw = float(
+        pd.to_numeric(pd.Series([row.get("battery_inverter_power_kw", 0.0)]), errors="coerce")
+        .fillna(0.0)
+        .iloc[0]
+    )
+    battery_inv_nom_kw = (
+        float(safe_float(data["battery_inverter_nominal_power_kw"]))
+        if "battery_inverter_nominal_power_kw" in data
+        else float("nan")
+    )
+    generator_units = float(
+        pd.to_numeric(pd.Series([row.get("generator_units", 0.0)]), errors="coerce")
+        .fillna(0.0)
+        .iloc[0]
+    )
+    generator_kw = float(
+        pd.to_numeric(pd.Series([row.get("generator_installed_kw", 0.0)]), errors="coerce")
+        .fillna(0.0)
+        .iloc[0]
+    )
 
     return {
         "renewable_design": pd.DataFrame(renewable_rows),
@@ -268,19 +422,48 @@ def build_inverter_metrics_table(
         dispatch["scenario"] = dispatch["scenario"].astype(str)
 
     if not renewable_inverter_design_df.empty:
-        scenarios = [str(s) for s in data.coords["scenario"].values.tolist()] if "scenario" in data.coords else []
+        scenarios = (
+            [str(s) for s in data.coords["scenario"].values.tolist()]
+            if "scenario" in data.coords
+            else []
+        )
         for _, resource_row in renewable_inverter_design_df.iterrows():
             resource = str(resource_row["Resource"])
-            inverter_ac_kw = float(pd.to_numeric(pd.Series([resource_row.get("Installed inverter AC capacity [kW_ac]", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
+            inverter_ac_kw = float(
+                pd.to_numeric(
+                    pd.Series([resource_row.get("Installed inverter AC capacity [kW_ac]", 0.0)]),
+                    errors="coerce",
+                )
+                .fillna(0.0)
+                .iloc[0]
+            )
             col = f"res_generation__{resource}"
-            max_dispatch = float(pd.to_numeric(dispatch[col], errors="coerce").fillna(0.0).max()) if col in dispatch.columns else 0.0
+            max_dispatch = (
+                float(pd.to_numeric(dispatch[col], errors="coerce").fillna(0.0).max())
+                if col in dispatch.columns
+                else 0.0
+            )
             pre_inverter_potential = 0.0
             effective_potential = 0.0
             if {"resource_availability", "res_inverter_efficiency"}.issubset(set(data.data_vars)):
-                installed_dc_kw = float(pd.to_numeric(pd.Series([resource_row.get("Installed DC capacity [kW]", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
-                inverter_efficiency = float(safe_float(data["res_inverter_efficiency"].sel(resource=resource)))
+                installed_dc_kw = float(
+                    pd.to_numeric(
+                        pd.Series([resource_row.get("Installed DC capacity [kW]", 0.0)]),
+                        errors="coerce",
+                    )
+                    .fillna(0.0)
+                    .iloc[0]
+                )
+                inverter_efficiency = float(
+                    safe_float(data["res_inverter_efficiency"].sel(resource=resource))
+                )
                 for scenario in scenarios:
-                    availability = np.asarray(data["resource_availability"].sel(scenario=scenario, resource=resource).values, dtype=float)
+                    availability = np.asarray(
+                        data["resource_availability"]
+                        .sel(scenario=scenario, resource=resource)
+                        .values,
+                        dtype=float,
+                    )
                     scenario_pre = availability * installed_dc_kw * inverter_efficiency
                     pre_inverter_potential += float(np.sum(scenario_pre))
                     effective_potential += float(np.sum(np.minimum(scenario_pre, inverter_ac_kw)))
@@ -289,23 +472,59 @@ def build_inverter_metrics_table(
                     "Component": f"{resource} inverter",
                     "Installed inverter AC capacity [kW_ac]": inverter_ac_kw,
                     "Peak dispatched renewable output [kW_ac]": max_dispatch,
-                    "Peak utilization [%]": 100.0 * safe_float(max_dispatch / inverter_ac_kw) if inverter_ac_kw > 1e-12 else 0.0,
+                    "Peak utilization [%]": 100.0 * safe_float(max_dispatch / inverter_ac_kw)
+                    if inverter_ac_kw > 1e-12
+                    else 0.0,
                     "Pre-inverter renewable AC-equivalent potential [kWh]": pre_inverter_potential,
                     "Effective inverter-limited renewable potential [kWh]": effective_potential,
-                    "Inverter clipping potential [kWh]": max(pre_inverter_potential - effective_potential, 0.0),
+                    "Inverter clipping potential [kWh]": max(
+                        pre_inverter_potential - effective_potential, 0.0
+                    ),
                 }
             )
 
     if not battery_inverter_design_df.empty:
-        battery_inv_kw = float(pd.to_numeric(pd.Series([battery_inverter_design_df.iloc[0].get("Installed inverter power [kW]", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
-        max_charge = float(pd.to_numeric(dispatch.get("battery_charge", pd.Series(dtype=float)), errors="coerce").fillna(0.0).max()) if "battery_charge" in dispatch.columns else 0.0
-        max_discharge = float(pd.to_numeric(dispatch.get("battery_discharge", pd.Series(dtype=float)), errors="coerce").fillna(0.0).max()) if "battery_discharge" in dispatch.columns else 0.0
+        battery_inv_kw = float(
+            pd.to_numeric(
+                pd.Series(
+                    [battery_inverter_design_df.iloc[0].get("Installed inverter power [kW]", 0.0)]
+                ),
+                errors="coerce",
+            )
+            .fillna(0.0)
+            .iloc[0]
+        )
+        max_charge = (
+            float(
+                pd.to_numeric(
+                    dispatch.get("battery_charge", pd.Series(dtype=float)), errors="coerce"
+                )
+                .fillna(0.0)
+                .max()
+            )
+            if "battery_charge" in dispatch.columns
+            else 0.0
+        )
+        max_discharge = (
+            float(
+                pd.to_numeric(
+                    dispatch.get("battery_discharge", pd.Series(dtype=float)), errors="coerce"
+                )
+                .fillna(0.0)
+                .max()
+            )
+            if "battery_discharge" in dispatch.columns
+            else 0.0
+        )
         rows.append(
             {
                 "Component": "Battery inverter",
                 "Installed inverter AC capacity [kW_ac]": battery_inv_kw,
                 "Peak dispatched renewable output [kW_ac]": np.nan,
-                "Peak utilization [%]": 100.0 * safe_float(max(max_charge, max_discharge) / battery_inv_kw) if battery_inv_kw > 1e-12 else 0.0,
+                "Peak utilization [%]": 100.0
+                * safe_float(max(max_charge, max_discharge) / battery_inv_kw)
+                if battery_inv_kw > 1e-12
+                else 0.0,
                 "Pre-inverter renewable AC-equivalent potential [kWh]": np.nan,
                 "Effective inverter-limited renewable potential [kWh]": np.nan,
                 "Inverter clipping potential [kWh]": np.nan,
@@ -396,15 +615,25 @@ def build_typical_year_results_from_tables(
     results_dir: Path | None = None,
     source: str = "files",
 ) -> TypicalYearResults:
-    raw_expected = kpis_df[kpis_df["scenario"].astype(str).str.lower() == "expected"] if "scenario" in kpis_df.columns else pd.DataFrame()
-    objective_value = float(safe_float(raw_expected.iloc[0].get("objective_value", np.nan))) if not raw_expected.empty else float("nan")
+    raw_expected = (
+        kpis_df[kpis_df["scenario"].astype(str).str.lower() == "expected"]
+        if "scenario" in kpis_df.columns
+        else pd.DataFrame()
+    )
+    objective_value = (
+        float(safe_float(raw_expected.iloc[0].get("objective_value", np.nan)))
+        if not raw_expected.empty
+        else float("nan")
+    )
     reporting = build_reporting_tables(
         data=data,
         dispatch_df=dispatch_df,
         design_df=design_summary_df,
         solver_objective_value=objective_value,
     )
-    structured_design = build_structured_design_tables(data=data, design_summary_df=design_summary_df)
+    structured_design = build_structured_design_tables(
+        data=data, design_summary_df=design_summary_df
+    )
     inverter_metrics = build_inverter_metrics_table(
         data=data,
         dispatch_df=dispatch_df,
@@ -426,13 +655,23 @@ def build_typical_year_results_from_tables(
         design_summary=design_summary_df,
         kpis=kpis_df,
         upfront=upfront_df if upfront_df is not None else reporting.upfront,
-        expected_cost_components=expected_cost_components_df if expected_cost_components_df is not None else reporting.expected_cost_components,
-        expected_fixed_om=expected_fixed_om_df if expected_fixed_om_df is not None else reporting.expected_fixed_om,
+        expected_cost_components=expected_cost_components_df
+        if expected_cost_components_df is not None
+        else reporting.expected_cost_components,
+        expected_fixed_om=expected_fixed_om_df
+        if expected_fixed_om_df is not None
+        else reporting.expected_fixed_om,
         annuities=annuities_df if annuities_df is not None else reporting.annuities,
         embodied=embodied_df if embodied_df is not None else reporting.embodied,
-        scenario_variable_costs=scenario_variable_costs_df if scenario_variable_costs_df is not None else reporting.scenario_variable_costs,
-        scenario_emissions=scenario_emissions_df if scenario_emissions_df is not None else reporting.scenario_emissions,
-        scenario_total_operating_costs=scenario_total_operating_costs_df if scenario_total_operating_costs_df is not None else reporting.scenario_total_operating_costs,
+        scenario_variable_costs=scenario_variable_costs_df
+        if scenario_variable_costs_df is not None
+        else reporting.scenario_variable_costs,
+        scenario_emissions=scenario_emissions_df
+        if scenario_emissions_df is not None
+        else reporting.scenario_emissions,
+        scenario_total_operating_costs=scenario_total_operating_costs_df
+        if scenario_total_operating_costs_df is not None
+        else reporting.scenario_total_operating_costs,
         renewable_design=structured_design["renewable_design"],
         battery_design=structured_design["battery_design"],
         generator_design=structured_design["generator_design"],
@@ -476,21 +715,39 @@ def build_summary_metrics_table(reporting) -> pd.DataFrame:
     expected = kpis[kpis["scenario"].str.lower() == "expected"]
     expected_row = expected.iloc[0] if not expected.empty else pd.Series(dtype=float)
 
-    total_annual_cost_exp = float(safe_float(expected_row.get("reported_total_annual_cost", np.nan)))
+    total_annual_cost_exp = float(
+        safe_float(expected_row.get("reported_total_annual_cost", np.nan))
+    )
     delivered_kwh = float(safe_float(expected_row.get("served_energy_kwh", np.nan)))
-    lcoe = total_annual_cost_exp / delivered_kwh if delivered_kwh > 1e-9 and np.isfinite(total_annual_cost_exp) else float("nan")
+    lcoe = (
+        total_annual_cost_exp / delivered_kwh
+        if delivered_kwh > 1e-9 and np.isfinite(total_annual_cost_exp)
+        else float("nan")
+    )
     total_upfront_gross_k = (
-        float(pd.to_numeric(reporting.upfront["Upfront gross [thousand]"], errors="coerce").fillna(0.0).sum())
+        float(
+            pd.to_numeric(reporting.upfront["Upfront gross [thousand]"], errors="coerce")
+            .fillna(0.0)
+            .sum()
+        )
         if not reporting.upfront.empty
         else 0.0
     )
     total_upfront_net_k = (
-        float(pd.to_numeric(reporting.upfront["Upfront net [thousand]"], errors="coerce").fillna(0.0).sum())
+        float(
+            pd.to_numeric(reporting.upfront["Upfront net [thousand]"], errors="coerce")
+            .fillna(0.0)
+            .sum()
+        )
         if not reporting.upfront.empty
         else 0.0
     )
     embodied_cost_exp = (
-        float(pd.to_numeric(reporting.embodied["Embodied Cost [/yr]"], errors="coerce").fillna(0.0).sum())
+        float(
+            pd.to_numeric(reporting.embodied["Embodied Cost [/yr]"], errors="coerce")
+            .fillna(0.0)
+            .sum()
+        )
         if not reporting.embodied.empty
         else 0.0
     )
@@ -498,12 +755,28 @@ def build_summary_metrics_table(reporting) -> pd.DataFrame:
 
     return pd.DataFrame(
         [
-            {"Metric": "Total Annualized Cost (Expected)", "Value": total_annual_cost_exp, "Unit": "/yr"},
+            {
+                "Metric": "Total Annualized Cost (Expected)",
+                "Value": total_annual_cost_exp,
+                "Unit": "/yr",
+            },
             {"Metric": "LCOE (Expected, delivered)", "Value": lcoe, "Unit": "/kWh"},
-            {"Metric": "Upfront investment gross", "Value": total_upfront_gross_k, "Unit": "thousand"},
+            {
+                "Metric": "Upfront investment gross",
+                "Value": total_upfront_gross_k,
+                "Unit": "thousand",
+            },
             {"Metric": "Upfront investment net", "Value": total_upfront_net_k, "Unit": "thousand"},
-            {"Metric": "Embodied emissions (Expected)", "Value": scope3_kg_exp, "Unit": "kgCO2e/yr"},
-            {"Metric": "Embodied externality cost (Expected)", "Value": embodied_cost_exp, "Unit": "/yr"},
+            {
+                "Metric": "Embodied emissions (Expected)",
+                "Value": scope3_kg_exp,
+                "Unit": "kgCO2e/yr",
+            },
+            {
+                "Metric": "Embodied externality cost (Expected)",
+                "Value": embodied_cost_exp,
+                "Unit": "/yr",
+            },
         ]
     )
 

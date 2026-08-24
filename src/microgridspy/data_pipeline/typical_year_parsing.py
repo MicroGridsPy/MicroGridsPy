@@ -1,4 +1,4 @@
-﻿# generation_planning/modeling/data.py
+# generation_planning/modeling/data.py
 from __future__ import annotations
 
 from functools import partial
@@ -149,6 +149,7 @@ def _validate_meta_hour_3level(
         error_cls=InputValidationError,
     )
 
+
 # -----------------------------------------------------------------------------
 # load data from CSV templates
 def _load_load_demand_csv(
@@ -183,7 +184,9 @@ def _load_load_demand_csv(
     # --- scenario columns: (scenario_label, typical_year) ---
     scenario_labels = _scenario_labels(scenario_coord)
 
-    missing_cols = [(s, "typical_year") for s in scenario_labels if (s, "typical_year") not in df.columns]
+    missing_cols = [
+        (s, "typical_year") for s in scenario_labels if (s, "typical_year") not in df.columns
+    ]
     if missing_cols:
         missing_names = ", ".join([f"({a},{b})" for a, b in missing_cols])
         raise InputValidationError(
@@ -211,6 +214,7 @@ def _load_load_demand_csv(
         attrs={"units": "kWh", "source_file": str(path)},
     )
     return da
+
 
 # -----------------------------------------------------------------------------
 # load resource availability from CSV template
@@ -254,14 +258,14 @@ def _load_resource_availability_csv(
         raise InputValidationError(
             f"{path.name}: missing required availability columns for the current sets. "
             f"Examples: {sample}"
-            + (f" ... (+{len(missing)-10} more)" if len(missing) > 10 else "")
+            + (f" ... (+{len(missing) - 10} more)" if len(missing) > 10 else "")
         )
 
     # --- extract into (period, scenario, resource) ---
     blocks = []
     for s in scenario_labels:
         cols_sr = [(s, year_label, r) for r in resource_labels]
-        mat_sr = df.loc[:, cols_sr].to_numpy()   # (period, resource)
+        mat_sr = df.loc[:, cols_sr].to_numpy()  # (period, resource)
         blocks.append(mat_sr)
 
     # blocks: list of (period, resource) for each scenario -> stack to (scenario, period, resource)
@@ -287,6 +291,7 @@ def _load_resource_availability_csv(
         attrs={"units": "-", "source_file": str(path), "year_label": year_label},
     )
     return da
+
 
 def _load_renewables_yaml(
     path: Path,
@@ -324,7 +329,9 @@ def _load_renewables_yaml(
 
     ren_list = payload.get("renewables", None)
     if not isinstance(ren_list, list) or len(ren_list) == 0:
-        raise InputValidationError(f"{path.name}: expected a non-empty list under key 'renewables'.")
+        raise InputValidationError(
+            f"{path.name}: expected a non-empty list under key 'renewables'."
+        )
 
     scenario_labels = _scenario_labels(scenario_coord)
     resource_labels = _resource_labels(resource_coord)
@@ -368,13 +375,19 @@ def _load_renewables_yaml(
 
     for item in ren_list:
         if not isinstance(item, dict):
-            raise InputValidationError(f"{path.name}: each element in 'renewables' must be a mapping/dict.")
+            raise InputValidationError(
+                f"{path.name}: each element in 'renewables' must be a mapping/dict."
+            )
 
         res_label = item.get("resource", None)
         if res_label is None:
-            raise InputValidationError(f"{path.name}: a renewable entry is missing required key 'resource'.")
+            raise InputValidationError(
+                f"{path.name}: a renewable entry is missing required key 'resource'."
+            )
         res_label = str(res_label)
-        conversion_technology_by_resource[res_label] = str(item.get("conversion_technology", "") or "").strip()
+        conversion_technology_by_resource[res_label] = str(
+            item.get("conversion_technology", "") or ""
+        ).strip()
 
         if res_label not in res_to_idx:
             raise InputValidationError(
@@ -385,7 +398,9 @@ def _load_renewables_yaml(
         # ---- investment.by_step (take first step entry)
         inv_block = item.get("investment", None)
         if not isinstance(inv_block, dict):
-            raise InputValidationError(f"{path.name}: resource '{res_label}' missing/invalid 'investment' mapping.")
+            raise InputValidationError(
+                f"{path.name}: resource '{res_label}' missing/invalid 'investment' mapping."
+            )
 
         first_step_key, base = _select_typical_year_step_block(
             path=path,
@@ -396,7 +411,11 @@ def _load_renewables_yaml(
         for k in PARAMS_INVESTMENT:
             if k not in base:
                 if k == "inverter_lifetime_years":
-                    inv_arr[k][j] = _as_float(base.get("lifetime_years"), name=f"{res_label}/investment/{first_step_key}/lifetime_years", default=0.0)
+                    inv_arr[k][j] = _as_float(
+                        base.get("lifetime_years"),
+                        name=f"{res_label}/investment/{first_step_key}/lifetime_years",
+                        default=0.0,
+                    )
                     continue
                 if k in OPTIONAL_INVESTMENT:
                     inv_arr[k][j] = float(OPTIONAL_INVESTMENT[k])
@@ -405,12 +424,16 @@ def _load_renewables_yaml(
                     f"{path.name}: missing investment param '{k}' in resource '{res_label}' (investment.by_step['{first_step_key}'])."
                 )
 
-            inv_arr[k][j] = _as_float(base.get(k), name=f"{res_label}/investment/{first_step_key}/{k}", default=0.0)
+            inv_arr[k][j] = _as_float(
+                base.get(k), name=f"{res_label}/investment/{first_step_key}/{k}", default=0.0
+            )
 
         # ---- technical (step-invariant)
         tech_block = item.get("technical", None)
         if not isinstance(tech_block, dict):
-            raise InputValidationError(f"{path.name}: resource '{res_label}' missing/invalid 'technical' mapping.")
+            raise InputValidationError(
+                f"{path.name}: resource '{res_label}' missing/invalid 'technical' mapping."
+            )
 
         for k in PARAMS_TECHNICAL:
             if k not in tech_block:
@@ -421,9 +444,13 @@ def _load_renewables_yaml(
                     f"{path.name}: missing technical param '{k}' in resource '{res_label}' (technical.{k})."
                 )
             if k in ("max_installable_capacity_kw", "specific_area_m2_per_kw"):
-                tech_arr[k][j] = _as_float_or_nan(tech_block.get(k), name=f"{res_label}/technical/{k}")
+                tech_arr[k][j] = _as_float_or_nan(
+                    tech_block.get(k), name=f"{res_label}/technical/{k}"
+                )
             else:
-                tech_arr[k][j] = _as_float(tech_block.get(k), name=f"{res_label}/technical/{k}", default=0.0)
+                tech_arr[k][j] = _as_float(
+                    tech_block.get(k), name=f"{res_label}/technical/{k}", default=0.0
+                )
 
         fom_arr[j] = inv_arr["fixed_om_share_per_year"][j]
         for si, _ in enumerate(scenario_labels):
@@ -437,12 +464,20 @@ def _load_renewables_yaml(
             )
 
     if np.any(~np.isfinite(tech_arr["dc_ac_ratio"])) or np.any(tech_arr["dc_ac_ratio"] <= 0.0):
-        raise InputValidationError(f"{path.name}: renewable technical 'dc_ac_ratio' must be > 0 for every resource.")
-    if np.any(np.isfinite(inv_arr["inverter_specific_investment_cost_per_kw_ac"]) & (inv_arr["inverter_specific_investment_cost_per_kw_ac"] < 0.0)):
+        raise InputValidationError(
+            f"{path.name}: renewable technical 'dc_ac_ratio' must be > 0 for every resource."
+        )
+    if np.any(
+        np.isfinite(inv_arr["inverter_specific_investment_cost_per_kw_ac"])
+        & (inv_arr["inverter_specific_investment_cost_per_kw_ac"] < 0.0)
+    ):
         raise InputValidationError(
             f"{path.name}: renewable investment 'inverter_specific_investment_cost_per_kw_ac' must be >= 0."
         )
-    if np.any(np.isfinite(inv_arr["inverter_fixed_om_share_per_year"]) & (inv_arr["inverter_fixed_om_share_per_year"] < 0.0)):
+    if np.any(
+        np.isfinite(inv_arr["inverter_fixed_om_share_per_year"])
+        & (inv_arr["inverter_fixed_om_share_per_year"] < 0.0)
+    ):
         raise InputValidationError(
             f"{path.name}: renewable investment 'inverter_fixed_om_share_per_year' must be >= 0."
         )
@@ -459,7 +494,12 @@ def _load_renewables_yaml(
             coords={"resource": resource_coord},
             dims=("resource",),
             name=var_name,
-            attrs={"source_file": str(path), "component": "renewable", "original_key": k, "scenario_dependent": False},
+            attrs={
+                "source_file": str(path),
+                "component": "renewable",
+                "original_key": k,
+                "scenario_dependent": False,
+            },
         )
 
     for k in PARAMS_TECHNICAL:
@@ -469,7 +509,12 @@ def _load_renewables_yaml(
             coords={"resource": resource_coord},
             dims=("resource",),
             name=var_name,
-            attrs={"source_file": str(path), "component": "renewable", "original_key": k, "scenario_dependent": False},
+            attrs={
+                "source_file": str(path),
+                "component": "renewable",
+                "original_key": k,
+                "scenario_dependent": False,
+            },
         )
 
     data_vars["res_fixed_om_share_per_year"] = xr.DataArray(
@@ -477,19 +522,32 @@ def _load_renewables_yaml(
         coords={"resource": resource_coord},
         dims=("resource",),
         name="res_fixed_om_share_per_year",
-        attrs={"source_file": str(path), "component": "renewable", "original_key": "fixed_om_share_per_year", "scenario_dependent": False},
+        attrs={
+            "source_file": str(path),
+            "component": "renewable",
+            "original_key": "fixed_om_share_per_year",
+            "scenario_dependent": False,
+        },
     )
     data_vars["res_production_subsidy_per_kwh"] = xr.DataArray(
         subsidy_arr,
         coords={"scenario": scenario_coord, "resource": resource_coord},
         dims=("scenario", "resource"),
         name="res_production_subsidy_per_kwh",
-        attrs={"source_file": str(path), "component": "renewable", "original_key": "production_subsidy_per_kwh", "scenario_dependent": True},
+        attrs={
+            "source_file": str(path),
+            "component": "renewable",
+            "original_key": "production_subsidy_per_kwh",
+            "scenario_dependent": True,
+        },
     )
 
     ds = xr.Dataset(data_vars=data_vars)
     ds.attrs["conversion_technology_by_resource"] = conversion_technology_by_resource
-    ds.attrs["settings"] = {"inputs_loaded": {"renewables_yaml": str(path)}, "schema": "new_cohort_investment_only"}
+    ds.attrs["settings"] = {
+        "inputs_loaded": {"renewables_yaml": str(path)},
+        "schema": "new_cohort_investment_only",
+    }
     return ds
 
 
@@ -547,7 +605,7 @@ def _load_battery_yaml(
         "inverter_nominal_power_kw",
         "max_discharge_c_rate",
         "max_charge_c_rate",
-        "max_installable_capacity_kwh",      # allow None -> NaN
+        "max_installable_capacity_kwh",  # allow None -> NaN
     ]
     OPTIONAL_TECHNICAL = {
         "inverter_nominal_power_kw": 1.0,
@@ -580,9 +638,12 @@ def _load_battery_yaml(
             if k in OPTIONAL_INVESTMENT:
                 inv_vals[k] = float(OPTIONAL_INVESTMENT[k])
                 continue
-            raise InputValidationError(f"{path.name}: missing investment param '{k}' in battery.investment.by_step.")
-        inv_vals[k] = _as_float(inv_base.get(k), name=f"battery/investment/{step_label}/{k}", default=0.0)
-
+            raise InputValidationError(
+                f"{path.name}: missing investment param '{k}' in battery.investment.by_step."
+            )
+        inv_vals[k] = _as_float(
+            inv_base.get(k), name=f"battery/investment/{step_label}/{k}", default=0.0
+        )
 
     # -----------------------------
     # technical (scalars)
@@ -595,9 +656,13 @@ def _load_battery_yaml(
     curve_file = raw_curve.strip() if isinstance(raw_curve, str) and raw_curve.strip() else None
     raw_calendar_curve = tech.get("calendar_fade_curve_csv", None)
     calendar_curve_file = (
-        raw_calendar_curve.strip() if isinstance(raw_calendar_curve, str) and raw_calendar_curve.strip() else None
+        raw_calendar_curve.strip()
+        if isinstance(raw_calendar_curve, str) and raw_calendar_curve.strip()
+        else None
     )
-    legacy_time_fields = [key for key in ("max_charge_time_hours", "max_discharge_time_hours") if key in tech]
+    legacy_time_fields = [
+        key for key in ("max_charge_time_hours", "max_discharge_time_hours") if key in tech
+    ]
 
     tech_vals = {}
     if "initial_soh" in tech:
@@ -610,7 +675,9 @@ def _load_battery_yaml(
             if k in OPTIONAL_TECHNICAL:
                 tech_vals[k] = float(OPTIONAL_TECHNICAL[k])
                 continue
-            raise InputValidationError(f"{path.name}: missing technical param '{k}' in battery.technical.")
+            raise InputValidationError(
+                f"{path.name}: missing technical param '{k}' in battery.technical."
+            )
 
         if k in ("max_installable_capacity_kwh",):
             tech_vals[k] = _as_float_or_nan(tech.get(k), name=f"battery/technical/{k}")
@@ -618,15 +685,23 @@ def _load_battery_yaml(
             tech_vals[k] = _as_float(tech.get(k), name=f"battery/technical/{k}", default=0.0)
 
     if float(inv_vals["inverter_specific_investment_cost_per_kw"]) < 0.0:
-        raise InputValidationError(f"{path.name}: battery investment 'inverter_specific_investment_cost_per_kw' must be >= 0.")
+        raise InputValidationError(
+            f"{path.name}: battery investment 'inverter_specific_investment_cost_per_kw' must be >= 0."
+        )
     if float(inv_vals["inverter_fixed_om_share_per_year"]) < 0.0:
-        raise InputValidationError(f"{path.name}: battery investment 'inverter_fixed_om_share_per_year' must be >= 0.")
+        raise InputValidationError(
+            f"{path.name}: battery investment 'inverter_fixed_om_share_per_year' must be >= 0."
+        )
     if float(tech_vals["inverter_nominal_power_kw"]) <= 0.0:
-        raise InputValidationError(f"{path.name}: battery technical 'inverter_nominal_power_kw' must be > 0.")
+        raise InputValidationError(
+            f"{path.name}: battery technical 'inverter_nominal_power_kw' must be > 0."
+        )
     for key in ("max_charge_c_rate", "max_discharge_c_rate"):
         value = float(tech_vals[key])
         if np.isfinite(value) and value < 0.0:
-            raise InputValidationError(f"{path.name}: battery technical '{key}' must be >= 0 when provided.")
+            raise InputValidationError(
+                f"{path.name}: battery technical '{key}' must be >= 0 when provided."
+            )
 
     fom_value = float(inv_vals["fixed_om_share_per_year"])
     if bat.get("operation", None) is not None:
@@ -647,7 +722,12 @@ def _load_battery_yaml(
             inv_vals[k],
             dims=(),
             name=var_name,
-            attrs={"source_file": str(path), "component": "battery", "original_key": k, "scenario_dependent": False},
+            attrs={
+                "source_file": str(path),
+                "component": "battery",
+                "original_key": k,
+                "scenario_dependent": False,
+            },
         )
 
     for k in TECHNICAL:
@@ -656,29 +736,48 @@ def _load_battery_yaml(
             tech_vals[k],
             dims=(),
             name=var_name,
-            attrs={"source_file": str(path), "component": "battery", "original_key": k, "scenario_dependent": False},
+            attrs={
+                "source_file": str(path),
+                "component": "battery",
+                "original_key": k,
+                "scenario_dependent": False,
+            },
         )
 
     data_vars["battery_fixed_om_share_per_year"] = xr.DataArray(
         fom_value,
         dims=(),
         name="battery_fixed_om_share_per_year",
-        attrs={"source_file": str(path), "component": "battery", "original_key": "fixed_om_share_per_year", "scenario_dependent": False},
+        attrs={
+            "source_file": str(path),
+            "component": "battery",
+            "original_key": "fixed_om_share_per_year",
+            "scenario_dependent": False,
+        },
     )
 
     ds = xr.Dataset(data_vars=data_vars)
     ds.attrs["battery_label"] = str(bat.get("label", "Battery"))
     ds.attrs["efficiency_curve_file"] = curve_file
     if "cycle_fade_coefficient_per_kwh_throughput" in tech:
-        ds.attrs["battery_cycle_fade_coefficient_override"] = tech.get("cycle_fade_coefficient_per_kwh_throughput")
+        ds.attrs["battery_cycle_fade_coefficient_override"] = tech.get(
+            "cycle_fade_coefficient_per_kwh_throughput"
+        )
     ds.attrs["battery_calendar_fade_curve_csv_override"] = calendar_curve_file
     if "calendar_time_increment_mode" in tech:
-        ds.attrs["battery_calendar_time_increment_mode_override"] = tech.get("calendar_time_increment_mode")
+        ds.attrs["battery_calendar_time_increment_mode_override"] = tech.get(
+            "calendar_time_increment_mode"
+        )
     if "calendar_time_increment_per_step" in tech:
-        ds.attrs["battery_calendar_time_increment_per_step_override"] = tech.get("calendar_time_increment_per_step")
+        ds.attrs["battery_calendar_time_increment_per_step_override"] = tech.get(
+            "calendar_time_increment_per_step"
+        )
     if legacy_time_fields:
         ds.attrs["ignored_legacy_technical_keys"] = legacy_time_fields
-    ds.attrs["settings"] = {"inputs_loaded": {"battery_yaml": str(path)}, "formulation": "steady_state"}
+    ds.attrs["settings"] = {
+        "inputs_loaded": {"battery_yaml": str(path)},
+        "formulation": "steady_state",
+    }
     return ds
 
 
@@ -757,7 +856,9 @@ def _load_generator_and_fuel_yaml(
         raise InputValidationError(f"{path.name}: missing/invalid generator.technical mapping.")
 
     if "nominal_efficiency_full_load" not in tech_block:
-        raise InputValidationError(f"{path.name}: missing generator technical param 'nominal_efficiency_full_load'.")
+        raise InputValidationError(
+            f"{path.name}: missing generator technical param 'nominal_efficiency_full_load'."
+        )
 
     tech_eff = _as_float(
         tech_block.get("nominal_efficiency_full_load"),
@@ -919,15 +1020,23 @@ def _load_generator_and_fuel_yaml(
         rel = pd.to_numeric(cdf["Relative Power Output [-]"], errors="coerce").to_numpy(dtype=float)
         eff_raw = pd.to_numeric(cdf["Efficiency [-]"], errors="coerce").to_numpy(dtype=float)
         if np.isnan(rel).any() or np.isnan(eff_raw).any():
-            raise InputValidationError(f"{curve_path.name}: contains non-numeric values in required columns.")
+            raise InputValidationError(
+                f"{curve_path.name}: contains non-numeric values in required columns."
+            )
         if rel.size < 2:
             raise InputValidationError(f"{curve_path.name}: curve must have at least 2 points.")
         if np.any(rel < 0.0) or np.any(rel > 1.0):
-            raise InputValidationError(f"{curve_path.name}: Relative Power Output [-] must be within [0,1].")
+            raise InputValidationError(
+                f"{curve_path.name}: Relative Power Output [-] must be within [0,1]."
+            )
         if np.any(np.diff(rel) <= 0.0):
-            raise InputValidationError(f"{curve_path.name}: Relative Power Output [-] must be strictly increasing.")
+            raise InputValidationError(
+                f"{curve_path.name}: Relative Power Output [-] must be strictly increasing."
+            )
         if not np.isclose(rel[-1], 1.0, atol=1e-9):
-            raise InputValidationError(f"{curve_path.name}: the last Relative Power Output [-] point must be 1.0.")
+            raise InputValidationError(
+                f"{curve_path.name}: the last Relative Power Output [-] point must be 1.0."
+            )
 
         eff, _, _ = resolve_efficiency_curve_values(
             eff_raw,
@@ -937,10 +1046,12 @@ def _load_generator_and_fuel_yaml(
             allow_zero=True,
         )
 
-        rel_full, eff_full, fuel_raw_full, fuel_surrogate_full = _validate_generator_partial_load_curve(
-            rel=rel,
-            eff=eff,
-            path=curve_path,
+        rel_full, eff_full, fuel_raw_full, fuel_surrogate_full = (
+            _validate_generator_partial_load_curve(
+                rel=rel,
+                eff=eff,
+                path=curve_path,
+            )
         )
 
         n_pts = int(rel_full.size)
@@ -952,13 +1063,21 @@ def _load_generator_and_fuel_yaml(
                     rel_full,
                     coords={"curve_point": curve_point},
                     dims=("curve_point",),
-                    attrs={"units": "-", "source_file": str(curve_path), "scenario_dependent": False},
+                    attrs={
+                        "units": "-",
+                        "source_file": str(curve_path),
+                        "scenario_dependent": False,
+                    },
                 ),
                 "generator_eff_curve_eff": xr.DataArray(
                     eff_full,
                     coords={"curve_point": curve_point},
                     dims=("curve_point",),
-                    attrs={"units": "-", "source_file": str(curve_path), "scenario_dependent": False},
+                    attrs={
+                        "units": "-",
+                        "source_file": str(curve_path),
+                        "scenario_dependent": False,
+                    },
                 ),
                 "generator_fuel_curve_rel_fuel_use": xr.DataArray(
                     fuel_surrogate_full,
@@ -1042,6 +1161,7 @@ def _load_price_csv_typical_year(
     )
     return da
 
+
 def _load_grid_yaml(
     path: Path,
     *,
@@ -1063,8 +1183,8 @@ def _load_grid_yaml(
             outages:
               average_outages_per_year: ...
               average_outage_duration_minutes: ...
-              outage_scale_od_hours: ...   
-              outage_shape_od: ...         
+              outage_scale_od_hours: ...
+              outage_shape_od: ...
     """
     payload = _read_yaml(path)
 
@@ -1084,10 +1204,8 @@ def _load_grid_yaml(
         ("line", "transmission_efficiency", "grid_transmission_efficiency"),
         ("line", "renewable_share", "grid_renewable_share"),
         ("line", "emissions_factor_kgco2e_per_kwh", "grid_emissions_factor_kgco2e_per_kwh"),
-
         ("outages", "average_outages_per_year", "grid_avg_outages_per_year"),
         ("outages", "average_outage_duration_minutes", "grid_avg_outage_duration_minutes"),
-
         # outage duration Weibull parameters (hours / -)
         ("outages", "outage_scale_od_hours", "grid_outage_scale_od_hours"),
         ("outages", "outage_shape_od", "grid_outage_shape_od"),
@@ -1106,7 +1224,9 @@ def _load_grid_yaml(
 
         block = by_scenario[s_lab]
         if not isinstance(block, dict):
-            raise InputValidationError(f"{path.name}: grid.by_scenario['{s_lab}'] must be a mapping/dict.")
+            raise InputValidationError(
+                f"{path.name}: grid.by_scenario['{s_lab}'] must be a mapping/dict."
+            )
 
         for section, key, out in PARAMS:
             sec = block.get(section, None)
@@ -1134,15 +1254,21 @@ def _load_grid_yaml(
             elif out == "grid_outage_seed":
                 default = 0.0
 
-            arr[out][i] = _as_float(sec.get(key), name=f"grid/{s_lab}/{section}/{key}", default=default)
+            arr[out][i] = _as_float(
+                sec.get(key), name=f"grid/{s_lab}/{section}/{key}", default=default
+            )
 
     # Optional: basic validity checks
-    if np.any(arr["grid_transmission_efficiency"] < 0.0) or np.any(arr["grid_transmission_efficiency"] > 1.0):
+    if np.any(arr["grid_transmission_efficiency"] < 0.0) or np.any(
+        arr["grid_transmission_efficiency"] > 1.0
+    ):
         raise InputValidationError(f"{path.name}: line.transmission_efficiency must be in [0,1].")
     if np.any(arr["grid_renewable_share"] < 0.0) or np.any(arr["grid_renewable_share"] > 1.0):
         raise InputValidationError(f"{path.name}: line.renewable_share must be in [0,1].")
     if np.any(arr["grid_emissions_factor_kgco2e_per_kwh"] < 0.0):
-        raise InputValidationError(f"{path.name}: line.emissions_factor_kgco2e_per_kwh must be >= 0.")
+        raise InputValidationError(
+            f"{path.name}: line.emissions_factor_kgco2e_per_kwh must be >= 0."
+        )
     if np.any(arr["grid_outage_scale_od_hours"] <= 0.0):
         raise InputValidationError(f"{path.name}: outages.outage_scale_od_hours must be > 0.")
     if np.any(arr["grid_outage_shape_od"] <= 0.0):
@@ -1162,6 +1288,7 @@ def _load_grid_yaml(
     ds = xr.Dataset(data_vars=data_vars)
     ds.attrs["settings"] = {"inputs_loaded": {"grid_yaml": str(path)}}
     return ds
+
 
 def _write_grid_availability_csv(
     path: Path,

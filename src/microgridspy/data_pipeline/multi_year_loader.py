@@ -35,7 +35,9 @@ def _align_contract_dims(ds: xr.Dataset) -> xr.Dataset:
     to the data contract ordering used by the shared pipeline.
     """
     ds = _transpose_if_present(ds, "load_demand", ("period", "year", "scenario"))
-    ds = _transpose_if_present(ds, "resource_availability", ("period", "year", "scenario", "resource"))
+    ds = _transpose_if_present(
+        ds, "resource_availability", ("period", "year", "scenario", "resource")
+    )
     ds = _transpose_if_present(ds, "grid_import_price", ("period", "year", "scenario"))
     ds = _transpose_if_present(ds, "grid_export_price", ("period", "year", "scenario"))
     ds = _transpose_if_present(ds, "grid_availability", ("period", "year", "scenario"))
@@ -46,14 +48,14 @@ def _soft_checks(ds: xr.Dataset) -> None:
     required_core = ("load_demand", "resource_availability", "scenario_weight")
     missing = [v for v in required_core if v not in ds.data_vars]
     if missing:
-        raise InputValidationError(
-            f"Dynamic loader missing required core variables: {missing}"
-        )
+        raise InputValidationError(f"Dynamic loader missing required core variables: {missing}")
 
     # Soft warning only: settings should be present for downstream feature flags.
     settings = (ds.attrs or {}).get("settings", None)
     if not isinstance(settings, dict):
-        warnings.warn("Dynamic loader returned dataset without attrs['settings'] dict.", stacklevel=2)
+        warnings.warn(
+            "Dynamic loader returned dataset without attrs['settings'] dict.", stacklevel=2
+        )
 
 
 def load_multi_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset:

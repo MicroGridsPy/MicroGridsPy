@@ -49,7 +49,7 @@ def initialize_sets(project_name: str) -> xr.Dataset:
         scenario_labels = list(ms.get("scenario_labels") or [])
         n_scen = int(ms.get("n_scenarios", len(scenario_labels)))
         if not scenario_labels:
-            scenario_labels = [f"scenario_{i+1}" for i in range(n_scen)]
+            scenario_labels = [f"scenario_{i + 1}" for i in range(n_scen)]
     else:
         scenario_labels = ["scenario_1"]
         n_scen = 1
@@ -60,9 +60,11 @@ def initialize_sets(project_name: str) -> xr.Dataset:
     resource_labels = list(renewables_yaml.get("resources") or components.get("resources") or [])
     n_res = int(components.get("n_sources", len(resource_labels) or 1))
     if not resource_labels:
-        resource_labels = [f"Resource_{i+1}" for i in range(n_res)]
+        resource_labels = [f"Resource_{i + 1}" for i in range(n_res)]
     elif len(resource_labels) < n_res:
-        resource_labels = resource_labels + [f"Resource_{i+1}" for i in range(len(resource_labels), n_res)]
+        resource_labels = resource_labels + [
+            f"Resource_{i + 1}" for i in range(len(resource_labels), n_res)
+        ]
     elif len(resource_labels) > n_res:
         resource_labels = resource_labels[:n_res]
 

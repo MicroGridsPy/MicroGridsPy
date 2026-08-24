@@ -73,7 +73,7 @@ class MultiYearResults:
 
 def _sanitize_sheet_name(name: Any) -> str:
     text = str(name)
-    invalid = '[]:*?/\\'
+    invalid = "[]:*?/\\"
     for ch in invalid:
         text = text.replace(ch, "_")
     return text[:31] or "Sheet"
@@ -123,6 +123,7 @@ def _write_multi_year_excel_workbook(
 
     return str(out_path)
 
+
 def _scenario_weights(p: Any, scenario_coord: xr.DataArray) -> xr.DataArray:
     if isinstance(p.scenario_weight, xr.DataArray):
         return p.scenario_weight.sel(scenario=scenario_coord)
@@ -158,7 +159,9 @@ def _as_year_scenario_da(x: Any, sets: xr.Dataset) -> xr.DataArray:
         da = da.expand_dims(scenario=scenario)
     else:
         da = da.sel(scenario=scenario)
-    ordered_dims = ["year", "scenario"] + [dim for dim in da.dims if dim not in {"year", "scenario"}]
+    ordered_dims = ["year", "scenario"] + [
+        dim for dim in da.dims if dim not in {"year", "scenario"}
+    ]
     return da.transpose(*ordered_dims)
 
 
@@ -255,13 +258,13 @@ def _broadcast_year_state_to_period(x: Any, sets: xr.Dataset) -> Any:
             *[dim for dim in x.dims],
         )
     if {"year", "inv_step"}.issubset(x.dims):
-        return x.expand_dims(period=sets.coords["period"], scenario=sets.coords["scenario"]).transpose(
-            "period", "year", "scenario", "inv_step"
-        )
+        return x.expand_dims(
+            period=sets.coords["period"], scenario=sets.coords["scenario"]
+        ).transpose("period", "year", "scenario", "inv_step")
     if "year" in x.dims:
-        return x.expand_dims(period=sets.coords["period"], scenario=sets.coords["scenario"]).transpose(
-            "period", "year", "scenario"
-        )
+        return x.expand_dims(
+            period=sets.coords["period"], scenario=sets.coords["scenario"]
+        ).transpose("period", "year", "scenario")
     return x
 
 
@@ -282,7 +285,9 @@ def _renewable_capacity_tables(
     solution: xr.Dataset | None,
 ) -> tuple[xr.DataArray, xr.DataArray, xr.DataArray]:
     p = get_params(data)
-    res_units = require_data_array("res_units", get_var_solution(vars_dict=vars, solution=solution, name="res_units"))
+    res_units = require_data_array(
+        "res_units", get_var_solution(vars_dict=vars, solution=solution, name="res_units")
+    )
     res_nom = require_data_array("res_nominal_capacity_kw", p.res_nominal_capacity_kw)
     res_life = require_data_array("res_lifetime_years", p.res_lifetime_years)
     res_dc_ac_ratio = require_data_array("res_dc_ac_ratio", p.res_dc_ac_ratio)
@@ -296,7 +301,9 @@ def _renewable_capacity_tables(
     dc_by_step = res_units * res_nom
     active_dc_by_step = dc_by_step * active_mask * degradation
     active_inv_ac_by_step = active_dc_by_step / res_dc_ac_ratio
-    effective_ac_by_step = xr.apply_ufunc(np.minimum, active_dc_by_step * res_eta, active_inv_ac_by_step)
+    effective_ac_by_step = xr.apply_ufunc(
+        np.minimum, active_dc_by_step * res_eta, active_inv_ac_by_step
+    )
     return active_dc_by_step, active_inv_ac_by_step, effective_ac_by_step
 
 
@@ -308,10 +315,17 @@ def _battery_capacity_tables(
     solution: xr.Dataset | None,
 ) -> tuple[xr.DataArray, xr.DataArray]:
     p = get_params(data)
-    bat_units = require_data_array("battery_units", get_var_solution(vars_dict=vars, solution=solution, name="battery_units"))
-    bat_inv_power = require_data_array("battery_inverter_power", get_var_solution(vars_dict=vars, solution=solution, name="battery_inverter_power"))
+    bat_units = require_data_array(
+        "battery_units", get_var_solution(vars_dict=vars, solution=solution, name="battery_units")
+    )
+    bat_inv_power = require_data_array(
+        "battery_inverter_power",
+        get_var_solution(vars_dict=vars, solution=solution, name="battery_inverter_power"),
+    )
     bat_nom = require_data_array("battery_nominal_capacity_kwh", p.battery_nominal_capacity_kwh)
-    bat_life = require_data_array("battery_calendar_lifetime_years", p.battery_calendar_lifetime_years)
+    bat_life = require_data_array(
+        "battery_calendar_lifetime_years", p.battery_calendar_lifetime_years
+    )
     active_mask = replacement_active_mask(sets)
     degradation = repeating_degradation_factor(
         sets=sets,
@@ -332,18 +346,49 @@ def build_dispatch_timeseries_table_multi_year(
 ) -> pd.DataFrame:
     p = get_params(data)
     load = require_data_array("load_demand", p.load_demand)
-    res = require_data_array("res_generation", get_var_solution(vars_dict=vars, solution=solution, name="res_generation"))
-    gen = _sum_if_has_inv_step(require_data_array("generator_generation", get_var_solution(vars_dict=vars, solution=solution, name="generator_generation")))
-    bch = _sum_if_has_inv_step(require_data_array("battery_charge", get_var_solution(vars_dict=vars, solution=solution, name="battery_charge")))
-    bdis = _sum_if_has_inv_step(require_data_array("battery_discharge", get_var_solution(vars_dict=vars, solution=solution, name="battery_discharge")))
-    bsoc = _sum_if_has_inv_step(require_data_array("battery_soc", get_var_solution(vars_dict=vars, solution=solution, name="battery_soc")))
-    bch_dc = _sum_if_has_inv_step(get_var_solution(vars_dict=vars, solution=solution, name="battery_charge_dc"))
-    bdis_dc = _sum_if_has_inv_step(get_var_solution(vars_dict=vars, solution=solution, name="battery_discharge_dc"))
-    bch_loss = _sum_if_has_inv_step(get_var_solution(vars_dict=vars, solution=solution, name="battery_charge_loss"))
-    bdis_loss = _sum_if_has_inv_step(get_var_solution(vars_dict=vars, solution=solution, name="battery_discharge_loss"))
+    res = require_data_array(
+        "res_generation", get_var_solution(vars_dict=vars, solution=solution, name="res_generation")
+    )
+    gen = _sum_if_has_inv_step(
+        require_data_array(
+            "generator_generation",
+            get_var_solution(vars_dict=vars, solution=solution, name="generator_generation"),
+        )
+    )
+    bch = _sum_if_has_inv_step(
+        require_data_array(
+            "battery_charge",
+            get_var_solution(vars_dict=vars, solution=solution, name="battery_charge"),
+        )
+    )
+    bdis = _sum_if_has_inv_step(
+        require_data_array(
+            "battery_discharge",
+            get_var_solution(vars_dict=vars, solution=solution, name="battery_discharge"),
+        )
+    )
+    bsoc = _sum_if_has_inv_step(
+        require_data_array(
+            "battery_soc", get_var_solution(vars_dict=vars, solution=solution, name="battery_soc")
+        )
+    )
+    bch_dc = _sum_if_has_inv_step(
+        get_var_solution(vars_dict=vars, solution=solution, name="battery_charge_dc")
+    )
+    bdis_dc = _sum_if_has_inv_step(
+        get_var_solution(vars_dict=vars, solution=solution, name="battery_discharge_dc")
+    )
+    bch_loss = _sum_if_has_inv_step(
+        get_var_solution(vars_dict=vars, solution=solution, name="battery_charge_loss")
+    )
+    bdis_loss = _sum_if_has_inv_step(
+        get_var_solution(vars_dict=vars, solution=solution, name="battery_discharge_loss")
+    )
     raw_bcycle = get_var_solution(vars_dict=vars, solution=solution, name="battery_cycle_fade")
     raw_bcal = get_var_solution(vars_dict=vars, solution=solution, name="battery_calendar_fade")
-    raw_beff = get_var_solution(vars_dict=vars, solution=solution, name="battery_effective_energy_capacity")
+    raw_beff = get_var_solution(
+        vars_dict=vars, solution=solution, name="battery_effective_energy_capacity"
+    )
     bcycle = _sum_if_has_inv_step(raw_bcycle)
     bcal = _broadcast_year_state_to_period(_sum_if_has_inv_step(raw_bcal), sets)
     beff = _broadcast_year_state_to_period(_sum_if_has_inv_step(raw_beff), sets)
@@ -363,7 +408,11 @@ def build_dispatch_timeseries_table_multi_year(
             bsoh = None
     elif bsoh is None and isinstance(raw_beff, xr.DataArray):
         bat_units = get_var_solution(vars_dict=vars, solution=solution, name="battery_units")
-        if isinstance(bat_units, xr.DataArray) and p.battery_nominal_capacity_kwh is not None and p.battery_calendar_lifetime_years is not None:
+        if (
+            isinstance(bat_units, xr.DataArray)
+            and p.battery_nominal_capacity_kwh is not None
+            and p.battery_calendar_lifetime_years is not None
+        ):
             nominal_available = (
                 bat_units
                 * p.battery_nominal_capacity_kwh
@@ -374,23 +423,35 @@ def build_dispatch_timeseries_table_multi_year(
                     p.battery_capacity_degradation_rate_per_year,
                 )
             )
-            nominal_available = nominal_available.expand_dims(scenario=sets.coords["scenario"]).transpose(
-                "year", "scenario", "inv_step"
-            )
+            nominal_available = nominal_available.expand_dims(
+                scenario=sets.coords["scenario"]
+            ).transpose("year", "scenario", "inv_step")
             denom = nominal_available.sum("inv_step")
             bsoh_year = xr.where(denom > 1e-12, raw_beff.sum("inv_step") / denom, np.nan)
             bsoh = _broadcast_year_state_to_period(bsoh_year, sets)
-    ll = require_data_array("lost_load", get_var_solution(vars_dict=vars, solution=solution, name="lost_load"))
+    ll = require_data_array(
+        "lost_load", get_var_solution(vars_dict=vars, solution=solution, name="lost_load")
+    )
 
-    gimp = get_var_solution(vars_dict=vars, solution=solution, name="grid_import") if p.is_grid_on() else None
-    gexp = get_var_solution(vars_dict=vars, solution=solution, name="grid_export") if p.is_grid_export_enabled() else None
+    gimp = (
+        get_var_solution(vars_dict=vars, solution=solution, name="grid_import")
+        if p.is_grid_on()
+        else None
+    )
+    gexp = (
+        get_var_solution(vars_dict=vars, solution=solution, name="grid_export")
+        if p.is_grid_export_enabled()
+        else None
+    )
 
     idx = load.to_series().index
     df = pd.DataFrame(index=idx).reset_index()
     df["load_demand"] = load.to_series().values.astype(float)
     df["res_generation_total"] = res.sum("resource").to_series().values.astype(float)
     for resource in res.coords["resource"].values.tolist():
-        df[f"res_generation__{resource}"] = res.sel(resource=resource).to_series().values.astype(float)
+        df[f"res_generation__{resource}"] = (
+            res.sel(resource=resource).to_series().values.astype(float)
+        )
     df["generator_generation"] = gen.to_series().values.astype(float)
     df["battery_charge"] = bch.to_series().values.astype(float)
     df["battery_discharge"] = bdis.to_series().values.astype(float)
@@ -414,12 +475,22 @@ def build_dispatch_timeseries_table_multi_year(
     if isinstance(bat_inv_active_total, xr.DataArray):
         df["battery_inverter_active_power"] = bat_inv_active_total.to_series().values.astype(float)
     df["lost_load"] = ll.to_series().values.astype(float)
-    df["grid_import"] = gimp.to_series().values.astype(float) if isinstance(gimp, xr.DataArray) else 0.0
-    df["grid_export"] = gexp.to_series().values.astype(float) if isinstance(gexp, xr.DataArray) else 0.0
-    grid_eta = df["scenario"].astype(str).map(
-        lambda scenario: float(p.grid_transmission_efficiency.sel(scenario=scenario))
-        if p.grid_transmission_efficiency is not None
-        else 1.0
+    df["grid_import"] = (
+        gimp.to_series().values.astype(float) if isinstance(gimp, xr.DataArray) else 0.0
+    )
+    df["grid_export"] = (
+        gexp.to_series().values.astype(float) if isinstance(gexp, xr.DataArray) else 0.0
+    )
+    grid_eta = (
+        df["scenario"]
+        .astype(str)
+        .map(
+            lambda scenario: (
+                float(p.grid_transmission_efficiency.sel(scenario=scenario))
+                if p.grid_transmission_efficiency is not None
+                else 1.0
+            )
+        )
     )
     df["grid_import_delivered"] = df["grid_import"] * grid_eta
     df["grid_export_delivered"] = df["grid_export"] * grid_eta
@@ -428,8 +499,12 @@ def build_dispatch_timeseries_table_multi_year(
 
 def build_energy_balance_table_multi_year(dispatch_df: pd.DataFrame) -> pd.DataFrame:
     df = dispatch_df.copy()
-    grid_import_delivered = df["grid_import_delivered"] if "grid_import_delivered" in df.columns else df["grid_import"]
-    grid_export_delivered = df["grid_export_delivered"] if "grid_export_delivered" in df.columns else df["grid_export"]
+    grid_import_delivered = (
+        df["grid_import_delivered"] if "grid_import_delivered" in df.columns else df["grid_import"]
+    )
+    grid_export_delivered = (
+        df["grid_export_delivered"] if "grid_export_delivered" in df.columns else df["grid_export"]
+    )
     df["supply_renewable"] = df["res_generation_total"]
     df["supply_generator"] = df["generator_generation"]
     df["supply_grid_import"] = grid_import_delivered
@@ -477,10 +552,20 @@ def build_design_by_step_table_multi_year(
     settings = (data.attrs or {}).get("settings", {}) or {}
     project_name = str(settings.get("project_name", "") or "").strip()
     vintage_labels = load_multi_year_vintage_labels(project_name) if project_name else {}
-    res_units = require_data_array("res_units", get_var_solution(vars_dict=vars, solution=solution, name="res_units"))
-    bat_units = require_data_array("battery_units", get_var_solution(vars_dict=vars, solution=solution, name="battery_units"))
-    bat_inv_power = require_data_array("battery_inverter_power", get_var_solution(vars_dict=vars, solution=solution, name="battery_inverter_power"))
-    gen_units = require_data_array("generator_units", get_var_solution(vars_dict=vars, solution=solution, name="generator_units"))
+    res_units = require_data_array(
+        "res_units", get_var_solution(vars_dict=vars, solution=solution, name="res_units")
+    )
+    bat_units = require_data_array(
+        "battery_units", get_var_solution(vars_dict=vars, solution=solution, name="battery_units")
+    )
+    bat_inv_power = require_data_array(
+        "battery_inverter_power",
+        get_var_solution(vars_dict=vars, solution=solution, name="battery_inverter_power"),
+    )
+    gen_units = require_data_array(
+        "generator_units",
+        get_var_solution(vars_dict=vars, solution=solution, name="generator_units"),
+    )
     res_nom = require_data_array("res_nominal_capacity_kw", p.res_nominal_capacity_kw)
     res_dc_ac_ratio = require_data_array("res_dc_ac_ratio", p.res_dc_ac_ratio)
     bat_nom = require_data_array("battery_nominal_capacity_kwh", p.battery_nominal_capacity_kwh)
@@ -488,12 +573,18 @@ def build_design_by_step_table_multi_year(
 
     rows = []
     for s in sets.coords["inv_step"].values:
-        start_y = str(sets["inv_step_start_year"].sel(inv_step=s).item()) if "inv_step_start_year" in sets else ""
+        start_y = (
+            str(sets["inv_step_start_year"].sel(inv_step=s).item())
+            if "inv_step_start_year" in sets
+            else ""
+        )
         for r in res_units.coords["resource"].values:
             u = float(res_units.sel(inv_step=s, resource=r))
             installed_dc = u * scalarize(res_nom, inv_step=s, resource=r)
             installed_inv_ac = installed_dc / scalarize(res_dc_ac_ratio, resource=r)
-            renewable_label = vintage_label_for_step(labels=vintage_labels, family="renewable", step=s)
+            renewable_label = vintage_label_for_step(
+                labels=vintage_labels, family="renewable", step=s
+            )
             rows.append(
                 {
                     "inv_step": s,
@@ -501,7 +592,9 @@ def build_design_by_step_table_multi_year(
                     "technology": "renewable",
                     "technology_label": _renewable_display_name(data, r),
                     "vintage_label": renewable_label,
-                    "display_label": vintage_display_for_step(labels=vintage_labels, family="renewable", step=s),
+                    "display_label": vintage_display_for_step(
+                        labels=vintage_labels, family="renewable", step=s
+                    ),
                     "fuel_vintage_label": "",
                     "resource": str(r),
                     "units": u,
@@ -521,7 +614,9 @@ def build_design_by_step_table_multi_year(
                 "technology": "battery",
                 "technology_label": "Battery",
                 "vintage_label": battery_label,
-                "display_label": vintage_display_for_step(labels=vintage_labels, family="battery", step=s),
+                "display_label": vintage_display_for_step(
+                    labels=vintage_labels, family="battery", step=s
+                ),
                 "fuel_vintage_label": "",
                 "resource": "",
                 "units": bu,
@@ -541,7 +636,9 @@ def build_design_by_step_table_multi_year(
                 "technology": "generator",
                 "technology_label": "Generator",
                 "vintage_label": generator_label,
-                "display_label": vintage_display_for_step(labels=vintage_labels, family="generator", step=s),
+                "display_label": vintage_display_for_step(
+                    labels=vintage_labels, family="generator", step=s
+                ),
                 "fuel_vintage_label": fuel_label,
                 "resource": "",
                 "units": gu,
@@ -562,8 +659,13 @@ def build_renewable_inverter_design_by_step_table_multi_year(
     solution: xr.Dataset | None,
 ) -> pd.DataFrame:
     p = get_params(data)
-    design = build_design_by_step_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
-    res_capex = require_data_array("res_inverter_specific_investment_cost_per_kw_ac", p.res_inverter_specific_investment_cost_per_kw_ac)
+    design = build_design_by_step_table_multi_year(
+        sets=sets, data=data, vars=vars, solution=solution
+    )
+    res_capex = require_data_array(
+        "res_inverter_specific_investment_cost_per_kw_ac",
+        p.res_inverter_specific_investment_cost_per_kw_ac,
+    )
     res_life = require_data_array("res_inverter_lifetime_years", p.res_inverter_lifetime_years)
     res_fom = p.res_inverter_fixed_om_share_per_year
     rows = []
@@ -577,10 +679,18 @@ def build_renewable_inverter_design_by_step_table_multi_year(
                 "inv_step_start_year": str(row["inv_step_start_year"]),
                 "resource": resource,
                 "technology_label": str(row.get("technology_label", resource)),
-                "installed_inverter_capacity_ac_kw": float(row.get("installed_inverter_capacity_ac", 0.0)),
-                "specific_investment_cost_per_kw_ac": _scalar_param(res_capex, inv_step=inv_step, resource=resource),
+                "installed_inverter_capacity_ac_kw": float(
+                    row.get("installed_inverter_capacity_ac", 0.0)
+                ),
+                "specific_investment_cost_per_kw_ac": _scalar_param(
+                    res_capex, inv_step=inv_step, resource=resource
+                ),
                 "lifetime_years": _scalar_param(res_life, inv_step=inv_step, resource=resource),
-                "fixed_om_share_per_year": _scalar_param(res_fom, inv_step=inv_step, resource=resource) if isinstance(res_fom, xr.DataArray) else 0.0,
+                "fixed_om_share_per_year": _scalar_param(
+                    res_fom, inv_step=inv_step, resource=resource
+                )
+                if isinstance(res_fom, xr.DataArray)
+                else 0.0,
             }
         )
     return pd.DataFrame(rows)
@@ -594,9 +704,16 @@ def build_battery_inverter_design_by_step_table_multi_year(
     solution: xr.Dataset | None,
 ) -> pd.DataFrame:
     p = get_params(data)
-    design = build_design_by_step_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
-    bat_capex = require_data_array("battery_inverter_specific_investment_cost_per_kw", p.battery_inverter_specific_investment_cost_per_kw)
-    bat_life = require_data_array("battery_inverter_lifetime_years", p.battery_inverter_lifetime_years)
+    design = build_design_by_step_table_multi_year(
+        sets=sets, data=data, vars=vars, solution=solution
+    )
+    bat_capex = require_data_array(
+        "battery_inverter_specific_investment_cost_per_kw",
+        p.battery_inverter_specific_investment_cost_per_kw,
+    )
+    bat_life = require_data_array(
+        "battery_inverter_lifetime_years", p.battery_inverter_lifetime_years
+    )
     bat_fom = p.battery_inverter_fixed_om_share_per_year
     battery_rows = design[design["technology"] == "battery"].copy()
     rows = []
@@ -607,10 +724,14 @@ def build_battery_inverter_design_by_step_table_multi_year(
                 "inv_step": inv_step,
                 "inv_step_start_year": str(row["inv_step_start_year"]),
                 "technology_label": "Battery inverter",
-                "installed_inverter_power_kw": float(row.get("installed_inverter_capacity_ac", 0.0)),
+                "installed_inverter_power_kw": float(
+                    row.get("installed_inverter_capacity_ac", 0.0)
+                ),
                 "specific_investment_cost_per_kw": _scalar_param(bat_capex, inv_step=inv_step),
                 "lifetime_years": _scalar_param(bat_life, inv_step=inv_step),
-                "fixed_om_share_per_year": _scalar_param(bat_fom, inv_step=inv_step) if isinstance(bat_fom, xr.DataArray) else 0.0,
+                "fixed_om_share_per_year": _scalar_param(bat_fom, inv_step=inv_step)
+                if isinstance(bat_fom, xr.DataArray)
+                else 0.0,
             }
         )
     return pd.DataFrame(rows)
@@ -640,9 +761,15 @@ def build_inverter_capacity_by_year_table_multi_year(
                     "component": "renewable_inverter",
                     "resource": str(resource),
                     "technology_label": _renewable_display_name(data, resource),
-                    "active_dc_capacity_kw": float(active_res_dc.sel(year=year, resource=resource).sum("inv_step")),
-                    "active_inverter_capacity_ac_kw": float(active_res_inv_ac.sel(year=year, resource=resource).sum("inv_step")),
-                    "effective_ac_capacity_kw": float(effective_res_ac.sel(year=year, resource=resource).sum("inv_step")),
+                    "active_dc_capacity_kw": float(
+                        active_res_dc.sel(year=year, resource=resource).sum("inv_step")
+                    ),
+                    "active_inverter_capacity_ac_kw": float(
+                        active_res_inv_ac.sel(year=year, resource=resource).sum("inv_step")
+                    ),
+                    "effective_ac_capacity_kw": float(
+                        effective_res_ac.sel(year=year, resource=resource).sum("inv_step")
+                    ),
                 }
             )
         rows.append(
@@ -652,7 +779,9 @@ def build_inverter_capacity_by_year_table_multi_year(
                 "resource": "",
                 "technology_label": "Battery inverter",
                 "active_dc_capacity_kw": np.nan,
-                "active_inverter_capacity_ac_kw": float(active_bat_inv.sel(year=year).sum("inv_step")),
+                "active_inverter_capacity_ac_kw": float(
+                    active_bat_inv.sel(year=year).sum("inv_step")
+                ),
                 "effective_ac_capacity_kw": float(active_bat_inv.sel(year=year).sum("inv_step")),
             }
         )
@@ -671,11 +800,39 @@ def build_capacity_by_year_table_multi_year(
         rows.append(
             {
                 "year": year,
-                "renewables_kw": float(active.loc[active["technology"] == "renewable", "installed_capacity"].sum()),
-                "renewable_inverter_kw_ac": float(pd.to_numeric(active.loc[active["technology"] == "renewable", "installed_inverter_capacity_ac"], errors="coerce").fillna(0.0).sum()) if "installed_inverter_capacity_ac" in active.columns else 0.0,
-                "battery_kwh": float(active.loc[active["technology"] == "battery", "installed_capacity"].sum()),
-                "battery_inverter_kw": float(pd.to_numeric(active.loc[active["technology"] == "battery", "installed_inverter_capacity_ac"], errors="coerce").fillna(0.0).sum()) if "installed_inverter_capacity_ac" in active.columns else 0.0,
-                "generator_kw": float(active.loc[active["technology"] == "generator", "installed_capacity"].sum()),
+                "renewables_kw": float(
+                    active.loc[active["technology"] == "renewable", "installed_capacity"].sum()
+                ),
+                "renewable_inverter_kw_ac": float(
+                    pd.to_numeric(
+                        active.loc[
+                            active["technology"] == "renewable", "installed_inverter_capacity_ac"
+                        ],
+                        errors="coerce",
+                    )
+                    .fillna(0.0)
+                    .sum()
+                )
+                if "installed_inverter_capacity_ac" in active.columns
+                else 0.0,
+                "battery_kwh": float(
+                    active.loc[active["technology"] == "battery", "installed_capacity"].sum()
+                ),
+                "battery_inverter_kw": float(
+                    pd.to_numeric(
+                        active.loc[
+                            active["technology"] == "battery", "installed_inverter_capacity_ac"
+                        ],
+                        errors="coerce",
+                    )
+                    .fillna(0.0)
+                    .sum()
+                )
+                if "installed_inverter_capacity_ac" in active.columns
+                else 0.0,
+                "generator_kw": float(
+                    active.loc[active["technology"] == "generator", "installed_capacity"].sum()
+                ),
             }
         )
     return pd.DataFrame(rows)
@@ -690,24 +847,40 @@ def build_yearly_kpis_table_multi_year(
     objective_value: float | None = None,
 ) -> pd.DataFrame:
     p = get_params(data)
-    dispatch = build_dispatch_timeseries_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
+    dispatch = build_dispatch_timeseries_table_multi_year(
+        sets=sets, data=data, vars=vars, solution=solution
+    )
     fuel_by_step = get_var_solution(vars_dict=vars, solution=solution, name="fuel_consumption")
     fuel = _sum_if_has_inv_step(fuel_by_step)
-    bat_units = require_data_array("battery_units", get_var_solution(vars_dict=vars, solution=solution, name="battery_units"))
-    gen_units = require_data_array("generator_units", get_var_solution(vars_dict=vars, solution=solution, name="generator_units"))
+    bat_units = require_data_array(
+        "battery_units", get_var_solution(vars_dict=vars, solution=solution, name="battery_units")
+    )
+    gen_units = require_data_array(
+        "generator_units",
+        get_var_solution(vars_dict=vars, solution=solution, name="generator_units"),
+    )
     bat_nom = require_data_array("battery_nominal_capacity_kwh", p.battery_nominal_capacity_kwh)
     gen_nom = require_data_array("generator_nominal_capacity_kw", p.generator_nominal_capacity_kw)
     w = _scenario_weights(p, p.load_demand.coords["scenario"])
-    commission_res = replacement_commission_mask(sets, require_data_array("res_lifetime_years", p.res_lifetime_years))
-    commission_bat = replacement_commission_mask(sets, require_data_array("battery_calendar_lifetime_years", p.battery_calendar_lifetime_years))
-    commission_gen = replacement_commission_mask(sets, require_data_array("generator_lifetime_years", p.generator_lifetime_years))
+    commission_res = replacement_commission_mask(
+        sets, require_data_array("res_lifetime_years", p.res_lifetime_years)
+    )
+    commission_bat = replacement_commission_mask(
+        sets,
+        require_data_array("battery_calendar_lifetime_years", p.battery_calendar_lifetime_years),
+    )
+    commission_gen = replacement_commission_mask(
+        sets, require_data_array("generator_lifetime_years", p.generator_lifetime_years)
+    )
     active_res_dc, active_res_inv_ac, effective_res_ac = _renewable_capacity_tables(
         sets=sets,
         data=data,
         vars=vars,
         solution=solution,
     )
-    res_units = require_data_array("res_units", get_var_solution(vars_dict=vars, solution=solution, name="res_units"))
+    res_units = require_data_array(
+        "res_units", get_var_solution(vars_dict=vars, solution=solution, name="res_units")
+    )
     res_nom = require_data_array("res_nominal_capacity_kw", p.res_nominal_capacity_kw)
 
     rows = []
@@ -718,7 +891,9 @@ def build_yearly_kpis_table_multi_year(
         res = float(g["res_generation_total"].sum())
         res_potential = float(
             (
-                require_data_array("resource_availability", p.resource_availability).sel(year=year, scenario=scenario)
+                require_data_array("resource_availability", p.resource_availability).sel(
+                    year=year, scenario=scenario
+                )
                 * effective_res_ac.sel(year=year).sum("inv_step")
             ).sum(("period", "resource"))
         )
@@ -726,20 +901,33 @@ def build_yearly_kpis_table_multi_year(
         res_curtailment_share = safe_share(res_curtailment, res_potential)
         inverter_clipping_potential = float(
             (
-                require_data_array("resource_availability", p.resource_availability).sel(year=year, scenario=scenario)
+                require_data_array("resource_availability", p.resource_availability).sel(
+                    year=year, scenario=scenario
+                )
                 * xr.apply_ufunc(
                     np.maximum,
-                    (active_res_dc.sel(year=year).sum("inv_step") * require_data_array("res_inverter_efficiency", p.res_inverter_efficiency))
+                    (
+                        active_res_dc.sel(year=year).sum("inv_step")
+                        * require_data_array("res_inverter_efficiency", p.res_inverter_efficiency)
+                    )
                     - active_res_inv_ac.sel(year=year).sum("inv_step"),
                     0.0,
                 )
             ).sum(("period", "resource"))
         )
-        active_inverter_capacity = float(active_res_inv_ac.sel(year=year).sum("inv_step").sum("resource"))
+        active_inverter_capacity = float(
+            active_res_inv_ac.sel(year=year).sum("inv_step").sum("resource")
+        )
         gen = float(g["generator_generation"].sum())
         imp = float(g["grid_import"].sum())
-        imp_delivered = float(g["grid_import_delivered"].sum()) if "grid_import_delivered" in g.columns else imp
-        exp_delivered = float(g["grid_export_delivered"].sum()) if "grid_export_delivered" in g.columns else float(g["grid_export"].sum())
+        imp_delivered = (
+            float(g["grid_import_delivered"].sum()) if "grid_import_delivered" in g.columns else imp
+        )
+        exp_delivered = (
+            float(g["grid_export_delivered"].sum())
+            if "grid_export_delivered" in g.columns
+            else float(g["grid_export"].sum())
+        )
         grid_ren_share = 0.0
         if p.grid_renewable_share is not None:
             grid_ren_share = float(p.grid_renewable_share.sel(scenario=scenario))
@@ -777,7 +965,9 @@ def build_yearly_kpis_table_multi_year(
                 )
         scope2 = 0.0
         if p.grid_emissions_factor_kgco2e_per_kwh is not None:
-            scope2 = imp_delivered * float(select_or_self(p.grid_emissions_factor_kgco2e_per_kwh, year=year, scenario=scenario))
+            scope2 = imp_delivered * float(
+                select_or_self(p.grid_emissions_factor_kgco2e_per_kwh, year=year, scenario=scenario)
+            )
 
         scope3 = 0.0
         if p.res_embedded_emissions_kgco2e_per_kw is not None:
@@ -787,7 +977,9 @@ def build_yearly_kpis_table_multi_year(
                     * res_nom
                     * p.res_embedded_emissions_kgco2e_per_kw
                     * commission_res.sel(year=year)
-                ).sum("inv_step").sum("resource")
+                )
+                .sum("inv_step")
+                .sum("resource")
             )
         if p.battery_embedded_emissions_kgco2e_per_kwh is not None:
             scope3 += float(
@@ -860,8 +1052,12 @@ def build_inverter_metrics_table_multi_year(
     vars: dict[str, Any],
     solution: xr.Dataset | None,
 ) -> pd.DataFrame:
-    dispatch = build_dispatch_timeseries_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
-    inverter_capacity = build_inverter_capacity_by_year_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
+    dispatch = build_dispatch_timeseries_table_multi_year(
+        sets=sets, data=data, vars=vars, solution=solution
+    )
+    inverter_capacity = build_inverter_capacity_by_year_table_multi_year(
+        sets=sets, data=data, vars=vars, solution=solution
+    )
     kpis = build_yearly_kpis_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
     weights = _scenario_weights(get_params(data), sets.coords["scenario"])
     weight_map = {str(s): float(weights.sel(scenario=s)) for s in weights.coords["scenario"].values}
@@ -873,18 +1069,31 @@ def build_inverter_metrics_table_multi_year(
         year_dispatch["weight"] = year_dispatch["scenario"].astype(str).map(weight_map).fillna(0.0)
         weighted_battery_inv = (
             year_dispatch.assign(
-                weighted_dispatch=pd.to_numeric(year_dispatch.get("battery_inverter_active_power", pd.Series([0.0])), errors="coerce").fillna(0.0)
+                weighted_dispatch=pd.to_numeric(
+                    year_dispatch.get("battery_inverter_active_power", pd.Series([0.0])),
+                    errors="coerce",
+                ).fillna(0.0)
                 * year_dispatch["weight"]
             )
             .groupby("period", as_index=False)["weighted_dispatch"]
             .sum()
         )
-        peak_battery_inv = float(pd.to_numeric(weighted_battery_inv.get("weighted_dispatch", pd.Series([0.0])), errors="coerce").fillna(0.0).max())
+        peak_battery_inv = float(
+            pd.to_numeric(
+                weighted_battery_inv.get("weighted_dispatch", pd.Series([0.0])), errors="coerce"
+            )
+            .fillna(0.0)
+            .max()
+        )
         battery_capacity_row = inverter_capacity[
             (inverter_capacity["year"].astype(str) == year_label)
             & (inverter_capacity["component"] == "battery_inverter")
         ]
-        battery_capacity = float(battery_capacity_row["active_inverter_capacity_ac_kw"].sum()) if not battery_capacity_row.empty else 0.0
+        battery_capacity = (
+            float(battery_capacity_row["active_inverter_capacity_ac_kw"].sum())
+            if not battery_capacity_row.empty
+            else 0.0
+        )
         rows.append(
             {
                 "year": year_label,
@@ -897,12 +1106,25 @@ def build_inverter_metrics_table_multi_year(
                 "renewable_inverter_clipping_potential_kwh": np.nan,
             }
         )
-        year_kpis = kpis[(kpis["year"].astype(str) == year_label) & (kpis["scenario"].astype(str).str.lower() == "expected")]
-        clipping = float(year_kpis["renewable_inverter_clipping_potential_kwh"].iloc[0]) if not year_kpis.empty and "renewable_inverter_clipping_potential_kwh" in year_kpis.columns else 0.0
+        year_kpis = kpis[
+            (kpis["year"].astype(str) == year_label)
+            & (kpis["scenario"].astype(str).str.lower() == "expected")
+        ]
+        clipping = (
+            float(year_kpis["renewable_inverter_clipping_potential_kwh"].iloc[0])
+            if not year_kpis.empty
+            and "renewable_inverter_clipping_potential_kwh" in year_kpis.columns
+            else 0.0
+        )
         for resource in data.coords["resource"].values.tolist():
             resource_col = f"res_generation__{resource}"
             weighted_resource = (
-                year_dispatch.assign(weighted_dispatch=pd.to_numeric(year_dispatch.get(resource_col, pd.Series([0.0])), errors="coerce").fillna(0.0) * year_dispatch["weight"])
+                year_dispatch.assign(
+                    weighted_dispatch=pd.to_numeric(
+                        year_dispatch.get(resource_col, pd.Series([0.0])), errors="coerce"
+                    ).fillna(0.0)
+                    * year_dispatch["weight"]
+                )
                 .groupby("period", as_index=False)["weighted_dispatch"]
                 .sum()
             )
@@ -911,8 +1133,18 @@ def build_inverter_metrics_table_multi_year(
                 & (inverter_capacity["component"] == "renewable_inverter")
                 & (inverter_capacity["resource"].astype(str) == str(resource))
             ]
-            active_capacity = float(resource_capacity["active_inverter_capacity_ac_kw"].sum()) if not resource_capacity.empty else 0.0
-            peak_dispatch = float(pd.to_numeric(weighted_resource.get("weighted_dispatch", pd.Series([0.0])), errors="coerce").fillna(0.0).max())
+            active_capacity = (
+                float(resource_capacity["active_inverter_capacity_ac_kw"].sum())
+                if not resource_capacity.empty
+                else 0.0
+            )
+            peak_dispatch = float(
+                pd.to_numeric(
+                    weighted_resource.get("weighted_dispatch", pd.Series([0.0])), errors="coerce"
+                )
+                .fillna(0.0)
+                .max()
+            )
             rows.append(
                 {
                     "year": year_label,
@@ -940,32 +1172,65 @@ def build_discounted_cashflows_table_multi_year(
     rs = float(p.settings.get("social_discount_rate", 0.0) or 0.0)
     disc = 1.0 / ((1.0 + rs) ** year_ordinal(sets))
 
-    res_units = require_data_array("res_units", get_var_solution(vars_dict=vars, solution=solution, name="res_units"))
-    bat_units = require_data_array("battery_units", get_var_solution(vars_dict=vars, solution=solution, name="battery_units"))
-    bat_inv_power = require_data_array("battery_inverter_power", get_var_solution(vars_dict=vars, solution=solution, name="battery_inverter_power"))
-    gen_units = require_data_array("generator_units", get_var_solution(vars_dict=vars, solution=solution, name="generator_units"))
-    res_gen = require_data_array("res_generation", get_var_solution(vars_dict=vars, solution=solution, name="res_generation"))
-    fuel_cons = require_data_array("fuel_consumption", get_var_solution(vars_dict=vars, solution=solution, name="fuel_consumption"))
-    lost_load = require_data_array("lost_load", get_var_solution(vars_dict=vars, solution=solution, name="lost_load"))
+    res_units = require_data_array(
+        "res_units", get_var_solution(vars_dict=vars, solution=solution, name="res_units")
+    )
+    bat_units = require_data_array(
+        "battery_units", get_var_solution(vars_dict=vars, solution=solution, name="battery_units")
+    )
+    bat_inv_power = require_data_array(
+        "battery_inverter_power",
+        get_var_solution(vars_dict=vars, solution=solution, name="battery_inverter_power"),
+    )
+    gen_units = require_data_array(
+        "generator_units",
+        get_var_solution(vars_dict=vars, solution=solution, name="generator_units"),
+    )
+    res_gen = require_data_array(
+        "res_generation", get_var_solution(vars_dict=vars, solution=solution, name="res_generation")
+    )
+    fuel_cons = require_data_array(
+        "fuel_consumption",
+        get_var_solution(vars_dict=vars, solution=solution, name="fuel_consumption"),
+    )
+    lost_load = require_data_array(
+        "lost_load", get_var_solution(vars_dict=vars, solution=solution, name="lost_load")
+    )
     gimp = get_var_solution(vars_dict=vars, solution=solution, name="grid_import")
     gexp = get_var_solution(vars_dict=vars, solution=solution, name="grid_export")
 
     res_nom = require_data_array("res_nominal_capacity_kw", p.res_nominal_capacity_kw)
-    res_capex = require_data_array("res_specific_investment_cost_per_kw", p.res_specific_investment_cost_per_kw)
-    res_inv_capex = require_data_array("res_inverter_specific_investment_cost_per_kw_ac", p.res_inverter_specific_investment_cost_per_kw_ac)
+    res_capex = require_data_array(
+        "res_specific_investment_cost_per_kw", p.res_specific_investment_cost_per_kw
+    )
+    res_inv_capex = require_data_array(
+        "res_inverter_specific_investment_cost_per_kw_ac",
+        p.res_inverter_specific_investment_cost_per_kw_ac,
+    )
     res_life = require_data_array("res_lifetime_years", p.res_lifetime_years)
     res_inv_life = require_data_array("res_inverter_lifetime_years", p.res_inverter_lifetime_years)
     res_wacc = require_data_array("res_wacc", p.res_wacc)
     res_grant = require_data_array("res_grant_share_of_capex", p.res_grant_share_of_capex)
     res_dc_ac_ratio = require_data_array("res_dc_ac_ratio", p.res_dc_ac_ratio)
     bat_nom = require_data_array("battery_nominal_capacity_kwh", p.battery_nominal_capacity_kwh)
-    bat_capex = require_data_array("battery_specific_investment_cost_per_kwh", p.battery_specific_investment_cost_per_kwh)
-    bat_inv_capex = require_data_array("battery_inverter_specific_investment_cost_per_kw", p.battery_inverter_specific_investment_cost_per_kw)
-    bat_life = require_data_array("battery_calendar_lifetime_years", p.battery_calendar_lifetime_years)
-    bat_inv_life = require_data_array("battery_inverter_lifetime_years", p.battery_inverter_lifetime_years)
+    bat_capex = require_data_array(
+        "battery_specific_investment_cost_per_kwh", p.battery_specific_investment_cost_per_kwh
+    )
+    bat_inv_capex = require_data_array(
+        "battery_inverter_specific_investment_cost_per_kw",
+        p.battery_inverter_specific_investment_cost_per_kw,
+    )
+    bat_life = require_data_array(
+        "battery_calendar_lifetime_years", p.battery_calendar_lifetime_years
+    )
+    bat_inv_life = require_data_array(
+        "battery_inverter_lifetime_years", p.battery_inverter_lifetime_years
+    )
     bat_wacc = require_data_array("battery_wacc", p.battery_wacc)
     gen_nom = require_data_array("generator_nominal_capacity_kw", p.generator_nominal_capacity_kw)
-    gen_capex = require_data_array("generator_specific_investment_cost_per_kw", p.generator_specific_investment_cost_per_kw)
+    gen_capex = require_data_array(
+        "generator_specific_investment_cost_per_kw", p.generator_specific_investment_cost_per_kw
+    )
     gen_life = require_data_array("generator_lifetime_years", p.generator_lifetime_years)
     gen_wacc = require_data_array("generator_wacc", p.generator_wacc)
 
@@ -988,12 +1253,20 @@ def build_discounted_cashflows_table_multi_year(
     ann_bat_inv_y = (ann_bat_inverter * act_bat).sum("inv_step")
     ann_gen_y = (ann_gen * act_gen).sum("inv_step")
 
-    fuel_price = p.fuel_cost_per_unit_fuel if p.fuel_cost_per_unit_fuel is not None else p.fuel_fuel_cost_per_unit_fuel
+    fuel_price = (
+        p.fuel_cost_per_unit_fuel
+        if p.fuel_cost_per_unit_fuel is not None
+        else p.fuel_fuel_cost_per_unit_fuel
+    )
     fuel_price = require_data_array("fuel_cost_per_unit_fuel", fuel_price)
     opex_y_s = (fuel_cons * fuel_price).sum("period").sum("inv_step")
     if p.is_grid_on() and isinstance(gimp, xr.DataArray) and p.grid_import_price is not None:
         opex_y_s = opex_y_s + (gimp * p.grid_import_price).sum("period")
-    if p.is_grid_export_enabled() and isinstance(gexp, xr.DataArray) and p.grid_export_price is not None:
+    if (
+        p.is_grid_export_enabled()
+        and isinstance(gexp, xr.DataArray)
+        and p.grid_export_price is not None
+    ):
         opex_y_s = opex_y_s - (gexp * p.grid_export_price).sum("period")
     if p.res_production_subsidy_per_kwh is not None:
         subsidy = _renewable_subsidy_by_year(sets, p.res_production_subsidy_per_kwh)
@@ -1004,20 +1277,33 @@ def build_discounted_cashflows_table_multi_year(
     fixed_om_bat_inv_y_s = _as_year_scenario_da(0.0, sets)
     if p.res_inverter_fixed_om_share_per_year is not None:
         fixed_om_res_inv_y_s = _as_year_scenario_da(
-            (res_inv_inverter * p.res_inverter_fixed_om_share_per_year * act_res).sum("inv_step").sum("resource"),
+            (res_inv_inverter * p.res_inverter_fixed_om_share_per_year * act_res)
+            .sum("inv_step")
+            .sum("resource"),
             sets,
         )
         opex_y_s = opex_y_s + fixed_om_res_inv_y_s
     if p.battery_inverter_fixed_om_share_per_year is not None:
         fixed_om_bat_inv_y_s = _as_year_scenario_da(
-            (bat_inv_converter * p.battery_inverter_fixed_om_share_per_year * act_bat).sum("inv_step"),
+            (bat_inv_converter * p.battery_inverter_fixed_om_share_per_year * act_bat).sum(
+                "inv_step"
+            ),
             sets,
         )
         opex_y_s = opex_y_s + fixed_om_bat_inv_y_s
     if p.lost_load_cost_per_kwh is not None:
         ext_y_s = ext_y_s + lost_load.sum("period") * p.lost_load_cost_per_kwh
-    if p.fuel_direct_emissions_kgco2e_per_unit_fuel is not None and p.emission_cost_per_kgco2e is not None:
-        ext_y_s = ext_y_s + (fuel_cons.sum("period") * p.fuel_direct_emissions_kgco2e_per_unit_fuel).sum("inv_step") * p.emission_cost_per_kgco2e
+    if (
+        p.fuel_direct_emissions_kgco2e_per_unit_fuel is not None
+        and p.emission_cost_per_kgco2e is not None
+    ):
+        ext_y_s = (
+            ext_y_s
+            + (fuel_cons.sum("period") * p.fuel_direct_emissions_kgco2e_per_unit_fuel).sum(
+                "inv_step"
+            )
+            * p.emission_cost_per_kgco2e
+        )
 
     commission_res = replacement_commission_mask(sets, res_life)
     commission_bat = replacement_commission_mask(sets, bat_life)
@@ -1025,17 +1311,48 @@ def build_discounted_cashflows_table_multi_year(
     emb_y = xr.DataArray(0.0).broadcast_like(ann_res_y)
     em_cost_exp = 0.0
     if p.emission_cost_per_kgco2e is not None:
-        em_cost_exp = (p.emission_cost_per_kgco2e * w).sum("scenario") if "scenario" in p.emission_cost_per_kgco2e.dims else p.emission_cost_per_kgco2e
+        em_cost_exp = (
+            (p.emission_cost_per_kgco2e * w).sum("scenario")
+            if "scenario" in p.emission_cost_per_kgco2e.dims
+            else p.emission_cost_per_kgco2e
+        )
     if p.res_embedded_emissions_kgco2e_per_kw is not None:
-        emb_y = emb_y + (res_units * res_nom * p.res_embedded_emissions_kgco2e_per_kw * commission_res).sum("inv_step").sum("resource") * em_cost_exp
+        emb_y = (
+            emb_y
+            + (res_units * res_nom * p.res_embedded_emissions_kgco2e_per_kw * commission_res)
+            .sum("inv_step")
+            .sum("resource")
+            * em_cost_exp
+        )
     if p.battery_embedded_emissions_kgco2e_per_kwh is not None:
-        emb_y = emb_y + (bat_units * bat_nom * p.battery_embedded_emissions_kgco2e_per_kwh * commission_bat).sum("inv_step") * em_cost_exp
+        emb_y = (
+            emb_y
+            + (
+                bat_units * bat_nom * p.battery_embedded_emissions_kgco2e_per_kwh * commission_bat
+            ).sum("inv_step")
+            * em_cost_exp
+        )
     if p.generator_embedded_emissions_kgco2e_per_kw is not None:
-        emb_y = emb_y + (gen_units * gen_nom * p.generator_embedded_emissions_kgco2e_per_kw * commission_gen).sum("inv_step") * em_cost_exp
+        emb_y = (
+            emb_y
+            + (
+                gen_units * gen_nom * p.generator_embedded_emissions_kgco2e_per_kw * commission_gen
+            ).sum("inv_step")
+            * em_cost_exp
+        )
 
     opex_exp_y = (opex_y_s * w).sum("scenario")
     ext_exp_y = (ext_y_s * w).sum("scenario")
-    gross_y = ann_res_y + ann_res_inv_y + ann_bat_y + ann_bat_inv_y + ann_gen_y + opex_exp_y + ext_exp_y + emb_y
+    gross_y = (
+        ann_res_y
+        + ann_res_inv_y
+        + ann_bat_y
+        + ann_bat_inv_y
+        + ann_gen_y
+        + opex_exp_y
+        + ext_exp_y
+        + emb_y
+    )
     discounted_y = gross_y * disc
 
     # Reporting-only indicator of the discounted annuity stream that would
@@ -1043,7 +1360,9 @@ def build_discounted_cashflows_table_multi_year(
     # objective and should not be interpreted as an in-objective salvage credit.
     post_horizon_annuity_tail = (
         discounted_annuity_tail_memo(sets, ann_res, res_life, rs).sum("inv_step").sum("resource")
-        + discounted_annuity_tail_memo(sets, ann_res_inverter, res_inv_life, rs).sum("inv_step").sum("resource")
+        + discounted_annuity_tail_memo(sets, ann_res_inverter, res_inv_life, rs)
+        .sum("inv_step")
+        .sum("resource")
         + discounted_annuity_tail_memo(sets, ann_bat, bat_life, rs).sum("inv_step")
         + discounted_annuity_tail_memo(sets, ann_bat_inverter, bat_inv_life, rs).sum("inv_step")
         + discounted_annuity_tail_memo(sets, ann_gen, gen_life, rs).sum("inv_step")
@@ -1084,37 +1403,92 @@ def build_scenario_costs_table_multi_year(
     p = get_params(data)
     weights = _scenario_weights(p, sets.coords["scenario"])
 
-    res_units = require_data_array("res_units", get_var_solution(vars_dict=vars, solution=solution, name="res_units"))
-    bat_units = require_data_array("battery_units", get_var_solution(vars_dict=vars, solution=solution, name="battery_units"))
-    bat_inv_power = require_data_array("battery_inverter_power", get_var_solution(vars_dict=vars, solution=solution, name="battery_inverter_power"))
-    gen_units = require_data_array("generator_units", get_var_solution(vars_dict=vars, solution=solution, name="generator_units"))
-    res_gen = require_data_array("res_generation", get_var_solution(vars_dict=vars, solution=solution, name="res_generation"))
-    fuel_cons = require_data_array("fuel_consumption", get_var_solution(vars_dict=vars, solution=solution, name="fuel_consumption"))
-    lost_load = require_data_array("lost_load", get_var_solution(vars_dict=vars, solution=solution, name="lost_load"))
+    res_units = require_data_array(
+        "res_units", get_var_solution(vars_dict=vars, solution=solution, name="res_units")
+    )
+    bat_units = require_data_array(
+        "battery_units", get_var_solution(vars_dict=vars, solution=solution, name="battery_units")
+    )
+    bat_inv_power = require_data_array(
+        "battery_inverter_power",
+        get_var_solution(vars_dict=vars, solution=solution, name="battery_inverter_power"),
+    )
+    gen_units = require_data_array(
+        "generator_units",
+        get_var_solution(vars_dict=vars, solution=solution, name="generator_units"),
+    )
+    res_gen = require_data_array(
+        "res_generation", get_var_solution(vars_dict=vars, solution=solution, name="res_generation")
+    )
+    fuel_cons = require_data_array(
+        "fuel_consumption",
+        get_var_solution(vars_dict=vars, solution=solution, name="fuel_consumption"),
+    )
+    lost_load = require_data_array(
+        "lost_load", get_var_solution(vars_dict=vars, solution=solution, name="lost_load")
+    )
 
     grid_imp = get_var_solution(vars_dict=vars, solution=solution, name="grid_import")
     grid_exp = get_var_solution(vars_dict=vars, solution=solution, name="grid_export")
 
     res_nom = require_data_array("res_nominal_capacity_kw", p.res_nominal_capacity_kw)
-    res_capex = require_data_array("res_specific_investment_cost_per_kw", p.res_specific_investment_cost_per_kw)
-    res_inv_capex = require_data_array("res_inverter_specific_investment_cost_per_kw_ac", p.res_inverter_specific_investment_cost_per_kw_ac)
+    res_capex = require_data_array(
+        "res_specific_investment_cost_per_kw", p.res_specific_investment_cost_per_kw
+    )
+    res_inv_capex = require_data_array(
+        "res_inverter_specific_investment_cost_per_kw_ac",
+        p.res_inverter_specific_investment_cost_per_kw_ac,
+    )
     res_dc_ac_ratio = require_data_array("res_dc_ac_ratio", p.res_dc_ac_ratio)
     res_grant = require_data_array("res_grant_share_of_capex", p.res_grant_share_of_capex)
     bat_nom = require_data_array("battery_nominal_capacity_kwh", p.battery_nominal_capacity_kwh)
-    bat_capex = require_data_array("battery_specific_investment_cost_per_kwh", p.battery_specific_investment_cost_per_kwh)
-    bat_inv_capex = require_data_array("battery_inverter_specific_investment_cost_per_kw", p.battery_inverter_specific_investment_cost_per_kw)
+    bat_capex = require_data_array(
+        "battery_specific_investment_cost_per_kwh", p.battery_specific_investment_cost_per_kwh
+    )
+    bat_inv_capex = require_data_array(
+        "battery_inverter_specific_investment_cost_per_kw",
+        p.battery_inverter_specific_investment_cost_per_kw,
+    )
     gen_nom = require_data_array("generator_nominal_capacity_kw", p.generator_nominal_capacity_kw)
-    gen_capex = require_data_array("generator_specific_investment_cost_per_kw", p.generator_specific_investment_cost_per_kw)
+    gen_capex = require_data_array(
+        "generator_specific_investment_cost_per_kw", p.generator_specific_investment_cost_per_kw
+    )
 
-    fuel_price = p.fuel_cost_per_unit_fuel if p.fuel_cost_per_unit_fuel is not None else p.fuel_fuel_cost_per_unit_fuel
-    fuel_cost_y_s = _as_year_scenario_da((fuel_cons * fuel_price).sum("period").sum("inv_step"), sets) if fuel_price is not None else _as_year_scenario_da(0.0, sets)
-    grid_import_cost_y_s = _as_year_scenario_da((grid_imp * p.grid_import_price).sum("period"), sets) if (p.is_grid_on() and isinstance(grid_imp, xr.DataArray) and p.grid_import_price is not None) else _as_year_scenario_da(0.0, sets)
-    grid_export_rev_y_s = _as_year_scenario_da((grid_exp * p.grid_export_price).sum("period"), sets) if (p.is_grid_export_enabled() and isinstance(grid_exp, xr.DataArray) and p.grid_export_price is not None) else _as_year_scenario_da(0.0, sets)
+    fuel_price = (
+        p.fuel_cost_per_unit_fuel
+        if p.fuel_cost_per_unit_fuel is not None
+        else p.fuel_fuel_cost_per_unit_fuel
+    )
+    fuel_cost_y_s = (
+        _as_year_scenario_da((fuel_cons * fuel_price).sum("period").sum("inv_step"), sets)
+        if fuel_price is not None
+        else _as_year_scenario_da(0.0, sets)
+    )
+    grid_import_cost_y_s = (
+        _as_year_scenario_da((grid_imp * p.grid_import_price).sum("period"), sets)
+        if (
+            p.is_grid_on()
+            and isinstance(grid_imp, xr.DataArray)
+            and p.grid_import_price is not None
+        )
+        else _as_year_scenario_da(0.0, sets)
+    )
+    grid_export_rev_y_s = (
+        _as_year_scenario_da((grid_exp * p.grid_export_price).sum("period"), sets)
+        if (
+            p.is_grid_export_enabled()
+            and isinstance(grid_exp, xr.DataArray)
+            and p.grid_export_price is not None
+        )
+        else _as_year_scenario_da(0.0, sets)
+    )
 
     res_subsidy_y_s = _as_year_scenario_da(0.0, sets)
     if p.res_production_subsidy_per_kwh is not None:
         subsidy = _renewable_subsidy_by_year(sets, p.res_production_subsidy_per_kwh)
-        res_subsidy_y_s = _as_year_scenario_da((res_gen * subsidy).sum("period").sum("resource"), sets)
+        res_subsidy_y_s = _as_year_scenario_da(
+            (res_gen * subsidy).sum("period").sum("resource"), sets
+        )
 
     res_inv = res_units * res_nom * res_capex * (1.0 - res_grant)
     res_inv_inverter = (res_units * res_nom / res_dc_ac_ratio) * res_inv_capex * (1.0 - res_grant)
@@ -1123,50 +1497,133 @@ def build_scenario_costs_table_multi_year(
     gen_inv = gen_units * gen_nom * gen_capex
     active = replacement_active_mask(sets)
 
-    res_fom_share = p.res_fixed_om_share_per_year if p.res_fixed_om_share_per_year is not None else 0.0
-    res_inv_fom_share = p.res_inverter_fixed_om_share_per_year if p.res_inverter_fixed_om_share_per_year is not None else 0.0
-    bat_fom_share = p.battery_fixed_om_share_per_year if p.battery_fixed_om_share_per_year is not None else 0.0
-    bat_inv_fom_share = p.battery_inverter_fixed_om_share_per_year if p.battery_inverter_fixed_om_share_per_year is not None else 0.0
-    gen_fom_share = p.generator_fixed_om_share_per_year if p.generator_fixed_om_share_per_year is not None else 0.0
+    res_fom_share = (
+        p.res_fixed_om_share_per_year if p.res_fixed_om_share_per_year is not None else 0.0
+    )
+    res_inv_fom_share = (
+        p.res_inverter_fixed_om_share_per_year
+        if p.res_inverter_fixed_om_share_per_year is not None
+        else 0.0
+    )
+    bat_fom_share = (
+        p.battery_fixed_om_share_per_year if p.battery_fixed_om_share_per_year is not None else 0.0
+    )
+    bat_inv_fom_share = (
+        p.battery_inverter_fixed_om_share_per_year
+        if p.battery_inverter_fixed_om_share_per_year is not None
+        else 0.0
+    )
+    gen_fom_share = (
+        p.generator_fixed_om_share_per_year
+        if p.generator_fixed_om_share_per_year is not None
+        else 0.0
+    )
 
-    fixed_om_res_y_s = _as_year_scenario_da((res_inv * res_fom_share * active).sum("inv_step").sum("resource"), sets)
-    fixed_om_res_inverter_y_s = _as_year_scenario_da((res_inv_inverter * res_inv_fom_share * active).sum("inv_step").sum("resource"), sets)
-    fixed_om_battery_y_s = _as_year_scenario_da((bat_inv * bat_fom_share * active).sum("inv_step"), sets)
-    fixed_om_battery_inverter_y_s = _as_year_scenario_da((bat_inv_converter * bat_inv_fom_share * active).sum("inv_step"), sets)
-    fixed_om_generator_y_s = _as_year_scenario_da((gen_inv * gen_fom_share * active).sum("inv_step"), sets)
+    fixed_om_res_y_s = _as_year_scenario_da(
+        (res_inv * res_fom_share * active).sum("inv_step").sum("resource"), sets
+    )
+    fixed_om_res_inverter_y_s = _as_year_scenario_da(
+        (res_inv_inverter * res_inv_fom_share * active).sum("inv_step").sum("resource"), sets
+    )
+    fixed_om_battery_y_s = _as_year_scenario_da(
+        (bat_inv * bat_fom_share * active).sum("inv_step"), sets
+    )
+    fixed_om_battery_inverter_y_s = _as_year_scenario_da(
+        (bat_inv_converter * bat_inv_fom_share * active).sum("inv_step"), sets
+    )
+    fixed_om_generator_y_s = _as_year_scenario_da(
+        (gen_inv * gen_fom_share * active).sum("inv_step"), sets
+    )
 
-    lost_load_cost_y_s = _as_year_scenario_da(lost_load.sum("period") * p.lost_load_cost_per_kwh, sets) if p.lost_load_cost_per_kwh is not None else _as_year_scenario_da(0.0, sets)
+    lost_load_cost_y_s = (
+        _as_year_scenario_da(lost_load.sum("period") * p.lost_load_cost_per_kwh, sets)
+        if p.lost_load_cost_per_kwh is not None
+        else _as_year_scenario_da(0.0, sets)
+    )
 
-    scope1_y_s = _as_year_scenario_da((fuel_cons.sum("period") * p.fuel_direct_emissions_kgco2e_per_unit_fuel).sum("inv_step"), sets) if p.fuel_direct_emissions_kgco2e_per_unit_fuel is not None else _as_year_scenario_da(0.0, sets)
+    scope1_y_s = (
+        _as_year_scenario_da(
+            (fuel_cons.sum("period") * p.fuel_direct_emissions_kgco2e_per_unit_fuel).sum(
+                "inv_step"
+            ),
+            sets,
+        )
+        if p.fuel_direct_emissions_kgco2e_per_unit_fuel is not None
+        else _as_year_scenario_da(0.0, sets)
+    )
     scope2_y_s = _as_year_scenario_da(0.0, sets)
-    if p.is_grid_on() and isinstance(grid_imp, xr.DataArray) and p.grid_transmission_efficiency is not None and p.grid_emissions_factor_kgco2e_per_kwh is not None:
-        scope2_y_s = _as_year_scenario_da((grid_imp * p.grid_transmission_efficiency).sum("period") * p.grid_emissions_factor_kgco2e_per_kwh, sets)
+    if (
+        p.is_grid_on()
+        and isinstance(grid_imp, xr.DataArray)
+        and p.grid_transmission_efficiency is not None
+        and p.grid_emissions_factor_kgco2e_per_kwh is not None
+    ):
+        scope2_y_s = _as_year_scenario_da(
+            (grid_imp * p.grid_transmission_efficiency).sum("period")
+            * p.grid_emissions_factor_kgco2e_per_kwh,
+            sets,
+        )
 
-    commission_res = replacement_commission_mask(sets, require_data_array("res_lifetime_years", p.res_lifetime_years))
-    commission_bat = replacement_commission_mask(sets, require_data_array("battery_calendar_lifetime_years", p.battery_calendar_lifetime_years))
-    commission_gen = replacement_commission_mask(sets, require_data_array("generator_lifetime_years", p.generator_lifetime_years))
+    commission_res = replacement_commission_mask(
+        sets, require_data_array("res_lifetime_years", p.res_lifetime_years)
+    )
+    commission_bat = replacement_commission_mask(
+        sets,
+        require_data_array("battery_calendar_lifetime_years", p.battery_calendar_lifetime_years),
+    )
+    commission_gen = replacement_commission_mask(
+        sets, require_data_array("generator_lifetime_years", p.generator_lifetime_years)
+    )
 
-    scope3_res_y = _as_year_scenario_da(
-        (res_units * res_nom * p.res_embedded_emissions_kgco2e_per_kw * commission_res).sum("inv_step").sum("resource"),
-        sets,
-    ) if p.res_embedded_emissions_kgco2e_per_kw is not None else _as_year_scenario_da(0.0, sets)
-    scope3_battery_y = _as_year_scenario_da(
-        (bat_units * bat_nom * p.battery_embedded_emissions_kgco2e_per_kwh * commission_bat).sum("inv_step"),
-        sets,
-    ) if p.battery_embedded_emissions_kgco2e_per_kwh is not None else _as_year_scenario_da(0.0, sets)
-    scope3_generator_y = _as_year_scenario_da(
-        (gen_units * gen_nom * p.generator_embedded_emissions_kgco2e_per_kw * commission_gen).sum("inv_step"),
-        sets,
-    ) if p.generator_embedded_emissions_kgco2e_per_kw is not None else _as_year_scenario_da(0.0, sets)
+    scope3_res_y = (
+        _as_year_scenario_da(
+            (res_units * res_nom * p.res_embedded_emissions_kgco2e_per_kw * commission_res)
+            .sum("inv_step")
+            .sum("resource"),
+            sets,
+        )
+        if p.res_embedded_emissions_kgco2e_per_kw is not None
+        else _as_year_scenario_da(0.0, sets)
+    )
+    scope3_battery_y = (
+        _as_year_scenario_da(
+            (
+                bat_units * bat_nom * p.battery_embedded_emissions_kgco2e_per_kwh * commission_bat
+            ).sum("inv_step"),
+            sets,
+        )
+        if p.battery_embedded_emissions_kgco2e_per_kwh is not None
+        else _as_year_scenario_da(0.0, sets)
+    )
+    scope3_generator_y = (
+        _as_year_scenario_da(
+            (
+                gen_units * gen_nom * p.generator_embedded_emissions_kgco2e_per_kw * commission_gen
+            ).sum("inv_step"),
+            sets,
+        )
+        if p.generator_embedded_emissions_kgco2e_per_kw is not None
+        else _as_year_scenario_da(0.0, sets)
+    )
     scope3_y_s = scope3_res_y + scope3_battery_y + scope3_generator_y
 
-    emission_cost_y_s = _as_year_scenario_da(p.emission_cost_per_kgco2e, sets) if p.emission_cost_per_kgco2e is not None else _as_year_scenario_da(0.0, sets)
+    emission_cost_y_s = (
+        _as_year_scenario_da(p.emission_cost_per_kgco2e, sets)
+        if p.emission_cost_per_kgco2e is not None
+        else _as_year_scenario_da(0.0, sets)
+    )
     scope1_cost_y_s = scope1_y_s * emission_cost_y_s
     scope2_cost_y_s = scope2_y_s * emission_cost_y_s
     scope3_res_cost_y_s = scope3_res_y * emission_cost_y_s
     scope3_battery_cost_y_s = scope3_battery_y * emission_cost_y_s
     scope3_generator_cost_y_s = scope3_generator_y * emission_cost_y_s
-    emissions_cost_y_s = scope1_cost_y_s + scope2_cost_y_s + scope3_res_cost_y_s + scope3_battery_cost_y_s + scope3_generator_cost_y_s
+    emissions_cost_y_s = (
+        scope1_cost_y_s
+        + scope2_cost_y_s
+        + scope3_res_cost_y_s
+        + scope3_battery_cost_y_s
+        + scope3_generator_cost_y_s
+    )
 
     variable_cost_y_s = fuel_cost_y_s + grid_import_cost_y_s - grid_export_rev_y_s - res_subsidy_y_s
     total_operating_cost_y_s = (
@@ -1189,31 +1646,73 @@ def build_scenario_costs_table_multi_year(
                     "scenario": str(scenario),
                     "weight": float(weights.sel(scenario=scenario)),
                     "fuel_cost": scalarize(fuel_cost_y_s, year=year, scenario=scenario),
-                    "grid_import_cost": scalarize(grid_import_cost_y_s, year=year, scenario=scenario),
-                    "grid_export_revenue": scalarize(grid_export_rev_y_s, year=year, scenario=scenario),
+                    "grid_import_cost": scalarize(
+                        grid_import_cost_y_s, year=year, scenario=scenario
+                    ),
+                    "grid_export_revenue": scalarize(
+                        grid_export_rev_y_s, year=year, scenario=scenario
+                    ),
                     "res_subsidy_revenue": scalarize(res_subsidy_y_s, year=year, scenario=scenario),
-                    "annual_variable_cost": scalarize(variable_cost_y_s, year=year, scenario=scenario),
+                    "annual_variable_cost": scalarize(
+                        variable_cost_y_s, year=year, scenario=scenario
+                    ),
                     "fixed_om_res": scalarize(fixed_om_res_y_s, year=year, scenario=scenario),
-                    "fixed_om_res_inverter": scalarize(fixed_om_res_inverter_y_s, year=year, scenario=scenario),
-                    "fixed_om_battery": scalarize(fixed_om_battery_y_s, year=year, scenario=scenario),
-                    "fixed_om_battery_inverter": scalarize(fixed_om_battery_inverter_y_s, year=year, scenario=scenario),
-                    "fixed_om_generator": scalarize(fixed_om_generator_y_s, year=year, scenario=scenario),
-                    "fixed_om_total": scalarize(fixed_om_res_y_s + fixed_om_res_inverter_y_s + fixed_om_battery_y_s + fixed_om_battery_inverter_y_s + fixed_om_generator_y_s, year=year, scenario=scenario),
-                    "lost_load_penalty": scalarize(lost_load_cost_y_s, year=year, scenario=scenario),
+                    "fixed_om_res_inverter": scalarize(
+                        fixed_om_res_inverter_y_s, year=year, scenario=scenario
+                    ),
+                    "fixed_om_battery": scalarize(
+                        fixed_om_battery_y_s, year=year, scenario=scenario
+                    ),
+                    "fixed_om_battery_inverter": scalarize(
+                        fixed_om_battery_inverter_y_s, year=year, scenario=scenario
+                    ),
+                    "fixed_om_generator": scalarize(
+                        fixed_om_generator_y_s, year=year, scenario=scenario
+                    ),
+                    "fixed_om_total": scalarize(
+                        fixed_om_res_y_s
+                        + fixed_om_res_inverter_y_s
+                        + fixed_om_battery_y_s
+                        + fixed_om_battery_inverter_y_s
+                        + fixed_om_generator_y_s,
+                        year=year,
+                        scenario=scenario,
+                    ),
+                    "lost_load_penalty": scalarize(
+                        lost_load_cost_y_s, year=year, scenario=scenario
+                    ),
                     "scope1_emissions": scalarize(scope1_y_s, year=year, scenario=scenario),
                     "scope2_emissions": scalarize(scope2_y_s, year=year, scenario=scenario),
                     "scope3_res_emissions": scalarize(scope3_res_y, year=year, scenario=scenario),
-                    "scope3_battery_emissions": scalarize(scope3_battery_y, year=year, scenario=scenario),
-                    "scope3_generator_emissions": scalarize(scope3_generator_y, year=year, scenario=scenario),
+                    "scope3_battery_emissions": scalarize(
+                        scope3_battery_y, year=year, scenario=scenario
+                    ),
+                    "scope3_generator_emissions": scalarize(
+                        scope3_generator_y, year=year, scenario=scenario
+                    ),
                     "scope3_emissions": scalarize(scope3_y_s, year=year, scenario=scenario),
-                    "total_emissions": scalarize(scope1_y_s + scope2_y_s + scope3_y_s, year=year, scenario=scenario),
-                    "scope1_emissions_cost": scalarize(scope1_cost_y_s, year=year, scenario=scenario),
-                    "scope2_emissions_cost": scalarize(scope2_cost_y_s, year=year, scenario=scenario),
-                    "scope3_res_emissions_cost": scalarize(scope3_res_cost_y_s, year=year, scenario=scenario),
-                    "scope3_battery_emissions_cost": scalarize(scope3_battery_cost_y_s, year=year, scenario=scenario),
-                    "scope3_generator_emissions_cost": scalarize(scope3_generator_cost_y_s, year=year, scenario=scenario),
+                    "total_emissions": scalarize(
+                        scope1_y_s + scope2_y_s + scope3_y_s, year=year, scenario=scenario
+                    ),
+                    "scope1_emissions_cost": scalarize(
+                        scope1_cost_y_s, year=year, scenario=scenario
+                    ),
+                    "scope2_emissions_cost": scalarize(
+                        scope2_cost_y_s, year=year, scenario=scenario
+                    ),
+                    "scope3_res_emissions_cost": scalarize(
+                        scope3_res_cost_y_s, year=year, scenario=scenario
+                    ),
+                    "scope3_battery_emissions_cost": scalarize(
+                        scope3_battery_cost_y_s, year=year, scenario=scenario
+                    ),
+                    "scope3_generator_emissions_cost": scalarize(
+                        scope3_generator_cost_y_s, year=year, scenario=scenario
+                    ),
                     "emissions_cost": scalarize(emissions_cost_y_s, year=year, scenario=scenario),
-                    "total_operating_cost": scalarize(total_operating_cost_y_s, year=year, scenario=scenario),
+                    "total_operating_cost": scalarize(
+                        total_operating_cost_y_s, year=year, scenario=scenario
+                    ),
                 }
             )
 
@@ -1232,7 +1731,10 @@ def build_investment_summary_table_multi_year(
     rs = float(p.settings.get("social_discount_rate", 0.0) or 0.0)
     years = [str(y) for y in sets.coords["year"].values.tolist()]
     start_year_map = (
-        {str(step): str(sets["inv_step_start_year"].sel(inv_step=step).item()) for step in sets.coords["inv_step"].values}
+        {
+            str(step): str(sets["inv_step_start_year"].sel(inv_step=step).item())
+            for step in sets.coords["inv_step"].values
+        }
         if "inv_step_start_year" in sets
         else {}
     )
@@ -1243,27 +1745,48 @@ def build_investment_summary_table_multi_year(
         technology = str(row.get("technology", "")).strip().lower()
         inv_step = str(row.get("inv_step", ""))
         resource = str(row.get("resource", "")).strip()
-        installed_capacity = float(pd.to_numeric(pd.Series([row.get("installed_capacity", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
+        installed_capacity = float(
+            pd.to_numeric(pd.Series([row.get("installed_capacity", 0.0)]), errors="coerce")
+            .fillna(0.0)
+            .iloc[0]
+        )
         if installed_capacity == 0.0:
             continue
-        start_year = str(row.get("inv_step_start_year", start_year_map.get(inv_step, years[0] if years else "")))
+        start_year = str(
+            row.get("inv_step_start_year", start_year_map.get(inv_step, years[0] if years else ""))
+        )
         discount_factor = 1.0 / ((1.0 + rs) ** year_to_ordinal.get(start_year, 0))
 
         if technology == "renewable":
-            capex = _scalar_param(p.res_specific_investment_cost_per_kw, inv_step=inv_step, resource=resource)
-            inv_capex = _scalar_param(p.res_inverter_specific_investment_cost_per_kw_ac, inv_step=inv_step, resource=resource)
+            capex = _scalar_param(
+                p.res_specific_investment_cost_per_kw, inv_step=inv_step, resource=resource
+            )
+            inv_capex = _scalar_param(
+                p.res_inverter_specific_investment_cost_per_kw_ac,
+                inv_step=inv_step,
+                resource=resource,
+            )
             grant = _scalar_param(p.res_grant_share_of_capex, inv_step=inv_step, resource=resource)
             nominal = installed_capacity * capex * (1.0 - grant)
             label = str(row.get("technology_label", resource))
             unit = "kW"
-            inverter_capacity = float(pd.to_numeric(pd.Series([row.get("installed_inverter_capacity_ac", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
+            inverter_capacity = float(
+                pd.to_numeric(
+                    pd.Series([row.get("installed_inverter_capacity_ac", 0.0)]), errors="coerce"
+                )
+                .fillna(0.0)
+                .iloc[0]
+            )
             if inverter_capacity > 0.0:
                 rows.append(
                     {
                         "Technology": f"{label} inverter",
                         "Capacity unit": "kW_ac",
                         "Nominal investment cost": inverter_capacity * inv_capex * (1.0 - grant),
-                        "Present-value investment cost": inverter_capacity * inv_capex * (1.0 - grant) * discount_factor,
+                        "Present-value investment cost": inverter_capacity
+                        * inv_capex
+                        * (1.0 - grant)
+                        * discount_factor,
                     }
                 )
         elif technology == "battery":
@@ -1271,15 +1794,25 @@ def build_investment_summary_table_multi_year(
             nominal = installed_capacity * capex
             label = "Battery"
             unit = "kWh"
-            inverter_capacity = float(pd.to_numeric(pd.Series([row.get("installed_inverter_capacity_ac", 0.0)]), errors="coerce").fillna(0.0).iloc[0])
-            inv_capex = _scalar_param(p.battery_inverter_specific_investment_cost_per_kw, inv_step=inv_step)
+            inverter_capacity = float(
+                pd.to_numeric(
+                    pd.Series([row.get("installed_inverter_capacity_ac", 0.0)]), errors="coerce"
+                )
+                .fillna(0.0)
+                .iloc[0]
+            )
+            inv_capex = _scalar_param(
+                p.battery_inverter_specific_investment_cost_per_kw, inv_step=inv_step
+            )
             if inverter_capacity > 0.0:
                 rows.append(
                     {
                         "Technology": "Battery inverter",
                         "Capacity unit": "kW",
                         "Nominal investment cost": inverter_capacity * inv_capex,
-                        "Present-value investment cost": inverter_capacity * inv_capex * discount_factor,
+                        "Present-value investment cost": inverter_capacity
+                        * inv_capex
+                        * discount_factor,
                     }
                 )
         elif technology == "generator":
@@ -1300,16 +1833,29 @@ def build_investment_summary_table_multi_year(
         )
 
     if not rows:
-        return pd.DataFrame(columns=["Technology", "Capacity unit", "Nominal investment cost", "Present-value investment cost"])
+        return pd.DataFrame(
+            columns=[
+                "Technology",
+                "Capacity unit",
+                "Nominal investment cost",
+                "Present-value investment cost",
+            ]
+        )
 
     out = pd.DataFrame(rows)
-    return out.groupby(["Technology", "Capacity unit"], as_index=False)[["Nominal investment cost", "Present-value investment cost"]].sum()
+    return out.groupby(["Technology", "Capacity unit"], as_index=False)[
+        ["Nominal investment cost", "Present-value investment cost"]
+    ].sum()
 
 
-def build_yearly_expected_table_multi_year(cash_df: pd.DataFrame, scenario_costs_df: pd.DataFrame) -> pd.DataFrame:
+def build_yearly_expected_table_multi_year(
+    cash_df: pd.DataFrame, scenario_costs_df: pd.DataFrame
+) -> pd.DataFrame:
     cash = cash_df.copy()
     cash["year"] = cash["year"].astype(str)
-    expected = scenario_costs_df[scenario_costs_df["scenario"].astype(str).str.lower() == "expected"].copy()
+    expected = scenario_costs_df[
+        scenario_costs_df["scenario"].astype(str).str.lower() == "expected"
+    ].copy()
     expected["year"] = expected["year"].astype(str)
     expected = expected.drop(columns=["scenario", "weight"], errors="ignore")
     yearly = cash.merge(expected, on="year", how="left")
@@ -1337,7 +1883,15 @@ def build_yearly_expected_table_multi_year(cash_df: pd.DataFrame, scenario_costs
     ]:
         if column not in yearly.columns:
             yearly[column] = 0.0
-    yearly["annuity_total"] = yearly[["annuity_res", "annuity_res_inverter", "annuity_battery", "annuity_battery_inverter", "annuity_generator"]].sum(axis=1)
+    yearly["annuity_total"] = yearly[
+        [
+            "annuity_res",
+            "annuity_res_inverter",
+            "annuity_battery",
+            "annuity_battery_inverter",
+            "annuity_generator",
+        ]
+    ].sum(axis=1)
     yearly["renewables_cost"] = (
         yearly["annuity_res"]
         + yearly["annuity_res_inverter"]
@@ -1375,7 +1929,9 @@ def build_additional_reporting_table_multi_year(
     scenario_costs_df: pd.DataFrame,
     objective_value: float | None = None,
 ) -> pd.DataFrame:
-    investment = build_investment_summary_table_multi_year(sets=sets, data=data, design_df=design_df)
+    investment = build_investment_summary_table_multi_year(
+        sets=sets, data=data, design_df=design_df
+    )
     yearly = build_yearly_expected_table_multi_year(cash_df, scenario_costs_df)
 
     expected_kpis = kpis_df[kpis_df["scenario"].astype(str).str.lower() == "expected"].copy()
@@ -1386,7 +1942,11 @@ def build_additional_reporting_table_multi_year(
 
     npc = float(safe_float(objective_value))
     if not np.isfinite(npc):
-        npc = float(pd.to_numeric(cash_df.get("discounted_objective_contribution"), errors="coerce").fillna(0.0).sum())
+        npc = float(
+            pd.to_numeric(cash_df.get("discounted_objective_contribution"), errors="coerce")
+            .fillna(0.0)
+            .sum()
+        )
 
     discounted_energy = float(
         (
@@ -1397,21 +1957,41 @@ def build_additional_reporting_table_multi_year(
     lcoe = npc / discounted_energy if discounted_energy > 1e-12 else float("nan")
 
     rows: list[dict[str, Any]] = [
-        {"section": "summary_metrics", "row_label": "Net Present Cost (Expected)", "year": "", "unit": "", "value": npc},
-        {"section": "summary_metrics", "row_label": "LCOE", "year": "", "unit": "/kWh", "value": lcoe},
+        {
+            "section": "summary_metrics",
+            "row_label": "Net Present Cost (Expected)",
+            "year": "",
+            "unit": "",
+            "value": npc,
+        },
+        {
+            "section": "summary_metrics",
+            "row_label": "LCOE",
+            "year": "",
+            "unit": "/kWh",
+            "value": lcoe,
+        },
         {
             "section": "summary_metrics",
             "row_label": "Investment cost (nominal)",
             "year": "",
             "unit": "",
-            "value": float(pd.to_numeric(investment.get("Nominal investment cost"), errors="coerce").fillna(0.0).sum()),
+            "value": float(
+                pd.to_numeric(investment.get("Nominal investment cost"), errors="coerce")
+                .fillna(0.0)
+                .sum()
+            ),
         },
         {
             "section": "summary_metrics",
             "row_label": "Investment cost (present)",
             "year": "",
             "unit": "",
-            "value": float(pd.to_numeric(investment.get("Present-value investment cost"), errors="coerce").fillna(0.0).sum()),
+            "value": float(
+                pd.to_numeric(investment.get("Present-value investment cost"), errors="coerce")
+                .fillna(0.0)
+                .sum()
+            ),
         },
     ]
 
@@ -1449,7 +2029,11 @@ def build_additional_reporting_table_multi_year(
     ]
 
     yearly_numeric = yearly.select_dtypes(include=[np.number])
-    average_year = yearly_numeric.mean(numeric_only=True) if not yearly_numeric.empty else pd.Series(dtype=float)
+    average_year = (
+        yearly_numeric.mean(numeric_only=True)
+        if not yearly_numeric.empty
+        else pd.Series(dtype=float)
+    )
     year_views: list[tuple[str, pd.Series]] = [("Average yearly", average_year)]
     for _, row in yearly.iterrows():
         year_views.append((str(row.get("year", "")), row))
@@ -1482,7 +2066,9 @@ def build_additional_reporting_table_multi_year(
     for column in ["value_secondary", "secondary_label"]:
         if column not in out.columns:
             out[column] = np.nan if column == "value_secondary" else ""
-    return out[["section", "row_label", "year", "unit", "value", "secondary_label", "value_secondary"]]
+    return out[
+        ["section", "row_label", "year", "unit", "value", "secondary_label", "value_secondary"]
+    ]
 
 
 def build_multi_year_results_from_tables(
@@ -1581,7 +2167,13 @@ def build_multi_year_results_from_tables(
             kpis_df=kpis,
             cash_df=cash,
             scenario_costs_df=scenario_costs,
-            objective_value=float(pd.to_numeric(cash.get("discounted_objective_contribution"), errors="coerce").fillna(0.0).sum()) if "discounted_objective_contribution" in cash.columns else None,
+            objective_value=float(
+                pd.to_numeric(cash.get("discounted_objective_contribution"), errors="coerce")
+                .fillna(0.0)
+                .sum()
+            )
+            if "discounted_objective_contribution" in cash.columns
+            else None,
         )
     )
     meta = dict(metadata or {})
@@ -1625,16 +2217,34 @@ def build_multi_year_results(
     results_dir: Path | None = None,
     source: str = "session",
 ) -> MultiYearResults:
-    dispatch = build_dispatch_timeseries_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
+    dispatch = build_dispatch_timeseries_table_multi_year(
+        sets=sets, data=data, vars=vars, solution=solution
+    )
     energy_balance = build_energy_balance_table_multi_year(dispatch)
-    design = build_design_by_step_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
-    renewable_inverter_design = build_renewable_inverter_design_by_step_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
-    battery_inverter_design = build_battery_inverter_design_by_step_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
-    inverter_capacity_by_year = build_inverter_capacity_by_year_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
-    inverter_metrics = build_inverter_metrics_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
-    kpis = build_yearly_kpis_table_multi_year(sets=sets, data=data, vars=vars, solution=solution, objective_value=objective_value)
-    cash = build_discounted_cashflows_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
-    scenario_costs = build_scenario_costs_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
+    design = build_design_by_step_table_multi_year(
+        sets=sets, data=data, vars=vars, solution=solution
+    )
+    renewable_inverter_design = build_renewable_inverter_design_by_step_table_multi_year(
+        sets=sets, data=data, vars=vars, solution=solution
+    )
+    battery_inverter_design = build_battery_inverter_design_by_step_table_multi_year(
+        sets=sets, data=data, vars=vars, solution=solution
+    )
+    inverter_capacity_by_year = build_inverter_capacity_by_year_table_multi_year(
+        sets=sets, data=data, vars=vars, solution=solution
+    )
+    inverter_metrics = build_inverter_metrics_table_multi_year(
+        sets=sets, data=data, vars=vars, solution=solution
+    )
+    kpis = build_yearly_kpis_table_multi_year(
+        sets=sets, data=data, vars=vars, solution=solution, objective_value=objective_value
+    )
+    cash = build_discounted_cashflows_table_multi_year(
+        sets=sets, data=data, vars=vars, solution=solution
+    )
+    scenario_costs = build_scenario_costs_table_multi_year(
+        sets=sets, data=data, vars=vars, solution=solution
+    )
     return build_multi_year_results_from_tables(
         project_name=project_name,
         data=data,

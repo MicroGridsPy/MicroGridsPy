@@ -179,10 +179,15 @@ def _dataset_project_name(data: Any) -> str | None:
     return str(raw) if raw is not None else None
 
 
-def get_results_bundle_from_session(session_state: Mapping[str, Any], *, active_project: str | None = None) -> ResultsBundle | None:
+def get_results_bundle_from_session(
+    session_state: Mapping[str, Any], *, active_project: str | None = None
+) -> ResultsBundle | None:
     raw = session_state.get("gp_results_bundle")
     if isinstance(raw, ResultsBundle):
-        if active_project is not None and _dataset_project_name(raw.data) not in {None, active_project}:
+        if active_project is not None and _dataset_project_name(raw.data) not in {
+            None,
+            active_project,
+        }:
             return None
         model_obj = session_state.get("gp_model_obj")
         model_sol = getattr(getattr(model_obj, "model", None), "solution", None)
@@ -224,7 +229,10 @@ def get_typical_year_results_from_session(
     vars_dict = session_state.get("gp_vars")
     if not isinstance(data, xr.Dataset) or not isinstance(vars_dict, dict):
         return None
-    if str(((data.attrs or {}).get("settings", {}) or {}).get("formulation", "steady_state")) != "steady_state":
+    if (
+        str(((data.attrs or {}).get("settings", {}) or {}).get("formulation", "steady_state"))
+        != "steady_state"
+    ):
         return None
     if active_project is not None and _dataset_project_name(data) not in {None, active_project}:
         return None
@@ -237,7 +245,9 @@ def get_typical_year_results_from_session(
         project_name=str(active_project or _dataset_project_name(data) or ""),
         data=data,
         vars=vars_dict,
-        solution=session_state.get("gp_solution") if isinstance(session_state.get("gp_solution"), xr.Dataset) else None,
+        solution=session_state.get("gp_solution")
+        if isinstance(session_state.get("gp_solution"), xr.Dataset)
+        else None,
         objective_value=objective_value,
         status=status,
         solver=None,
@@ -259,12 +269,23 @@ def get_multi_year_results_from_session(
         return raw
 
     bundle = get_results_bundle_from_session(session_state, active_project=active_project)
-    if bundle is None or not isinstance(bundle.data, xr.Dataset) or not isinstance(bundle.vars, dict):
+    if (
+        bundle is None
+        or not isinstance(bundle.data, xr.Dataset)
+        or not isinstance(bundle.vars, dict)
+    ):
         return None
-    if str(((bundle.data.attrs or {}).get("settings", {}) or {}).get("formulation", "steady_state")) != "dynamic":
+    if (
+        str(
+            ((bundle.data.attrs or {}).get("settings", {}) or {}).get("formulation", "steady_state")
+        )
+        != "dynamic"
+    ):
         return None
     summary = session_state.get("gp_solution_summary")
-    objective_value = summary.get("objective_value") if isinstance(summary, dict) else bundle.objective_value
+    objective_value = (
+        summary.get("objective_value") if isinstance(summary, dict) else bundle.objective_value
+    )
     status = summary.get("status") if isinstance(summary, dict) else bundle.status
     return build_multi_year_results(
         project_name=str(active_project or _dataset_project_name(bundle.data) or ""),
@@ -278,6 +299,7 @@ def get_multi_year_results_from_session(
         results_dir=None,
         source="session_legacy",
     )
+
 
 def get_var_solution(*, bundle: ResultsBundle, name: str) -> xr.DataArray | None:
     return _get_var_solution_common(

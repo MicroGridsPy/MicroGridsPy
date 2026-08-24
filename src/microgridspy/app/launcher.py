@@ -5,6 +5,7 @@ Registered in ``pyproject.toml`` under ``[project.scripts]`` as
 packaged ``Home.py`` via :mod:`importlib.resources`, so it works regardless of
 where the package was installed or which directory the user runs it from.
 """
+
 from __future__ import annotations
 
 import sys

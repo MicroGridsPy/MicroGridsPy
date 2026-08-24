@@ -164,13 +164,21 @@ def _project_specific_optional_inputs(formulation: dict[str, Any], paths) -> dic
         eff_path = entry.get("efficiency_curve_path")
         cal_path = entry.get("calendar_curve_path")
         if isinstance(eff_path, Path):
-            suffix = f" (investment step {entry['inv_step']})" if entry.get("inv_step") is not None else ""
+            suffix = (
+                f" (investment step {entry['inv_step']})"
+                if entry.get("inv_step") is not None
+                else ""
+            )
             files[eff_path.name] = (
                 "Optional battery one-way efficiency curve used by the advanced convex loss model."
                 f"{suffix}"
             )
         if isinstance(cal_path, Path):
-            suffix = f" (investment step {entry['inv_step']})" if entry.get("inv_step") is not None else ""
+            suffix = (
+                f" (investment step {entry['inv_step']})"
+                if entry.get("inv_step") is not None
+                else ""
+            )
             files[cal_path.name] = (
                 "Optional battery yearly-average-SoC-dependent calendar-fade coefficient curve used when calendar fade is enabled."
                 f"{suffix}"
@@ -179,7 +187,11 @@ def _project_specific_optional_inputs(formulation: dict[str, Any], paths) -> dic
     for entry in generator_cfg.get("curve_entries", []):
         curve_path = entry.get("curve_path")
         if isinstance(curve_path, Path):
-            suffix = f" (investment step {entry['inv_step']})" if entry.get("inv_step") is not None else ""
+            suffix = (
+                f" (investment step {entry['inv_step']})"
+                if entry.get("inv_step") is not None
+                else ""
+            )
             files[curve_path.name] = (
                 "Optional generator partial-load efficiency curve used when generator.yaml points to it."
                 f"{suffix}"
@@ -195,13 +207,18 @@ def _required_missing_for_configuration(formulation: dict[str, Any], paths) -> l
         for name in ("grid.yaml", "grid_import_price.csv"):
             if not (paths.inputs_dir / name).exists():
                 missing.append(name)
-        if bool(formulation.get("grid_allow_export", False)) and not (paths.inputs_dir / "grid_export_price.csv").exists():
+        if (
+            bool(formulation.get("grid_allow_export", False))
+            and not (paths.inputs_dir / "grid_export_price.csv").exists()
+        ):
             missing.append("grid_export_price.csv")
 
     return sorted(set(missing))
 
 
-def _load_sets_and_dataset(project_name: str, formulation: dict[str, Any]) -> tuple[xr.Dataset, xr.Dataset, str]:
+def _load_sets_and_dataset(
+    project_name: str, formulation: dict[str, Any]
+) -> tuple[xr.Dataset, xr.Dataset, str]:
     formulation_mode = str(formulation.get("core_formulation", "steady_state")).strip()
     loader_mode = "multi_year" if formulation_mode == "dynamic" else "typical_year"
 
@@ -219,10 +236,16 @@ def _build_project_summary(formulation: dict[str, Any]) -> str:
     mode_label = "Typical-year" if formulation_mode == "steady_state" else "Multi-year"
     system_label = "On-grid" if bool(formulation.get("on_grid", False)) else "Off-grid"
     export_label = "export enabled" if bool(formulation.get("grid_allow_export", False)) else None
-    sizing_label = "Discrete sizing" if bool(formulation.get("unit_commitment", False)) else "Continuous sizing"
+    sizing_label = (
+        "Discrete sizing"
+        if bool(formulation.get("unit_commitment", False))
+        else "Continuous sizing"
+    )
     ms = formulation.get("multi_scenario", {}) or {}
     n_scen = int(ms.get("n_scenarios", 1) or 1)
-    scenario_label = f"Multi-scenario ({n_scen})" if bool(ms.get("enabled", False)) else "Single scenario"
+    scenario_label = (
+        f"Multi-scenario ({n_scen})" if bool(ms.get("enabled", False)) else "Single scenario"
+    )
     parts = [mode_label, system_label]
     if export_label:
         parts.append(export_label)
@@ -235,7 +258,9 @@ def _build_project_summary(formulation: dict[str, Any]) -> str:
         if bool(formulation.get("capacity_expansion", False)):
             parts.append("capacity expansion")
 
-    enforcement = ((formulation.get("optimization_constraints", {}) or {}).get("enforcement") or "").strip()
+    enforcement = (
+        (formulation.get("optimization_constraints", {}) or {}).get("enforcement") or ""
+    ).strip()
     if enforcement:
         parts.append(f"{enforcement} constraints")
 
@@ -258,11 +283,15 @@ def _load_yaml_parameter_metadata(paths) -> dict[str, dict[str, str]]:
         meta = payload.get("meta", {}) or {}
         units = meta.get("units", {}) or {}
         description_block = meta.get("description", {}) or {}
-        parameters = description_block.get("parameters", {}) if isinstance(description_block, dict) else {}
+        parameters = (
+            description_block.get("parameters", {}) if isinstance(description_block, dict) else {}
+        )
         for key in set(units.keys()) | set(parameters.keys()):
             metadata[key] = {
                 "unit": str(units.get(key, "")) if units.get(key) is not None else "",
-                "description": str(parameters.get(key, "")) if parameters.get(key) is not None else "",
+                "description": str(parameters.get(key, ""))
+                if parameters.get(key) is not None
+                else "",
                 "source": name,
             }
     return metadata
@@ -332,8 +361,7 @@ def _format_parameter_value(da: xr.DataArray) -> str:
         dim = da.dims[0]
         labels = [str(v) for v in da.coords[dim].values.tolist()]
         labelled = ", ".join(
-            f"{label}={_format_scalar_value(value)}"
-            for label, value in zip(labels, flat.tolist())
+            f"{label}={_format_scalar_value(value)}" for label, value in zip(labels, flat.tolist())
         )
         return f"[{labelled}]"
 
@@ -409,7 +437,9 @@ def _soft_checks(ds: xr.Dataset) -> list[tuple[str, str]]:
     if "load_demand" in ds:
         load = np.asarray(ds["load_demand"].values, dtype=float)
         if np.nanmin(load) < 0:
-            checks.append(("warning", f"`load_demand` contains negative values (min={np.nanmin(load):.6g})."))
+            checks.append(
+                ("warning", f"`load_demand` contains negative values (min={np.nanmin(load):.6g}).")
+            )
         else:
             checks.append(("success", "`load_demand` is non-negative."))
 
@@ -418,14 +448,21 @@ def _soft_checks(ds: xr.Dataset) -> list[tuple[str, str]]:
         mn = float(np.nanmin(res))
         mx = float(np.nanmax(res))
         if mn < 0 or mx > 1:
-            checks.append(("warning", f"`resource_availability` falls outside [0, 1] (min={mn:.6g}, max={mx:.6g})."))
+            checks.append(
+                (
+                    "warning",
+                    f"`resource_availability` falls outside [0, 1] (min={mn:.6g}, max={mx:.6g}).",
+                )
+            )
         else:
             checks.append(("success", "`resource_availability` is within [0, 1]."))
 
     settings = (ds.attrs or {}).get("settings", {})
     missing_settings = [key for key in REQUIRED_SETTINGS_KEYS if key not in settings]
     if missing_settings:
-        checks.append(("warning", f"Missing recommended settings keys: {', '.join(missing_settings)}."))
+        checks.append(
+            ("warning", f"Missing recommended settings keys: {', '.join(missing_settings)}.")
+        )
     else:
         checks.append(("success", "Required settings keys are present."))
 
@@ -460,10 +497,14 @@ def _safe_yaml_float(value: Any, default: float) -> float:
 
 
 def _battery_curve_config(formulation: dict[str, Any], paths) -> dict[str, Any]:
-    battery_model = (formulation.get("battery_model", {}) or {})
-    degradation_model = (battery_model.get("degradation_model", {}) or {})
-    loss_model = str(battery_model.get("loss_model", "constant_efficiency") or "constant_efficiency").strip()
-    formulation_mode = str(formulation.get("core_formulation", "steady_state") or "steady_state").strip()
+    battery_model = formulation.get("battery_model", {}) or {}
+    degradation_model = battery_model.get("degradation_model", {}) or {}
+    loss_model = str(
+        battery_model.get("loss_model", "constant_efficiency") or "constant_efficiency"
+    ).strip()
+    formulation_mode = str(
+        formulation.get("core_formulation", "steady_state") or "steady_state"
+    ).strip()
 
     battery_yaml = {}
     try:
@@ -471,8 +512,8 @@ def _battery_curve_config(formulation: dict[str, Any], paths) -> dict[str, Any]:
     except Exception:
         battery_yaml = {}
 
-    battery_block = (battery_yaml.get("battery", {}) or {})
-    technical = (battery_block.get("technical", {}) or {})
+    battery_block = battery_yaml.get("battery", {}) or {}
+    technical = battery_block.get("technical", {}) or {}
     top_level_by_step = battery_block.get("by_step", {}) if isinstance(battery_block, dict) else {}
     if not isinstance(top_level_by_step, dict):
         top_level_by_step = {}
@@ -500,16 +541,23 @@ def _battery_curve_config(formulation: dict[str, Any], paths) -> dict[str, Any]:
             curve_entries.append(
                 {
                     "inv_step": str(step),
-                    "efficiency_curve_path": (paths.inputs_dir / eff_curve_name) if eff_curve_name else None,
-                    "calendar_curve_path": (paths.inputs_dir / cal_curve_name) if cal_curve_name else None,
-                    "charge_efficiency_base": _safe_yaml_float(block.get("charge_efficiency", 1.0), 1.0),
-                    "discharge_efficiency_base": _safe_yaml_float(block.get("discharge_efficiency", 1.0), 1.0),
+                    "efficiency_curve_path": (paths.inputs_dir / eff_curve_name)
+                    if eff_curve_name
+                    else None,
+                    "calendar_curve_path": (paths.inputs_dir / cal_curve_name)
+                    if cal_curve_name
+                    else None,
+                    "charge_efficiency_base": _safe_yaml_float(
+                        block.get("charge_efficiency", 1.0), 1.0
+                    ),
+                    "discharge_efficiency_base": _safe_yaml_float(
+                        block.get("discharge_efficiency", 1.0), 1.0
+                    ),
                 }
             )
     else:
         eff_curve_name = str(
-            technical.get("efficiency_curve_csv")
-            or "battery_efficiency_curve.csv"
+            technical.get("efficiency_curve_csv") or "battery_efficiency_curve.csv"
         ).strip()
         cal_curve_name = str(
             technical.get("calendar_fade_curve_csv")
@@ -521,15 +569,20 @@ def _battery_curve_config(formulation: dict[str, Any], paths) -> dict[str, Any]:
                 "inv_step": None,
                 "efficiency_curve_path": paths.inputs_dir / eff_curve_name,
                 "calendar_curve_path": paths.inputs_dir / cal_curve_name,
-                "charge_efficiency_base": _safe_yaml_float(technical.get("charge_efficiency", 1.0), 1.0),
-                "discharge_efficiency_base": _safe_yaml_float(technical.get("discharge_efficiency", 1.0), 1.0),
+                "charge_efficiency_base": _safe_yaml_float(
+                    technical.get("charge_efficiency", 1.0), 1.0
+                ),
+                "discharge_efficiency_base": _safe_yaml_float(
+                    technical.get("discharge_efficiency", 1.0), 1.0
+                ),
             }
         )
 
     return {
         "loss_model": loss_model,
         "battery_efficiency_curve_enabled": loss_model == "convex_loss_epigraph",
-        "calendar_fade_enabled": formulation_mode == "dynamic" and bool(degradation_model.get("calendar_fade_enabled", False)),
+        "calendar_fade_enabled": formulation_mode == "dynamic"
+        and bool(degradation_model.get("calendar_fade_enabled", False)),
         "curve_entries": curve_entries,
     }
 
@@ -541,9 +594,11 @@ def _generator_curve_config(paths) -> dict[str, Any]:
     except Exception:
         generator_yaml = {}
 
-    technical = ((generator_yaml.get("generator", {}) or {}).get("technical", {}) or {})
-    generator_block = (generator_yaml.get("generator", {}) or {})
-    top_level_by_step = generator_block.get("by_step", {}) if isinstance(generator_block, dict) else {}
+    technical = (generator_yaml.get("generator", {}) or {}).get("technical", {}) or {}
+    generator_block = generator_yaml.get("generator", {}) or {}
+    top_level_by_step = (
+        generator_block.get("by_step", {}) if isinstance(generator_block, dict) else {}
+    )
     if not isinstance(top_level_by_step, dict):
         top_level_by_step = {}
     technical_by_step = technical.get("by_step", {}) if isinstance(technical, dict) else {}
@@ -602,7 +657,13 @@ def _render_curve_plot(
 ) -> None:
     fig, ax = plt.subplots(figsize=(7.5, 4.0))
     for col in y_columns:
-        ax.plot(df[x].to_numpy(dtype=float), df[col].to_numpy(dtype=float), marker="o", linewidth=1.8, label=col)
+        ax.plot(
+            df[x].to_numpy(dtype=float),
+            df[col].to_numpy(dtype=float),
+            marker="o",
+            linewidth=1.8,
+            label=col,
+        )
     ax.set_title(title)
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
@@ -619,19 +680,22 @@ def _render_curve_diagnostics(formulation: dict[str, Any], paths) -> None:
     vintage_labels = load_multi_year_vintage_labels(paths.root.name)
 
     battery_eff_entries = [
-        entry for entry in battery_cfg["curve_entries"]
+        entry
+        for entry in battery_cfg["curve_entries"]
         if battery_cfg["battery_efficiency_curve_enabled"]
         and isinstance(entry.get("efficiency_curve_path"), Path)
         and entry["efficiency_curve_path"].exists()
     ]
     battery_cal_entries = [
-        entry for entry in battery_cfg["curve_entries"]
+        entry
+        for entry in battery_cfg["curve_entries"]
         if battery_cfg["calendar_fade_enabled"]
         and isinstance(entry.get("calendar_curve_path"), Path)
         and entry["calendar_curve_path"].exists()
     ]
     generator_entries = [
-        entry for entry in generator_cfg["curve_entries"]
+        entry
+        for entry in generator_cfg["curve_entries"]
         if isinstance(entry.get("curve_path"), Path) and entry["curve_path"].exists()
     ]
 
@@ -639,7 +703,9 @@ def _render_curve_diagnostics(formulation: dict[str, Any], paths) -> None:
         return
 
     st.subheader("Curve Diagnostics")
-    st.caption("Plot optional efficiency and degradation curves only when they are enabled in the active project configuration.")
+    st.caption(
+        "Plot optional efficiency and degradation curves only when they are enabled in the active project configuration."
+    )
 
     for entry in battery_eff_entries:
         title_suffix = (
@@ -651,18 +717,28 @@ def _render_curve_diagnostics(formulation: dict[str, Any], paths) -> None:
         eff_df = _read_optional_csv(entry["efficiency_curve_path"])
         if eff_df is None:
             st.warning(f"Could not read `{entry['efficiency_curve_path'].name}`.")
-        elif {"relative_power_pu", "charge_efficiency", "discharge_efficiency"}.issubset(eff_df.columns):
+        elif {"relative_power_pu", "charge_efficiency", "discharge_efficiency"}.issubset(
+            eff_df.columns
+        ):
             plot_df = eff_df.copy()
-            normalized_curve = bool(np.isclose(float(plot_df["charge_efficiency"].iloc[-1]), 1.0, atol=1e-9))
+            normalized_curve = bool(
+                np.isclose(float(plot_df["charge_efficiency"].iloc[-1]), 1.0, atol=1e-9)
+            )
             if normalized_curve:
-                plot_df["actual_charge_efficiency"] = plot_df["charge_efficiency"] * float(entry["charge_efficiency_base"])
-                plot_df["actual_discharge_efficiency"] = plot_df["discharge_efficiency"] * float(entry["discharge_efficiency_base"])
+                plot_df["actual_charge_efficiency"] = plot_df["charge_efficiency"] * float(
+                    entry["charge_efficiency_base"]
+                )
+                plot_df["actual_discharge_efficiency"] = plot_df["discharge_efficiency"] * float(
+                    entry["discharge_efficiency_base"]
+                )
             c1, c2 = st.columns([2.0, 1.0])
             with c1:
                 _render_curve_plot(
                     plot_df,
                     x="relative_power_pu",
-                    y_columns=["actual_charge_efficiency", "actual_discharge_efficiency"] if normalized_curve else ["charge_efficiency", "discharge_efficiency"],
+                    y_columns=["actual_charge_efficiency", "actual_discharge_efficiency"]
+                    if normalized_curve
+                    else ["charge_efficiency", "discharge_efficiency"],
                     title=f"Battery one-way efficiency vs relative DC power{title_suffix}",
                     x_label="Relative DC-side power [p.u.]",
                     y_label="Efficiency [-]",
@@ -678,7 +754,9 @@ def _render_curve_diagnostics(formulation: dict[str, Any], paths) -> None:
                     st.caption("Legacy absolute-efficiency curve detected.")
                 st.dataframe(plot_df, width="stretch", hide_index=True)
         else:
-            st.warning(f"`{entry['efficiency_curve_path'].name}` does not contain the expected columns.")
+            st.warning(
+                f"`{entry['efficiency_curve_path'].name}` does not contain the expected columns."
+            )
 
     for entry in battery_cal_entries:
         title_suffix = (
@@ -690,7 +768,10 @@ def _render_curve_diagnostics(formulation: dict[str, Any], paths) -> None:
         cal_df = _read_optional_csv(entry["calendar_curve_path"])
         if cal_df is None:
             st.warning(f"Could not read `{entry['calendar_curve_path'].name}`.")
-        elif {"soc_pu", "calendar_fade_coefficient_per_year"}.issubset(cal_df.columns) or {"soc_pu", "calendar_fade_coefficient_per_step"}.issubset(cal_df.columns):
+        elif {"soc_pu", "calendar_fade_coefficient_per_year"}.issubset(cal_df.columns) or {
+            "soc_pu",
+            "calendar_fade_coefficient_per_step",
+        }.issubset(cal_df.columns):
             y_col = (
                 "calendar_fade_coefficient_per_year"
                 if "calendar_fade_coefficient_per_year" in cal_df.columns
@@ -709,10 +790,14 @@ def _render_curve_diagnostics(formulation: dict[str, Any], paths) -> None:
             with c2:
                 st.caption(f"Source: `{entry['calendar_curve_path'].name}`")
                 if y_col == "calendar_fade_coefficient_per_step":
-                    st.caption("Legacy per-step column detected. It is interpreted with yearly semantics in the updated multi-year surrogate.")
+                    st.caption(
+                        "Legacy per-step column detected. It is interpreted with yearly semantics in the updated multi-year surrogate."
+                    )
                 st.dataframe(cal_df, width="stretch", hide_index=True)
         else:
-            st.warning(f"`{entry['calendar_curve_path'].name}` does not contain the expected columns.")
+            st.warning(
+                f"`{entry['calendar_curve_path'].name}` does not contain the expected columns."
+            )
 
     for entry in generator_entries:
         title_suffix = (
@@ -746,7 +831,9 @@ def _render_curve_diagnostics(formulation: dict[str, Any], paths) -> None:
 
 def _render_file_section(project_root: Path, formulation: dict[str, Any], paths) -> bool:
     st.subheader("Required Input Files")
-    st.caption(f"Check that the active project contains the inputs required to construct the canonical dataset. Project path: `{project_root}`")
+    st.caption(
+        f"Check that the active project contains the inputs required to construct the canonical dataset. Project path: `{project_root}`"
+    )
 
     required_df = _build_file_table(paths, REQUIRED_INPUTS)
     optional_df = _build_file_table(paths, _project_specific_optional_inputs(formulation, paths))
@@ -762,7 +849,9 @@ def _render_file_section(project_root: Path, formulation: dict[str, Any], paths)
     st.dataframe(optional_df, width="stretch", hide_index=True)
 
     if missing:
-        st.error(f"Dataset cannot be constructed yet. Missing configuration-dependent inputs: {', '.join(missing)}")
+        st.error(
+            f"Dataset cannot be constructed yet. Missing configuration-dependent inputs: {', '.join(missing)}"
+        )
         return False
 
     st.success("All configuration-dependent inputs required for dataset construction are present.")
@@ -771,7 +860,9 @@ def _render_file_section(project_root: Path, formulation: dict[str, Any], paths)
 
 def _render_dataset_section(ds: xr.Dataset, loader_mode: str, paths) -> None:
     st.subheader("Dataset Summary")
-    st.caption("Load the canonical dataset through the shared pipeline and inspect its structure before optimization.")
+    st.caption(
+        "Load the canonical dataset through the shared pipeline and inspect its structure before optimization."
+    )
 
     c1, c2, c3 = st.columns(3)
     c1.metric("Loader mode", loader_mode)
@@ -808,7 +899,9 @@ def _render_dataset_section(ds: xr.Dataset, loader_mode: str, paths) -> None:
     constraints_df = _optimization_constraints_summary(ds)
     if not constraints_df.empty:
         st.markdown("**Optimization System Constraints**")
-        st.caption("Project-level optimization constraints loaded from `formulation.json` and attached to the canonical dataset metadata.")
+        st.caption(
+            "Project-level optimization constraints loaded from `formulation.json` and attached to the canonical dataset metadata."
+        )
         st.dataframe(constraints_df, width="stretch", hide_index=True)
 
     with st.expander("Dataset metadata", expanded=False):
@@ -817,7 +910,9 @@ def _render_dataset_section(ds: xr.Dataset, loader_mode: str, paths) -> None:
     _render_soft_check_warnings(ds)
 
 
-def _render_grid_controls(project_name: str, formulation: dict[str, Any], ds: xr.Dataset, paths) -> None:
+def _render_grid_controls(
+    project_name: str, formulation: dict[str, Any], ds: xr.Dataset, paths
+) -> None:
     formulation_mode = str(formulation.get("core_formulation", "steady_state")).strip()
     if formulation_mode not in {"steady_state", "dynamic"}:
         return
@@ -838,11 +933,11 @@ def _render_grid_controls(project_name: str, formulation: dict[str, Any], ds: xr
         st.error(f"Could not read grid configuration: {exc}")
         return
 
-    by_scenario = ((grid_payload.get("grid", {}) or {}).get("by_scenario", {}) or {})
+    by_scenario = (grid_payload.get("grid", {}) or {}).get("by_scenario", {}) or {}
     rows = []
     for scenario, block in by_scenario.items():
-        line = (block.get("line", {}) or {})
-        outages = (block.get("outages", {}) or {})
+        line = block.get("line", {}) or {}
+        outages = block.get("outages", {}) or {}
         row = {
             "scenario": scenario,
             "line_capacity_kw": line.get("capacity_kw"),
@@ -864,7 +959,11 @@ def _render_grid_controls(project_name: str, formulation: dict[str, Any], ds: xr
     st.caption(f"Derived file: `{grid_csv_path.name}`")
     if grid_csv_path.exists():
         st.caption(f"Last updated: {pd.Timestamp(grid_csv_path.stat().st_mtime, unit='s')}")
-    if st.button("Regenerate grid availability from grid.yaml", key=f"regen_grid_{formulation_mode}", type="primary"):
+    if st.button(
+        "Regenerate grid availability from grid.yaml",
+        key=f"regen_grid_{formulation_mode}",
+        type="primary",
+    ):
         try:
             if formulation_mode == "dynamic":
                 sets = initialize_multi_year_sets(project_name)
@@ -906,7 +1005,9 @@ def _render_grid_controls(project_name: str, formulation: dict[str, Any], ds: xr
                 )
         else:
             total_hours = int(availability_values.size)
-            unavailable_share = (unavailable_hours / total_hours) if total_hours > 0 else float("nan")
+            unavailable_share = (
+                (unavailable_hours / total_hours) if total_hours > 0 else float("nan")
+            )
             c21, c22 = st.columns(2)
             c21.metric("Share of year unavailable", f"{100.0 * unavailable_share:.2f}%")
             c22.metric("Unavailable hours", str(unavailable_hours))
@@ -963,7 +1064,11 @@ def _render_timeseries_section(ds: xr.Dataset) -> None:
 
     selectors: dict[str, Any] = {}
     for dim in variable.extra_dims:
-        values = ds.coords[dim].values.tolist() if dim in ds.coords else ds[variable.variable].coords[dim].values.tolist()
+        values = (
+            ds.coords[dim].values.tolist()
+            if dim in ds.coords
+            else ds[variable.variable].coords[dim].values.tolist()
+        )
         selectors[dim] = st.selectbox(
             dim.replace("_", " ").title(),
             options=values,
@@ -1007,7 +1112,9 @@ def _render_timeseries_section(ds: xr.Dataset) -> None:
     s4.metric("Missing values", str(stats["missing_values"]))
 
     with st.expander("Series diagnostics", expanded=False):
-        annual_total_label = "Total annual energy" if "availability" not in variable.variable else "Total annual sum"
+        annual_total_label = (
+            "Total annual energy" if "availability" not in variable.variable else "Total annual sum"
+        )
         st.write(
             {
                 "variable": variable.variable,
@@ -1033,7 +1140,13 @@ def _comparison_options(ds: xr.Dataset) -> list[Any]:
         da = ds[option.variable]
         if "year" not in da.dims:
             continue
-        if option.variable in {"load_demand", "resource_availability", "grid_import_price", "grid_export_price", "grid_availability"}:
+        if option.variable in {
+            "load_demand",
+            "resource_availability",
+            "grid_import_price",
+            "grid_export_price",
+            "grid_availability",
+        }:
             options.append(option)
     return options
 
@@ -1067,7 +1180,9 @@ def _style_bar_axis(ax: plt.Axes, labels: list[str]) -> None:
         tick.set_horizontalalignment("right" if rotation else "center")
 
 
-def _render_bar_plot(df: pd.DataFrame, *, x: str, y: str, hue: str | None, title: str, y_label: str) -> None:
+def _render_bar_plot(
+    df: pd.DataFrame, *, x: str, y: str, hue: str | None, title: str, y_label: str
+) -> None:
     x_labels = df[x].astype(str).unique().tolist()
     width_scale = max(10, min(14, len(x_labels) * 0.6))
     fig, ax = plt.subplots(figsize=(width_scale, 4.2))
@@ -1083,7 +1198,9 @@ def _render_bar_plot(df: pd.DataFrame, *, x: str, y: str, hue: str | None, title
         positions = np.arange(len(x_values))
         for idx, hue_value in enumerate(hue_values):
             subset = df[df[hue].astype(str) == hue_value].copy()
-            subset = subset.set_index(subset[x].astype(str)).reindex(x_values).reset_index(drop=True)
+            subset = (
+                subset.set_index(subset[x].astype(str)).reindex(x_values).reset_index(drop=True)
+            )
             ax.bar(
                 positions + (idx - (len(hue_values) - 1) / 2.0) * width,
                 subset[y].to_numpy(dtype=float),
@@ -1127,7 +1244,9 @@ def _comparison_metric_specs(ds: xr.Dataset) -> dict[str, dict[str, Any]]:
             "series_y_label": "Import price [currency/kWh]",
             "selector_dim": None,
         }
-    if "grid_export_price" in ds and bool(((ds.attrs.get("settings", {}) or {}).get("grid", {}) or {}).get("allow_export", False)):
+    if "grid_export_price" in ds and bool(
+        ((ds.attrs.get("settings", {}) or {}).get("grid", {}) or {}).get("allow_export", False)
+    ):
         specs["Grid export price"] = {
             "variable": "grid_export_price",
             "aggregation": "mean",
@@ -1251,7 +1370,9 @@ def _render_scenario_input_comparison(
         rows.append(
             {
                 "scenario": scenario_label,
-                "summary_value": _aggregate_series_for_comparison(series, str(metric_spec["aggregation"])),
+                "summary_value": _aggregate_series_for_comparison(
+                    series, str(metric_spec["aggregation"])
+                ),
                 "min": stats["min"],
                 "max": stats["max"],
                 "mean": stats["mean"],
@@ -1308,14 +1429,25 @@ def _render_multi_year_input_comparison(ds: xr.Dataset) -> None:
     scenario = None
     if "scenario" in ds.coords:
         scenarios = [str(v) for v in ds.coords["scenario"].values.tolist()]
-        scenario = st.selectbox("Scenario for year comparison", options=scenarios, index=0, key="audit_compare_year_scenario")
+        scenario = st.selectbox(
+            "Scenario for year comparison",
+            options=scenarios,
+            index=0,
+            key="audit_compare_year_scenario",
+        )
 
     years = ds.coords["year"].values.tolist()
 
     if "Load demand" in metric_specs:
         load_rows = []
         for year in years:
-            series = _comparison_series(ds, metric_spec=metric_specs["Load demand"], scenario=scenario, year=year, selector_value=None)
+            series = _comparison_series(
+                ds,
+                metric_spec=metric_specs["Load demand"],
+                scenario=scenario,
+                year=year,
+                selector_value=None,
+            )
             load_rows.append({"year": str(year), "value": float(np.nansum(series.values))})
         _render_bar_plot(
             pd.DataFrame(load_rows),
@@ -1331,7 +1463,13 @@ def _render_multi_year_input_comparison(ds: xr.Dataset) -> None:
         resource_values = ds.coords["resource"].values.tolist() if "resource" in ds.coords else []
         for year in years:
             for resource in resource_values:
-                series = _comparison_series(ds, metric_spec=metric_specs["Renewable capacity factor"], scenario=scenario, year=year, selector_value=resource)
+                series = _comparison_series(
+                    ds,
+                    metric_spec=metric_specs["Renewable capacity factor"],
+                    scenario=scenario,
+                    year=year,
+                    selector_value=resource,
+                )
                 res_rows.append(
                     {
                         "year": str(year),
@@ -1352,7 +1490,13 @@ def _render_multi_year_input_comparison(ds: xr.Dataset) -> None:
     if "Grid import price" in metric_specs:
         price_rows = []
         for year in years:
-            series = _comparison_series(ds, metric_spec=metric_specs["Grid import price"], scenario=scenario, year=year, selector_value=None)
+            series = _comparison_series(
+                ds,
+                metric_spec=metric_specs["Grid import price"],
+                scenario=scenario,
+                year=year,
+                selector_value=None,
+            )
             price_rows.append({"year": str(year), "value": float(np.nanmean(series.values))})
         _render_bar_plot(
             pd.DataFrame(price_rows),
@@ -1366,7 +1510,13 @@ def _render_multi_year_input_comparison(ds: xr.Dataset) -> None:
     if "Grid export price" in metric_specs:
         export_rows = []
         for year in years:
-            series = _comparison_series(ds, metric_spec=metric_specs["Grid export price"], scenario=scenario, year=year, selector_value=None)
+            series = _comparison_series(
+                ds,
+                metric_spec=metric_specs["Grid export price"],
+                scenario=scenario,
+                year=year,
+                selector_value=None,
+            )
             export_rows.append({"year": str(year), "value": float(np.nanmean(series.values))})
         _render_bar_plot(
             pd.DataFrame(export_rows),
@@ -1380,8 +1530,19 @@ def _render_multi_year_input_comparison(ds: xr.Dataset) -> None:
     if "Grid availability" in metric_specs:
         availability_rows = []
         for year in years:
-            series = _comparison_series(ds, metric_spec=metric_specs["Grid availability"], scenario=scenario, year=year, selector_value=None)
-            availability_rows.append({"year": str(year), "value": int(np.sum(np.asarray(series.values, dtype=float) > 0.5))})
+            series = _comparison_series(
+                ds,
+                metric_spec=metric_specs["Grid availability"],
+                scenario=scenario,
+                year=year,
+                selector_value=None,
+            )
+            availability_rows.append(
+                {
+                    "year": str(year),
+                    "value": int(np.sum(np.asarray(series.values, dtype=float) > 0.5)),
+                }
+            )
         _render_bar_plot(
             pd.DataFrame(availability_rows),
             x="year",
@@ -1393,7 +1554,9 @@ def _render_multi_year_input_comparison(ds: xr.Dataset) -> None:
 
     if "scenario" in ds.coords and int(ds.sizes.get("scenario", 0)) > 1:
         st.markdown("**Scenario comparison for selected year**")
-        st.caption("Compare scenario-level yearly summaries and time-series profiles for one selected model year.")
+        st.caption(
+            "Compare scenario-level yearly summaries and time-series profiles for one selected model year."
+        )
 
         selected_year = st.selectbox(
             "Year for scenario comparison",
@@ -1401,12 +1564,16 @@ def _render_multi_year_input_comparison(ds: xr.Dataset) -> None:
             index=0,
             key="audit_compare_scenario_year",
         )
-        _render_scenario_input_comparison(ds, year=selected_year, key_prefix="audit_compare_scenario")
+        _render_scenario_input_comparison(
+            ds, year=selected_year, key_prefix="audit_compare_scenario"
+        )
 
 
 def render_page() -> None:
     st.title("Data Audit and Visualization")
-    st.caption("Validate project inputs, load the canonical dataset, and inspect time-series data before optimization.")
+    st.caption(
+        "Validate project inputs, load the canonical dataset, and inspect time-series data before optimization."
+    )
 
     project_name, project_root = resolve_active_project_from_session()
     paths = project_paths(project_name)
@@ -1442,13 +1609,19 @@ def render_page() -> None:
         if loader_mode == "multi_year":
             st.markdown("---")
             st.subheader("Multi-Year Input Comparison")
-            st.caption("Compare compact yearly summaries of demand, renewable availability, and grid-related inputs.")
+            st.caption(
+                "Compare compact yearly summaries of demand, renewable availability, and grid-related inputs."
+            )
             _render_multi_year_input_comparison(ds)
         elif "scenario" in ds.coords and int(ds.sizes.get("scenario", 0)) > 1:
             st.markdown("---")
             st.subheader("Scenario Input Comparison")
-            st.caption("Compare scenario-level summaries and time-series profiles for typical-year inputs.")
-            _render_scenario_input_comparison(ds, year=None, key_prefix="audit_typical_scenario_compare")
+            st.caption(
+                "Compare scenario-level summaries and time-series profiles for typical-year inputs."
+            )
+            _render_scenario_input_comparison(
+                ds, year=None, key_prefix="audit_typical_scenario_compare"
+            )
 
 
 render_page()

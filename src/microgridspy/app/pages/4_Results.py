@@ -82,7 +82,9 @@ def _get_var_solution(
     return None
 
 
-def _scenario_selector(settings: dict[str, Any], data: xr.Dataset, *, key: str) -> tuple[str, str | None]:
+def _scenario_selector(
+    settings: dict[str, Any], data: xr.Dataset, *, key: str
+) -> tuple[str, str | None]:
     """
     Returns:
       mode: "expected" or "scenario"
@@ -96,7 +98,6 @@ def _scenario_selector(settings: dict[str, Any], data: xr.Dataset, *, key: str) 
     scen_labels = [str(s) for s in data.coords["scenario"].values.tolist()]
     options = ["Expected"] + [f"Scenario: {s}" for s in scen_labels]
     sel = st.selectbox("View metrics for:", options=options, index=0, key=key)
-
 
     if sel == "Expected":
         return "expected", None
@@ -114,7 +115,9 @@ def _weighted_over_scenario(da: xr.DataArray, w_s: xr.DataArray) -> xr.DataArray
     return (da * w).sum("scenario")
 
 
-def _pick_mode(da: xr.DataArray, *, mode: str, scenario_label: str | None, w_s: xr.DataArray) -> xr.DataArray:
+def _pick_mode(
+    da: xr.DataArray, *, mode: str, scenario_label: str | None, w_s: xr.DataArray
+) -> xr.DataArray:
     """Return (period, ...) DataArray with scenario collapsed or selected."""
     if "scenario" not in da.dims:
         return da
@@ -140,8 +143,17 @@ def _build_typical_diagnostics_table(
     w_s: xr.DataArray,
 ) -> pd.DataFrame:
     settings = get_dataset_settings(data)
-    battery_loss_model = str(((settings.get("battery_model", {}) or {}).get("loss_model", "constant_efficiency")) or "constant_efficiency").strip().lower()
-    generator_partial_load = bool((settings.get("generator", {}) or {}).get("partial_load_modelling_enabled", False))
+    battery_loss_model = (
+        str(
+            ((settings.get("battery_model", {}) or {}).get("loss_model", "constant_efficiency"))
+            or "constant_efficiency"
+        )
+        .strip()
+        .lower()
+    )
+    generator_partial_load = bool(
+        (settings.get("generator", {}) or {}).get("partial_load_modelling_enabled", False)
+    )
     if battery_loss_model != "convex_loss_epigraph" and not generator_partial_load:
         return pd.DataFrame()
 
@@ -152,7 +164,9 @@ def _build_typical_diagnostics_table(
     bat_ch_dc = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="battery_charge_dc")
     bat_dis_dc = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="battery_discharge_dc")
     bat_ch_loss = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="battery_charge_loss")
-    bat_dis_loss = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="battery_discharge_loss")
+    bat_dis_loss = _get_var_solution(
+        vars_dict=vars_dict, sol_ds=sol_ds, name="battery_discharge_loss"
+    )
     fuel_cons = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="fuel_consumption")
     gen_gen = _get_var_solution(vars_dict=vars_dict, sol_ds=sol_ds, name="generator_generation")
 
@@ -165,38 +179,69 @@ def _build_typical_diagnostics_table(
         dis_ac_sum = _safe_float(dis_ac.sum("period"))
         ch_dc_sum = _safe_float(ch_dc.sum("period"))
         dis_dc_sum = _safe_float(dis_dc.sum("period"))
-        rows.append({"Metric": "Battery DC throughput", "Value": 0.5 * (ch_dc_sum + dis_dc_sum) / 1e3, "Unit": "MWh"})
+        rows.append(
+            {
+                "Metric": "Battery DC throughput",
+                "Value": 0.5 * (ch_dc_sum + dis_dc_sum) / 1e3,
+                "Unit": "MWh",
+            }
+        )
         charge_eff = _safe_percent(ch_dc_sum, ch_ac_sum)
         discharge_eff = _safe_percent(dis_ac_sum, dis_dc_sum)
         roundtrip_eff = None
         if charge_eff is not None and discharge_eff is not None:
             roundtrip_eff = (charge_eff / 100.0) * (discharge_eff / 100.0) * 100.0
         if charge_eff is not None:
-            rows.append({"Metric": "Battery avg charging efficiency", "Value": charge_eff, "Unit": "%"})
+            rows.append(
+                {"Metric": "Battery avg charging efficiency", "Value": charge_eff, "Unit": "%"}
+            )
         if discharge_eff is not None:
-            rows.append({"Metric": "Battery avg discharging efficiency", "Value": discharge_eff, "Unit": "%"})
+            rows.append(
+                {
+                    "Metric": "Battery avg discharging efficiency",
+                    "Value": discharge_eff,
+                    "Unit": "%",
+                }
+            )
         if roundtrip_eff is not None:
-            rows.append({"Metric": "Battery implied round-trip efficiency", "Value": roundtrip_eff, "Unit": "%"})
+            rows.append(
+                {
+                    "Metric": "Battery implied round-trip efficiency",
+                    "Value": roundtrip_eff,
+                    "Unit": "%",
+                }
+            )
         if isinstance(bat_ch_loss, xr.DataArray) and isinstance(bat_dis_loss, xr.DataArray):
             ch_loss = _pick_mode(bat_ch_loss, mode=mode, scenario_label=scenario_label, w_s=w_s)
             dis_loss = _pick_mode(bat_dis_loss, mode=mode, scenario_label=scenario_label, w_s=w_s)
             rows.append(
                 {
                     "Metric": "Battery conversion losses",
-                    "Value": (_safe_float(ch_loss.sum("period")) + _safe_float(dis_loss.sum("period"))) / 1e3,
+                    "Value": (
+                        _safe_float(ch_loss.sum("period")) + _safe_float(dis_loss.sum("period"))
+                    )
+                    / 1e3,
                     "Unit": "MWh",
                 }
             )
-    if isinstance(fuel_cons, xr.DataArray) and isinstance(gen_gen, xr.DataArray) and "fuel_lhv_kwh_per_unit_fuel" in data:
+    if (
+        isinstance(fuel_cons, xr.DataArray)
+        and isinstance(gen_gen, xr.DataArray)
+        and "fuel_lhv_kwh_per_unit_fuel" in data
+    ):
         fuel_sel = _pick_mode(fuel_cons, mode=mode, scenario_label=scenario_label, w_s=w_s)
         gen_sel = _pick_mode(gen_gen, mode=mode, scenario_label=scenario_label, w_s=w_s)
-        lhv_sel = _pick_mode(data["fuel_lhv_kwh_per_unit_fuel"], mode=mode, scenario_label=scenario_label, w_s=w_s)
+        lhv_sel = _pick_mode(
+            data["fuel_lhv_kwh_per_unit_fuel"], mode=mode, scenario_label=scenario_label, w_s=w_s
+        )
         fuel_sum = _safe_float(fuel_sel.sum("period"))
         gen_sum = _safe_float(gen_sel.sum("period"))
         lhv_val = _safe_float(lhv_sel)
         avg_eff = _safe_percent(gen_sum, fuel_sum * lhv_val)
         if avg_eff is not None:
-            rows.append({"Metric": "Generator average conversion efficiency", "Value": avg_eff, "Unit": "%"})
+            rows.append(
+                {"Metric": "Generator average conversion efficiency", "Value": avg_eff, "Unit": "%"}
+            )
         if "generator_nominal_efficiency_full_load" in data:
             gen_nom_eff = _pick_mode(
                 data["generator_nominal_efficiency_full_load"],
@@ -211,7 +256,9 @@ def _build_typical_diagnostics_table(
                     "Unit": "%",
                 }
             )
-        rows.append({"Metric": "Generator fuel consumption", "Value": fuel_sum, "Unit": "fuel units"})
+        rows.append(
+            {"Metric": "Generator fuel consumption", "Value": fuel_sum, "Unit": "fuel units"}
+        )
 
     return pd.DataFrame(rows)
 
@@ -238,15 +285,16 @@ def _days_to_slice(T: int, start_day: int, ndays: int) -> tuple[slice, int, int]
     start_hr_label = i0 + 1
     return slice(i0, i1), start_hr_label, (i1 - i0)
 
+
 # ---------------------------------------------------------------------
 # Plot palette (match reference)
 # ---------------------------------------------------------------------
-C_RES  = "#FFD700"  # Renewables
-C_BAT  = "#00ACC1"  # Battery charge/discharge
-C_GEN  = "#546E7A"  # Generators
-C_IMP  = "#9C27B0"  # Grid import
-C_EXP  = "#9C27B0"  # Grid export
-C_LL   = "#E53935"  # Lost load
+C_RES = "#FFD700"  # Renewables
+C_BAT = "#00ACC1"  # Battery charge/discharge
+C_GEN = "#546E7A"  # Generators
+C_IMP = "#9C27B0"  # Grid import
+C_EXP = "#9C27B0"  # Grid export
+C_LL = "#E53935"  # Lost load
 C_LOAD = "#111111"  # Load
 
 
@@ -284,7 +332,7 @@ def _plot_dispatch_stack(
     n2 = n1 - (y_gexp if y_gexp is not None else 0.0)
 
     # positive fills
-    ax.fill_between(x, 0,  p1,  color=C_RES, alpha=0.85, label="Renewables")
+    ax.fill_between(x, 0, p1, color=C_RES, alpha=0.85, label="Renewables")
     if np.any(y_bnet_pos > 0):
         ax.fill_between(x, p1, p2, color=C_BAT, alpha=0.35, label="Battery net discharge")
     ax.fill_between(x, p2, p3, color=C_GEN, alpha=0.85, label="Generator")
@@ -334,20 +382,28 @@ def _render_energy_balance_check(bundle: ResultsBundle, tolerance: float = 1e-6)
 
 def render_generation_planning_results_page() -> None:
     st.title("Results")
-    st.caption("Explore the latest solved results from session state or, if available, saved results loaded from project files.")
+    st.caption(
+        "Explore the latest solved results from session state or, if available, saved results loaded from project files."
+    )
 
     project_name = st.session_state.get(KEYS["active_project"])
     if project_name:
         st.success(f"Active project: {project_name}")
 
-    typical_results = get_typical_year_results_from_session(st.session_state, active_project=project_name)
+    typical_results = get_typical_year_results_from_session(
+        st.session_state, active_project=project_name
+    )
     if typical_results is not None:
         render_typical_year_results(typical_results, project_name)
         return
 
     # Canonical source for all sections: model.solution -> vars -> data via ResultsBundle helper.
     bundle = get_results_bundle_from_session(st.session_state, active_project=project_name)
-    if bundle is None or not isinstance(bundle.data, xr.Dataset) or not isinstance(bundle.vars, dict):
+    if (
+        bundle is None
+        or not isinstance(bundle.data, xr.Dataset)
+        or not isinstance(bundle.vars, dict)
+    ):
         if project_name:
             try:
                 file_results = load_typical_year_results_from_files(project_name)
@@ -375,7 +431,9 @@ def render_generation_planning_results_page() -> None:
     settings = get_dataset_settings(data)
     formulation = str(settings.get("formulation", "steady_state"))
     if formulation == "dynamic":
-        multi_year_results = get_multi_year_results_from_session(st.session_state, active_project=project_name)
+        multi_year_results = get_multi_year_results_from_session(
+            st.session_state, active_project=project_name
+        )
         if multi_year_results is not None:
             render_multi_year_results(multi_year_results, project_name)
             return
@@ -395,7 +453,11 @@ def render_generation_planning_results_page() -> None:
     if w_s is None:
         # fall back to equal weights
         scen = data.coords["scenario"]
-        w_s = xr.DataArray(np.ones(int(scen.size)) / float(scen.size), dims=("scenario",), coords={"scenario": scen})
+        w_s = xr.DataArray(
+            np.ones(int(scen.size)) / float(scen.size),
+            dims=("scenario",),
+            coords={"scenario": scen},
+        )
 
     # -----------------------------------------------------------------------------
     # Sizing summary
@@ -423,34 +485,93 @@ def render_generation_planning_results_page() -> None:
             vars_dict = live_vars if isinstance(live_vars, dict) else vars_dict
             sol_ds = live_solution if isinstance(live_solution, xr.Dataset) else sol_ds
         except Exception as second_exc:
-            st.error("Design variables not found in results. Ensure the model solved and variables are stored in session.")
+            st.error(
+                "Design variables not found in results. Ensure the model solved and variables are stored in session."
+            )
             with st.expander("Technical details", expanded=False):
                 st.write(f"First error: {first_exc}")
                 st.write(f"Retry error: {second_exc}")
             return
 
     row = design_df.iloc[0] if not design_df.empty else pd.Series(dtype=float)
-    resources = [str(r) for r in data.coords["resource"].values.tolist()] if "resource" in data.coords else []
+    resources = (
+        [str(r) for r in data.coords["resource"].values.tolist()]
+        if "resource" in data.coords
+        else []
+    )
     res_units = xr.DataArray(
-        [float(pd.to_numeric(pd.Series([row.get(f"res_units__{r}", 0.0)]), errors="coerce").fillna(0.0).iloc[0]) for r in resources],
+        [
+            float(
+                pd.to_numeric(pd.Series([row.get(f"res_units__{r}", 0.0)]), errors="coerce")
+                .fillna(0.0)
+                .iloc[0]
+            )
+            for r in resources
+        ],
         dims=("resource",),
         coords={"resource": resources},
     )
     cap_res_kw = xr.DataArray(
-        [float(pd.to_numeric(pd.Series([row.get(f"res_installed_kw__{r}", 0.0)]), errors="coerce").fillna(0.0).iloc[0]) for r in resources],
+        [
+            float(
+                pd.to_numeric(pd.Series([row.get(f"res_installed_kw__{r}", 0.0)]), errors="coerce")
+                .fillna(0.0)
+                .iloc[0]
+            )
+            for r in resources
+        ],
         dims=("resource",),
         coords={"resource": resources},
     )
     cap_res_inv_kw = xr.DataArray(
-        [float(pd.to_numeric(pd.Series([row.get(f"res_inverter_installed_kw_ac__{r}", 0.0)]), errors="coerce").fillna(0.0).iloc[0]) for r in resources],
+        [
+            float(
+                pd.to_numeric(
+                    pd.Series([row.get(f"res_inverter_installed_kw_ac__{r}", 0.0)]), errors="coerce"
+                )
+                .fillna(0.0)
+                .iloc[0]
+            )
+            for r in resources
+        ],
         dims=("resource",),
         coords={"resource": resources},
     )
-    battery_units = xr.DataArray(float(pd.to_numeric(pd.Series([row.get("battery_units", 0.0)]), errors="coerce").fillna(0.0).iloc[0]))
-    battery_inverter_power = xr.DataArray(float(pd.to_numeric(pd.Series([row.get("battery_inverter_power_kw", 0.0)]), errors="coerce").fillna(0.0).iloc[0]))
-    cap_bat_kwh = xr.DataArray(float(pd.to_numeric(pd.Series([row.get("battery_installed_kwh", 0.0)]), errors="coerce").fillna(0.0).iloc[0]))
-    generator_units = xr.DataArray(float(pd.to_numeric(pd.Series([row.get("generator_units", 0.0)]), errors="coerce").fillna(0.0).iloc[0]))
-    cap_gen_kw = xr.DataArray(float(pd.to_numeric(pd.Series([row.get("generator_installed_kw", 0.0)]), errors="coerce").fillna(0.0).iloc[0]))
+    battery_units = xr.DataArray(
+        float(
+            pd.to_numeric(pd.Series([row.get("battery_units", 0.0)]), errors="coerce")
+            .fillna(0.0)
+            .iloc[0]
+        )
+    )
+    battery_inverter_power = xr.DataArray(
+        float(
+            pd.to_numeric(pd.Series([row.get("battery_inverter_power_kw", 0.0)]), errors="coerce")
+            .fillna(0.0)
+            .iloc[0]
+        )
+    )
+    cap_bat_kwh = xr.DataArray(
+        float(
+            pd.to_numeric(pd.Series([row.get("battery_installed_kwh", 0.0)]), errors="coerce")
+            .fillna(0.0)
+            .iloc[0]
+        )
+    )
+    generator_units = xr.DataArray(
+        float(
+            pd.to_numeric(pd.Series([row.get("generator_units", 0.0)]), errors="coerce")
+            .fillna(0.0)
+            .iloc[0]
+        )
+    )
+    cap_gen_kw = xr.DataArray(
+        float(
+            pd.to_numeric(pd.Series([row.get("generator_installed_kw", 0.0)]), errors="coerce")
+            .fillna(0.0)
+            .iloc[0]
+        )
+    )
 
     reporting = build_reporting_tables(
         data=data,
@@ -495,7 +616,9 @@ def render_generation_planning_results_page() -> None:
     )
 
     st.dataframe(
-        df_size.style.format({"Installed units": "{:,.3g}", "Capacity": "{:,.3g}"}).hide(axis="index"),
+        df_size.style.format({"Installed units": "{:,.3g}", "Capacity": "{:,.3g}"}).hide(
+            axis="index"
+        ),
         width="stretch",
     )
 
@@ -530,7 +653,11 @@ def render_generation_planning_results_page() -> None:
         )
         st.dataframe(
             df_res.style.format(
-                {"Installed units": "{:,.3g}", "Capacity [kW]": "{:,.3g}", "Derived inverter size [kW_ac]": "{:,.3g}"}
+                {
+                    "Installed units": "{:,.3g}",
+                    "Capacity [kW]": "{:,.3g}",
+                    "Derived inverter size [kW_ac]": "{:,.3g}",
+                }
             ).hide(axis="index"),
             width="stretch",
         )
@@ -546,7 +673,9 @@ def render_generation_planning_results_page() -> None:
     if load is None:
         st.warning("load_demand not found in data. KPIs will be partial.")
     else:
-        kpi_row = select_reporting_kpi_row(reporting.kpis, data, mode=mode, scenario_label=scen_label)
+        kpi_row = select_reporting_kpi_row(
+            reporting.kpis, data, mode=mode, scenario_label=scen_label
+        )
         kpi_df = pd.DataFrame(
             {
                 "Metric": [
@@ -568,9 +697,15 @@ def render_generation_planning_results_page() -> None:
                     float(_safe_float(kpi_row.get("lost_load_kwh", 0.0))) / 1e3,
                     float(_safe_float(kpi_row.get("total_res_kwh", 0.0))) / 1e3,
                     float(_safe_float(kpi_row.get("generator_generation_kwh", 0.0))) / 1e3,
-                    float(_safe_float(kpi_row.get("grid_import_delivered_kwh", 0.0))) / 1e3 if on_grid else None,
-                    float(_safe_float(kpi_row.get("grid_renewable_kwh", 0.0))) / 1e3 if on_grid else None,
-                    float(_safe_float(kpi_row.get("grid_export_delivered_kwh", 0.0))) / 1e3 if (on_grid and allow_export) else None,
+                    float(_safe_float(kpi_row.get("grid_import_delivered_kwh", 0.0))) / 1e3
+                    if on_grid
+                    else None,
+                    float(_safe_float(kpi_row.get("grid_renewable_kwh", 0.0))) / 1e3
+                    if on_grid
+                    else None,
+                    float(_safe_float(kpi_row.get("grid_export_delivered_kwh", 0.0))) / 1e3
+                    if (on_grid and allow_export)
+                    else None,
                     100.0 * float(_safe_float(kpi_row.get("renewable_penetration", 0.0))),
                     100.0 * float(_safe_float(kpi_row.get("renewable_curtailment_share", 0.0))),
                     100.0 * float(_safe_float(kpi_row.get("lost_load_fraction", 0.0))),
@@ -631,11 +766,15 @@ def render_generation_planning_results_page() -> None:
         "battery_discharge",
     }
     if any(col not in reporting.dispatch.columns for col in required_dispatch_cols):
-        st.info("Dispatch plot needs load_demand and the main operational variables. Some are missing.")
+        st.info(
+            "Dispatch plot needs load_demand and the main operational variables. Some are missing."
+        )
         return
 
     mode_d, scen_label_d = _scenario_selector(settings, data, key="gp_disp_view_sel")
-    disp_view = select_reporting_dispatch_view(reporting.dispatch, data, mode=mode_d, scenario_label=scen_label_d)
+    disp_view = select_reporting_dispatch_view(
+        reporting.dispatch, data, mode=mode_d, scenario_label=scen_label_d
+    )
 
     # ---------- Time window ----------
     T = int(len(disp_view))
@@ -665,13 +804,21 @@ def render_generation_planning_results_page() -> None:
 
     # arrays
     y_load = disp_view["load_demand"].to_numpy(dtype=float)[idx]
-    y_ll   = disp_view["lost_load"].to_numpy(dtype=float)[idx]
-    y_res  = disp_view["res_generation_total"].to_numpy(dtype=float)[idx]
-    y_gen  = disp_view["generator_generation"].to_numpy(dtype=float)[idx]
+    y_ll = disp_view["lost_load"].to_numpy(dtype=float)[idx]
+    y_res = disp_view["res_generation_total"].to_numpy(dtype=float)[idx]
+    y_gen = disp_view["generator_generation"].to_numpy(dtype=float)[idx]
     y_bdis = disp_view["battery_discharge"].to_numpy(dtype=float)[idx]
-    y_bch  = disp_view["battery_charge"].to_numpy(dtype=float)[idx]
-    y_gimp = (disp_view["grid_import_delivered"].to_numpy(dtype=float)[idx] if "grid_import_delivered" in disp_view.columns else None)
-    y_gexp = (disp_view["grid_export_delivered"].to_numpy(dtype=float)[idx] if "grid_export_delivered" in disp_view.columns else None)
+    y_bch = disp_view["battery_charge"].to_numpy(dtype=float)[idx]
+    y_gimp = (
+        disp_view["grid_import_delivered"].to_numpy(dtype=float)[idx]
+        if "grid_import_delivered" in disp_view.columns
+        else None
+    )
+    y_gexp = (
+        disp_view["grid_export_delivered"].to_numpy(dtype=float)[idx]
+        if "grid_export_delivered" in disp_view.columns
+        else None
+    )
 
     # ---------- Plot ----------
     fig, ax = plt.subplots(figsize=(11, 4))
@@ -702,27 +849,56 @@ def render_generation_planning_results_page() -> None:
     # -----------------------------
     # 11) Headline metrics
     # -----------------------------
-    expected_row = select_reporting_kpi_row(reporting.kpis, data, mode="expected", scenario_label=None)
-    total_annual_cost_exp = float(_safe_float(expected_row.get("reported_total_annual_cost", np.nan)))
+    expected_row = select_reporting_kpi_row(
+        reporting.kpis, data, mode="expected", scenario_label=None
+    )
+    total_annual_cost_exp = float(
+        _safe_float(expected_row.get("reported_total_annual_cost", np.nan))
+    )
     delivered_kwh = float(_safe_float(expected_row.get("served_energy_kwh", np.nan)))
-    lcoe = total_annual_cost_exp / delivered_kwh if delivered_kwh > 1e-9 and np.isfinite(total_annual_cost_exp) else float("nan")
-    total_upfront_gross_k = float(pd.to_numeric(reporting.upfront["Upfront gross [thousand]"], errors="coerce").fillna(0.0).sum()) if not reporting.upfront.empty else 0.0
-    total_upfront_net_k = float(pd.to_numeric(reporting.upfront["Upfront net [thousand]"], errors="coerce").fillna(0.0).sum()) if not reporting.upfront.empty else 0.0
+    lcoe = (
+        total_annual_cost_exp / delivered_kwh
+        if delivered_kwh > 1e-9 and np.isfinite(total_annual_cost_exp)
+        else float("nan")
+    )
+    total_upfront_gross_k = (
+        float(
+            pd.to_numeric(reporting.upfront["Upfront gross [thousand]"], errors="coerce")
+            .fillna(0.0)
+            .sum()
+        )
+        if not reporting.upfront.empty
+        else 0.0
+    )
+    total_upfront_net_k = (
+        float(
+            pd.to_numeric(reporting.upfront["Upfront net [thousand]"], errors="coerce")
+            .fillna(0.0)
+            .sum()
+        )
+        if not reporting.upfront.empty
+        else 0.0
+    )
 
     c1, c2, c3 = st.columns(3)
     c1.metric("Total Annualized Cost (Expected)", f"{total_annual_cost_exp:,.0f}/yr")
     c2.metric("LCOE (Expected, delivered)", f"{lcoe:,.4f}/kWh" if np.isfinite(lcoe) else "n/a")
-    c3.metric("Upfront investment (gross / net) [thousand]", f"{total_upfront_gross_k:,.0f} / {total_upfront_net_k:,.0f}")
+    c3.metric(
+        "Upfront investment (gross / net) [thousand]",
+        f"{total_upfront_gross_k:,.0f} / {total_upfront_net_k:,.0f}",
+    )
 
     st.markdown("---")
     st.markdown("**Upfront investment** *(per technology)*")
     st.dataframe(
-        reporting.upfront.style.format({
-            "Capacity": "{:,.3g}",
-            "Grant share": "{:.0%}",
-            "Upfront gross [thousand]": "{:,.0f}",
-            "Upfront net [thousand]": "{:,.0f}",
-        }).hide(axis="index"),
+        reporting.upfront.style.format(
+            {
+                "Capacity": "{:,.3g}",
+                "Grant share": "{:.0%}",
+                "Upfront gross [thousand]": "{:,.0f}",
+                "Upfront net [thousand]": "{:,.0f}",
+            }
+        ).hide(axis="index"),
         width="stretch",
     )
 
@@ -732,12 +908,14 @@ def render_generation_planning_results_page() -> None:
     if not inverter_upfront.empty:
         st.markdown("**Upfront investment** *(inverters only)*")
         st.dataframe(
-            inverter_upfront.style.format({
-                "Capacity": "{:,.3g}",
-                "Grant share": "{:.0%}",
-                "Upfront gross [thousand]": "{:,.0f}",
-                "Upfront net [thousand]": "{:,.0f}",
-            }).hide(axis="index"),
+            inverter_upfront.style.format(
+                {
+                    "Capacity": "{:,.3g}",
+                    "Grant share": "{:.0%}",
+                    "Upfront gross [thousand]": "{:,.0f}",
+                    "Upfront net [thousand]": "{:,.0f}",
+                }
+            ).hide(axis="index"),
             width="stretch",
         )
 
@@ -749,7 +927,9 @@ def render_generation_planning_results_page() -> None:
 
     st.markdown("**Expected annual fixed O&M** *(per technology)*")
     st.dataframe(
-        reporting.expected_fixed_om.style.format({"Annual FOM [/yr]": "{:,.0f}"}).hide(axis="index"),
+        reporting.expected_fixed_om.style.format({"Annual FOM [/yr]": "{:,.0f}"}).hide(
+            axis="index"
+        ),
         width="stretch",
     )
 
@@ -764,7 +944,11 @@ def render_generation_planning_results_page() -> None:
         reporting.expected_cost_components["Component"] != "TOTAL (Expected)"
     ].copy()
     annuity_total = float(_safe_float(expected_row.get("investment_annuity_cost", 0.0)))
-    ann_vals = pd.to_numeric(reporting.annuities["Annuity [/yr]"], errors="coerce").fillna(0.0).to_numpy(dtype=float)
+    ann_vals = (
+        pd.to_numeric(reporting.annuities["Annuity [/yr]"], errors="coerce")
+        .fillna(0.0)
+        .to_numpy(dtype=float)
+    )
     ann_labels = reporting.annuities["Technology (lifetime)"].tolist()
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 7), gridspec_kw={"width_ratios": [1.5, 1]})
     if not cost_chart_df.empty:
@@ -781,16 +965,26 @@ def render_generation_planning_results_page() -> None:
     st.pyplot(fig)
 
     st.markdown("**Embodied externalities** *(annualized)*")
-    embodied_cost_exp = float(pd.to_numeric(reporting.embodied["Embodied Cost [/yr]"], errors="coerce").fillna(0.0).sum()) if not reporting.embodied.empty else 0.0
+    embodied_cost_exp = (
+        float(
+            pd.to_numeric(reporting.embodied["Embodied Cost [/yr]"], errors="coerce")
+            .fillna(0.0)
+            .sum()
+        )
+        if not reporting.embodied.empty
+        else 0.0
+    )
     scope3_kg_exp = float(_safe_float(expected_row.get("scope3_emissions_kgco2e", 0.0)))
     c1, c2 = st.columns(2)
     c1.metric("Embodied emissions (Expected)", f"{scope3_kg_exp:,.0f} kgCO2e/yr")
     c2.metric("Embodied externality cost (Expected)", f"{embodied_cost_exp:,.0f}/yr")
     st.dataframe(
-        reporting.embodied.style.format({
-            "Embodied Emissions [kg/yr]": "{:,.0f}",
-            "Embodied Cost [/yr]": "{:,.0f}",
-        }).hide(axis="index"),
+        reporting.embodied.style.format(
+            {
+                "Embodied Emissions [kg/yr]": "{:,.0f}",
+                "Embodied Cost [/yr]": "{:,.0f}",
+            }
+        ).hide(axis="index"),
         width="stretch",
     )
 
@@ -800,7 +994,9 @@ def render_generation_planning_results_page() -> None:
     ms_enabled = bool((settings.get("multi_scenario", {}) or {}).get("enabled", False))
     if ms_enabled:
         scen_vals = [str(s) for s in data.coords["scenario"].values.tolist()]
-        view = st.selectbox("View:", ["Expected"] + [f"Scenario {s}" for s in scen_vals], key="fuel_view_sel")
+        view = st.selectbox(
+            "View:", ["Expected"] + [f"Scenario {s}" for s in scen_vals], key="fuel_view_sel"
+        )
     else:
         view = "Expected"
 
@@ -809,7 +1005,9 @@ def render_generation_planning_results_page() -> None:
         total_emissions_view = float(_safe_float(expected_row.get("emissions_kgco2e", 0.0)))
     else:
         sc = view.split("Scenario ", 1)[-1].strip()
-        scenario_row = select_reporting_kpi_row(reporting.kpis, data, mode="scenario", scenario_label=sc)
+        scenario_row = select_reporting_kpi_row(
+            reporting.kpis, data, mode="scenario", scenario_label=sc
+        )
         variable_cost_view = float(_safe_float(scenario_row.get("annual_variable_cost", 0.0)))
         total_emissions_view = float(_safe_float(scenario_row.get("emissions_kgco2e", 0.0)))
 
@@ -819,44 +1017,50 @@ def render_generation_planning_results_page() -> None:
 
     with st.expander("Scenario-wise variable cost breakdown", expanded=False):
         st.dataframe(
-            reporting.scenario_variable_costs.style.format({
-                "Fuel cost": "{:,.0f}",
-                "Grid import cost": "{:,.0f}",
-                "Grid export revenue": "{:,.0f}",
-                "RES subsidy revenue": "{:,.0f}",
-                "Annual variable cost": "{:,.0f}",
-                "Weight": "{:.3f}",
-            }).hide(axis="index"),
+            reporting.scenario_variable_costs.style.format(
+                {
+                    "Fuel cost": "{:,.0f}",
+                    "Grid import cost": "{:,.0f}",
+                    "Grid export revenue": "{:,.0f}",
+                    "RES subsidy revenue": "{:,.0f}",
+                    "Annual variable cost": "{:,.0f}",
+                    "Weight": "{:.3f}",
+                }
+            ).hide(axis="index"),
             width="stretch",
         )
 
     with st.expander("Scenario-wise emissions breakdown", expanded=False):
         st.dataframe(
-            reporting.scenario_emissions.style.format({
-                "Scope 1 emissions": "{:,.0f}",
-                "Scope 2 emissions": "{:,.0f}",
-                "Scope 3 emissions": "{:,.0f}",
-                "Total emissions": "{:,.0f}",
-                "Emissions cost": "{:,.0f}",
-                "Weight": "{:.3f}",
-            }).hide(axis="index"),
+            reporting.scenario_emissions.style.format(
+                {
+                    "Scope 1 emissions": "{:,.0f}",
+                    "Scope 2 emissions": "{:,.0f}",
+                    "Scope 3 emissions": "{:,.0f}",
+                    "Total emissions": "{:,.0f}",
+                    "Emissions cost": "{:,.0f}",
+                    "Weight": "{:.3f}",
+                }
+            ).hide(axis="index"),
             width="stretch",
         )
 
     with st.expander("Scenario-wise total operating cost breakdown", expanded=False):
         st.dataframe(
-            reporting.scenario_total_operating_costs.style.format({
-                "Fixed O&M": "{:,.0f}",
-                "Fuel cost": "{:,.0f}",
-                "Grid import cost": "{:,.0f}",
-                "Grid export revenue": "{:,.0f}",
-                "RES subsidy revenue": "{:,.0f}",
-                "Annual variable cost": "{:,.0f}",
-                "Lost load penalty": "{:,.0f}",
-                "Emissions cost": "{:,.0f}",
-                "Total operating cost": "{:,.0f}",
-                "Weight": "{:.3f}",
-            }).hide(axis="index"),
+            reporting.scenario_total_operating_costs.style.format(
+                {
+                    "Fixed O&M": "{:,.0f}",
+                    "Fuel cost": "{:,.0f}",
+                    "Grid import cost": "{:,.0f}",
+                    "Grid export revenue": "{:,.0f}",
+                    "RES subsidy revenue": "{:,.0f}",
+                    "Annual variable cost": "{:,.0f}",
+                    "Lost load penalty": "{:,.0f}",
+                    "Emissions cost": "{:,.0f}",
+                    "Total operating cost": "{:,.0f}",
+                    "Weight": "{:.3f}",
+                }
+            ).hide(axis="index"),
             width="stretch",
         )
 
@@ -879,9 +1083,5 @@ def render_generation_planning_results_page() -> None:
             st.error(f"Export failed: {e}")
 
 
-
-
 # Entrypoint
 render_generation_planning_results_page()
-
-

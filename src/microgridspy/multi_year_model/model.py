@@ -140,7 +140,9 @@ class MultiYearModel:
             pass
 
         # If nothing worked, at least create a placeholder so UI does not mislead
-        problem_fn.write_text("[Could not export via linopy API in this environment]\n", encoding="utf-8")
+        problem_fn.write_text(
+            "[Could not export via linopy API in this environment]\n", encoding="utf-8"
+        )
 
     def _ensure_log_artifact(self, solver: str) -> None:
         if self._last_log_path is None:
@@ -220,9 +222,17 @@ class MultiYearModel:
         try:
             if self._last_log_path is not None:
                 with tee_console_output(self._last_log_path):
-                    result = solve_fn(solver_name=solver, **solve_kwargs) if use_solver_name else solve_fn(solver, **solve_kwargs)
+                    result = (
+                        solve_fn(solver_name=solver, **solve_kwargs)
+                        if use_solver_name
+                        else solve_fn(solver, **solve_kwargs)
+                    )
             else:
-                result = solve_fn(solver_name=solver, **solve_kwargs) if use_solver_name else solve_fn(solver, **solve_kwargs)
+                result = (
+                    solve_fn(solver_name=solver, **solve_kwargs)
+                    if use_solver_name
+                    else solve_fn(solver, **solve_kwargs)
+                )
         except ValueError as e:
             msg = str(e)
             if "contains nan" in msg.lower():

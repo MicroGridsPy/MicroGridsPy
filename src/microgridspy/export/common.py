@@ -63,6 +63,7 @@ def get_var_solution(
     prefer_solution_dataset: bool = True,
 ) -> xr.DataArray | None:
     """Resolve a solved variable from the solution dataset or the linopy variable dict."""
+
     def _coerce_solution_array(var_obj: Any, raw: Any) -> xr.DataArray | None:
         if isinstance(raw, xr.DataArray):
             return raw

@@ -46,9 +46,7 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict
     # --- required coords (per your sets.py)
     for c in ("period", "year", "inv_step", "scenario", "resource"):
         if c not in sets.coords:
-            raise InputValidationError(
-                f"initialize_vars: missing required coord in sets: '{c}'"
-            )
+            raise InputValidationError(f"initialize_vars: missing required coord in sets: '{c}'")
 
     period = sets.coords["period"]
     year = sets.coords["year"]
@@ -60,13 +58,15 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict
     p = get_params(data)
     on_grid = p.is_grid_on()
     allow_export = p.is_grid_export_enabled()
-    partial_load_enabled = bool((p.settings.get("generator", {}) or {}).get("partial_load_modelling_enabled", False))
+    partial_load_enabled = bool(
+        (p.settings.get("generator", {}) or {}).get("partial_load_modelling_enabled", False)
+    )
     battery_loss_model = normalize_battery_loss_model(
         ((p.settings.get("battery_model", {}) or {}).get("loss_model")),
         default="constant_efficiency",
     )
-    battery_model_settings = (p.settings.get("battery_model", {}) or {})
-    degradation_settings = (battery_model_settings.get("degradation_model", {}) or {})
+    battery_model_settings = p.settings.get("battery_model", {}) or {}
+    degradation_settings = battery_model_settings.get("degradation_model", {}) or {}
     cycle_fade_enabled = bool(degradation_settings.get("cycle_fade_enabled", False))
     calendar_fade_enabled = bool(degradation_settings.get("calendar_fade_enabled", False))
     degradation_state_enabled = cycle_fade_enabled or calendar_fade_enabled

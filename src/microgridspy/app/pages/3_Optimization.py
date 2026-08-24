@@ -24,6 +24,7 @@ from microgridspy.typical_year_model.model import SteadyStateModel
 class InputValidationError(RuntimeError):
     pass
 
+
 def _as_str(x: Any, *, name: str, default: str = "") -> str:
     """Convert x to str, with default if None. Raise InputValidationError on failure."""
     if x is None:
@@ -32,7 +33,8 @@ def _as_str(x: Any, *, name: str, default: str = "") -> str:
         return str(x)
     except Exception as e:
         raise InputValidationError(f"Invalid value for '{name}': {x!r} (error: {e})")
-    
+
+
 # =============================================================================
 # Defaults / Session keys
 # =============================================================================
@@ -43,19 +45,16 @@ KEYS = {
     "custom_lp": "gp_custom_lp",
     "use_custom_log": "gp_use_custom_log",
     "custom_log": "gp_custom_log",
-
     # solver params
     "highs_time_limit": "gp_highs_time_limit",
     "highs_mip_rel_gap": "gp_highs_mip_rel_gap",
     "highs_threads": "gp_highs_threads",
     "highs_presolve": "gp_highs_presolve",
-
     "gurobi_time_limit": "gp_gurobi_time_limit",
     "gurobi_mip_gap": "gp_gurobi_mip_gap",
     "gurobi_threads": "gp_gurobi_threads",
     "gurobi_presolve": "gp_gurobi_presolve",
     "optimization_settings_project_hint": "gp_optimization_settings_project_hint",
-
     # outputs
     "solution": "gp_solution",
     "sets": "gp_sets",
@@ -90,13 +89,11 @@ def _init_defaults() -> None:
         KEYS["custom_lp"]: "",
         KEYS["use_custom_log"]: False,
         KEYS["custom_log"]: "",
-
         # HiGHS
         KEYS["highs_time_limit"]: 0,
         KEYS["highs_mip_rel_gap"]: 0.0,
         KEYS["highs_threads"]: 0,
         KEYS["highs_presolve"]: True,
-
         # Gurobi
         KEYS["gurobi_time_limit"]: 0,
         KEYS["gurobi_mip_gap"]: 0.0,
@@ -144,33 +141,59 @@ def _apply_optimization_settings_payload(payload: dict[str, Any]) -> None:
     if not isinstance(payload, dict):
         return
 
-    solver = str(payload.get("solver", st.session_state[KEYS["solver"]]) or st.session_state[KEYS["solver"]])
+    solver = str(
+        payload.get("solver", st.session_state[KEYS["solver"]]) or st.session_state[KEYS["solver"]]
+    )
     if solver in {"highs", "gurobi"}:
         st.session_state[KEYS["solver"]] = solver
 
     problem_export = payload.get("problem_export", {}) or {}
     if isinstance(problem_export, dict):
-        st.session_state[KEYS["use_custom_lp"]] = bool(problem_export.get("enabled", st.session_state[KEYS["use_custom_lp"]]))
-        st.session_state[KEYS["custom_lp"]] = str(problem_export.get("path", st.session_state[KEYS["custom_lp"]]) or "")
+        st.session_state[KEYS["use_custom_lp"]] = bool(
+            problem_export.get("enabled", st.session_state[KEYS["use_custom_lp"]])
+        )
+        st.session_state[KEYS["custom_lp"]] = str(
+            problem_export.get("path", st.session_state[KEYS["custom_lp"]]) or ""
+        )
 
     log_settings = payload.get("log", {}) or {}
     if isinstance(log_settings, dict):
-        st.session_state[KEYS["use_custom_log"]] = bool(log_settings.get("override_enabled", st.session_state[KEYS["use_custom_log"]]))
-        st.session_state[KEYS["custom_log"]] = str(log_settings.get("path", st.session_state[KEYS["custom_log"]]) or "")
+        st.session_state[KEYS["use_custom_log"]] = bool(
+            log_settings.get("override_enabled", st.session_state[KEYS["use_custom_log"]])
+        )
+        st.session_state[KEYS["custom_log"]] = str(
+            log_settings.get("path", st.session_state[KEYS["custom_log"]]) or ""
+        )
 
     highs = payload.get("highs", {}) or {}
     if isinstance(highs, dict):
-        st.session_state[KEYS["highs_time_limit"]] = int(highs.get("time_limit", st.session_state[KEYS["highs_time_limit"]]) or 0)
-        st.session_state[KEYS["highs_mip_rel_gap"]] = float(highs.get("mip_rel_gap", st.session_state[KEYS["highs_mip_rel_gap"]]) or 0.0)
-        st.session_state[KEYS["highs_threads"]] = int(highs.get("threads", st.session_state[KEYS["highs_threads"]]) or 0)
-        st.session_state[KEYS["highs_presolve"]] = bool(highs.get("presolve", st.session_state[KEYS["highs_presolve"]]))
+        st.session_state[KEYS["highs_time_limit"]] = int(
+            highs.get("time_limit", st.session_state[KEYS["highs_time_limit"]]) or 0
+        )
+        st.session_state[KEYS["highs_mip_rel_gap"]] = float(
+            highs.get("mip_rel_gap", st.session_state[KEYS["highs_mip_rel_gap"]]) or 0.0
+        )
+        st.session_state[KEYS["highs_threads"]] = int(
+            highs.get("threads", st.session_state[KEYS["highs_threads"]]) or 0
+        )
+        st.session_state[KEYS["highs_presolve"]] = bool(
+            highs.get("presolve", st.session_state[KEYS["highs_presolve"]])
+        )
 
     gurobi = payload.get("gurobi", {}) or {}
     if isinstance(gurobi, dict):
-        st.session_state[KEYS["gurobi_time_limit"]] = int(gurobi.get("time_limit", st.session_state[KEYS["gurobi_time_limit"]]) or 0)
-        st.session_state[KEYS["gurobi_mip_gap"]] = float(gurobi.get("mip_gap", st.session_state[KEYS["gurobi_mip_gap"]]) or 0.0)
-        st.session_state[KEYS["gurobi_threads"]] = int(gurobi.get("threads", st.session_state[KEYS["gurobi_threads"]]) or 0)
-        st.session_state[KEYS["gurobi_presolve"]] = int(gurobi.get("presolve", st.session_state[KEYS["gurobi_presolve"]]))
+        st.session_state[KEYS["gurobi_time_limit"]] = int(
+            gurobi.get("time_limit", st.session_state[KEYS["gurobi_time_limit"]]) or 0
+        )
+        st.session_state[KEYS["gurobi_mip_gap"]] = float(
+            gurobi.get("mip_gap", st.session_state[KEYS["gurobi_mip_gap"]]) or 0.0
+        )
+        st.session_state[KEYS["gurobi_threads"]] = int(
+            gurobi.get("threads", st.session_state[KEYS["gurobi_threads"]]) or 0
+        )
+        st.session_state[KEYS["gurobi_presolve"]] = int(
+            gurobi.get("presolve", st.session_state[KEYS["gurobi_presolve"]])
+        )
 
 
 def _load_optimization_settings_for_project(project_name: str) -> None:
@@ -416,7 +439,9 @@ def _render_constraints_debug(model_obj: Any) -> None:
     st.markdown("### Constraints")
 
     if model_obj is None:
-        st.info("Model not available yet. Run at least the 'build' step (and store the model in session state).")
+        st.info(
+            "Model not available yet. Run at least the 'build' step (and store the model in session state)."
+        )
         return
 
     lp_model = getattr(model_obj, "model", None)
@@ -462,7 +487,9 @@ def _render_constraints_debug(model_obj: Any) -> None:
         coords_preview: dict[str, Any] = {}
         try:
             for d in dims:
-                coords_preview[d] = _safe_preview(da.coords[d].values, n=n) if d in da.coords else "-"
+                coords_preview[d] = (
+                    _safe_preview(da.coords[d].values, n=n) if d in da.coords else "-"
+                )
         except Exception as e:
             coords_preview = {"error": str(e)}
 
@@ -482,7 +509,9 @@ def _render_constraints_debug(model_obj: Any) -> None:
                 }
             )
         except Exception as e:
-            rows.append({"constraint": str(cname), "count": "", "dims": "ERROR", "coords_preview": str(e)})
+            rows.append(
+                {"constraint": str(cname), "count": "", "dims": "ERROR", "coords_preview": str(e)}
+            )
 
     with st.expander("Constraints overview (name / count / dims)", expanded=False):
         st.dataframe(pd.DataFrame(rows), width="stretch")
@@ -497,6 +526,7 @@ def _render_constraints_debug(model_obj: Any) -> None:
             st.write(cons[pick])
         except Exception as e:
             st.error(f"Could not render constraint '{pick}': {e}")
+
 
 def _as_float(x: Any) -> float | None:
     """Best-effort float conversion for numpy/xarray scalars."""
@@ -600,6 +630,7 @@ def _extract_solution_summary(m: Any) -> dict[str, Any]:
 
     return out
 
+
 def _render_minimal_results(solution_summary: dict[str, Any] | None) -> None:
     st.subheader("Results (minimal)")
 
@@ -694,7 +725,9 @@ def _log_indicates_optimal(log_path_value: Any) -> bool:
     return ("optimal objective" in lower) or ("solved with barrier" in lower and "optimal" in lower)
 
 
-def _has_usable_solution(*, model: Any, solution_summary: dict[str, Any] | None, log_path_value: Any) -> bool:
+def _has_usable_solution(
+    *, model: Any, solution_summary: dict[str, Any] | None, log_path_value: Any
+) -> bool:
     # Primary, solver-independent signal: linopy assigned a solution back onto the
     # model. Infeasible/unsolved runs do not populate this, so a non-empty solution
     # Dataset is sound evidence of a usable result for both HiGHS and Gurobi.
@@ -712,14 +745,18 @@ def _has_usable_solution(*, model: Any, solution_summary: dict[str, Any] | None,
     return _log_indicates_optimal(log_path_value)
 
 
-def _format_unsolved_message(*, solution_summary: dict[str, Any] | None, log_path_value: Any) -> str:
+def _format_unsolved_message(
+    *, solution_summary: dict[str, Any] | None, log_path_value: Any
+) -> str:
     status = None
     if isinstance(solution_summary, dict):
         status = solution_summary.get("status")
     status_text = str(status).strip() if status is not None else ""
     termination_hint = _extract_termination_hint_from_log(log_path_value)
 
-    if _status_indicates_infeasible(status_text) or (termination_hint and "infeasible" in termination_hint.lower()):
+    if _status_indicates_infeasible(status_text) or (
+        termination_hint and "infeasible" in termination_hint.lower()
+    ):
         detail = termination_hint or status_text or "Solver reported infeasibility."
         return f"Optimization completed, but the model is infeasible. {detail}"
 
@@ -747,7 +784,9 @@ def _store_solve_outputs(
     st.session_state[KEYS["data"]] = model.data
     st.session_state[KEYS["vars"]] = model.vars
     st.session_state[KEYS["model_obj"]] = model
-    st.session_state[KEYS["log_path"]] = str(model._last_log_path) if model._last_log_path else str(fallback_log_path)
+    st.session_state[KEYS["log_path"]] = (
+        str(model._last_log_path) if model._last_log_path else str(fallback_log_path)
+    )
     st.session_state[KEYS["solution_summary"]] = _extract_solution_summary(model)
     st.session_state[KEYS["typical_year_results"]] = None
     st.session_state[KEYS["multi_year_results"]] = None
@@ -771,11 +810,17 @@ def _store_solve_outputs(
     ):
         return
 
-    formulation = str(((model.data.attrs or {}).get("settings", {}) or {}).get("formulation", "steady_state"))
+    formulation = str(
+        ((model.data.attrs or {}).get("settings", {}) or {}).get("formulation", "steady_state")
+    )
     if formulation == "steady_state":
         live_solution = getattr(model.model, "solution", None) if model.model is not None else None
         st.session_state[KEYS["typical_year_results"]] = build_typical_year_results(
-            project_name=str(((model.data.attrs or {}).get("settings", {}) or {}).get("project_name", model.project_name)),
+            project_name=str(
+                ((model.data.attrs or {}).get("settings", {}) or {}).get(
+                    "project_name", model.project_name
+                )
+            ),
             data=model.data,
             vars=model.vars,
             solution=live_solution if isinstance(live_solution, xr.Dataset) else None,
@@ -788,7 +833,11 @@ def _store_solve_outputs(
     else:
         live_solution = getattr(model.model, "solution", None) if model.model is not None else None
         st.session_state[KEYS["multi_year_results"]] = build_multi_year_results(
-            project_name=str(((model.data.attrs or {}).get("settings", {}) or {}).get("project_name", model.project_name)),
+            project_name=str(
+                ((model.data.attrs or {}).get("settings", {}) or {}).get(
+                    "project_name", model.project_name
+                )
+            ),
             sets=model.sets,
             data=model.data,
             vars=model.vars,
@@ -812,7 +861,9 @@ def render_generation_planning_optimization_page() -> None:
 
     project_name = st.session_state.get(KEYS["active_project"])
     if not project_name:
-        st.error("No active project found. Please create/select a project first in the Project Setup page.")
+        st.error(
+            "No active project found. Please create/select a project first in the Project Setup page."
+        )
         return
     _load_optimization_settings_for_project(str(project_name))
 
@@ -825,11 +876,15 @@ def render_generation_planning_optimization_page() -> None:
         error_cls=InputValidationError,
         parse_prefix="Cannot parse JSON",
     )
-    formulation_mode = _as_str(formulation_json.get("core_formulation", "steady_state"), name="core_formulation")
+    formulation_mode = _as_str(
+        formulation_json.get("core_formulation", "steady_state"), name="core_formulation"
+    )
 
     st.subheader("Solve Run")
     st.caption("This page builds the full model and solves the single-objective formulation.")
-    st.info("Multi-objective workflows are not exposed here yet. This page always runs the single-objective solve.")
+    st.info(
+        "Multi-objective workflows are not exposed here yet. This page always runs the single-objective solve."
+    )
 
     st.subheader("Solver")
     solver = st.radio(
@@ -876,37 +931,56 @@ def render_generation_planning_optimization_page() -> None:
             g1, g2, g3, g4 = st.columns(4)
             with g1:
                 st.session_state[KEYS["gurobi_time_limit"]] = st.number_input(
-                    "TimeLimit [s]", min_value=0, step=10, value=int(st.session_state[KEYS["gurobi_time_limit"]])
+                    "TimeLimit [s]",
+                    min_value=0,
+                    step=10,
+                    value=int(st.session_state[KEYS["gurobi_time_limit"]]),
                 )
             with g2:
                 st.session_state[KEYS["gurobi_mip_gap"]] = st.number_input(
-                    "MIPGap (0–1)", min_value=0.0, max_value=1.0, step=0.001,
-                    value=float(st.session_state[KEYS["gurobi_mip_gap"]])
+                    "MIPGap (0–1)",
+                    min_value=0.0,
+                    max_value=1.0,
+                    step=0.001,
+                    value=float(st.session_state[KEYS["gurobi_mip_gap"]]),
                 )
             with g3:
                 st.session_state[KEYS["gurobi_threads"]] = st.number_input(
-                    "Threads", min_value=0, step=1, value=int(st.session_state[KEYS["gurobi_threads"]])
+                    "Threads",
+                    min_value=0,
+                    step=1,
+                    value=int(st.session_state[KEYS["gurobi_threads"]]),
                 )
             with g4:
                 st.session_state[KEYS["gurobi_presolve"]] = st.selectbox(
-                    "Presolve", options=[-1, 0, 1, 2],
-                    index=[-1, 0, 1, 2].index(int(st.session_state[KEYS["gurobi_presolve"]]))
+                    "Presolve",
+                    options=[-1, 0, 1, 2],
+                    index=[-1, 0, 1, 2].index(int(st.session_state[KEYS["gurobi_presolve"]])),
                 )
         else:
             st.markdown("**HiGHS parameters**")
             h1, h2, h3, h4 = st.columns(4)
             with h1:
                 st.session_state[KEYS["highs_time_limit"]] = st.number_input(
-                    "time_limit [s]", min_value=0, step=10, value=int(st.session_state[KEYS["highs_time_limit"]])
+                    "time_limit [s]",
+                    min_value=0,
+                    step=10,
+                    value=int(st.session_state[KEYS["highs_time_limit"]]),
                 )
             with h2:
                 st.session_state[KEYS["highs_mip_rel_gap"]] = st.number_input(
-                    "mip_rel_gap (0–1)", min_value=0.0, max_value=1.0, step=0.001,
-                    value=float(st.session_state[KEYS["highs_mip_rel_gap"]])
+                    "mip_rel_gap (0–1)",
+                    min_value=0.0,
+                    max_value=1.0,
+                    step=0.001,
+                    value=float(st.session_state[KEYS["highs_mip_rel_gap"]]),
                 )
             with h3:
                 st.session_state[KEYS["highs_threads"]] = st.number_input(
-                    "threads", min_value=0, step=1, value=int(st.session_state[KEYS["highs_threads"]])
+                    "threads",
+                    min_value=0,
+                    step=1,
+                    value=int(st.session_state[KEYS["highs_threads"]]),
                 )
             with h4:
                 st.session_state[KEYS["highs_presolve"]] = st.checkbox(
@@ -949,17 +1023,20 @@ def render_generation_planning_optimization_page() -> None:
 
         elapsed = time.time() - t0
         summary = st.session_state.get(KEYS["solution_summary"])
-        if (
-            _status_indicates_success(summary.get("status") if isinstance(summary, dict) else None)
-            or _has_usable_solution(
-                model=st.session_state.get(KEYS["model_obj"]),
-                solution_summary=summary if isinstance(summary, dict) else None,
-                log_path_value=st.session_state.get(KEYS["log_path"]),
-            )
+        if _status_indicates_success(
+            summary.get("status") if isinstance(summary, dict) else None
+        ) or _has_usable_solution(
+            model=st.session_state.get(KEYS["model_obj"]),
+            solution_summary=summary if isinstance(summary, dict) else None,
+            log_path_value=st.session_state.get(KEYS["log_path"]),
         ):
             st.success(f"Solve completed. Runtime: {elapsed:.2f} s")
         else:
-            st.error(_format_unsolved_message(solution_summary=summary, log_path_value=st.session_state.get(KEYS["log_path"])))
+            st.error(
+                _format_unsolved_message(
+                    solution_summary=summary, log_path_value=st.session_state.get(KEYS["log_path"])
+                )
+            )
 
     _render_solver_log(st.session_state.get(KEYS["log_path"]))
 
@@ -968,8 +1045,16 @@ def render_generation_planning_optimization_page() -> None:
     # -------------------------
     with st.expander("Quick inspection", expanded=False):
         bundle = st.session_state.get(KEYS["results_bundle"])
-        data_ds = getattr(bundle, "data", None) if bundle is not None else st.session_state.get(KEYS["data"])
-        vars_dict = getattr(bundle, "vars", None) if bundle is not None else st.session_state.get(KEYS["vars"])
+        data_ds = (
+            getattr(bundle, "data", None)
+            if bundle is not None
+            else st.session_state.get(KEYS["data"])
+        )
+        vars_dict = (
+            getattr(bundle, "vars", None)
+            if bundle is not None
+            else st.session_state.get(KEYS["vars"])
+        )
         model_obj = st.session_state.get(KEYS["model_obj"])
 
         _show_xr_dataset_debug(data_ds, "Data")
@@ -977,7 +1062,6 @@ def render_generation_planning_optimization_page() -> None:
         _render_constraints_debug(model_obj)
         summary = st.session_state.get(KEYS["solution_summary"])
         _render_minimal_results(summary)
-
 
 
 # Call page

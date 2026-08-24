@@ -64,9 +64,13 @@ def map_inv_step_to_year(
     if "inv_step" not in da.dims:
         return da
     if "year" not in sets.coords:
-        raise InputValidationError(f"Cannot map '{name}' from inv_step to year: missing sets.year coord.")
+        raise InputValidationError(
+            f"Cannot map '{name}' from inv_step to year: missing sets.year coord."
+        )
     if "year_inv_step" not in sets:
-        raise InputValidationError(f"Cannot map '{name}' from inv_step to year: missing sets.year_inv_step mapping.")
+        raise InputValidationError(
+            f"Cannot map '{name}' from inv_step to year: missing sets.year_inv_step mapping."
+        )
 
     year = sets.coords["year"]
     year_inv_step = sets["year_inv_step"].sel(year=year)
@@ -106,7 +110,9 @@ def replacement_cycle_age(sets: xr.Dataset, lifetime_years: xr.DataArray | float
     return xr.where(active, age, 0.0)
 
 
-def replacement_commission_mask(sets: xr.Dataset, lifetime_years: xr.DataArray | float) -> xr.DataArray:
+def replacement_commission_mask(
+    sets: xr.Dataset, lifetime_years: xr.DataArray | float
+) -> xr.DataArray:
     active = replacement_active_mask(sets)
     age = replacement_cycle_age(sets, lifetime_years)
     return xr.where((active > 0.0) & (np.abs(age - 1.0) < 1e-9), 1.0, 0.0)

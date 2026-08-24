@@ -8,6 +8,7 @@ It wraps the public API for common project operations from the terminal::
     microgridspy validate my_site
     microgridspy solve my_site --solver highs --export
 """
+
 from __future__ import annotations
 
 import argparse
@@ -50,7 +51,9 @@ def _build_parser(version: str) -> argparse.ArgumentParser:
     p_solve = sub.add_parser("solve", help="build and solve a project")
     p_solve.add_argument("name")
     p_solve.add_argument("--solver", choices=["highs", "gurobi"], default="highs")
-    p_solve.add_argument("--export", action="store_true", help="write results to the project folder")
+    p_solve.add_argument(
+        "--export", action="store_true", help="write results to the project folder"
+    )
     _add_workspace_arg(p_solve)
 
     return parser

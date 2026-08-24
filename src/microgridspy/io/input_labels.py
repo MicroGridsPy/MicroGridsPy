@@ -27,9 +27,12 @@ def renewable_labels_from_yaml(path: Path) -> dict[str, list[str]]:
     for i, item in enumerate(renewables):
         if not isinstance(item, dict):
             continue
-        resources.append(str(item.get("resource", "") or f"Resource_{i+1}").strip() or f"Resource_{i+1}")
+        resources.append(
+            str(item.get("resource", "") or f"Resource_{i + 1}").strip() or f"Resource_{i + 1}"
+        )
         conversions.append(
-            str(item.get("conversion_technology", "") or f"Technology_{i+1}").strip() or f"Technology_{i+1}"
+            str(item.get("conversion_technology", "") or f"Technology_{i + 1}").strip()
+            or f"Technology_{i + 1}"
         )
     return {
         "resources": resources,

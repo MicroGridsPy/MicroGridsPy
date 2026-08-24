@@ -52,9 +52,7 @@ def get_battery_loss_model_from_formulation(formulation: dict[str, Any] | None) 
 
 def _strictly_increasing(values: np.ndarray, *, name: str, path: Path) -> None:
     if np.any(np.diff(values) <= MONOTONIC_TOL):
-        raise InputValidationError(
-            f"{path.name}: column '{name}' must be strictly increasing."
-        )
+        raise InputValidationError(f"{path.name}: column '{name}' must be strictly increasing.")
 
 
 def _validate_convex_piecewise_loss(
@@ -103,7 +101,11 @@ def resolve_efficiency_curve_values(
             f"{path.name}: '{column_name}' must be in {comparator} when interpreted as a normalized efficiency multiplier."
         )
 
-    if not np.isfinite(base_efficiency) or base_efficiency <= 0.0 or base_efficiency > 1.0 + EFFICIENCY_TOL:
+    if (
+        not np.isfinite(base_efficiency)
+        or base_efficiency <= 0.0
+        or base_efficiency > 1.0 + EFFICIENCY_TOL
+    ):
         raise InputValidationError(
             f"{path.name}: invalid baseline efficiency {base_efficiency!r} for '{column_name}'. "
             "The corresponding YAML scalar efficiency must be in (0, 1]."
@@ -158,9 +160,7 @@ def load_battery_loss_curve_dataset(
       where P_ref is the formulation-side DC power reference used to normalize the curve.
     """
     if not path.exists():
-        raise InputValidationError(
-            f"Missing required battery efficiency curve file: {path}"
-        )
+        raise InputValidationError(f"Missing required battery efficiency curve file: {path}")
 
     try:
         df = read_csv_with_format(path)
@@ -181,7 +181,9 @@ def load_battery_loss_curve_dataset(
 
     rel = pd.to_numeric(df["relative_power_pu"], errors="coerce").to_numpy(dtype=float)
     charge_curve = pd.to_numeric(df["charge_efficiency"], errors="coerce").to_numpy(dtype=float)
-    discharge_curve = pd.to_numeric(df["discharge_efficiency"], errors="coerce").to_numpy(dtype=float)
+    discharge_curve = pd.to_numeric(df["discharge_efficiency"], errors="coerce").to_numpy(
+        dtype=float
+    )
 
     if np.isnan(rel).any() or np.isnan(charge_curve).any() or np.isnan(discharge_curve).any():
         raise InputValidationError(
@@ -189,9 +191,7 @@ def load_battery_loss_curve_dataset(
         )
 
     if np.any(rel <= 0.0) or np.any(rel > 1.0):
-        raise InputValidationError(
-            f"{path.name}: 'relative_power_pu' must be in (0, 1]."
-        )
+        raise InputValidationError(f"{path.name}: 'relative_power_pu' must be in (0, 1].")
     _strictly_increasing(rel, name="relative_power_pu", path=path)
     if not np.isclose(rel[-1], 1.0, atol=1e-9):
         raise InputValidationError(

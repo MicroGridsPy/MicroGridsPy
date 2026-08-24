@@ -37,14 +37,18 @@ def initialize_constraints(
     if not isinstance(data, xr.Dataset):
         raise InputValidationError("initialize_constraints: `data` must be an xarray.Dataset.")
     if not isinstance(vars, dict):
-        raise InputValidationError("initialize_constraints: `vars` must be a dict of linopy variables.")
+        raise InputValidationError(
+            "initialize_constraints: `vars` must be a dict of linopy variables."
+        )
 
     # ---------------------------------------------------------------------
     # Coords
     # ---------------------------------------------------------------------
     for c in ("period", "scenario", "resource"):
         if c not in sets.coords:
-            raise InputValidationError(f"initialize_constraints: missing required coord in sets: '{c}'")
+            raise InputValidationError(
+                f"initialize_constraints: missing required coord in sets: '{c}'"
+            )
 
     period = sets.coords["period"]
     scenario = sets.coords["scenario"]
@@ -59,8 +63,8 @@ def initialize_constraints(
         ((data.attrs or {}).get("settings", {}).get("battery_model", {}) or {}).get("loss_model"),
         default="constant_efficiency",
     )
-    battery_model_settings = ((data.attrs or {}).get("settings", {}).get("battery_model", {}) or {})
-    degradation_settings = (battery_model_settings.get("degradation_model", {}) or {})
+    battery_model_settings = (data.attrs or {}).get("settings", {}).get("battery_model", {}) or {}
+    degradation_settings = battery_model_settings.get("degradation_model", {}) or {}
     degradation_state_enabled = bool(degradation_settings.get("cycle_fade_enabled", False)) or bool(
         degradation_settings.get("calendar_fade_enabled", False)
     )
@@ -92,7 +96,7 @@ def initialize_constraints(
     res_inv_eta = p.res_inverter_efficiency  # (resource)
 
     # Optional land and max installable
-    land_m2 = p.land_availability_m2  # scalar 
+    land_m2 = p.land_availability_m2  # scalar
     res_area_m2_per_kw = p.res_specific_area_m2_per_kw  # (resource)
     res_max_kw = p.res_max_installable_capacity_kw  # (resource) may contain NaN
 
@@ -169,13 +173,17 @@ def initialize_constraints(
     # ---------------------------------------------------------------------
     finite = np.isfinite(res_max_kw)
     if bool(np.any((res_max_kw.where(finite, other=0.0) < 0.0).values)):
-        raise InputValidationError("res_max_installable_capacity_kw must be non-negative when provided.")
+        raise InputValidationError(
+            "res_max_installable_capacity_kw must be non-negative when provided."
+        )
     res_max_kw_finite = res_max_kw.where(finite, drop=True)
     if res_max_kw_finite.sizes.get("resource", 0) > 0:
         model.add_constraints(
-            res_units.sel(resource=res_max_kw_finite.resource) * res_nom_kw.sel(resource=res_max_kw_finite.resource)
+            res_units.sel(resource=res_max_kw_finite.resource)
+            * res_nom_kw.sel(resource=res_max_kw_finite.resource)
             <= res_max_kw_finite,
-            name="res_max_installable_capacity")
+            name="res_max_installable_capacity",
+        )
 
     # ---------------------------------------------------------------------
     # 3) Generator production capacity
@@ -206,8 +214,10 @@ def initialize_constraints(
     pl_fuel_rel = p.generator_fuel_curve_rel_fuel_use
 
     pl_points_ok = (
-        pl_rel is not None and pl_fuel_rel is not None
-        and ("curve_point" in pl_rel.dims) and ("curve_point" in pl_fuel_rel.dims)
+        pl_rel is not None
+        and pl_fuel_rel is not None
+        and ("curve_point" in pl_rel.dims)
+        and ("curve_point" in pl_fuel_rel.dims)
         and (pl_rel.sizes["curve_point"] >= 2)
     )
 
@@ -220,39 +230,41 @@ def initialize_constraints(
         for s in scenario_labels:
             # Scalar per scenario
             lhv_s = fuel_lhv.sel(scenario=s)  # scalar DA
-            cap = gen_nom_kw                  # scalar DA (kW per unit)
+            cap = gen_nom_kw  # scalar DA (kW per unit)
 
             # Shared technology curve
-            r_full = pl_rel   # (curve_point,)
-            phi_full = pl_fuel_rel   # (curve_point,)
+            r_full = pl_rel  # (curve_point,)
+            phi_full = pl_fuel_rel  # (curve_point,)
 
             # Basic sanity (optional but recommended)
             # - drop NaNs (if present) by requiring all finite
             if not (np.isfinite(r_full.values).all() and np.isfinite(phi_full.values).all()):
-                raise ValueError("Generator partial-load fuel-use curve contains NaNs; provide full curve_point series.")
+                raise ValueError(
+                    "Generator partial-load fuel-use curve contains NaNs; provide full curve_point series."
+                )
 
             # r0,r1 and phi0,phi1
-            r0 = r_full.isel(curve_point=seg)         # (segment,)
-            r1 = r_full.isel(curve_point=seg + 1)     # (segment,)
-            phi0 = phi_full.isel(curve_point=seg)     # (segment,)
-            phi1 = phi_full.isel(curve_point=seg + 1) # (segment,)
+            r0 = r_full.isel(curve_point=seg)  # (segment,)
+            r1 = r_full.isel(curve_point=seg + 1)  # (segment,)
+            phi0 = phi_full.isel(curve_point=seg)  # (segment,)
+            phi1 = phi_full.isel(curve_point=seg + 1)  # (segment,)
 
             # Convert to power at breakpoints for ONE unit (kW)
-            p0 = cap * r0                              # (segment,)
-            p1 = cap * r1                              # (segment,)
+            p0 = cap * r0  # (segment,)
+            p1 = cap * r1  # (segment,)
 
             # Fuel at breakpoints for ONE unit (unit_fuel/h since Δt=1h)
             # fc = P / (eta * LHV)
-            fc0 = cap * phi0 / lhv_s                   # (segment,)
-            fc1 = cap * phi1 / lhv_s                   # (segment,)
+            fc0 = cap * phi0 / lhv_s  # (segment,)
+            fc1 = cap * phi1 / lhv_s  # (segment,)
 
             # Segment slope in fuel per kWh (unit_fuel/kWh)
-            denom = (p1 - p0)
+            denom = p1 - p0
             slope = xr.where(denom != 0.0, (fc1 - fc0) / denom, 0.0)  # (segment,)
 
             # Variables for this scenario
-            gen_ts = gen_gen.sel(scenario=s)           # (period,)
-            fuel_ts = fuel_cons.sel(scenario=s)        # (period,)
+            gen_ts = gen_gen.sel(scenario=s)  # (period,)
+            fuel_ts = fuel_cons.sel(scenario=s)  # (period,)
 
             # Broadcast to (period, segment)
             gen_b = gen_ts.expand_dims({"segment": seg})
@@ -408,9 +420,7 @@ def initialize_constraints(
             )
 
         model.add_constraints(
-            soc.isel(period=T-1)
-            + bat_ch_dc.isel(period=T-1)
-            - bat_dis_dc.isel(period=T-1)
+            soc.isel(period=T - 1) + bat_ch_dc.isel(period=T - 1) - bat_dis_dc.isel(period=T - 1)
             == soc0 * Ecap,
             name="soc_cyclic",
         )
@@ -432,9 +442,9 @@ def initialize_constraints(
 
         # cyclic closure (do NOT also force soc[T-1]==soc0*Ecap)
         model.add_constraints(
-            soc.isel(period=T-1)
-            + eta_c * bat_ch.isel(period=T-1)
-            - bat_dis.isel(period=T-1) / eta_d
+            soc.isel(period=T - 1)
+            + eta_c * bat_ch.isel(period=T - 1)
+            - bat_dis.isel(period=T - 1) / eta_d
             == soc0 * Ecap,
             name="soc_cyclic",
         )
@@ -478,7 +488,12 @@ def initialize_constraints(
 
     if on_grid and allow_export:
         model.add_constraints(
-            res_sum + gen_gen + ((grid_imp * grid_eta) - (grid_exp * grid_eta)) + (bat_dis - bat_ch) + ll == load_demand,
+            res_sum
+            + gen_gen
+            + ((grid_imp * grid_eta) - (grid_exp * grid_eta))
+            + (bat_dis - bat_ch)
+            + ll
+            == load_demand,
             name="energy_balance",
         )
     elif on_grid and not allow_export:
@@ -502,9 +517,9 @@ def initialize_constraints(
 
     # Total demand energy per scenario
     E_demand_s = load_demand.sum("period")  # (scenario,)
-    E_ll_s     = ll.sum("period")          # (scenario,)
-    E_res_s    = res_sum.sum("period")     # (scenario,)
-    E_gen_s    = gen_gen.sum("period")     # (scenario,)
+    E_ll_s = ll.sum("period")  # (scenario,)
+    E_res_s = res_sum.sum("period")  # (scenario,)
+    E_gen_s = gen_gen.sum("period")  # (scenario,)
 
     if on_grid:
         E_grid_s = (grid_imp * grid_eta).sum("period")  # (scenario,) delivered imported energy
@@ -527,9 +542,11 @@ def initialize_constraints(
         model.add_constraints(E_ll_s <= max_ll_frac * E_demand_s, name="max_lost_load_share")
     else:
         # expected: Σ_s w_s * LL_s <= max_ll_frac * Σ_s w_s * Demand_s
-        E_ll_exp     = (E_ll_s * w_s).sum("scenario")       # scalar
-        E_demand_exp = (E_demand_s * w_s).sum("scenario")   # scalar
-        model.add_constraints(E_ll_exp <= max_ll_frac * E_demand_exp, name="max_lost_load_share_expected")
+        E_ll_exp = (E_ll_s * w_s).sum("scenario")  # scalar
+        E_demand_exp = (E_demand_s * w_s).sum("scenario")  # scalar
+        model.add_constraints(
+            E_ll_exp <= max_ll_frac * E_demand_exp, name="max_lost_load_share_expected"
+        )
 
     # --- (B) Minimum renewable penetration
     #   E_total = E_res + E_gen + E_grid_import
@@ -539,11 +556,15 @@ def initialize_constraints(
         if enforcement == "scenario_wise":
             E_total_s = E_res_s + E_gen_s + E_grid_s
             E_renew_s = E_res_s + E_grid_ren_s
-            model.add_constraints(E_renew_s >= min_res_pen * E_total_s, name="min_renewable_penetration")
+            model.add_constraints(
+                E_renew_s >= min_res_pen * E_total_s, name="min_renewable_penetration"
+            )
         else:
             E_total_exp = ((E_res_s + E_gen_s + E_grid_s) * w_s).sum("scenario")  # scalar
-            E_renew_exp = ((E_res_s + E_grid_ren_s) * w_s).sum("scenario")        # scalar
-            model.add_constraints(E_renew_exp >= min_res_pen * E_total_exp, name="min_renewable_penetration_expected")
+            E_renew_exp = ((E_res_s + E_grid_ren_s) * w_s).sum("scenario")  # scalar
+            model.add_constraints(
+                E_renew_exp >= min_res_pen * E_total_exp, name="min_renewable_penetration_expected"
+            )
 
     # ---------------------------------------------------------------------
     # 10) Land availability (renewables only, only if user provides a finite
@@ -557,5 +578,5 @@ def initialize_constraints(
         error_cls=InputValidationError,
     )
     if land_limit is not None:
-        area_used = (res_units * res_nom_kw * res_area_m2_per_kw).sum("resource") # scalar
+        area_used = (res_units * res_nom_kw * res_area_m2_per_kw).sum("resource")  # scalar
         model.add_constraints(area_used <= land_limit, name="land_availability")

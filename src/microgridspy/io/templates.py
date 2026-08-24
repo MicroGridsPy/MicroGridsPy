@@ -17,8 +17,8 @@ from microgridspy.io.paths import ProjectPaths
 # =============================================================================
 @dataclass(frozen=True)
 class TemplateSettings:
-    formulation: str                 # "steady_state" | "dynamic"
-    system_type: str                 # "off_grid" | "on_grid"
+    formulation: str  # "steady_state" | "dynamic"
+    system_type: str  # "off_grid" | "on_grid"
     allow_export: bool
 
     multi_scenario: bool
@@ -27,16 +27,15 @@ class TemplateSettings:
     scenario_weights: Sequence[float]
 
     # dynamic-only context used to generate year headers
-    start_year_label: str            # e.g. "2026" or "typical_year"
-    horizon_years: int | None     # e.g. 20 (None for steady_state)
+    start_year_label: str  # e.g. "2026" or "typical_year"
+    horizon_years: int | None  # e.g. 20 (None for steady_state)
     # capacity expansion context
     capacity_expansion: bool
     investment_steps_years: Sequence[int] | None  # e.g. [5,5,5,5] or None
 
-
     # renewable resource context
-    n_res_sources: int              # e.g. 2
-    resource_labels: Sequence[str]   # e.g. ["solar", "wind"]
+    n_res_sources: int  # e.g. 2
+    resource_labels: Sequence[str]  # e.g. ["solar", "wind"]
     conversion_labels: Sequence[str]  # e.g. ["pv", "wt"]
     # single-tech component labels
     battery_label: str
@@ -60,14 +59,18 @@ class TemplateSettings:
     fuel_vintage_labels_by_step: Mapping[str, str] | None = None
 
 
-def write_templates(paths: ProjectPaths, settings: TemplateSettings, overwrite: bool = False) -> None:
+def write_templates(
+    paths: ProjectPaths, settings: TemplateSettings, overwrite: bool = False
+) -> None:
     """
     Write user-editable templates into the project inputs folder.
     """
 
     # Time series templates
     _write_load_demand_csv(paths.inputs_dir / "load_demand.csv", settings, overwrite=overwrite)
-    _write_resource_availability_csv(paths.inputs_dir / "resource_availability.csv", settings, overwrite=overwrite)
+    _write_resource_availability_csv(
+        paths.inputs_dir / "resource_availability.csv", settings, overwrite=overwrite
+    )
     # Write README file with metadata
     _write_inputs_readme(paths.inputs_dir / "README_inputs.md", settings, overwrite=overwrite)
     # Write renewables.yaml configuration
@@ -107,10 +110,10 @@ def _safe_scenario_labels(settings: TemplateSettings) -> list[str]:
     """
     labels = list(settings.scenario_labels) if settings.scenario_labels is not None else []
     if len(labels) < settings.n_scenarios:
-        labels += [f"scenario_{i+1}" for i in range(len(labels), settings.n_scenarios)]
+        labels += [f"scenario_{i + 1}" for i in range(len(labels), settings.n_scenarios)]
     if len(labels) > settings.n_scenarios:
         labels = labels[: settings.n_scenarios]
-    return [str(x).strip() or f"scenario_{i+1}" for i, x in enumerate(labels)]
+    return [str(x).strip() or f"scenario_{i + 1}" for i, x in enumerate(labels)]
 
 
 def _safe_year_labels(settings: TemplateSettings) -> list[str]:
@@ -137,7 +140,8 @@ def _safe_year_labels(settings: TemplateSettings) -> list[str]:
             f"value. Got {settings.start_year_label!r}."
         ) from exc
     return [str(y0 + i) for i in range(horizon)]
-    
+
+
 def _safe_resource_labels(settings: TemplateSettings) -> list[str]:
     """
     Ensure resource_labels matches n_res_sources (stable ordering).
@@ -147,11 +151,12 @@ def _safe_resource_labels(settings: TemplateSettings) -> list[str]:
     n = max(n, 1)
 
     if len(labels) < n:
-        labels += [f"RESOURCE_{i+1}" for i in range(len(labels), n)]
+        labels += [f"RESOURCE_{i + 1}" for i in range(len(labels), n)]
     if len(labels) > n:
         labels = labels[:n]
 
-    return [str(x).strip() or f"RESOURCE_{i+1}" for i, x in enumerate(labels)]
+    return [str(x).strip() or f"RESOURCE_{i + 1}" for i, x in enumerate(labels)]
+
 
 def _safe_conversion_labels(settings: TemplateSettings) -> list[str]:
     labels = list(settings.conversion_labels) if settings.conversion_labels is not None else []
@@ -159,11 +164,11 @@ def _safe_conversion_labels(settings: TemplateSettings) -> list[str]:
     n = max(n, 1)
 
     if len(labels) < n:
-        labels += [f"TECH_{i+1}" for i in range(len(labels), n)]
+        labels += [f"TECH_{i + 1}" for i in range(len(labels), n)]
     if len(labels) > n:
         labels = labels[:n]
 
-    return [str(x).strip() or f"TECH_{i+1}" for i, x in enumerate(labels)]
+    return [str(x).strip() or f"TECH_{i + 1}" for i, x in enumerate(labels)]
 
 
 def _safe_step_keys(settings: TemplateSettings) -> list[str]:
@@ -176,7 +181,7 @@ def _safe_step_keys(settings: TemplateSettings) -> list[str]:
     `sets.inv_step` labels and avoids relying on hidden alias remapping for the
     current workflow.
     """
-    is_dynamic = (settings.formulation == "dynamic")
+    is_dynamic = settings.formulation == "dynamic"
     if not is_dynamic:
         return ["base"]
 
@@ -185,6 +190,7 @@ def _safe_step_keys(settings: TemplateSettings) -> list[str]:
         return ["1"]
 
     return [str(i + 1) for i in range(len(years))]
+
 
 def _safe_battery_label(settings: TemplateSettings) -> str:
     v = str(getattr(settings, "battery_label", "") or "").strip()
@@ -355,7 +361,9 @@ def _annotate_yaml_sections(text: str, section_comments: Mapping[str, str] | Non
     return "\n".join(annotated_lines) + "\n"
 
 
-def _write_yaml_file(path: Path, payload: dict, *, section_comments: Mapping[str, str] | None = None) -> None:
+def _write_yaml_file(
+    path: Path, payload: dict, *, section_comments: Mapping[str, str] | None = None
+) -> None:
     _ensure_parent_dir(path)
     text = yaml.safe_dump(payload, sort_keys=False, allow_unicode=True)
     text = _annotate_yaml_sections(text, section_comments)
@@ -425,7 +433,10 @@ def _write_load_demand_csv(path: Path, settings: TemplateSettings, overwrite: bo
         overwrite=overwrite,
     )
 
-def _write_resource_availability_csv(path: Path, settings: TemplateSettings, overwrite: bool = False) -> None:
+
+def _write_resource_availability_csv(
+    path: Path, settings: TemplateSettings, overwrite: bool = False
+) -> None:
     """
     Create inputs/resource_availability.csv with a 3-row header:
       - level 0: scenario label
@@ -449,7 +460,9 @@ def _write_resource_availability_csv(path: Path, settings: TemplateSettings, ove
                 cols.append((str(s), str(y), str(r)))
 
     columns = pd.MultiIndex.from_tuples(cols, names=["scenario", "year", "resource"])
-    value_columns = [(str(s), str(y), str(r)) for s in scenarios for y in years for r in resource_labels]
+    value_columns = [
+        (str(s), str(y), str(r)) for s in scenarios for y in years for r in resource_labels
+    ]
     _write_hourly_csv_template(
         path,
         settings=settings,
@@ -464,8 +477,11 @@ def _write_inputs_readme(path: Path, settings: TemplateSettings, overwrite: bool
     if path.exists() and not overwrite:
         return
 
-    is_dynamic = (settings.formulation == "dynamic")
-    battery_curve_enabled = str(getattr(settings, "battery_loss_model", "") or "").strip().lower() == "convex_loss_epigraph"
+    is_dynamic = settings.formulation == "dynamic"
+    battery_curve_enabled = (
+        str(getattr(settings, "battery_loss_model", "") or "").strip().lower()
+        == "convex_loss_epigraph"
+    )
     generator_curve_enabled = _safe_generator_efficiency_model(settings) == "efficiency_curve"
     scenarios = _template_scenarios(settings)
     years = _template_years(settings)
@@ -606,12 +622,11 @@ def _write_inputs_readme(path: Path, settings: TemplateSettings, overwrite: bool
                 "- Meta column `meta/hour` provides hour index (0..8759).\n\n"
             )
 
-        text += (
-            "Note: the grid availability matrix is generated by the backend from outage inputs (no user template).\n\n"
-        )
+        text += "Note: the grid availability matrix is generated by the backend from outage inputs (no user template).\n\n"
 
     _ensure_parent_dir(path)
     path.write_text(text, encoding="utf-8")
+
 
 def _write_renewables_yaml(path: Path, settings: TemplateSettings, overwrite: bool = False) -> None:
     """
@@ -648,7 +663,7 @@ def _write_renewables_yaml(path: Path, settings: TemplateSettings, overwrite: bo
     # Dynamic templates use ["1","2",...,"N"] and steady_state uses ["base"].
     step_keys = list(map(str, _safe_step_keys(settings)))
 
-    is_dynamic = (settings.formulation == "dynamic")
+    is_dynamic = settings.formulation == "dynamic"
     capexp = bool(getattr(settings, "capacity_expansion", False))
 
     # Optional step metadata (purely informational; not required by loaders)
@@ -656,7 +671,10 @@ def _write_renewables_yaml(path: Path, settings: TemplateSettings, overwrite: bo
     steps_meta = None
     if is_dynamic and capexp and steps_years:
         # Map metadata to the canonical external step labels "1","2",...
-        steps_meta = [{"step": str(i + 1), "duration_years": int(steps_years[i])} for i in range(len(steps_years))]
+        steps_meta = [
+            {"step": str(i + 1), "duration_years": int(steps_years[i])}
+            for i in range(len(steps_years))
+        ]
 
     # -------------------------------------------------------------------------
     # Default parameter blocks
@@ -664,29 +682,27 @@ def _write_renewables_yaml(path: Path, settings: TemplateSettings, overwrite: bo
     def _default_investment_params() -> dict:
         return {
             # sizing (design-side)
-            "nominal_capacity_kw": 1.0,                         # kW per unit (or per continuous "unit")
-
+            "nominal_capacity_kw": 1.0,  # kW per unit (or per continuous "unit")
             # base asset economics (investment-side)
-            "specific_investment_cost_per_kw": 0.0,             # currency/kW
-            "wacc": 0.0,                                        # -
-            "grant_share_of_capex": 0.0,                        # share (0..1)
-            "lifetime_years": 25,                               # years
-            "embedded_emissions_kgco2e_per_kw": 0.0,            # kgCO2e/kW
-            "fixed_om_share_per_year": 0.0,                     # share of CAPEX per year
-
+            "specific_investment_cost_per_kw": 0.0,  # currency/kW
+            "wacc": 0.0,  # -
+            "grant_share_of_capex": 0.0,  # share (0..1)
+            "lifetime_years": 25,  # years
+            "embedded_emissions_kgco2e_per_kw": 0.0,  # kgCO2e/kW
+            "fixed_om_share_per_year": 0.0,  # share of CAPEX per year
             # inverter economics (investment-side)
-            "inverter_specific_investment_cost_per_kw_ac": 0.0, # currency/kW_ac
-            "inverter_lifetime_years": 15,                      # years
-            "inverter_fixed_om_share_per_year": 0.0,            # share of inverter CAPEX per year
-            "production_subsidy_per_kwh": 0.0,                  # currency/kWh
+            "inverter_specific_investment_cost_per_kw_ac": 0.0,  # currency/kW_ac
+            "inverter_lifetime_years": 15,  # years
+            "inverter_fixed_om_share_per_year": 0.0,  # share of inverter CAPEX per year
+            "production_subsidy_per_kwh": 0.0,  # currency/kWh
         }
 
     def _default_technical_params() -> dict:
         params = {
-            "dc_ac_ratio": 1.0,                                 # deterministic inverter sizing rule
-            "inverter_efficiency": 1.0,                         # -
-            "specific_area_m2_per_kw": None,                    # optional (m2/kW) -> allow null 
-            "max_installable_capacity_kw": None,                # optional (kW) -> allow null
+            "dc_ac_ratio": 1.0,  # deterministic inverter sizing rule
+            "inverter_efficiency": 1.0,  # -
+            "specific_area_m2_per_kw": None,  # optional (m2/kW) -> allow null
+            "max_installable_capacity_kw": None,  # optional (kW) -> allow null
         }
         if is_dynamic:
             params["capacity_degradation_rate_per_year"] = 0.0  # -/year (effective capacity)
@@ -702,7 +718,7 @@ def _write_renewables_yaml(path: Path, settings: TemplateSettings, overwrite: bo
         investment_by_step = {sk: _default_investment_params() for sk in step_keys}
         renewables_list.append(
             {
-                "id": f"res_{i+1}",
+                "id": f"res_{i + 1}",
                 "conversion_technology": conv,
                 "resource": res,
                 "investment": {"by_step": investment_by_step},
@@ -813,9 +829,11 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
         return
 
     scenarios = _template_scenarios(settings)
-    step_keys = _safe_step_keys(settings)  # Dynamic templates use canonical step labels ["1","2",...]
+    step_keys = _safe_step_keys(
+        settings
+    )  # Dynamic templates use canonical step labels ["1","2",...]
 
-    is_dynamic = (settings.formulation == "dynamic")
+    is_dynamic = settings.formulation == "dynamic"
     capexp = bool(getattr(settings, "capacity_expansion", False))
 
     # Optional step metadata (human readability only)
@@ -834,19 +852,17 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
     def _default_investment_params() -> dict:
         return {
             # sizing (per unit)
-            "nominal_capacity_kwh": 1.0,                      # kWh per unit (or continuous unit)
-
+            "nominal_capacity_kwh": 1.0,  # kWh per unit (or continuous unit)
             # base asset economics (investment-related)
-            "specific_investment_cost_per_kwh": 0.0,          # currency/kWh
-            "wacc": 0.0,                                      # -
-            "calendar_lifetime_years": 10,                    # years
-            "embedded_emissions_kgco2e_per_kwh": 0.0,         # kgCO2e/kWh of capacity
-            "fixed_om_share_per_year": 0.0,                   # share of CAPEX per year
-
+            "specific_investment_cost_per_kwh": 0.0,  # currency/kWh
+            "wacc": 0.0,  # -
+            "calendar_lifetime_years": 10,  # years
+            "embedded_emissions_kgco2e_per_kwh": 0.0,  # kgCO2e/kWh of capacity
+            "fixed_om_share_per_year": 0.0,  # share of CAPEX per year
             # inverter economics (investment-related)
             "inverter_specific_investment_cost_per_kw": 0.0,  # currency/kW
-            "inverter_lifetime_years": 15,                    # years
-            "inverter_fixed_om_share_per_year": 0.0,          # share of inverter CAPEX per year
+            "inverter_lifetime_years": 15,  # years
+            "inverter_fixed_om_share_per_year": 0.0,  # share of inverter CAPEX per year
         }
 
     # Step-invariant technical parameters (shared across cohorts)
@@ -854,15 +870,17 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
         endogenous_degradation = _battery_endogenous_degradation_enabled(settings)
         cycle_fade_active = _battery_cycle_fade_active(settings)
         calendar_fade_active = _battery_calendar_fade_active(settings)
-        max_installable_capacity_kwh = 1.0e6 if _battery_requires_lp_soh_capacity_reference(settings) else None
+        max_installable_capacity_kwh = (
+            1.0e6 if _battery_requires_lp_soh_capacity_reference(settings) else None
+        )
         params = {
-            "charge_efficiency": 0.95,                        # full-load one-way charge efficiency
-            "discharge_efficiency": 0.96,                     # full-load one-way discharge efficiency
-            "initial_soc": 0.5,                               # absolute fraction of installed/effective capacity (0..1)
-            "depth_of_discharge": 0.8,                        # fraction (0..1), usable fraction of nominal capacity
-            "inverter_nominal_power_kw": 1.0,                 # kW per inverter unit
-            "max_discharge_c_rate": None,                     # optional upper bound on inverter power / energy
-            "max_charge_c_rate": None,                        # optional upper bound on inverter power / energy
+            "charge_efficiency": 0.95,  # full-load one-way charge efficiency
+            "discharge_efficiency": 0.96,  # full-load one-way discharge efficiency
+            "initial_soc": 0.5,  # absolute fraction of installed/effective capacity (0..1)
+            "depth_of_discharge": 0.8,  # fraction (0..1), usable fraction of nominal capacity
+            "inverter_nominal_power_kw": 1.0,  # kW per inverter unit
+            "max_discharge_c_rate": None,  # optional upper bound on inverter power / energy
+            "max_charge_c_rate": None,  # optional upper bound on inverter power / energy
             "max_installable_capacity_kwh": max_installable_capacity_kwh,  # optional total battery capacity upper bound
             "efficiency_curve_csv": (
                 _safe_battery_efficiency_curve_csv(settings)
@@ -872,7 +890,9 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
         }
         if endogenous_degradation:
             params["initial_soh"] = 1.0
-            params["end_of_life_soh"] = float(getattr(settings, "battery_end_of_life_soh", 0.8) or 0.8)
+            params["end_of_life_soh"] = float(
+                getattr(settings, "battery_end_of_life_soh", 0.8) or 0.8
+            )
         if cycle_fade_active:
             params["cycle_lifetime_to_eol_cycles"] = float(
                 getattr(settings, "battery_cycle_lifetime_to_eol_cycles", 6000.0) or 6000.0
@@ -1065,7 +1085,9 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
     )
 
 
-def _write_battery_efficiency_curve_csv(path: Path, *, settings: TemplateSettings, overwrite: bool = False) -> None:
+def _write_battery_efficiency_curve_csv(
+    path: Path, *, settings: TemplateSettings, overwrite: bool = False
+) -> None:
     """
     Create inputs/battery_efficiency_curve.csv.
 
@@ -1091,7 +1113,9 @@ def _write_battery_efficiency_curve_csv(path: Path, *, settings: TemplateSetting
     write_csv_with_format(df, path, csv_format=_csv_format(settings), index=False)
 
 
-def _write_battery_calendar_fade_curve_csv(path: Path, *, settings: TemplateSettings, overwrite: bool = False) -> None:
+def _write_battery_calendar_fade_curve_csv(
+    path: Path, *, settings: TemplateSettings, overwrite: bool = False
+) -> None:
     """
     Create inputs/battery_calendar_fade_curve.csv.
 
@@ -1134,7 +1158,7 @@ def _write_generator_yaml(path: Path, settings: TemplateSettings, overwrite: boo
     if path.exists() and not overwrite:
         return
 
-    is_dynamic = (settings.formulation == "dynamic")
+    is_dynamic = settings.formulation == "dynamic"
     capexp = bool(getattr(settings, "capacity_expansion", False))
 
     scenarios = _template_scenarios(settings)
@@ -1158,27 +1182,26 @@ def _write_generator_yaml(path: Path, settings: TemplateSettings, overwrite: boo
     def _default_generator_investment_params() -> dict:
         return {
             # sizing (per unit)
-            "nominal_capacity_kw": 1.0,                        # kW per unit
-
+            "nominal_capacity_kw": 1.0,  # kW per unit
             # lifetime / finance (investment-side)
-            "lifetime_years": 10,                              # years
-            "specific_investment_cost_per_kw": 0.0,            # currency/kW
-            "wacc": 0.0,                                       # -
-            "embedded_emissions_kgco2e_per_kw": 0.0,           # kgCO2e/kW (investment-side attribute)
-            "fixed_om_share_per_year": 0.0,                    # share of CAPEX per year
+            "lifetime_years": 10,  # years
+            "specific_investment_cost_per_kw": 0.0,  # currency/kW
+            "wacc": 0.0,  # -
+            "embedded_emissions_kgco2e_per_kw": 0.0,  # kgCO2e/kW (investment-side attribute)
+            "fixed_om_share_per_year": 0.0,  # share of CAPEX per year
         }
 
     # Step-INVARIANT technical params
     def _default_generator_technical_params() -> dict:
         return {
             # core performance assumption at 100% output
-            "nominal_efficiency_full_load": 0.30,              # - at 100% power
+            "nominal_efficiency_full_load": 0.30,  # - at 100% power
             "efficiency_curve_csv": (
                 _safe_generator_efficiency_curve_csv(settings)
                 if generator_efficiency_model == "efficiency_curve"
                 else None
             ),
-            "max_installable_capacity_kw": None,               # optional (kW)
+            "max_installable_capacity_kw": None,  # optional (kW)
             **({"capacity_degradation_rate_per_year": 0.0} if is_dynamic else {}),
         }
 
@@ -1194,19 +1217,21 @@ def _write_generator_yaml(path: Path, settings: TemplateSettings, overwrite: boo
             (If you want constant cost, repeat the same value for all years.)
         """
         base = {
-            "lhv_kwh_per_unit_fuel": 0.0,                        # kWh per unit fuel (e.g., kWh/L or kWh/kg)
-            "direct_emissions_kgco2e_per_unit_fuel": 0.0,        # kgCO2e per unit fuel
+            "lhv_kwh_per_unit_fuel": 0.0,  # kWh per unit fuel (e.g., kWh/L or kWh/kg)
+            "direct_emissions_kgco2e_per_unit_fuel": 0.0,  # kgCO2e per unit fuel
         }
 
         if not is_dynamic:
-            base["fuel_cost_per_unit_fuel"] = 0.0               # currency per unit fuel (constant typical-year)
+            base["fuel_cost_per_unit_fuel"] = 0.0  # currency per unit fuel (constant typical-year)
             base["description"] = (
                 "Typical-year fuel inputs use a single constant fuel cost per unit fuel."
             )
             return base
 
         # dynamic
-        base["by_year_cost_per_unit_fuel"] = [0.0 for _ in years]  # list aligned with year_labels_for_fuel_cost
+        base["by_year_cost_per_unit_fuel"] = [
+            0.0 for _ in years
+        ]  # list aligned with year_labels_for_fuel_cost
         base["description"] = (
             "Multi-year fuel inputs use one fuel cost value per model year label; repeat values for flat trajectories."
         )
@@ -1240,7 +1265,11 @@ def _write_generator_yaml(path: Path, settings: TemplateSettings, overwrite: boo
         fuel_payload = {
             "label": _safe_fuel_label(settings),
             "technical": _default_fuel_technical_params(),
-            "cost": {"by_scenario": {str(s): {"by_year_cost_per_unit_fuel": [0.0 for _ in years]} for s in scenarios}},
+            "cost": {
+                "by_scenario": {
+                    str(s): {"by_year_cost_per_unit_fuel": [0.0 for _ in years]} for s in scenarios
+                }
+            },
         }
     else:
         generator_payload = {
@@ -1352,7 +1381,9 @@ def _write_generator_yaml(path: Path, settings: TemplateSettings, overwrite: boo
     )
 
 
-def _write_generator_efficiency_curve_csv(path: Path, *, settings: TemplateSettings, overwrite: bool = False) -> None:
+def _write_generator_efficiency_curve_csv(
+    path: Path, *, settings: TemplateSettings, overwrite: bool = False
+) -> None:
     """
     Create inputs/generator_efficiency_curve.csv (optional helper template).
 
@@ -1377,7 +1408,10 @@ def _write_generator_efficiency_curve_csv(path: Path, *, settings: TemplateSetti
     _ensure_parent_dir(path)
     write_csv_with_format(df, path, csv_format=_csv_format(settings), index=False)
 
-def _write_grid_inputs(paths: ProjectPaths, settings: TemplateSettings, overwrite: bool = False) -> None:
+
+def _write_grid_inputs(
+    paths: ProjectPaths, settings: TemplateSettings, overwrite: bool = False
+) -> None:
     """
     Write grid-related templates ONLY if on-grid system is enabled.
     Files:
@@ -1389,10 +1423,14 @@ def _write_grid_inputs(paths: ProjectPaths, settings: TemplateSettings, overwrit
         return
 
     _write_grid_yaml(paths.inputs_dir / "grid.yaml", settings, overwrite=overwrite)
-    _write_grid_import_price_csv(paths.inputs_dir / "grid_import_price.csv", settings, overwrite=overwrite)
+    _write_grid_import_price_csv(
+        paths.inputs_dir / "grid_import_price.csv", settings, overwrite=overwrite
+    )
 
     if bool(getattr(settings, "allow_export", False)):
-        _write_grid_export_price_csv(paths.inputs_dir / "grid_export_price.csv", settings, overwrite=overwrite)
+        _write_grid_export_price_csv(
+            paths.inputs_dir / "grid_export_price.csv", settings, overwrite=overwrite
+        )
 
 
 def _write_grid_yaml(path: Path, settings: TemplateSettings, overwrite: bool = False) -> None:
@@ -1426,26 +1464,25 @@ def _write_grid_yaml(path: Path, settings: TemplateSettings, overwrite: bool = F
 
     scenarios = _template_scenarios(settings)
     years = _template_years(settings)  # used for context + dynamic first_year_connection default
-    is_dynamic = (settings.formulation == "dynamic")
+    is_dynamic = settings.formulation == "dynamic"
     allow_export = bool(getattr(settings, "allow_export", False))
 
     def _default_grid_params() -> dict:
         base = {
             "line": {
-                "capacity_kw": 0.0,                 # kW (grid import/export limit)
-                "transmission_efficiency": 1.0,     # - (0..1), scenario dependent
-                "renewable_share": 0.0,             # share (0..1) of imported electricity counted as renewable
+                "capacity_kw": 0.0,  # kW (grid import/export limit)
+                "transmission_efficiency": 1.0,  # - (0..1), scenario dependent
+                "renewable_share": 0.0,  # share (0..1) of imported electricity counted as renewable
                 "emissions_factor_kgco2e_per_kwh": 0.0,  # kgCO2e per delivered kWh imported from grid
             },
             "outages": {
-                "average_outages_per_year": 0.0,         # events/year
+                "average_outages_per_year": 0.0,  # events/year
                 "average_outage_duration_minutes": 0.0,  # minutes/event
-
                 # Weibull parameters for outage duration (OD), in HOURS
                 # Default matches your previous constants: scale_od = 36/60, shape_od = 0.56
-                "outage_scale_od_hours": 36 / 60,        # hours
-                "outage_shape_od": 0.56,                 # -
-                "outage_seed": 0,                        # deterministic seed for generated availability
+                "outage_scale_od_hours": 36 / 60,  # hours
+                "outage_shape_od": 0.56,  # -
+                "outage_seed": 0,  # deterministic seed for generated availability
             },
         }
 
@@ -1497,10 +1534,10 @@ def _write_grid_yaml(path: Path, settings: TemplateSettings, overwrite: bool = F
                 ),
                 "parameters": {
                     "grid_line_capacity_kw": "Maximum import/export capacity of the grid interconnection.",
-                "grid_transmission_efficiency": (
-                    "Efficiency applied to delivered imports/exports in the internal energy balance and "
-                    "scope-2 accounting; line-capacity limits and prices use raw PCC interchange."
-                ),
+                    "grid_transmission_efficiency": (
+                        "Efficiency applied to delivered imports/exports in the internal energy balance and "
+                        "scope-2 accounting; line-capacity limits and prices use raw PCC interchange."
+                    ),
                     "grid_renewable_share": "Share of delivered imported electricity counted as renewable in policy metrics.",
                     "grid_emissions_factor_kgco2e_per_kwh": "Scope 2 emissions factor applied to delivered imported electricity.",
                     "grid_avg_outages_per_year": "Average number of grid outages per year.",
@@ -1511,9 +1548,9 @@ def _write_grid_yaml(path: Path, settings: TemplateSettings, overwrite: bool = F
                     **(
                         {
                             "grid_first_year_connection": (
-                            "First model year in which the grid connection becomes available. "
-                            "Use an exact year label from sets.year when possible; integer calendar years "
-                            "are supported only when the model year labels are themselves integer-like."
+                                "First model year in which the grid connection becomes available. "
+                                "Use an exact year label from sets.year when possible; integer calendar years "
+                                "are supported only when the model year labels are themselves integer-like."
                             )
                         }
                         if is_dynamic
@@ -1548,8 +1585,9 @@ def _write_grid_yaml(path: Path, settings: TemplateSettings, overwrite: bool = F
     )
 
 
-
-def _write_grid_import_price_csv(path: Path, settings: TemplateSettings, overwrite: bool = False) -> None:
+def _write_grid_import_price_csv(
+    path: Path, settings: TemplateSettings, overwrite: bool = False
+) -> None:
     """
     Create inputs/grid_import_price.csv with a 2-row header:
       - level 0: scenario label
@@ -1585,7 +1623,9 @@ def _write_grid_import_price_csv(path: Path, settings: TemplateSettings, overwri
     )
 
 
-def _write_grid_export_price_csv(path: Path, settings: TemplateSettings, overwrite: bool = False) -> None:
+def _write_grid_export_price_csv(
+    path: Path, settings: TemplateSettings, overwrite: bool = False
+) -> None:
     """
     Create inputs/grid_export_price.csv with a 2-row header:
       - level 0: scenario label

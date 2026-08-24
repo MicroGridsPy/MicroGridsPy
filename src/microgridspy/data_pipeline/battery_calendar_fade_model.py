@@ -16,14 +16,14 @@ class InputValidationError(RuntimeError):
     pass
 
 
-def _validate_convex_curve(*, x: np.ndarray, y: np.ndarray, path: Path) -> tuple[np.ndarray, np.ndarray]:
+def _validate_convex_curve(
+    *, x: np.ndarray, y: np.ndarray, path: Path
+) -> tuple[np.ndarray, np.ndarray]:
     dx = np.diff(x)
     if np.any(dx <= MONOTONIC_TOL):
         raise InputValidationError(f"{path.name}: 'soc_pu' must be strictly increasing.")
     if np.any(y < -CONVEXITY_TOL):
-        raise InputValidationError(
-            f"{path.name}: calendar-fade coefficients must be non-negative."
-        )
+        raise InputValidationError(f"{path.name}: calendar-fade coefficients must be non-negative.")
     slopes = np.diff(y) / dx
     if np.any(np.diff(slopes) < -CONVEXITY_TOL):
         raise InputValidationError(
@@ -59,7 +59,11 @@ def load_battery_calendar_fade_curve_dataset(path: Path) -> xr.Dataset:
         coeff_column = "calendar_fade_coefficient_per_year"
     elif "calendar_fade_coefficient_per_step" in df.columns:
         coeff_column = "calendar_fade_coefficient_per_step"
-    required = ["soc_pu", coeff_column] if coeff_column is not None else ["soc_pu", "calendar_fade_coefficient_per_year"]
+    required = (
+        ["soc_pu", coeff_column]
+        if coeff_column is not None
+        else ["soc_pu", "calendar_fade_coefficient_per_year"]
+    )
     missing = [c for c in required if c is not None and c not in df.columns]
     if coeff_column is None or missing:
         raise InputValidationError(

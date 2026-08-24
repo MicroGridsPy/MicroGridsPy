@@ -65,9 +65,7 @@ REPOSITORY_REFERENCES = (
     "`projects/`: example projects and input templates",
 )
 
-USEFUL_LINKS = (
-    ("Official documentation (coming soon)", DOCS_URL),
-)
+USEFUL_LINKS = (("Official documentation (coming soon)", DOCS_URL),)
 
 
 def _asset(name: str) -> str:
@@ -128,7 +126,9 @@ def _render_featured_planning_card() -> None:
         with col_image:
             st.image(_asset("planning_tool_card.png"), width="stretch")
         with col_body:
-            st.markdown('<div class="featured-kicker">Core planning engine</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="featured-kicker">Core planning engine</div>', unsafe_allow_html=True
+            )
             st.markdown("### MicroGridsPy Planning")
             st.write(
                 "Techno-economic optimization of mini-grid systems under deterministic or stochastic assumptions. "
@@ -208,11 +208,17 @@ def _render_resources() -> None:
     st.markdown("**At a glance**")
     info_cols = st.columns(3, gap="medium")
     with info_cols[0]:
-        st.info("Planning modes: Typical-year for compact investment studies, multi-year for dynamic expansion and long-horizon planning.")
+        st.info(
+            "Planning modes: Typical-year for compact investment studies, multi-year for dynamic expansion and long-horizon planning."
+        )
     with info_cols[1]:
-        st.info("Backend: Python + Streamlit frontend, Linopy optimization backend, CSV/YAML/JSON project workflow.")
+        st.info(
+            "Backend: Python + Streamlit frontend, Linopy optimization backend, CSV/YAML/JSON project workflow."
+        )
     with info_cols[2]:
-        st.info("Use together: Resource, demand, planning, network, and dispatch modules can be combined at increasing levels of detail.")
+        st.info(
+            "Use together: Resource, demand, planning, network, and dispatch modules can be combined at increasing levels of detail."
+        )
 
     st.write("")
     st.markdown("**Documentation**")
@@ -223,7 +229,6 @@ def _render_resources() -> None:
 
     st.write("")
     _render_useful_links()
-
 
 
 def _render_footer() -> None:
@@ -246,7 +251,9 @@ def _render_footer() -> None:
     )
 
     st.subheader("License")
-    st.markdown("Open-source research codebase. Refer to the repository materials for the current licensing terms.")
+    st.markdown(
+        "Open-source research codebase. Refer to the repository materials for the current licensing terms."
+    )
 
 
 def render_home_page() -> None:

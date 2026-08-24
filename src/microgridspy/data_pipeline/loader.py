@@ -40,7 +40,11 @@ def _coerce_sets(sets: dict | xr.Dataset) -> xr.Dataset:
 
 
 def _validate_sets_for_mode(sets: xr.Dataset, mode: str) -> None:
-    required = ("period", "scenario", "year", "inv_step", "resource") if mode == "multi_year" else ("period", "scenario")
+    required = (
+        ("period", "scenario", "year", "inv_step", "resource")
+        if mode == "multi_year"
+        else ("period", "scenario")
+    )
     validate_required_coords(
         sets,
         required=required,

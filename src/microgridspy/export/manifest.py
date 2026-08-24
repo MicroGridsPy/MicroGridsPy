@@ -43,7 +43,7 @@ def _safe_list(x: Any, default: list[Any]) -> list[Any]:
 def _normalize_named_list(values: list[Any], *, n: int, prefix: str) -> list[str]:
     out = [str(v) for v in values[:n]]
     if len(out) < n:
-        out += [f"{prefix}_{i+1}" for i in range(len(out), n)]
+        out += [f"{prefix}_{i + 1}" for i in range(len(out), n)]
     return out
 
 
@@ -55,7 +55,7 @@ def _parse_years(formulation: str, start_year_label: Any, horizon_years: Any) ->
         y0 = int(str(start_year_label).strip())
         return [str(y0 + i) for i in range(n)]
     except Exception:
-        return [f"year_{i+1}" for i in range(n)]
+        return [f"year_{i + 1}" for i in range(n)]
 
 
 def _parse_steps(formulation: str, capexp: bool, investment_steps_years: Any) -> list[str]:
@@ -66,7 +66,7 @@ def _parse_steps(formulation: str, capexp: bool, investment_steps_years: Any) ->
     years = investment_steps_years if isinstance(investment_steps_years, list) else []
     if len(years) == 0:
         return ["step_1"]
-    return [f"step_{i+1}" for i in range(len(years))]
+    return [f"step_{i + 1}" for i in range(len(years))]
 
 
 def read_manifest(project_name: str) -> ManifestBundle:
@@ -86,7 +86,11 @@ def read_manifest(project_name: str) -> ManifestBundle:
         scenarios = ["scenario_1"]
         weights = [1.0]
 
-    years = _parse_years(formulation, payload.get("start_year_label", "typical_year"), payload.get("time_horizon_years", 1))
+    years = _parse_years(
+        formulation,
+        payload.get("start_year_label", "typical_year"),
+        payload.get("time_horizon_years", 1),
+    )
     capexp = bool(payload.get("capacity_expansion", False))
     inv_steps = payload.get("investment_steps_years", None)
     inv_steps_list = inv_steps if isinstance(inv_steps, list) else None
@@ -101,13 +105,17 @@ def read_manifest(project_name: str) -> ManifestBundle:
     )
     conversion_technologies = _safe_list(
         renewable_labels.get("conversion_technologies"),
-        _safe_list(syscfg.get("conversion_technologies"), [f"Technology_{i+1}" for i in range(n_sources)]),
+        _safe_list(
+            syscfg.get("conversion_technologies"), [f"Technology_{i + 1}" for i in range(n_sources)]
+        ),
     )
     resources = _safe_list(
         renewable_labels.get("resources"),
-        _safe_list(syscfg.get("resources"), [f"Resource_{i+1}" for i in range(n_sources)]),
+        _safe_list(syscfg.get("resources"), [f"Resource_{i + 1}" for i in range(n_sources)]),
     )
-    conversion_technologies = _normalize_named_list(conversion_technologies, n=n_sources, prefix="Technology")
+    conversion_technologies = _normalize_named_list(
+        conversion_technologies, n=n_sources, prefix="Technology"
+    )
     resources = _normalize_named_list(resources, n=n_sources, prefix="Resource")
 
     sets = CoreSets(
@@ -131,4 +139,3 @@ def read_manifest(project_name: str) -> ManifestBundle:
         fuel_label=component_labels.get("fuel", "Fuel"),
     )
     return ManifestBundle(payload=payload, sets=sets)
-
