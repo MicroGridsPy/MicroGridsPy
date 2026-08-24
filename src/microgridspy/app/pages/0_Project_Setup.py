@@ -23,6 +23,7 @@ from microgridspy.io.csv_format import (
     normalize_csv_delimiter,
 )
 from microgridspy.io.jsonio import write_json
+from microgridspy.io.project_setup import build_formulation_payload
 from microgridspy.io.templates import TemplateSettings, write_templates
 
 # =============================================================================
@@ -268,53 +269,37 @@ def write_formulation_file(*, project_name: str, project_description: str, cfg: 
     degradation_supported = cfg.formulation == "dynamic"
     battery_cycle_fade_active = _battery_cycle_fade_active(cfg) if degradation_supported else False
     battery_calendar_fade_active = _battery_calendar_fade_active(cfg) if degradation_supported else False
-    payload = {
-        "project_name": project_name,
-        "description": project_description,
-        "module": "generation_planning",
-        "created_at": datetime.now().isoformat() + "Z",
-        "core_formulation": cfg.formulation,
-        "system_type": cfg.system_type,
-        "on_grid": cfg.on_grid,
-        "grid_allow_export": cfg.allow_export,
-        "unit_commitment": cfg.discrete_unit_sizing,
-        "start_year_label": cfg.start_year_label,
-        "time_horizon_years": cfg.horizon_years,
-        "social_discount_rate": cfg.social_discount_rate,
-        "capacity_expansion": cfg.capacity_expansion,
-        "investment_steps_years": cfg.investment_steps,
-        "multi_scenario": {
-            "enabled": cfg.multi_scenario,
-            "n_scenarios": cfg.n_scenarios,
-            "scenario_labels": cfg.scenario_labels,
-            "scenario_weights": cfg.scenario_weights,
-        },
-        "optimization_constraints": {
-            "enforcement": cfg.constraints_enforcement,
-            "min_renewable_penetration": cfg.min_res_penetration,
-            "max_lost_load_fraction": cfg.max_lost_load_fraction,
-            "lost_load_cost_per_kwh": cfg.lost_load_cost_per_kwh,
-            "land_availability_m2": cfg.land_availability_m2,
-            "emission_cost_per_kgco2e": float(cfg.emission_cost_per_kgco2e or 0.0),
-        },
-        "system_configuration": {
-            "n_sources": cfg.n_res_sources,
-        },
-        "battery_model": {
-            "loss_model": str(cfg.battery_loss_model or "constant_efficiency"),
-            "degradation_model": {
-                "cycle_fade_enabled": battery_cycle_fade_active,
-                "calendar_fade_enabled": battery_calendar_fade_active,
-            },
-        },
-        "generator_model": {
-            "efficiency_model": str(cfg.generator_efficiency_model or "constant_efficiency"),
-        },
-        "csv_format": {
-            "delimiter": normalize_csv_delimiter(cfg.csv_delimiter),
-            "decimal": normalize_csv_decimal(cfg.csv_decimal),
-        },
-    }
+    payload = build_formulation_payload(
+        project_name=project_name,
+        description=project_description,
+        formulation=cfg.formulation,
+        system_type=cfg.system_type,
+        on_grid=cfg.on_grid,
+        allow_export=cfg.allow_export,
+        unit_commitment=cfg.discrete_unit_sizing,
+        start_year_label=cfg.start_year_label,
+        time_horizon_years=cfg.horizon_years,
+        social_discount_rate=cfg.social_discount_rate,
+        capacity_expansion=cfg.capacity_expansion,
+        investment_steps_years=cfg.investment_steps,
+        multi_scenario_enabled=cfg.multi_scenario,
+        n_scenarios=cfg.n_scenarios,
+        scenario_labels=cfg.scenario_labels,
+        scenario_weights=cfg.scenario_weights,
+        constraints_enforcement=cfg.constraints_enforcement,
+        min_renewable_penetration=cfg.min_res_penetration,
+        max_lost_load_fraction=cfg.max_lost_load_fraction,
+        lost_load_cost_per_kwh=cfg.lost_load_cost_per_kwh,
+        land_availability_m2=cfg.land_availability_m2,
+        emission_cost_per_kgco2e=cfg.emission_cost_per_kgco2e,
+        n_sources=cfg.n_res_sources,
+        battery_loss_model=cfg.battery_loss_model,
+        battery_cycle_fade_enabled=battery_cycle_fade_active,
+        battery_calendar_fade_enabled=battery_calendar_fade_active,
+        generator_efficiency_model=cfg.generator_efficiency_model,
+        csv_delimiter=normalize_csv_delimiter(cfg.csv_delimiter),
+        csv_decimal=normalize_csv_decimal(cfg.csv_decimal),
+    )
 
     paths = project_paths(project_name)
     try:

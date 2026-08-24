@@ -37,8 +37,12 @@ from microgridspy.api import solve, load_results, export_results
 from microgridspy.export.typical_year_results import TypicalYearResults
 from microgridspy.export.multi_year_results import MultiYearResults
 
+# --- Project scaffolding ----------------------------------------------------
+from microgridspy.io.project_setup import create_project, validate_project
+from microgridspy.io.templates import TemplateSettings
+
 # --- Workspace helpers ------------------------------------------------------
-from microgridspy.io.utils import set_workspace, list_projects, project_paths
+from microgridspy.io.utils import set_workspace, list_projects, project_paths, project_exists
 
 __all__ = [
     "SteadyStateModel",
@@ -46,11 +50,15 @@ __all__ = [
     "solve",
     "load_results",
     "export_results",
+    "create_project",
+    "validate_project",
+    "TemplateSettings",
     "TypicalYearResults",
     "MultiYearResults",
     "set_workspace",
     "list_projects",
     "project_paths",
+    "project_exists",
     "InputValidationError",
     "__version__",
 ]
