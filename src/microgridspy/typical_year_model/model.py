@@ -261,7 +261,48 @@ class SteadyStateModel:
         except Exception:
             pass
 
+        # Remember the last solve context so results() can label its output.
+        self._last_solver = solver
+        self._last_status = out.attrs.get("status")
+
         return out
+
+    # ---------------------------------------------------------------------
+    # Structured results
+    # ---------------------------------------------------------------------
+    def results(self) -> "TypicalYearResults":
+        """Assemble the full typical-year results object from the solved model.
+
+        Call this after :meth:`solve_single_objective`. Returns a
+        ``TypicalYearResults`` holding the analysis-ready pandas tables
+        (dispatch, energy balance, design summary, KPIs, cash flows, ...) -
+        the same content the GUI Results page renders, with no manual plumbing.
+
+        Returns:
+            TypicalYearResults: the structured results container.
+
+        Raises:
+            RuntimeError: if the model has not been solved yet.
+        """
+        from microgridspy.export.typical_year_results import build_typical_year_results
+
+        solution = getattr(self.model, "solution", None) if self.model is not None else None
+        if not isinstance(solution, xr.Dataset) or len(solution.data_vars) == 0:
+            raise RuntimeError("results(): solve the model first (no solution available).")
+        objective_value = None
+        try:
+            objective_value = float(self.model.objective.value)
+        except Exception:
+            pass
+        return build_typical_year_results(
+            project_name=self.project_name,
+            data=self.data,
+            vars=self.vars,
+            solution=solution,
+            objective_value=objective_value,
+            status=getattr(self, "_last_status", None),
+            solver=getattr(self, "_last_solver", None),
+        )
 
     # ---------------------------------------------------------------------
     # Convenience for UI
