@@ -9,7 +9,7 @@ import pytest
 import xarray as xr
 import linopy as lp
 
-from core.export.multi_year_results import (
+from microgridspy.export.multi_year_results import (
     MultiYearResults,
     build_battery_inverter_design_by_step_table_multi_year,
     build_design_by_step_table_multi_year,
@@ -22,12 +22,12 @@ from core.export.multi_year_results import (
     build_yearly_kpis_table_multi_year,
     export_multi_year_results,
 )
-from core.io.paths import ProjectPaths
-from core.export.results_page_helpers import load_multi_year_results_from_files
-from core.multi_year_model.constraints import initialize_constraints
-from core.multi_year_model.data import _load_battery_yaml, _load_renewables_yaml
-from core.multi_year_model.objective import initialize_objective
-from core.multi_year_model.variables import initialize_vars
+from microgridspy.io.paths import ProjectPaths
+from microgridspy.export.results_page_helpers import load_multi_year_results_from_files
+from microgridspy.multi_year_model.constraints import initialize_constraints
+from microgridspy.multi_year_model.data import _load_battery_yaml, _load_renewables_yaml
+from microgridspy.multi_year_model.objective import initialize_objective
+from microgridspy.multi_year_model.variables import initialize_vars
 
 
 def _solve_with_highs_or_skip(model: lp.Model) -> xr.Dataset:
@@ -387,15 +387,15 @@ def test_multi_year_file_loader_reads_dedicated_inverter_csvs(tmp_path: Path, mo
     )
 
     monkeypatch.setattr(
-        "core.export.results_page_helpers.project_paths",
+        "microgridspy.export.results_page_helpers.project_paths",
         lambda project_name: ProjectPaths(root=project_root),
     )
     monkeypatch.setattr(
-        "core.export.results_page_helpers.initialize_multi_year_sets",
+        "microgridspy.export.results_page_helpers.initialize_multi_year_sets",
         lambda project_name: sets,
     )
     monkeypatch.setattr(
-        "core.export.results_page_helpers.load_project_dataset",
+        "microgridspy.export.results_page_helpers.load_project_dataset",
         lambda project_name, sets, mode: data,
     )
 

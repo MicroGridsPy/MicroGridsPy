@@ -9,21 +9,21 @@ from typing import Dict, List, Tuple, Literal, Optional
 import pandas as pd
 import streamlit as st
 
-from core.data_pipeline.utils import normalize_weights
-from core.io.utils import (
+from microgridspy.data_pipeline.utils import normalize_weights
+from microgridspy.io.utils import (
     ensure_project_structure,
     project_exists,
     project_paths,
     sanitize_project_name,
 )
-from core.io.csv_format import (
+from microgridspy.io.csv_format import (
     CSV_DECIMAL_OPTIONS,
     CSV_DELIMITER_OPTIONS,
     normalize_csv_decimal,
     normalize_csv_delimiter,
 )
-from core.io.jsonio import write_json
-from core.io.templates import TemplateSettings, write_templates
+from microgridspy.io.jsonio import write_json
+from microgridspy.io.templates import TemplateSettings, write_templates
 
 # =============================================================================
 # Session keys and UI constants

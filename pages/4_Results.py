@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 import xarray as xr
 import streamlit as st
 
-from core.export.results_bundle import ResultsBundle
-from core.export.results_page_helpers import (
+from microgridspy.export.results_bundle import ResultsBundle
+from microgridspy.export.results_page_helpers import (
     build_energy_balance_dataframe,
     export_results_from_bundle,
     get_multi_year_results_from_session,
@@ -19,15 +19,15 @@ from core.export.results_page_helpers import (
     load_multi_year_results_from_files,
     load_typical_year_results_from_files,
 )
-from core.export.typical_year_reporting import (
+from microgridspy.export.typical_year_reporting import (
     build_reporting_tables,
     select_dispatch_view as select_reporting_dispatch_view,
     select_kpi_row as select_reporting_kpi_row,
 )
-from core.export.typical_year_results import build_design_summary_table, build_dispatch_timeseries_table
-from core.visualization.page_helpers import get_dataset_settings, get_nested_flag, safe_float as _safe_float
-from core.visualization.multi_year_results_page import render_multi_year_results, render_multi_year_results_from_files
-from core.visualization.typical_year_results_page import render_typical_year_results
+from microgridspy.export.typical_year_results import build_design_summary_table, build_dispatch_timeseries_table
+from microgridspy.visualization.page_helpers import get_dataset_settings, get_nested_flag, safe_float as _safe_float
+from microgridspy.visualization.multi_year_results_page import render_multi_year_results, render_multi_year_results_from_files
+from microgridspy.visualization.typical_year_results_page import render_typical_year_results
 
 
 # Keep aligned with your Optimization page
@@ -688,7 +688,7 @@ def render_generation_planning_results_page() -> None:
     # Cost summary & Cash-flow (objective-consistent)
     # -------------------------------------------------------------------------
     st.subheader("Cost summary & Cash-flow")
-
+
     # -----------------------------
     # 11) Headline metrics
     # -----------------------------

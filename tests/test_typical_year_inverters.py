@@ -8,18 +8,18 @@ import pytest
 import xarray as xr
 import linopy as lp
 
-from core.data_pipeline.battery_loss_model import CONVEX_LOSS_EPIGRAPH
-from core.data_pipeline.typical_year_parsing import _load_battery_yaml, _load_renewables_yaml
-from core.export.typical_year_reporting import build_reporting_tables
-from core.export.typical_year_results import (
+from microgridspy.data_pipeline.battery_loss_model import CONVEX_LOSS_EPIGRAPH
+from microgridspy.data_pipeline.typical_year_parsing import _load_battery_yaml, _load_renewables_yaml
+from microgridspy.export.typical_year_reporting import build_reporting_tables
+from microgridspy.export.typical_year_results import (
     build_design_summary_table,
     build_dispatch_timeseries_table,
     build_typical_year_results,
     export_typical_year_results_package,
 )
-from core.typical_year_model.constraints import initialize_constraints
-from core.typical_year_model.objective import _crf, initialize_objective
-from core.typical_year_model.variables import initialize_vars
+from microgridspy.typical_year_model.constraints import initialize_constraints
+from microgridspy.typical_year_model.objective import _crf, initialize_objective
+from microgridspy.typical_year_model.variables import initialize_vars
 
 
 def _scalar_value(obj) -> float:

@@ -9,17 +9,17 @@ import pandas as pd
 import streamlit as st
 import xarray as xr
 
-from core.data_pipeline.loader import load_project_dataset
-from core.data_pipeline.typical_year_loader import regenerate_grid_availability_typical_year
-from core.io.csv_format import read_csv_with_format
-from core.export.yaml_reader import read_yaml
-from core.io.utils import project_paths
-from core.io.vintage_labels import load_multi_year_vintage_labels, vintage_display_for_step
-from core.multi_year_model.data import regenerate_grid_availability_dynamic
-from core.multi_year_model.sets import initialize_sets as initialize_multi_year_sets
-from core.typical_year_model.sets import initialize_sets as initialize_typical_year_sets
-from core.visualization.page_helpers import read_json_file, resolve_active_project_from_session
-from core.visualization.input_plots import (
+from microgridspy.data_pipeline.loader import load_project_dataset
+from microgridspy.data_pipeline.typical_year_loader import regenerate_grid_availability_typical_year
+from microgridspy.io.csv_format import read_csv_with_format
+from microgridspy.export.yaml_reader import read_yaml
+from microgridspy.io.utils import project_paths
+from microgridspy.io.vintage_labels import load_multi_year_vintage_labels, vintage_display_for_step
+from microgridspy.multi_year_model.data import regenerate_grid_availability_dynamic
+from microgridspy.multi_year_model.sets import initialize_sets as initialize_multi_year_sets
+from microgridspy.typical_year_model.sets import initialize_sets as initialize_typical_year_sets
+from microgridspy.visualization.page_helpers import read_json_file, resolve_active_project_from_session
+from microgridspy.visualization.input_plots import (
     build_timeseries_figures,
     compute_series_stats,
     list_timeseries_options,

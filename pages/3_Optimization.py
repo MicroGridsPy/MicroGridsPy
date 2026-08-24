@@ -11,14 +11,14 @@ import pandas as pd
 import streamlit as st
 import xarray as xr
 
-from core.typical_year_model.model import SteadyStateModel
-from core.multi_year_model.model import MultiYearModel
-from core.export.results_bundle import build_results_bundle
-from core.export.multi_year_results import build_multi_year_results
-from core.export.typical_year_results import build_typical_year_results
-from core.io.jsonio import write_json
-from core.io.utils import project_paths
-from core.visualization.page_helpers import get_dataset_settings, read_json_file
+from microgridspy.typical_year_model.model import SteadyStateModel
+from microgridspy.multi_year_model.model import MultiYearModel
+from microgridspy.export.results_bundle import build_results_bundle
+from microgridspy.export.multi_year_results import build_multi_year_results
+from microgridspy.export.typical_year_results import build_typical_year_results
+from microgridspy.io.jsonio import write_json
+from microgridspy.io.utils import project_paths
+from microgridspy.visualization.page_helpers import get_dataset_settings, read_json_file
 
 class InputValidationError(RuntimeError):
     pass
