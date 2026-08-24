@@ -1,8 +1,10 @@
-# MicroGridsPy Planning - Streamlit Optimization Tool
+# MicroGridsPy - Mini-Grid Planning Optimization
 
-MicroGridsPy Planning is an open-source optimization tool for the techno-economic planning of mini-grid energy systems in remote and underserved areas. The application is built in Python with Streamlit for the user interface and Linopy for mathematical optimization.
+MicroGridsPy is an open-source Python package for the techno-economic planning of mini-grid energy systems in remote and underserved areas. It is built on Linopy for mathematical optimization and ships with an optional Streamlit graphical interface.
 
-The tool is designed as a guided planning workspace: users define a project, generate structured input templates, audit the data, run the optimization, and explore results within the same application.
+You can use it two ways:
+- **As a Python library** — call the optimization from your own scripts and notebooks (`import microgridspy`).
+- **As a guided app** — define a project, generate input templates, audit data, solve, and explore results in a Streamlit workspace (`microgridspy-gui`).
 
 > [!NOTE]
 > **Work in progress.** Recent development work has strengthened inverter modeling and results reliability across both planning modes, but this area is still being actively refined.
@@ -33,77 +35,58 @@ The app supports both simple and advanced studies, including:
 
 Each project is stored in its own folder with CSV, YAML, and JSON files, so studies remain reproducible, inspectable, and easy to revisit.
 
-![MicroGridsPy Planning interface](assets/intro_interface.png)
+![MicroGridsPy Planning interface](src/microgridspy/app/assets/intro_interface.png)
 
 ---
 
 ## Installation
 
-The recommended setup uses Anaconda or Miniconda.
-
-### 1. Create and activate an environment
+MicroGridsPy is published on PyPI. Install it into a Python 3.10+ environment:
 
 ```bash
-conda create -n mgpy_planning python=3.11
-conda activate mgpy_planning
+pip install "microgridspy[gui,highs]"
 ```
 
-### 2. Install the main dependencies
+Extras let you install only what you need:
 
-The preferred option is to use one of the dependency files already provided in the project root.
+| Extra | Adds | Use it for |
+| --- | --- | --- |
+| _(none)_ | the core library | scripting / notebooks, no GUI |
+| `gui` | Streamlit interface | the `microgridspy-gui` app |
+| `highs` | HiGHS solver | open-source solving |
+| `gurobi` | `gurobipy` | commercial solver (license required) |
 
-Using the Conda environment file:
+For example, `pip install microgridspy` gives a lean library with no GUI, while `pip install "microgridspy[gui,highs]"` installs everything needed to run the app with the open-source solver.
+
+### Launch the app
 
 ```bash
-conda env create -f environment.yml
-conda activate mgpy_planning
+microgridspy-gui
 ```
 
-If you want a lighter or more portable Conda resolution, you can also use:
+The app looks for a `projects/` folder in the current directory (or in the folder set by the `MICROGRIDSPY_WORKSPACE` environment variable).
 
-```bash
-conda env create -f environment_nobuilds.yml
-conda activate mgpy_planning
+---
+
+## Using MicroGridsPy as a Python library
+
+The package exposes a small, stable API:
+
+```python
+import microgridspy as mgp
+
+# create a new project and scaffold its input templates
+mgp.create_project("my_site", formulation="steady_state", resources=["solar", "wind"])
+# ...fill in projects/my_site/inputs (load demand, resource availability, *.yaml)...
+
+mgp.validate_project("my_site")               # pre-flight input check
+model = mgp.solve("my_site", solver="highs")  # build + solve
+results = model.results()                     # analysis-ready pandas tables
+print(results.kpis)
+mgp.export_results(results)                   # write CSV/Excel to the project folder
 ```
 
-If you prefer installing from `requirements.txt` inside an existing environment:
-
-```bash
-pip install -r requirements.txt
-```
-
-If needed, the main dependencies can also be installed manually:
-
-```bash
-conda install -c conda-forge streamlit pandas numpy xarray matplotlib pyyaml
-pip install linopy
-```
-
-### 3. Install a solver
-
-At least one solver is required.
-
-For HiGHS:
-
-```bash
-conda install -c conda-forge highspy
-```
-
-For Gurobi, install the Python package and make sure a valid license is available:
-
-```bash
-pip install gurobipy
-```
-
-### 4. Launch the app
-
-From the repository root:
-
-```bash
-streamlit run Home.py
-```
-
-If the app was already open while you installed new dependencies, restart Streamlit so the environment is reloaded.
+Key entry points: `solve`, `create_project`, `validate_project`, `load_results`, `export_results`, `list_projects`, `set_workspace`, and the model classes `SteadyStateModel` / `MultiYearModel`. See the `examples/` folder for a runnable script.
 
 ---
 
@@ -283,7 +266,7 @@ Supported optimization solvers:
 - `HiGHS`: open-source and recommended as the default option
 - `Gurobi`: commercial solver, useful for harder MILP cases or larger studies
 
-If you select HiGHS in the app, make sure the `highspy` package is installed in the active environment.
+If you select HiGHS in the app, make sure the `highspy` package is installed (`pip install "microgridspy[highs]"`).
 
 ---
 
