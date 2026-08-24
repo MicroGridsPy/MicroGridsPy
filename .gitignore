@@ -1,0 +1,37 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Build / packaging artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Test / lint caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Docs build output
+docs/_build/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Editors / IDE
+.history/
+.vscode/
+.idea/
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# User run outputs (keep example inputs, ignore generated results/logs)
+projects/**/results/
+projects/**/logs/
