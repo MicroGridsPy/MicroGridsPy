@@ -6,6 +6,27 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-24
+
+### Added
+- Project management: `delete_project`, `copy_project`, `rename_project`.
+- `load_inputs()` — assemble a project's input dataset without solving.
+- `list_input_timeseries()` and `plot_input_timeseries()` — input time-series
+  plots returned as matplotlib figures.
+- `to_excel()` method on `TypicalYearResults` / `MultiYearResults`.
+- `microgridspy` command-line interface (`list` / `create` / `validate` / `solve`).
+
+### Changed
+- Removed outdated files (broken `requirements.txt`, `environment_nobuilds.yml`,
+  documentation PDFs); README rewritten for `pip install` and the Python API.
+- Home page: the PDF previews were replaced with a documentation-link placeholder.
+- The `formulation.json` builder is shared between the GUI and the library.
+- Whole codebase formatted and linted with ruff.
+
+### Fixed
+- `results_summary()` now reads the objective from `model.objective.value`, so the
+  headline objective value is populated instead of `None`.
+
 ## [0.1.0] - 2026-08-24
 
 First pip-installable release.
@@ -37,5 +58,6 @@ First pip-installable release.
   result gate grepped the solver log for a Gurobi-specific marker. Detection now
   uses the in-memory linopy solution, so HiGHS and Gurobi both work.
 
-[Unreleased]: https://github.com/MicroGridsPy/MicroGridsPy/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/MicroGridsPy/MicroGridsPy/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/MicroGridsPy/MicroGridsPy/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/MicroGridsPy/MicroGridsPy/releases/tag/v0.1.0
