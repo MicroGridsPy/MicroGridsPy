@@ -86,6 +86,42 @@ def ensure_project_structure(project_name: str, base_dir: Path | None = None) ->
     return paths
 
 
+def set_workspace(path: str | Path) -> Path:
+    """Set the workspace directory that contains the ``projects/`` folder.
+
+    The choice is stored in the ``MICROGRIDSPY_WORKSPACE`` environment variable,
+    so it applies to every subsequent path resolution in this process. This is
+    the explicit alternative to relying on the current working directory.
+
+    Args:
+        path: the workspace directory (its ``projects/`` sub-folder holds the
+            individual projects). ``~`` is expanded and the path is resolved.
+
+    Returns:
+        Path: the resolved workspace directory.
+    """
+    resolved = Path(path).expanduser().resolve()
+    os.environ["MICROGRIDSPY_WORKSPACE"] = str(resolved)
+    return resolved
+
+
+def list_projects(base_dir: Path | None = None) -> list[str]:
+    """List the project names available in the current workspace.
+
+    Args:
+        base_dir: optional explicit workspace; defaults to the resolution used
+            by :func:`get_projects_root` (``MICROGRIDSPY_WORKSPACE`` or cwd).
+
+    Returns:
+        list[str]: sorted names of the sub-directories under ``projects/``,
+        or an empty list if that root does not exist yet.
+    """
+    root = get_projects_root(base_dir)
+    if not root.exists():
+        return []
+    return sorted(p.name for p in root.iterdir() if p.is_dir())
+
+
 def simulate_grid_availability_typical_year(
     avg_outages_per_year: float,
     avg_outage_duration_min: float,
