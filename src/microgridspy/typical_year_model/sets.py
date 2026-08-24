@@ -1,20 +1,21 @@
 # generation_planning/modeling/sets.py
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Dict
 import json
+from pathlib import Path
+from typing import Any
+
 import xarray as xr
 
-from microgridspy.io.utils import project_paths  
 from microgridspy.io.input_labels import renewable_labels_from_yaml
+from microgridspy.io.utils import project_paths
 
 
 class InputValidationError(RuntimeError):
     pass
 
 
-def _read_json(path: Path) -> Dict[str, Any]:
+def _read_json(path: Path) -> dict[str, Any]:
     if not path.exists():
         raise InputValidationError(f"Missing required file: {path}")
     try:

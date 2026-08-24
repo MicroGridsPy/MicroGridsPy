@@ -16,9 +16,8 @@ from __future__ import annotations
 
 import json
 import shutil
+from collections.abc import Sequence
 from datetime import datetime
-from pathlib import Path
-from typing import Any, Mapping, Optional, Sequence
 
 from microgridspy.io.jsonio import write_json
 from microgridspy.io.paths import ProjectPaths
@@ -50,11 +49,11 @@ def build_formulation_payload(
     on_grid: bool = False,
     allow_export: bool = False,
     unit_commitment: bool = False,
-    start_year_label: Optional[str] = "typical_year",
-    time_horizon_years: Optional[int] = None,
-    social_discount_rate: Optional[float] = None,
+    start_year_label: str | None = "typical_year",
+    time_horizon_years: int | None = None,
+    social_discount_rate: float | None = None,
     capacity_expansion: bool = False,
-    investment_steps_years: Optional[Sequence[int]] = None,
+    investment_steps_years: Sequence[int] | None = None,
     multi_scenario_enabled: bool = False,
     n_scenarios: int = 1,
     scenario_labels: Sequence[str] = ("scenario_1",),
@@ -63,8 +62,8 @@ def build_formulation_payload(
     min_renewable_penetration: float = 0.0,
     max_lost_load_fraction: float = 0.0,
     lost_load_cost_per_kwh: float = 0.0,
-    land_availability_m2: Optional[float] = None,
-    emission_cost_per_kgco2e: Optional[float] = 0.0,
+    land_availability_m2: float | None = None,
+    emission_cost_per_kgco2e: float | None = 0.0,
     n_sources: int = 1,
     battery_loss_model: str = "constant_efficiency",
     battery_cycle_fade_enabled: bool = False,
@@ -129,7 +128,7 @@ def build_formulation_payload(
     }
 
 
-def _normalize_scenarios(scenarios: "int | Sequence[str]") -> tuple[bool, int, list[str], list[float]]:
+def _normalize_scenarios(scenarios: int | Sequence[str]) -> tuple[bool, int, list[str], list[float]]:
     """Turn a scenario count or label list into (enabled, n, labels, weights)."""
     if isinstance(scenarios, int):
         if scenarios <= 1:
@@ -150,18 +149,18 @@ def create_project(
     system_type: str = "off_grid",
     allow_export: bool = False,
     resources: Sequence[str] = ("Resource_1",),
-    conversions: Optional[Sequence[str]] = None,
-    scenarios: "int | Sequence[str]" = 1,
-    horizon_years: Optional[int] = None,
+    conversions: Sequence[str] | None = None,
+    scenarios: int | Sequence[str] = 1,
+    horizon_years: int | None = None,
     capacity_expansion: bool = False,
-    investment_steps_years: Optional[Sequence[int]] = None,
-    start_year_label: Optional[str] = None,
+    investment_steps_years: Sequence[int] | None = None,
+    start_year_label: str | None = None,
     battery_label: str = "Battery",
     generator_label: str = "Generator",
     fuel_label: str = "Fuel",
     csv_delimiter: str = ",",
     csv_decimal: str = ".",
-    settings: Optional[TemplateSettings] = None,
+    settings: TemplateSettings | None = None,
     overwrite: bool = False,
 ) -> ProjectPaths:
     """Create a project folder, its ``formulation.json`` and input templates.

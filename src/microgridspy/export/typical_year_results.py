@@ -2,22 +2,23 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
+import linopy as lp
 import numpy as np
 import pandas as pd
 import xarray as xr
-import linopy as lp
 
 from microgridspy.export.common import (
-    InputValidationError,
     ensure_results_dir,
     get_var_solution,
     require_data_array,
     safe_float,
     write_csv_outputs,
 )
-from microgridspy.export.typical_year_reporting import build_energy_balance_table as build_reporting_energy_balance_table
+from microgridspy.export.typical_year_reporting import (
+    build_energy_balance_table as build_reporting_energy_balance_table,
+)
 from microgridspy.export.typical_year_reporting import build_reporting_tables
 from microgridspy.typical_year_model.params import get_params
 
@@ -26,7 +27,7 @@ from microgridspy.typical_year_model.params import get_params
 class TypicalYearResults:
     project_name: str
     data: xr.Dataset
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
     dispatch: pd.DataFrame
     energy_balance: pd.DataFrame
     design_summary: pd.DataFrame
@@ -63,8 +64,8 @@ class TypicalYearResults:
 def build_dispatch_timeseries_table(
     *,
     data: xr.Dataset,
-    vars: Dict[str, Any],
-    solution: Optional[xr.Dataset],
+    vars: dict[str, Any],
+    solution: xr.Dataset | None,
 ) -> pd.DataFrame:
     p = get_params(data)
     load = p.load_demand
@@ -134,8 +135,8 @@ def build_energy_balance_table(*, data: xr.Dataset, dispatch_df: pd.DataFrame) -
 def build_design_summary_table(
     *,
     data: xr.Dataset,
-    vars: Dict[str, Any],
-    solution: Optional[xr.Dataset],
+    vars: dict[str, Any],
+    solution: xr.Dataset | None,
 ) -> pd.DataFrame:
     p = get_params(data)
     res_units = require_data_array("res_units", get_var_solution(vars_dict=vars, solution=solution, name="res_units", prefer_solution_dataset=False))
@@ -157,7 +158,7 @@ def build_design_summary_table(
     bat_inv_power = bat_inv_units * p.battery_inverter_nominal_power_kw
     gen_cap = gen_units * p.generator_nominal_capacity_kw
 
-    row: Dict[str, Any] = {
+    row: dict[str, Any] = {
         "battery_units": safe_float(bat_units),
         "battery_inverter_units": safe_float(bat_inv_units),
         "battery_installed_kwh": safe_float(bat_cap),
@@ -180,7 +181,7 @@ def build_structured_design_tables(
     *,
     data: xr.Dataset,
     design_summary_df: pd.DataFrame,
-) -> Dict[str, pd.DataFrame]:
+) -> dict[str, pd.DataFrame]:
     row = design_summary_df.iloc[0] if not design_summary_df.empty else pd.Series(dtype=float)
     resources = [str(r) for r in data.coords["resource"].values.tolist()] if "resource" in data.coords else []
 
@@ -318,11 +319,11 @@ def build_typical_year_results(
     *,
     project_name: str,
     data: xr.Dataset,
-    vars: Dict[str, Any],
-    solution: Optional[xr.Dataset],
-    objective_value: Optional[float],
-    status: Optional[str] = None,
-    solver: Optional[str] = None,
+    vars: dict[str, Any],
+    solution: xr.Dataset | None,
+    objective_value: float | None,
+    status: str | None = None,
+    solver: str | None = None,
     results_dir: Path | None = None,
     source: str = "session",
 ) -> TypicalYearResults:
@@ -384,14 +385,14 @@ def build_typical_year_results_from_tables(
     energy_balance_df: pd.DataFrame,
     design_summary_df: pd.DataFrame,
     kpis_df: pd.DataFrame,
-    upfront_df: Optional[pd.DataFrame] = None,
-    expected_cost_components_df: Optional[pd.DataFrame] = None,
-    expected_fixed_om_df: Optional[pd.DataFrame] = None,
-    annuities_df: Optional[pd.DataFrame] = None,
-    embodied_df: Optional[pd.DataFrame] = None,
-    scenario_variable_costs_df: Optional[pd.DataFrame] = None,
-    scenario_emissions_df: Optional[pd.DataFrame] = None,
-    scenario_total_operating_costs_df: Optional[pd.DataFrame] = None,
+    upfront_df: pd.DataFrame | None = None,
+    expected_cost_components_df: pd.DataFrame | None = None,
+    expected_fixed_om_df: pd.DataFrame | None = None,
+    annuities_df: pd.DataFrame | None = None,
+    embodied_df: pd.DataFrame | None = None,
+    scenario_variable_costs_df: pd.DataFrame | None = None,
+    scenario_emissions_df: pd.DataFrame | None = None,
+    scenario_total_operating_costs_df: pd.DataFrame | None = None,
     results_dir: Path | None = None,
     source: str = "files",
 ) -> TypicalYearResults:
@@ -455,9 +456,9 @@ def _crf(r: float, n: float) -> float:
 def build_kpis_table(
     *,
     data: xr.Dataset,
-    vars: Dict[str, Any],
-    solution: Optional[xr.Dataset],
-    objective_value: Optional[float],
+    vars: dict[str, Any],
+    solution: xr.Dataset | None,
+    objective_value: float | None,
 ) -> pd.DataFrame:
     dispatch = build_dispatch_timeseries_table(data=data, vars=vars, solution=solution)
     design = build_design_summary_table(data=data, vars=vars, solution=solution)
@@ -518,9 +519,9 @@ def export_typical_year_results(
     project_name: str,
     sets: xr.Dataset,
     data: xr.Dataset,
-    model: Optional[lp.Model],
-    vars: Dict[str, Any],
-    solution: Optional[xr.Dataset],
+    model: lp.Model | None,
+    vars: dict[str, Any],
+    solution: xr.Dataset | None,
     out_dir: Path | None = None,
 ) -> dict:
     if out_dir is None:

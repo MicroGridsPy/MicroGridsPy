@@ -4,11 +4,12 @@ from typing import Literal
 
 import xarray as xr
 
-from microgridspy.data_pipeline.utils import as_str, validate_required_coords
 from microgridspy.data_pipeline.multi_year_loader import load_multi_year_dataset
 from microgridspy.data_pipeline.typical_year_loader import (
     load_typical_year_dataset,
 )
+from microgridspy.data_pipeline.utils import as_str, validate_required_coords
+
 
 class InputValidationError(RuntimeError):
     pass

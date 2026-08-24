@@ -13,14 +13,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 import xarray as xr
 
-from microgridspy.typical_year_model.model import SteadyStateModel, InputValidationError
-from microgridspy.multi_year_model.model import MultiYearModel
-from microgridspy.export.typical_year_results import TypicalYearResults
 from microgridspy.export.multi_year_results import MultiYearResults
+from microgridspy.export.typical_year_results import TypicalYearResults
+from microgridspy.multi_year_model.model import MultiYearModel
+from microgridspy.typical_year_model.model import InputValidationError, SteadyStateModel
 
 AnyModel = Union[SteadyStateModel, MultiYearModel]
 AnyResults = Union[TypicalYearResults, MultiYearResults]
@@ -60,7 +60,7 @@ def _model_for(project_name: str, formulation: str) -> AnyModel:
 def solve(
     project_name: str,
     *,
-    formulation: Optional[str] = None,
+    formulation: str | None = None,
     solver: str = "highs",
     **solver_kwargs: Any,
 ) -> AnyModel:
@@ -89,8 +89,8 @@ def solve(
 def load_results(
     project_name: str,
     *,
-    formulation: Optional[str] = None,
-) -> Optional[AnyResults]:
+    formulation: str | None = None,
+) -> AnyResults | None:
     """Load a previously saved run's results from the project's ``results/`` folder.
 
     Args:
@@ -113,7 +113,7 @@ def load_results(
     return load_typical_year_results_from_files(project_name)
 
 
-def export_results(results: AnyResults, out_dir: Optional[Path] = None) -> dict[str, str]:
+def export_results(results: AnyResults, out_dir: Path | None = None) -> dict[str, str]:
     """Write a results object to CSV/Excel files.
 
     Args:
@@ -137,7 +137,7 @@ def export_results(results: AnyResults, out_dir: Optional[Path] = None) -> dict[
     )
 
 
-def load_inputs(project_name: str, *, formulation: Optional[str] = None) -> xr.Dataset:
+def load_inputs(project_name: str, *, formulation: str | None = None) -> xr.Dataset:
     """Assemble and return a project's input dataset, without solving.
 
     Builds the sets and data layers (the same inputs a model would use), so you
@@ -157,7 +157,7 @@ def load_inputs(project_name: str, *, formulation: Optional[str] = None) -> xr.D
     return model.data
 
 
-def list_input_timeseries(project_name: str, *, formulation: Optional[str] = None) -> list[str]:
+def list_input_timeseries(project_name: str, *, formulation: str | None = None) -> list[str]:
     """List the time-series input variables available to plot for a project."""
     from microgridspy.visualization.input_plots import list_timeseries_options
 
@@ -167,11 +167,11 @@ def list_input_timeseries(project_name: str, *, formulation: Optional[str] = Non
 
 def plot_input_timeseries(
     project_name: str,
-    variable: Optional[str] = None,
+    variable: str | None = None,
     *,
-    formulation: Optional[str] = None,
-    scenario: Optional[str] = None,
-    year: Optional[Union[str, int]] = None,
+    formulation: str | None = None,
+    scenario: str | None = None,
+    year: str | int | None = None,
     **selectors: Any,
 ):
     """Plot an input time series as ``(hourly, daily)`` matplotlib figures.

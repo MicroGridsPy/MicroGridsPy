@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Type
+from typing import Any
 
 import streamlit as st
 import xarray as xr
@@ -11,10 +11,10 @@ import xarray as xr
 def read_json_file(
     path: Path,
     *,
-    error_cls: Type[Exception] = RuntimeError,
+    error_cls: type[Exception] = RuntimeError,
     missing_prefix: str = "Missing required file",
     parse_prefix: str = "Cannot parse JSON file",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Read a JSON file and raise a caller-selected exception on failure."""
     if not path.exists():
         raise error_cls(f"{missing_prefix}: {path}")
@@ -24,7 +24,7 @@ def read_json_file(
         raise error_cls(f"{parse_prefix}: {path}\nerror: {exc}") from exc
 
 
-def resolve_active_project_from_session() -> Tuple[str, Path]:
+def resolve_active_project_from_session() -> tuple[str, Path]:
     """Resolve the active project root from Streamlit session state or stop the page."""
     if "project_path" not in st.session_state:
         st.warning("Please create or load a project first.")
@@ -40,7 +40,7 @@ def resolve_active_project_from_session() -> Tuple[str, Path]:
     return project_name, project_root
 
 
-def get_dataset_settings(data_ds: Optional[xr.Dataset]) -> Dict[str, Any]:
+def get_dataset_settings(data_ds: xr.Dataset | None) -> dict[str, Any]:
     """Safely return dataset settings from attrs."""
     if not isinstance(data_ds, xr.Dataset):
         return {}
@@ -48,7 +48,7 @@ def get_dataset_settings(data_ds: Optional[xr.Dataset]) -> Dict[str, Any]:
     return settings if isinstance(settings, dict) else {}
 
 
-def get_nested_flag(settings: Dict[str, Any], path: Tuple[str, ...], default: bool = False) -> bool:
+def get_nested_flag(settings: dict[str, Any], path: tuple[str, ...], default: bool = False) -> bool:
     """Safely read a nested boolean-ish flag from a dict."""
     current: Any = settings
     for key in path:

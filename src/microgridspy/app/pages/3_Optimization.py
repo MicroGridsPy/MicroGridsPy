@@ -4,21 +4,22 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import streamlit as st
 import xarray as xr
 
-from microgridspy.typical_year_model.model import SteadyStateModel
-from microgridspy.multi_year_model.model import MultiYearModel
-from microgridspy.export.results_bundle import build_results_bundle
+from microgridspy.app.page_helpers import get_dataset_settings, read_json_file
 from microgridspy.export.multi_year_results import build_multi_year_results
+from microgridspy.export.results_bundle import build_results_bundle
 from microgridspy.export.typical_year_results import build_typical_year_results
 from microgridspy.io.jsonio import write_json
 from microgridspy.io.utils import project_paths
-from microgridspy.app.page_helpers import get_dataset_settings, read_json_file
+from microgridspy.multi_year_model.model import MultiYearModel
+from microgridspy.typical_year_model.model import SteadyStateModel
+
 
 class InputValidationError(RuntimeError):
     pass
@@ -113,7 +114,7 @@ def _reset_result_state() -> None:
         st.session_state[key] = None
 
 
-def _optimization_settings_payload() -> Dict[str, Any]:
+def _optimization_settings_payload() -> dict[str, Any]:
     return {
         "solver": str(st.session_state[KEYS["solver"]]),
         "problem_export": {
@@ -139,7 +140,7 @@ def _optimization_settings_payload() -> Dict[str, Any]:
     }
 
 
-def _apply_optimization_settings_payload(payload: Dict[str, Any]) -> None:
+def _apply_optimization_settings_payload(payload: dict[str, Any]) -> None:
     if not isinstance(payload, dict):
         return
 
@@ -178,7 +179,7 @@ def _load_optimization_settings_for_project(project_name: str) -> None:
         return
 
     paths = project_paths(project_name)
-    payload: Dict[str, Any] = {}
+    payload: dict[str, Any] = {}
     if paths.formulation_json.exists():
         try:
             payload = json.loads(paths.formulation_json.read_text(encoding="utf-8"))
@@ -192,7 +193,7 @@ def _load_optimization_settings_for_project(project_name: str) -> None:
 
 def _save_optimization_settings_for_project(project_name: str) -> None:
     paths = project_paths(project_name)
-    payload: Dict[str, Any] = {}
+    payload: dict[str, Any] = {}
     if paths.formulation_json.exists():
         try:
             payload = json.loads(paths.formulation_json.read_text(encoding="utf-8"))
@@ -207,10 +208,10 @@ def _save_optimization_settings_for_project(project_name: str) -> None:
 # =============================================================================
 # Helpers (solver + I/O)
 # =============================================================================
-def _solver_params(solver: str) -> Dict[str, Any]:
+def _solver_params(solver: str) -> dict[str, Any]:
     """Return solver kwargs for linopy.Model.solve()."""
     if solver == "gurobi":
-        p: Dict[str, Any] = {}
+        p: dict[str, Any] = {}
         tl = int(st.session_state[KEYS["gurobi_time_limit"]])
         if tl > 0:
             p["TimeLimit"] = tl
@@ -223,7 +224,7 @@ def _solver_params(solver: str) -> Dict[str, Any]:
         p["Presolve"] = int(st.session_state[KEYS["gurobi_presolve"]])
         return p
 
-    p: Dict[str, Any] = {}
+    p: dict[str, Any] = {}
     tl = int(st.session_state[KEYS["highs_time_limit"]])
     if tl > 0:
         p["time_limit"] = float(tl)
@@ -242,7 +243,7 @@ def _default_log_path(project_name: str, solver: str) -> Path:
     return paths.logs_dir / f"{solver}_solve.log"
 
 
-def _validate_optional_paths(project_name: str, solver: str) -> Tuple[Optional[Path], Path, bool]:
+def _validate_optional_paths(project_name: str, solver: str) -> tuple[Path | None, Path, bool]:
     lp_path = None
     log_path = _default_log_path(project_name, solver)
     ok = True
@@ -343,7 +344,7 @@ def _show_xr_dataset_debug(ds: xr.Dataset, title: str, coord_preview_n: int = 8)
             st.dataframe(pd.DataFrame(rows), width="stretch")
 
 
-def _render_variables_debug(data_ds: Optional[xr.Dataset], vars_dict: Any) -> None:
+def _render_variables_debug(data_ds: xr.Dataset | None, vars_dict: Any) -> None:
     """Minimal vars inspector: name, dims, expected type, coords preview."""
     st.markdown("### Variables")
 
@@ -431,7 +432,7 @@ def _render_constraints_debug(model_obj: Any) -> None:
         st.info("No constraints found in the model yet.")
         return
 
-    def _count_rows(con_obj: Any) -> Optional[int]:
+    def _count_rows(con_obj: Any) -> int | None:
         try:
             da = getattr(con_obj, "data", None)
             if da is not None:
@@ -447,7 +448,7 @@ def _render_constraints_debug(model_obj: Any) -> None:
                 continue
         return None
 
-    def _dims_and_coords_preview(con_obj: Any, n: int = 4) -> Tuple[str, Dict[str, Any]]:
+    def _dims_and_coords_preview(con_obj: Any, n: int = 4) -> tuple[str, dict[str, Any]]:
         da = getattr(con_obj, "data", None)
         if da is None:
             da = getattr(con_obj, "lhs", None) or getattr(con_obj, "rhs", None)
@@ -458,7 +459,7 @@ def _render_constraints_debug(model_obj: Any) -> None:
         dims = list(da.dims) if da.dims else []
         dims_str = ", ".join(dims) if dims else "(scalar)"
 
-        coords_preview: Dict[str, Any] = {}
+        coords_preview: dict[str, Any] = {}
         try:
             for d in dims:
                 coords_preview[d] = _safe_preview(da.coords[d].values, n=n) if d in da.coords else "-"
@@ -497,7 +498,7 @@ def _render_constraints_debug(model_obj: Any) -> None:
         except Exception as e:
             st.error(f"Could not render constraint '{pick}': {e}")
 
-def _as_float(x: Any) -> Optional[float]:
+def _as_float(x: Any) -> float | None:
     """Best-effort float conversion for numpy/xarray scalars."""
     try:
         if x is None:
@@ -514,7 +515,7 @@ def _as_float(x: Any) -> Optional[float]:
         return None
 
 
-def _status_to_str(status_obj: Any) -> Optional[str]:
+def _status_to_str(status_obj: Any) -> str | None:
     """
     Turn linopy Status/Result status into a readable string.
     Typical: ('ok','optimal') or Status(status='ok', termination_condition='optimal')
@@ -549,7 +550,7 @@ def _status_to_str(status_obj: Any) -> Optional[str]:
         return None
 
 
-def _extract_solution_summary(m: Any) -> Dict[str, Any]:
+def _extract_solution_summary(m: Any) -> dict[str, Any]:
     """
     Extract minimal results from a solved linopy.Model or a wrapper object.
 
@@ -557,7 +558,7 @@ def _extract_solution_summary(m: Any) -> Dict[str, Any]:
       - status (str|None)
       - objective_value (float|None)
     """
-    out: Dict[str, Any] = {
+    out: dict[str, Any] = {
         "status": None,
         "objective_value": None,
     }
@@ -599,7 +600,7 @@ def _extract_solution_summary(m: Any) -> Dict[str, Any]:
 
     return out
 
-def _render_minimal_results(solution_summary: Optional[Dict[str, Any]]) -> None:
+def _render_minimal_results(solution_summary: dict[str, Any] | None) -> None:
     st.subheader("Results (minimal)")
 
     if not solution_summary:
@@ -634,7 +635,7 @@ def _render_solver_log(log_path_value: Any) -> None:
         st.text_area("Log content", value=txt, height=260)
 
 
-def _read_solver_log_text(log_path_value: Any) -> Optional[str]:
+def _read_solver_log_text(log_path_value: Any) -> str | None:
     if not log_path_value:
         return None
     p = Path(str(log_path_value))
@@ -661,7 +662,7 @@ def _status_indicates_infeasible(status: Any) -> bool:
     return "infeasible" in text
 
 
-def _extract_termination_hint_from_log(log_path_value: Any) -> Optional[str]:
+def _extract_termination_hint_from_log(log_path_value: Any) -> str | None:
     text = _read_solver_log_text(log_path_value)
     if not text:
         return None
@@ -693,7 +694,7 @@ def _log_indicates_optimal(log_path_value: Any) -> bool:
     return ("optimal objective" in lower) or ("solved with barrier" in lower and "optimal" in lower)
 
 
-def _has_usable_solution(*, model: Any, solution_summary: Optional[Dict[str, Any]], log_path_value: Any) -> bool:
+def _has_usable_solution(*, model: Any, solution_summary: dict[str, Any] | None, log_path_value: Any) -> bool:
     # Primary, solver-independent signal: linopy assigned a solution back onto the
     # model. Infeasible/unsolved runs do not populate this, so a non-empty solution
     # Dataset is sound evidence of a usable result for both HiGHS and Gurobi.
@@ -711,7 +712,7 @@ def _has_usable_solution(*, model: Any, solution_summary: Optional[Dict[str, Any
     return _log_indicates_optimal(log_path_value)
 
 
-def _format_unsolved_message(*, solution_summary: Optional[Dict[str, Any]], log_path_value: Any) -> str:
+def _format_unsolved_message(*, solution_summary: dict[str, Any] | None, log_path_value: Any) -> str:
     status = None
     if isinstance(solution_summary, dict):
         status = solution_summary.get("status")

@@ -1,11 +1,9 @@
 # generation_planning/modeling/objective.py
 from __future__ import annotations
 
-from typing import Dict
-
+import linopy as lp
 import numpy as np
 import xarray as xr
-import linopy as lp
 
 from microgridspy.typical_year_model.params import get_params
 
@@ -35,7 +33,7 @@ def _crf(r: xr.DataArray | float, n: xr.DataArray | float) -> xr.DataArray:
 def initialize_objective(
     sets: xr.Dataset,
     data: xr.Dataset,
-    vars: Dict[str, lp.Variable],
+    vars: dict[str, lp.Variable],
     model: lp.Model,
 ) -> None:
     """

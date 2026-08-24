@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 import yaml
 
 from microgridspy.io.utils import project_paths
-
 
 FAMILY_FALLBACK_PREFIX = {
     "renewable": "Renewable technology",
@@ -36,10 +35,10 @@ def _normalize_step_key(step: object) -> str:
     return text
 
 
-def _sanitize_label_map(raw: object) -> Dict[str, str]:
+def _sanitize_label_map(raw: object) -> dict[str, str]:
     if not isinstance(raw, dict):
         return {}
-    out: Dict[str, str] = {}
+    out: dict[str, str] = {}
     for key, value in raw.items():
         label = str(value or "").strip()
         if label:
@@ -47,15 +46,15 @@ def _sanitize_label_map(raw: object) -> Dict[str, str]:
     return out
 
 
-def _sanitize_nested_step_map(raw: object) -> Dict[str, Dict[str, str]]:
+def _sanitize_nested_step_map(raw: object) -> dict[str, dict[str, str]]:
     if not isinstance(raw, dict):
         return {}
-    out: Dict[str, Dict[str, str]] = {}
+    out: dict[str, dict[str, str]] = {}
     for step, value in raw.items():
         if not isinstance(value, dict):
             continue
         step_key = _normalize_step_key(step)
-        step_map: Dict[str, str] = {}
+        step_map: dict[str, str] = {}
         for subkey, label in value.items():
             text = str(label or "").strip()
             if text:
@@ -65,7 +64,7 @@ def _sanitize_nested_step_map(raw: object) -> Dict[str, Dict[str, str]]:
     return out
 
 
-def load_multi_year_vintage_labels(project_name: str) -> Dict[str, Dict[str, str]]:
+def load_multi_year_vintage_labels(project_name: str) -> dict[str, dict[str, str]]:
     paths = project_paths(project_name)
     renewables_meta = (_read_yaml_optional(paths.inputs_dir / "renewables.yaml").get("meta", {}) or {})
     battery_meta = (_read_yaml_optional(paths.inputs_dir / "battery.yaml").get("meta", {}) or {})
@@ -91,10 +90,10 @@ def fallback_vintage_label(family: str, step: object) -> str:
 
 def vintage_label_for_step(
     *,
-    labels: Dict[str, Dict[str, str]],
+    labels: dict[str, dict[str, str]],
     family: str,
     step: object,
-    resource: Optional[object] = None,
+    resource: object | None = None,
 ) -> str:
     family_map = labels.get(str(family), {}) if isinstance(labels, dict) else {}
     normalized = _normalize_step_key(step)
@@ -114,9 +113,9 @@ def vintage_label_for_step(
 
 def vintage_display_for_step(
     *,
-    labels: Dict[str, Dict[str, str]],
+    labels: dict[str, dict[str, str]],
     family: str,
     step: object,
-    resource: Optional[object] = None,
+    resource: object | None = None,
 ) -> str:
     return f"{vintage_label_for_step(labels=labels, family=family, step=step, resource=resource)} (step {_normalize_step_key(step)})"

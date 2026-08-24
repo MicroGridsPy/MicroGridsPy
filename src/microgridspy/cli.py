@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import argparse
 import sys
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 
 def _add_workspace_arg(parser: argparse.ArgumentParser) -> None:
@@ -56,7 +56,7 @@ def _build_parser(version: str) -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     import microgridspy as mgp
 
     args = _build_parser(mgp.__version__).parse_args(argv)

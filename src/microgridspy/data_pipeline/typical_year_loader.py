@@ -5,16 +5,21 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 
+from microgridspy.data_pipeline import typical_year_parsing as p
 from microgridspy.data_pipeline.battery_loss_model import (
     CONVEX_LOSS_EPIGRAPH,
-    InputValidationError as BatteryLossInputValidationError,
     get_battery_loss_model_from_formulation,
     load_battery_loss_curve_dataset,
 )
-from microgridspy.data_pipeline.utils import coord_labels, merge_optional_datasets, validate_required_coords
+from microgridspy.data_pipeline.battery_loss_model import (
+    InputValidationError as BatteryLossInputValidationError,
+)
+from microgridspy.data_pipeline.utils import (
+    coord_labels,
+    merge_optional_datasets,
+    validate_required_coords,
+)
 from microgridspy.io.utils import project_paths, simulate_grid_availability_typical_year
-from microgridspy.data_pipeline import typical_year_parsing as p
-
 
 InputValidationError = p.InputValidationError
 

@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from typing import Dict
-
+import linopy as lp
 import numpy as np
 import xarray as xr
-import linopy as lp
 
 from microgridspy.multi_year_model.lifecycle import (
     discounted_annuity_tail_memo,
@@ -67,7 +65,7 @@ def _discount_factor_by_year(sets: xr.Dataset, social_rate: float) -> xr.DataArr
 def initialize_objective(
     sets: xr.Dataset,
     data: xr.Dataset,
-    vars: Dict[str, lp.Variable],
+    vars: dict[str, lp.Variable],
     model: lp.Model,
 ) -> None:
     if not isinstance(sets, xr.Dataset):
@@ -88,7 +86,7 @@ def initialize_objective(
     allow_export = p.is_grid_export_enabled()
 
     # Note: if missing in attrs, keep rs=0.0 to avoid blocking objective build.
-    rs = float((p.settings.get("social_discount_rate", 0.0) or 0.0))
+    rs = float(p.settings.get("social_discount_rate", 0.0) or 0.0)
     if rs <= -1.0:
         raise InputValidationError(f"Invalid social_discount_rate={rs}. Must be > -1.")
     disc_y = _discount_factor_by_year(sets, rs)  # (year,)

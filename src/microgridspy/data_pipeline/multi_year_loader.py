@@ -3,7 +3,9 @@ from __future__ import annotations
 import warnings
 
 import xarray as xr
+
 from microgridspy.data_pipeline.utils import validate_required_coords
+
 
 class InputValidationError(RuntimeError):
     pass

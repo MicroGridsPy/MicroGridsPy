@@ -1,13 +1,14 @@
 # generation_planning/modeling/constraints.py
 from __future__ import annotations
 
-from typing import Dict
-
+import linopy as lp
 import numpy as np
 import xarray as xr
-import linopy as lp
 
-from microgridspy.data_pipeline.battery_loss_model import CONVEX_LOSS_EPIGRAPH, normalize_battery_loss_model
+from microgridspy.data_pipeline.battery_loss_model import (
+    CONVEX_LOSS_EPIGRAPH,
+    normalize_battery_loss_model,
+)
 from microgridspy.data_pipeline.utils import finite_nonnegative_scalar_limit
 from microgridspy.typical_year_model.params import get_params
 
@@ -19,7 +20,7 @@ class InputValidationError(RuntimeError):
 def initialize_constraints(
     sets: xr.Dataset,
     data: xr.Dataset,
-    vars: Dict[str, lp.Variable],
+    vars: dict[str, lp.Variable],
     model: lp.Model,
 ) -> None:
     """

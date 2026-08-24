@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import yaml
 
@@ -16,14 +16,14 @@ def _read_yaml_optional(path: Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
-def renewable_labels_from_yaml(path: Path) -> Dict[str, List[str]]:
+def renewable_labels_from_yaml(path: Path) -> dict[str, list[str]]:
     payload = _read_yaml_optional(path)
     renewables = payload.get("renewables", None)
     if not isinstance(renewables, list):
         return {"resources": [], "conversion_technologies": []}
 
-    resources: List[str] = []
-    conversions: List[str] = []
+    resources: list[str] = []
+    conversions: list[str] = []
     for i, item in enumerate(renewables):
         if not isinstance(item, dict):
             continue
@@ -37,7 +37,7 @@ def renewable_labels_from_yaml(path: Path) -> Dict[str, List[str]]:
     }
 
 
-def component_labels_from_yaml(*, battery_path: Path, generator_path: Path) -> Dict[str, str]:
+def component_labels_from_yaml(*, battery_path: Path, generator_path: Path) -> dict[str, str]:
     battery_payload = _read_yaml_optional(battery_path)
     generator_payload = _read_yaml_optional(generator_path)
 

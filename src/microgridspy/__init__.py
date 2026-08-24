@@ -24,38 +24,39 @@ grow) until the 1.0 release.
 """
 from __future__ import annotations
 
-from importlib.metadata import PackageNotFoundError, version as _version
-
-# --- Models (stable core) ---------------------------------------------------
-from microgridspy.typical_year_model.model import SteadyStateModel, InputValidationError
-from microgridspy.multi_year_model.model import MultiYearModel
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _version
 
 # --- Convenience API --------------------------------------------------------
 from microgridspy.api import (
-    solve,
-    load_results,
     export_results,
-    load_inputs,
     list_input_timeseries,
+    load_inputs,
+    load_results,
     plot_input_timeseries,
+    solve,
 )
+from microgridspy.export.multi_year_results import MultiYearResults
 
 # --- Structured results (provisional) ---------------------------------------
 from microgridspy.export.typical_year_results import TypicalYearResults
-from microgridspy.export.multi_year_results import MultiYearResults
 
 # --- Project scaffolding & management ---------------------------------------
 from microgridspy.io.project_setup import (
-    create_project,
-    validate_project,
-    delete_project,
     copy_project,
+    create_project,
+    delete_project,
     rename_project,
+    validate_project,
 )
 from microgridspy.io.templates import TemplateSettings
 
 # --- Workspace helpers ------------------------------------------------------
-from microgridspy.io.utils import set_workspace, list_projects, project_paths, project_exists
+from microgridspy.io.utils import list_projects, project_exists, project_paths, set_workspace
+from microgridspy.multi_year_model.model import MultiYearModel
+
+# --- Models (stable core) ---------------------------------------------------
+from microgridspy.typical_year_model.model import InputValidationError, SteadyStateModel
 
 __all__ = [
     "SteadyStateModel",

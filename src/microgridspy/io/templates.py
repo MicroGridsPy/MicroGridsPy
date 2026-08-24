@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence, Optional, List, Mapping, Any
 
 import pandas as pd
 import yaml
@@ -28,10 +28,10 @@ class TemplateSettings:
 
     # dynamic-only context used to generate year headers
     start_year_label: str            # e.g. "2026" or "typical_year"
-    horizon_years: Optional[int]     # e.g. 20 (None for steady_state)
+    horizon_years: int | None     # e.g. 20 (None for steady_state)
     # capacity expansion context
     capacity_expansion: bool
-    investment_steps_years: Optional[Sequence[int]]  # e.g. [5,5,5,5] or None
+    investment_steps_years: Sequence[int] | None  # e.g. [5,5,5,5] or None
 
 
     # renewable resource context
@@ -54,10 +54,10 @@ class TemplateSettings:
     fuel_label: str
     csv_delimiter: str = ","
     csv_decimal: str = "."
-    renewable_vintage_labels_by_step: Optional[Mapping[str, Mapping[str, str]]] = None
-    battery_vintage_labels_by_step: Optional[Mapping[str, str]] = None
-    generator_vintage_labels_by_step: Optional[Mapping[str, str]] = None
-    fuel_vintage_labels_by_step: Optional[Mapping[str, str]] = None
+    renewable_vintage_labels_by_step: Mapping[str, Mapping[str, str]] | None = None
+    battery_vintage_labels_by_step: Mapping[str, str] | None = None
+    generator_vintage_labels_by_step: Mapping[str, str] | None = None
+    fuel_vintage_labels_by_step: Mapping[str, str] | None = None
 
 
 def write_templates(paths: ProjectPaths, settings: TemplateSettings, overwrite: bool = False) -> None:
@@ -101,7 +101,7 @@ def write_templates(paths: ProjectPaths, settings: TemplateSettings, overwrite: 
 # =============================================================================
 # Helpers
 # =============================================================================
-def _safe_scenario_labels(settings: TemplateSettings) -> List[str]:
+def _safe_scenario_labels(settings: TemplateSettings) -> list[str]:
     """
     Ensure scenario_labels matches n_scenarios (stable ordering).
     """
@@ -113,7 +113,7 @@ def _safe_scenario_labels(settings: TemplateSettings) -> List[str]:
     return [str(x).strip() or f"scenario_{i+1}" for i, x in enumerate(labels)]
 
 
-def _safe_year_labels(settings: TemplateSettings) -> List[str]:
+def _safe_year_labels(settings: TemplateSettings) -> list[str]:
     """
     Return year labels for the second header level.
     - steady_state -> ["typical_year"]
@@ -138,7 +138,7 @@ def _safe_year_labels(settings: TemplateSettings) -> List[str]:
         ) from exc
     return [str(y0 + i) for i in range(horizon)]
     
-def _safe_resource_labels(settings: TemplateSettings) -> List[str]:
+def _safe_resource_labels(settings: TemplateSettings) -> list[str]:
     """
     Ensure resource_labels matches n_res_sources (stable ordering).
     """
@@ -153,7 +153,7 @@ def _safe_resource_labels(settings: TemplateSettings) -> List[str]:
 
     return [str(x).strip() or f"RESOURCE_{i+1}" for i, x in enumerate(labels)]
 
-def _safe_conversion_labels(settings: TemplateSettings) -> List[str]:
+def _safe_conversion_labels(settings: TemplateSettings) -> list[str]:
     labels = list(settings.conversion_labels) if settings.conversion_labels is not None else []
     n = int(settings.n_res_sources or 0)
     n = max(n, 1)
@@ -166,7 +166,7 @@ def _safe_conversion_labels(settings: TemplateSettings) -> List[str]:
     return [str(x).strip() or f"TECH_{i+1}" for i, x in enumerate(labels)]
 
 
-def _safe_step_keys(settings: TemplateSettings) -> List[str]:
+def _safe_step_keys(settings: TemplateSettings) -> list[str]:
     """
     Step keys used in YAML:
     - steady_state -> ["base"]
@@ -256,11 +256,11 @@ def _battery_requires_lp_soh_capacity_reference(settings: TemplateSettings) -> b
     return _battery_endogenous_degradation_enabled(settings)
 
 
-def _template_scenarios(settings: TemplateSettings) -> List[str]:
+def _template_scenarios(settings: TemplateSettings) -> list[str]:
     return _safe_scenario_labels(settings) if settings.multi_scenario else ["scenario_1"]
 
 
-def _template_years(settings: TemplateSettings) -> List[str]:
+def _template_years(settings: TemplateSettings) -> list[str]:
     return _safe_year_labels(settings)
 
 
@@ -283,7 +283,7 @@ def _default_step_label(family: str, step: str) -> str:
 
 
 def _coerce_vintage_labels(
-    raw: Optional[Mapping[str, str]],
+    raw: Mapping[str, str] | None,
     step_keys: Sequence[str],
     *,
     family: str,
@@ -298,7 +298,7 @@ def _coerce_vintage_labels(
 
 
 def _coerce_renewable_vintage_labels(
-    raw: Optional[Mapping[str, Mapping[str, str]]],
+    raw: Mapping[str, Mapping[str, str]] | None,
     *,
     step_keys: Sequence[str],
     resource_labels: Sequence[str],

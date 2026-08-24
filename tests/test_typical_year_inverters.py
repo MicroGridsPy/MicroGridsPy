@@ -3,13 +3,16 @@ from __future__ import annotations
 from pathlib import Path
 from textwrap import dedent
 
+import linopy as lp
 import numpy as np
 import pytest
 import xarray as xr
-import linopy as lp
 
 from microgridspy.data_pipeline.battery_loss_model import CONVEX_LOSS_EPIGRAPH
-from microgridspy.data_pipeline.typical_year_parsing import _load_battery_yaml, _load_renewables_yaml
+from microgridspy.data_pipeline.typical_year_parsing import (
+    _load_battery_yaml,
+    _load_renewables_yaml,
+)
 from microgridspy.export.typical_year_reporting import build_reporting_tables
 from microgridspy.export.typical_year_results import (
     build_design_summary_table,

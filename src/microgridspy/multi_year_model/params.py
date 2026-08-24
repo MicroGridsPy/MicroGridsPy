@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 import xarray as xr
 
@@ -11,92 +11,92 @@ class Params:
     settings: dict[str, Any]
 
     # Common core series
-    load_demand: Optional[xr.DataArray]
-    resource_availability: Optional[xr.DataArray]
-    scenario_weight: Optional[xr.DataArray]
+    load_demand: xr.DataArray | None
+    resource_availability: xr.DataArray | None
+    scenario_weight: xr.DataArray | None
 
     # Policy / externalities
-    min_renewable_penetration: Optional[xr.DataArray]
-    max_lost_load_fraction: Optional[xr.DataArray]
-    lost_load_cost_per_kwh: Optional[xr.DataArray]
-    land_availability_m2: Optional[xr.DataArray]
-    emission_cost_per_kgco2e: Optional[xr.DataArray]
+    min_renewable_penetration: xr.DataArray | None
+    max_lost_load_fraction: xr.DataArray | None
+    lost_load_cost_per_kwh: xr.DataArray | None
+    land_availability_m2: xr.DataArray | None
+    emission_cost_per_kgco2e: xr.DataArray | None
 
     # Renewables
-    res_nominal_capacity_kw: Optional[xr.DataArray]
-    res_lifetime_years: Optional[xr.DataArray]
-    res_specific_investment_cost_per_kw: Optional[xr.DataArray]
-    res_inverter_specific_investment_cost_per_kw_ac: Optional[xr.DataArray]
-    res_inverter_lifetime_years: Optional[xr.DataArray]
-    res_wacc: Optional[xr.DataArray]
-    res_grant_share_of_capex: Optional[xr.DataArray]
-    res_embedded_emissions_kgco2e_per_kw: Optional[xr.DataArray]
-    res_fixed_om_share_per_year: Optional[xr.DataArray]
-    res_inverter_fixed_om_share_per_year: Optional[xr.DataArray]
-    res_production_subsidy_per_kwh: Optional[xr.DataArray]
-    res_dc_ac_ratio: Optional[xr.DataArray]
-    res_inverter_efficiency: Optional[xr.DataArray]
-    res_specific_area_m2_per_kw: Optional[xr.DataArray]
-    res_max_installable_capacity_kw: Optional[xr.DataArray]
-    res_capacity_degradation_rate_per_year: Optional[xr.DataArray]
+    res_nominal_capacity_kw: xr.DataArray | None
+    res_lifetime_years: xr.DataArray | None
+    res_specific_investment_cost_per_kw: xr.DataArray | None
+    res_inverter_specific_investment_cost_per_kw_ac: xr.DataArray | None
+    res_inverter_lifetime_years: xr.DataArray | None
+    res_wacc: xr.DataArray | None
+    res_grant_share_of_capex: xr.DataArray | None
+    res_embedded_emissions_kgco2e_per_kw: xr.DataArray | None
+    res_fixed_om_share_per_year: xr.DataArray | None
+    res_inverter_fixed_om_share_per_year: xr.DataArray | None
+    res_production_subsidy_per_kwh: xr.DataArray | None
+    res_dc_ac_ratio: xr.DataArray | None
+    res_inverter_efficiency: xr.DataArray | None
+    res_specific_area_m2_per_kw: xr.DataArray | None
+    res_max_installable_capacity_kw: xr.DataArray | None
+    res_capacity_degradation_rate_per_year: xr.DataArray | None
 
     # Battery
-    battery_nominal_capacity_kwh: Optional[xr.DataArray]
-    battery_specific_investment_cost_per_kwh: Optional[xr.DataArray]
-    battery_inverter_specific_investment_cost_per_kw: Optional[xr.DataArray]
-    battery_inverter_lifetime_years: Optional[xr.DataArray]
-    battery_wacc: Optional[xr.DataArray]
-    battery_calendar_lifetime_years: Optional[xr.DataArray]
-    battery_fixed_om_share_per_year: Optional[xr.DataArray]
-    battery_inverter_fixed_om_share_per_year: Optional[xr.DataArray]
-    battery_embedded_emissions_kgco2e_per_kwh: Optional[xr.DataArray]
-    battery_max_installable_capacity_kwh: Optional[xr.DataArray]
-    battery_charge_efficiency: Optional[xr.DataArray]
-    battery_discharge_efficiency: Optional[xr.DataArray]
-    battery_initial_soc: Optional[xr.DataArray]
-    battery_initial_soh: Optional[xr.DataArray]
-    battery_depth_of_discharge: Optional[xr.DataArray]
-    battery_max_charge_c_rate: Optional[xr.DataArray]
-    battery_max_discharge_c_rate: Optional[xr.DataArray]
-    battery_cycle_fade_coefficient_per_kwh_throughput: Optional[xr.DataArray]
-    battery_calendar_time_increment_per_year: Optional[xr.DataArray]
-    battery_capacity_degradation_rate_per_year: Optional[xr.DataArray]
+    battery_nominal_capacity_kwh: xr.DataArray | None
+    battery_specific_investment_cost_per_kwh: xr.DataArray | None
+    battery_inverter_specific_investment_cost_per_kw: xr.DataArray | None
+    battery_inverter_lifetime_years: xr.DataArray | None
+    battery_wacc: xr.DataArray | None
+    battery_calendar_lifetime_years: xr.DataArray | None
+    battery_fixed_om_share_per_year: xr.DataArray | None
+    battery_inverter_fixed_om_share_per_year: xr.DataArray | None
+    battery_embedded_emissions_kgco2e_per_kwh: xr.DataArray | None
+    battery_max_installable_capacity_kwh: xr.DataArray | None
+    battery_charge_efficiency: xr.DataArray | None
+    battery_discharge_efficiency: xr.DataArray | None
+    battery_initial_soc: xr.DataArray | None
+    battery_initial_soh: xr.DataArray | None
+    battery_depth_of_discharge: xr.DataArray | None
+    battery_max_charge_c_rate: xr.DataArray | None
+    battery_max_discharge_c_rate: xr.DataArray | None
+    battery_cycle_fade_coefficient_per_kwh_throughput: xr.DataArray | None
+    battery_calendar_time_increment_per_year: xr.DataArray | None
+    battery_capacity_degradation_rate_per_year: xr.DataArray | None
 
     # Generator / fuel
-    generator_nominal_capacity_kw: Optional[xr.DataArray]
-    generator_max_installable_capacity_kw: Optional[xr.DataArray]
-    generator_nominal_efficiency_full_load: Optional[xr.DataArray]
-    generator_capacity_degradation_rate_per_year: Optional[xr.DataArray]
-    generator_specific_investment_cost_per_kw: Optional[xr.DataArray]
-    generator_lifetime_years: Optional[xr.DataArray]
-    generator_wacc: Optional[xr.DataArray]
-    generator_fixed_om_share_per_year: Optional[xr.DataArray]
-    generator_embedded_emissions_kgco2e_per_kw: Optional[xr.DataArray]
-    fuel_lhv_kwh_per_unit_fuel: Optional[xr.DataArray]
-    fuel_cost_per_unit_fuel: Optional[xr.DataArray]
-    fuel_fuel_cost_per_unit_fuel: Optional[xr.DataArray]
-    fuel_direct_emissions_kgco2e_per_unit_fuel: Optional[xr.DataArray]
+    generator_nominal_capacity_kw: xr.DataArray | None
+    generator_max_installable_capacity_kw: xr.DataArray | None
+    generator_nominal_efficiency_full_load: xr.DataArray | None
+    generator_capacity_degradation_rate_per_year: xr.DataArray | None
+    generator_specific_investment_cost_per_kw: xr.DataArray | None
+    generator_lifetime_years: xr.DataArray | None
+    generator_wacc: xr.DataArray | None
+    generator_fixed_om_share_per_year: xr.DataArray | None
+    generator_embedded_emissions_kgco2e_per_kw: xr.DataArray | None
+    fuel_lhv_kwh_per_unit_fuel: xr.DataArray | None
+    fuel_cost_per_unit_fuel: xr.DataArray | None
+    fuel_fuel_cost_per_unit_fuel: xr.DataArray | None
+    fuel_direct_emissions_kgco2e_per_unit_fuel: xr.DataArray | None
 
     # Grid
-    grid_line_capacity_kw: Optional[xr.DataArray]
-    grid_transmission_efficiency: Optional[xr.DataArray]
-    grid_renewable_share: Optional[xr.DataArray]
-    grid_emissions_factor_kgco2e_per_kwh: Optional[xr.DataArray]
-    grid_availability: Optional[xr.DataArray]
-    grid_import_price: Optional[xr.DataArray]
-    grid_export_price: Optional[xr.DataArray]
+    grid_line_capacity_kw: xr.DataArray | None
+    grid_transmission_efficiency: xr.DataArray | None
+    grid_renewable_share: xr.DataArray | None
+    grid_emissions_factor_kgco2e_per_kwh: xr.DataArray | None
+    grid_availability: xr.DataArray | None
+    grid_import_price: xr.DataArray | None
+    grid_export_price: xr.DataArray | None
 
     # Optional curve vars + coord
-    generator_eff_curve_rel_power: Optional[xr.DataArray]
-    generator_eff_curve_eff: Optional[xr.DataArray]
-    generator_fuel_curve_rel_fuel_use: Optional[xr.DataArray]
-    curve_point: Optional[xr.DataArray]
+    generator_eff_curve_rel_power: xr.DataArray | None
+    generator_eff_curve_eff: xr.DataArray | None
+    generator_fuel_curve_rel_fuel_use: xr.DataArray | None
+    curve_point: xr.DataArray | None
 
     def is_grid_on(self) -> bool:
-        return bool(((self.settings.get("grid", {}) or {}).get("on_grid", False)))
+        return bool((self.settings.get("grid", {}) or {}).get("on_grid", False))
 
     def is_grid_export_enabled(self) -> bool:
-        return bool(((self.settings.get("grid", {}) or {}).get("allow_export", False)))
+        return bool((self.settings.get("grid", {}) or {}).get("allow_export", False))
 
 
 def get_params(ds: xr.Dataset) -> Params:
@@ -104,7 +104,7 @@ def get_params(ds: xr.Dataset) -> Params:
     if not isinstance(settings, dict):
         settings = {}
 
-    def _opt(name: str) -> Optional[xr.DataArray]:
+    def _opt(name: str) -> xr.DataArray | None:
         return ds[name] if name in ds.data_vars else None
 
     curve_point = ds.coords["curve_point"] if "curve_point" in ds.coords else None

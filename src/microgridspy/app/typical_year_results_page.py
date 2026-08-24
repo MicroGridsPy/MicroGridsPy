@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,11 +8,11 @@ import pandas as pd
 import streamlit as st
 import xarray as xr
 
+from microgridspy.app.page_helpers import get_dataset_settings, get_nested_flag
+from microgridspy.app.page_helpers import safe_float as _safe_float
 from microgridspy.export.results_page_helpers import export_typical_year_results_from_object
 from microgridspy.export.typical_year_reporting import select_dispatch_view, select_kpi_row
 from microgridspy.export.typical_year_results import TypicalYearResults
-from microgridspy.app.page_helpers import get_dataset_settings, get_nested_flag, safe_float as _safe_float
-
 
 C_RES = "#FFD700"
 C_BAT = "#00ACC1"
@@ -25,7 +25,7 @@ MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 MONTH_HOURS = [31 * 24, 28 * 24, 31 * 24, 30 * 24, 31 * 24, 30 * 24, 31 * 24, 31 * 24, 30 * 24, 31 * 24, 30 * 24, 31 * 24]
 
 
-def _days_to_slice(T: int, start_day: int, ndays: int) -> Tuple[slice, int, int]:
+def _days_to_slice(T: int, start_day: int, ndays: int) -> tuple[slice, int, int]:
     ndays = int(np.clip(ndays, 1, 7))
     max_day = max(1, int(np.ceil(T / 24)))
     start_day = int(np.clip(start_day, 1, max_day))
@@ -82,8 +82,8 @@ def _plot_dispatch_stack(
     ax.legend(ncols=4, fontsize=9, loc="lower center", bbox_to_anchor=(0.5, 1.25))
 
 
-def _scenario_selector(settings: Dict[str, Any], data: xr.Dataset, *, key: str) -> Tuple[str, Optional[str]]:
-    ms_enabled = bool(((settings.get("multi_scenario", {}) or {}).get("enabled", False)))
+def _scenario_selector(settings: dict[str, Any], data: xr.Dataset, *, key: str) -> tuple[str, str | None]:
+    ms_enabled = bool((settings.get("multi_scenario", {}) or {}).get("enabled", False))
     if not ms_enabled:
         return "scenario", str(data.coords["scenario"].values[0])
 
@@ -95,7 +95,7 @@ def _scenario_selector(settings: Dict[str, Any], data: xr.Dataset, *, key: str) 
     return "scenario", selected.split("Scenario: ", 1)[-1].strip()
 
 
-def _weights_map(data: xr.Dataset) -> Dict[str, float]:
+def _weights_map(data: xr.Dataset) -> dict[str, float]:
     w_s = data.get("scenario_weight", None)
     scenarios = [str(s) for s in data.coords["scenario"].values.tolist()]
     if isinstance(w_s, xr.DataArray) and "scenario" in w_s.dims:
@@ -106,7 +106,7 @@ def _weights_map(data: xr.Dataset) -> Dict[str, float]:
     return {s: eq for s in scenarios}
 
 
-def _weighted_scalar_from_scenarios(data: xr.Dataset, da: xr.DataArray, *, mode: str, scenario_label: Optional[str]) -> float:
+def _weighted_scalar_from_scenarios(data: xr.Dataset, da: xr.DataArray, *, mode: str, scenario_label: str | None) -> float:
     if "scenario" not in da.dims:
         return float(_safe_float(da))
     if mode == "scenario" and scenario_label is not None:
@@ -118,7 +118,7 @@ def _weighted_scalar_from_scenarios(data: xr.Dataset, da: xr.DataArray, *, mode:
     return total
 
 
-def _weighted_timeseries_from_scenarios(data: xr.Dataset, da: Optional[xr.DataArray], *, mode: str, scenario_label: Optional[str]) -> Optional[np.ndarray]:
+def _weighted_timeseries_from_scenarios(data: xr.Dataset, da: xr.DataArray | None, *, mode: str, scenario_label: str | None) -> np.ndarray | None:
     if da is None:
         return None
     if "period" not in da.dims:
@@ -151,7 +151,7 @@ def _build_monthly_operational_profile(
     dispatch_view: pd.DataFrame,
     data: xr.Dataset,
     mode: str,
-    scenario_label: Optional[str],
+    scenario_label: str | None,
 ) -> pd.DataFrame:
     if dispatch_view.empty:
         return pd.DataFrame()
@@ -212,12 +212,12 @@ def _build_typical_file_diagnostics_table(
     dispatch_view: pd.DataFrame,
     data: xr.Dataset,
     mode: str,
-    scenario_label: Optional[str],
+    scenario_label: str | None,
     kpi_row: pd.Series,
 ) -> pd.DataFrame:
     settings = get_dataset_settings(data)
     battery_loss_model = str(((settings.get("battery_model", {}) or {}).get("loss_model", "constant_efficiency")) or "constant_efficiency").strip().lower()
-    generator_partial_load = bool(((settings.get("generator", {}) or {}).get("partial_load_modelling_enabled", False)))
+    generator_partial_load = bool((settings.get("generator", {}) or {}).get("partial_load_modelling_enabled", False))
     if battery_loss_model != "convex_loss_epigraph" and not generator_partial_load:
         return pd.DataFrame()
 
@@ -288,7 +288,7 @@ def _emissions_priced_in_objective(data: xr.Dataset) -> bool:
     return bool(np.any(np.abs(vals) > 1e-12))
 
 
-def render_typical_year_results(results: TypicalYearResults, project_name: Optional[str] = None) -> None:
+def render_typical_year_results(results: TypicalYearResults, project_name: str | None = None) -> None:
     _ = project_name
     data = results.data
     settings = get_dataset_settings(data)

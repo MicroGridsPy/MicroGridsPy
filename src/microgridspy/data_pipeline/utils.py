@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Dict, Optional, Sequence, Type
-
 import json
+from collections.abc import Sequence
+from pathlib import Path
+from typing import Any
+
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -12,7 +13,7 @@ import yaml
 from microgridspy.io.csv_format import read_csv_with_format
 
 
-def read_json_or_raise(path: Path, *, error_cls: Type[Exception] = RuntimeError) -> Dict[str, Any]:
+def read_json_or_raise(path: Path, *, error_cls: type[Exception] = RuntimeError) -> dict[str, Any]:
     """Read and parse JSON file, raising error_cls on failure."""
     if not path.exists():
         raise error_cls(f"Missing required file: {path}")
@@ -22,7 +23,7 @@ def read_json_or_raise(path: Path, *, error_cls: Type[Exception] = RuntimeError)
         raise error_cls(f"Cannot parse JSON: {path}\nerror: {e}")
 
 
-def read_yaml_or_raise(path: Path, *, error_cls: Type[Exception] = RuntimeError) -> Dict[str, Any]:
+def read_yaml_or_raise(path: Path, *, error_cls: type[Exception] = RuntimeError) -> dict[str, Any]:
     """Read and parse YAML file, raising error_cls on failure."""
     if not path.exists():
         raise error_cls(f"Missing required file: {path}")
@@ -37,8 +38,8 @@ def read_csv_or_raise(
     path: Path,
     *,
     header: int | list[int],
-    csv_format: Dict[str, str] | None = None,
-    error_cls: Type[Exception] = RuntimeError,
+    csv_format: dict[str, str] | None = None,
+    error_cls: type[Exception] = RuntimeError,
 ) -> pd.DataFrame:
     """Read a CSV file with a fixed header shape, raising error_cls on failure."""
     if not path.exists():
@@ -49,7 +50,7 @@ def read_csv_or_raise(
         raise error_cls(f"Cannot parse CSV: {path}\nerror: {e}")
 
 
-def as_float(x: Any, *, name: str, default: float = 0.0, error_cls: Type[Exception] = RuntimeError) -> float:
+def as_float(x: Any, *, name: str, default: float = 0.0, error_cls: type[Exception] = RuntimeError) -> float:
     """Convert x to float, with default if None. Raise error_cls on failure."""
     if x is None:
         return float(default)
@@ -59,7 +60,7 @@ def as_float(x: Any, *, name: str, default: float = 0.0, error_cls: Type[Excepti
         raise error_cls(f"Invalid value for '{name}': {x!r} (error: {e})")
 
 
-def as_float_or_nan(x: Any, *, name: str, error_cls: Type[Exception] = RuntimeError) -> float:
+def as_float_or_nan(x: Any, *, name: str, error_cls: type[Exception] = RuntimeError) -> float:
     """Convert x to float, or NaN if None. Raise error_cls on failure."""
     if x is None:
         return float("nan")
@@ -69,7 +70,7 @@ def as_float_or_nan(x: Any, *, name: str, error_cls: Type[Exception] = RuntimeEr
         raise error_cls(f"Invalid numeric value for '{name}': {x!r} (error: {e})")
 
 
-def as_str(x: Any, *, name: str, default: str = "", error_cls: Type[Exception] = RuntimeError) -> str:
+def as_str(x: Any, *, name: str, default: str = "", error_cls: type[Exception] = RuntimeError) -> str:
     """Convert x to str, with default if None. Raise error_cls on failure."""
     if x is None:
         return default
@@ -101,7 +102,7 @@ def validate_required_coords(
     sets: xr.Dataset,
     *,
     required: Sequence[str],
-    error_cls: Type[Exception] = RuntimeError,
+    error_cls: type[Exception] = RuntimeError,
     context: str = "initialize_data",
 ) -> None:
     """Validate that an xarray dataset contains the required coordinates."""
@@ -117,7 +118,7 @@ def validate_hour_column(
     *,
     path: Path,
     period_coord: xr.DataArray,
-    error_cls: Type[Exception] = RuntimeError,
+    error_cls: type[Exception] = RuntimeError,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Validate an hour column against the expected period coordinate.
@@ -166,13 +167,13 @@ def broadcast_to_scenario(value: xr.DataArray, scenario_coord: xr.DataArray) -> 
 def merge_optional_datasets(
     *datasets: xr.Dataset | None,
     compat: str = "override",
-    join: Optional[str] = None,
+    join: str | None = None,
 ) -> xr.Dataset:
     """Merge non-null datasets while preserving xarray merge options."""
     present = [ds for ds in datasets if ds is not None]
     if not present:
         return xr.Dataset()
-    kwargs: Dict[str, Any] = {"compat": compat}
+    kwargs: dict[str, Any] = {"compat": compat}
     if join is not None:
         kwargs["join"] = join
     return xr.merge(present, **kwargs)
@@ -182,7 +183,7 @@ def finite_nonnegative_scalar_limit(
     value: Any,
     *,
     name: str,
-    error_cls: Type[Exception] = RuntimeError,
+    error_cls: type[Exception] = RuntimeError,
 ) -> float | None:
     """
     Return the first finite scalar limit if present and validate it is non-negative.

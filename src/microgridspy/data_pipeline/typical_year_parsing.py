@@ -3,21 +3,22 @@ from __future__ import annotations
 
 from functools import partial
 from pathlib import Path
-from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 
 from microgridspy.data_pipeline.battery_loss_model import resolve_efficiency_curve_values
-from microgridspy.data_pipeline.generator_partial_load_model import build_generator_partial_load_surrogate
+from microgridspy.data_pipeline.generator_partial_load_model import (
+    build_generator_partial_load_surrogate,
+)
 from microgridspy.data_pipeline.utils import (
     as_float,
     as_float_or_nan,
     as_str,
     broadcast_to_scenario,
-    coord_labels,
     coerce_numeric_array,
+    coord_labels,
     normalize_weights,
     read_csv_or_raise,
     read_json_or_raise,
@@ -363,7 +364,7 @@ def _load_renewables_yaml(
     tech_arr = {k: np.full((n_r,), np.nan, dtype=float) for k in PARAMS_TECHNICAL}
     fom_arr = np.full((n_r,), np.nan, dtype=float)
     subsidy_arr = np.full((n_s, n_r), np.nan, dtype=float)
-    conversion_technology_by_resource: Dict[str, str] = {}
+    conversion_technology_by_resource: dict[str, str] = {}
 
     for item in ren_list:
         if not isinstance(item, dict):
@@ -449,7 +450,7 @@ def _load_renewables_yaml(
     # -----------------------------
     # Build xr.Dataset
     # -----------------------------
-    data_vars: Dict[str, xr.DataArray] = {}
+    data_vars: dict[str, xr.DataArray] = {}
 
     for k in PARAMS_INVESTMENT:
         var_name = f"res_{k}"
@@ -686,7 +687,7 @@ def _load_generator_and_fuel_yaml(
     *,
     inputs_dir: Path,
     scenario_coord: xr.DataArray,
-) -> tuple[xr.Dataset, xr.Dataset, Optional[xr.Dataset], dict]:
+) -> tuple[xr.Dataset, xr.Dataset, xr.Dataset | None, dict]:
     payload = _read_yaml(path)
 
     gen = payload.get("generator", None)

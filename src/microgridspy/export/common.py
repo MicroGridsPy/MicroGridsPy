@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Dict, Mapping, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -56,13 +57,13 @@ def scalarize(x: Any, **indexers: Any) -> float:
 
 def get_var_solution(
     *,
-    vars_dict: Optional[Dict[str, Any]],
-    solution: Optional[xr.Dataset],
+    vars_dict: dict[str, Any] | None,
+    solution: xr.Dataset | None,
     name: str,
     prefer_solution_dataset: bool = True,
-) -> Optional[xr.DataArray]:
+) -> xr.DataArray | None:
     """Resolve a solved variable from the solution dataset or the linopy variable dict."""
-    def _coerce_solution_array(var_obj: Any, raw: Any) -> Optional[xr.DataArray]:
+    def _coerce_solution_array(var_obj: Any, raw: Any) -> xr.DataArray | None:
         if isinstance(raw, xr.DataArray):
             return raw
         if raw is None:
@@ -102,7 +103,7 @@ def get_var_solution(
     return None
 
 
-def require_data_array(name: str, da: Optional[xr.DataArray]) -> xr.DataArray:
+def require_data_array(name: str, da: xr.DataArray | None) -> xr.DataArray:
     """Require that a solved variable resolves to an xarray.DataArray."""
     if not isinstance(da, xr.DataArray):
         raise InputValidationError(f"Missing solved variable '{name}' in vars/solution.")
@@ -127,10 +128,10 @@ def ensure_results_dir(project_name: str, *, suffix: str | None = None) -> Path:
     return out_dir
 
 
-def write_csv_outputs(out_dir: Path, outputs: Mapping[str, pd.DataFrame]) -> Dict[str, str]:
+def write_csv_outputs(out_dir: Path, outputs: Mapping[str, pd.DataFrame]) -> dict[str, str]:
     """Write multiple DataFrames to CSV in a directory and return path metadata."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    written: Dict[str, str] = {"out_dir": str(out_dir)}
+    written: dict[str, str] = {"out_dir": str(out_dir)}
     for filename, df in outputs.items():
         path = out_dir / filename
         df.to_csv(path, index=False)

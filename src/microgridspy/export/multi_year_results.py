@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
+import linopy as lp
 import numpy as np
 import pandas as pd
 import xarray as xr
-import linopy as lp
 
 from microgridspy.export.common import (
     InputValidationError,
@@ -20,16 +20,20 @@ from microgridspy.export.common import (
     select_or_self,
     write_csv_outputs,
 )
+from microgridspy.io.vintage_labels import (
+    load_multi_year_vintage_labels,
+    vintage_display_for_step,
+    vintage_label_for_step,
+)
 from microgridspy.multi_year_model.lifecycle import (
     discounted_annuity_tail_memo,
     map_inv_step_to_year,
+    repeating_degradation_factor,
     replacement_active_mask,
     replacement_commission_mask,
-    repeating_degradation_factor,
     year_ordinal,
 )
 from microgridspy.multi_year_model.params import get_params
-from microgridspy.io.vintage_labels import load_multi_year_vintage_labels, vintage_display_for_step, vintage_label_for_step
 
 
 @dataclass
@@ -37,7 +41,7 @@ class MultiYearResults:
     project_name: str
     data: xr.Dataset
     sets: xr.Dataset
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
     dispatch: pd.DataFrame
     energy_balance: pd.DataFrame
     design_by_step: pd.DataFrame
@@ -274,8 +278,8 @@ def _renewable_capacity_tables(
     *,
     sets: xr.Dataset,
     data: xr.Dataset,
-    vars: Dict[str, Any],
-    solution: Optional[xr.Dataset],
+    vars: dict[str, Any],
+    solution: xr.Dataset | None,
 ) -> tuple[xr.DataArray, xr.DataArray, xr.DataArray]:
     p = get_params(data)
     res_units = require_data_array("res_units", get_var_solution(vars_dict=vars, solution=solution, name="res_units"))
@@ -300,8 +304,8 @@ def _battery_capacity_tables(
     *,
     sets: xr.Dataset,
     data: xr.Dataset,
-    vars: Dict[str, Any],
-    solution: Optional[xr.Dataset],
+    vars: dict[str, Any],
+    solution: xr.Dataset | None,
 ) -> tuple[xr.DataArray, xr.DataArray]:
     p = get_params(data)
     bat_units = require_data_array("battery_units", get_var_solution(vars_dict=vars, solution=solution, name="battery_units"))
@@ -323,8 +327,8 @@ def build_dispatch_timeseries_table_multi_year(
     *,
     sets: xr.Dataset,
     data: xr.Dataset,
-    vars: Dict[str, Any],
-    solution: Optional[xr.Dataset],
+    vars: dict[str, Any],
+    solution: xr.Dataset | None,
 ) -> pd.DataFrame:
     p = get_params(data)
     load = require_data_array("load_demand", p.load_demand)
@@ -466,8 +470,8 @@ def build_design_by_step_table_multi_year(
     *,
     sets: xr.Dataset,
     data: xr.Dataset,
-    vars: Dict[str, Any],
-    solution: Optional[xr.Dataset],
+    vars: dict[str, Any],
+    solution: xr.Dataset | None,
 ) -> pd.DataFrame:
     p = get_params(data)
     settings = (data.attrs or {}).get("settings", {}) or {}
@@ -554,8 +558,8 @@ def build_renewable_inverter_design_by_step_table_multi_year(
     *,
     sets: xr.Dataset,
     data: xr.Dataset,
-    vars: Dict[str, Any],
-    solution: Optional[xr.Dataset],
+    vars: dict[str, Any],
+    solution: xr.Dataset | None,
 ) -> pd.DataFrame:
     p = get_params(data)
     design = build_design_by_step_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
@@ -586,8 +590,8 @@ def build_battery_inverter_design_by_step_table_multi_year(
     *,
     sets: xr.Dataset,
     data: xr.Dataset,
-    vars: Dict[str, Any],
-    solution: Optional[xr.Dataset],
+    vars: dict[str, Any],
+    solution: xr.Dataset | None,
 ) -> pd.DataFrame:
     p = get_params(data)
     design = build_design_by_step_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
@@ -616,8 +620,8 @@ def build_inverter_capacity_by_year_table_multi_year(
     *,
     sets: xr.Dataset,
     data: xr.Dataset,
-    vars: Dict[str, Any],
-    solution: Optional[xr.Dataset],
+    vars: dict[str, Any],
+    solution: xr.Dataset | None,
 ) -> pd.DataFrame:
     active_res_dc, active_res_inv_ac, effective_res_ac = _renewable_capacity_tables(
         sets=sets,
@@ -681,9 +685,9 @@ def build_yearly_kpis_table_multi_year(
     *,
     sets: xr.Dataset,
     data: xr.Dataset,
-    vars: Dict[str, Any],
-    solution: Optional[xr.Dataset],
-    objective_value: Optional[float] = None,
+    vars: dict[str, Any],
+    solution: xr.Dataset | None,
+    objective_value: float | None = None,
 ) -> pd.DataFrame:
     p = get_params(data)
     dispatch = build_dispatch_timeseries_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
@@ -853,8 +857,8 @@ def build_inverter_metrics_table_multi_year(
     *,
     sets: xr.Dataset,
     data: xr.Dataset,
-    vars: Dict[str, Any],
-    solution: Optional[xr.Dataset],
+    vars: dict[str, Any],
+    solution: xr.Dataset | None,
 ) -> pd.DataFrame:
     dispatch = build_dispatch_timeseries_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
     inverter_capacity = build_inverter_capacity_by_year_table_multi_year(sets=sets, data=data, vars=vars, solution=solution)
@@ -928,12 +932,12 @@ def build_discounted_cashflows_table_multi_year(
     *,
     sets: xr.Dataset,
     data: xr.Dataset,
-    vars: Dict[str, Any],
-    solution: Optional[xr.Dataset],
+    vars: dict[str, Any],
+    solution: xr.Dataset | None,
 ) -> pd.DataFrame:
     p = get_params(data)
     w = _scenario_weights(p, sets.coords["scenario"])
-    rs = float((p.settings.get("social_discount_rate", 0.0) or 0.0))
+    rs = float(p.settings.get("social_discount_rate", 0.0) or 0.0)
     disc = 1.0 / ((1.0 + rs) ** year_ordinal(sets))
 
     res_units = require_data_array("res_units", get_var_solution(vars_dict=vars, solution=solution, name="res_units"))
@@ -1074,8 +1078,8 @@ def build_scenario_costs_table_multi_year(
     *,
     sets: xr.Dataset,
     data: xr.Dataset,
-    vars: Dict[str, Any],
-    solution: Optional[xr.Dataset],
+    vars: dict[str, Any],
+    solution: xr.Dataset | None,
 ) -> pd.DataFrame:
     p = get_params(data)
     weights = _scenario_weights(p, sets.coords["scenario"])
@@ -1225,7 +1229,7 @@ def build_investment_summary_table_multi_year(
     design_df: pd.DataFrame,
 ) -> pd.DataFrame:
     p = get_params(data)
-    rs = float((p.settings.get("social_discount_rate", 0.0) or 0.0))
+    rs = float(p.settings.get("social_discount_rate", 0.0) or 0.0)
     years = [str(y) for y in sets.coords["year"].values.tolist()]
     start_year_map = (
         {str(step): str(sets["inv_step_start_year"].sel(inv_step=step).item()) for step in sets.coords["inv_step"].values}
@@ -1369,7 +1373,7 @@ def build_additional_reporting_table_multi_year(
     kpis_df: pd.DataFrame,
     cash_df: pd.DataFrame,
     scenario_costs_df: pd.DataFrame,
-    objective_value: Optional[float] = None,
+    objective_value: float | None = None,
 ) -> pd.DataFrame:
     investment = build_investment_summary_table_multi_year(sets=sets, data=data, design_df=design_df)
     yearly = build_yearly_expected_table_multi_year(cash_df, scenario_costs_df)
@@ -1492,17 +1496,17 @@ def build_multi_year_results_from_tables(
     kpis_yearly_df: pd.DataFrame,
     cashflows_discounted_df: pd.DataFrame,
     scenario_costs_yearly_df: pd.DataFrame,
-    renewable_inverter_design_by_step_df: Optional[pd.DataFrame] = None,
-    battery_inverter_design_by_step_df: Optional[pd.DataFrame] = None,
-    inverter_capacity_by_year_df: Optional[pd.DataFrame] = None,
-    inverter_metrics_yearly_df: Optional[pd.DataFrame] = None,
-    capacity_by_year_df: Optional[pd.DataFrame] = None,
-    investment_summary_df: Optional[pd.DataFrame] = None,
-    yearly_expected_df: Optional[pd.DataFrame] = None,
-    reporting_summary_df: Optional[pd.DataFrame] = None,
+    renewable_inverter_design_by_step_df: pd.DataFrame | None = None,
+    battery_inverter_design_by_step_df: pd.DataFrame | None = None,
+    inverter_capacity_by_year_df: pd.DataFrame | None = None,
+    inverter_metrics_yearly_df: pd.DataFrame | None = None,
+    capacity_by_year_df: pd.DataFrame | None = None,
+    investment_summary_df: pd.DataFrame | None = None,
+    yearly_expected_df: pd.DataFrame | None = None,
+    reporting_summary_df: pd.DataFrame | None = None,
     results_dir: Path | None = None,
     source: str = "files",
-    metadata: Optional[Dict[str, Any]] = None,
+    metadata: dict[str, Any] | None = None,
 ) -> MultiYearResults:
     design = design_by_step_df.copy()
     dispatch = dispatch_df.copy()
@@ -1613,11 +1617,11 @@ def build_multi_year_results(
     project_name: str,
     sets: xr.Dataset,
     data: xr.Dataset,
-    vars: Dict[str, Any],
-    solution: Optional[xr.Dataset],
-    objective_value: Optional[float] = None,
-    status: Optional[str] = None,
-    solver: Optional[str] = None,
+    vars: dict[str, Any],
+    solution: xr.Dataset | None,
+    objective_value: float | None = None,
+    status: str | None = None,
+    solver: str | None = None,
     results_dir: Path | None = None,
     source: str = "session",
 ) -> MultiYearResults:
@@ -1661,9 +1665,9 @@ def export_multi_year_results(
     project_name: str,
     sets: xr.Dataset,
     data: xr.Dataset,
-    model: Optional[lp.Model],
-    vars: Dict[str, Any],
-    solution: Optional[xr.Dataset],
+    model: lp.Model | None,
+    vars: dict[str, Any],
+    solution: xr.Dataset | None,
     out_dir: Path | None = None,
 ) -> dict:
     if out_dir is None:

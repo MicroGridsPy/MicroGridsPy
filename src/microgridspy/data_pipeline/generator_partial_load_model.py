@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Type
 
 import numpy as np
 
@@ -11,7 +10,7 @@ def build_generator_partial_load_surrogate(
     rel: np.ndarray,
     eff: np.ndarray,
     path: Path,
-    error_cls: Type[Exception] = RuntimeError,
+    error_cls: type[Exception] = RuntimeError,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Build an LP-safe convex generator fuel-use surrogate from sampled efficiency points.

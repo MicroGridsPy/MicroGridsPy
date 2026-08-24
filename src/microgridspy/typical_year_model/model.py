@@ -2,17 +2,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any
 
-import xarray as xr
 import linopy as lp
+import xarray as xr
 
-from microgridspy.typical_year_model.sets import initialize_sets
-from microgridspy.typical_year_model.data import initialize_data
-from microgridspy.typical_year_model.variables import initialize_vars
-from microgridspy.typical_year_model.constraints import initialize_constraints
-from microgridspy.typical_year_model.objective import initialize_objective
 from microgridspy.io.utils import tee_console_output
+from microgridspy.typical_year_model.constraints import initialize_constraints
+from microgridspy.typical_year_model.data import initialize_data
+from microgridspy.typical_year_model.objective import initialize_objective
+from microgridspy.typical_year_model.sets import initialize_sets
+from microgridspy.typical_year_model.variables import initialize_vars
 
 if TYPE_CHECKING:
     from microgridspy.export.typical_year_results import TypicalYearResults
@@ -22,7 +22,7 @@ class InputValidationError(RuntimeError):
     pass
 
 
-SolverKw = Dict[str, Any]
+SolverKw = dict[str, Any]
 
 
 @dataclass
@@ -42,10 +42,10 @@ class SteadyStateModel:
         self.sets: xr.Dataset = xr.Dataset()
         self.data: xr.Dataset = xr.Dataset()
 
-        self.model: Optional[lp.Model] = None
-        self.vars: Dict[str, lp.Variable] = {}
+        self.model: lp.Model | None = None
+        self.vars: dict[str, lp.Variable] = {}
 
-        self._last_log_path: Optional[Path] = None
+        self._last_log_path: Path | None = None
         self._flags = _BuildFlags()
 
     # ---------------------------------------------------------------------
@@ -109,7 +109,7 @@ class SteadyStateModel:
     # ---------------------------------------------------------------------
     # Optional exports
     # ---------------------------------------------------------------------
-    def _maybe_write_problem(self, problem_fn: Optional[Path]) -> None:
+    def _maybe_write_problem(self, problem_fn: Path | None) -> None:
         """
         Best-effort export of the optimization problem.
         Linopy supports writing LP/MPS in most versions, but API differs slightly.
@@ -168,8 +168,8 @@ class SteadyStateModel:
         self,
         solver: str = "highs",
         solver_params: SolverKw | None = None,
-        problem_fn: Optional[Path] = None,
-        log_file_path: Optional[Path] = None,
+        problem_fn: Path | None = None,
+        log_file_path: Path | None = None,
     ) -> xr.Dataset:
         """
         Build and solve the model. Returns an xarray Dataset with:
@@ -272,7 +272,7 @@ class SteadyStateModel:
     # ---------------------------------------------------------------------
     # Structured results
     # ---------------------------------------------------------------------
-    def results(self) -> "TypicalYearResults":
+    def results(self) -> TypicalYearResults:
         """Assemble the full typical-year results object from the solved model.
 
         Call this after :meth:`solve_single_objective`. Returns a

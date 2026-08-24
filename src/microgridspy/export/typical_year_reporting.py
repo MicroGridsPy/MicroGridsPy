@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -36,7 +36,7 @@ def _crf(r: float, n: float) -> float:
     return (r * a) / (a - 1.0)
 
 
-def weights_map(data: xr.Dataset) -> Dict[str, float]:
+def weights_map(data: xr.Dataset) -> dict[str, float]:
     scenario_values = [str(s) for s in data.coords["scenario"].values.tolist()]
     w_s = data.get("scenario_weight", None)
     if isinstance(w_s, xr.DataArray) and "scenario" in w_s.dims:
@@ -56,7 +56,7 @@ def _renewable_display_label(data: xr.Dataset, resource: str) -> str:
     return str(resource)
 
 
-def select_dispatch_view(dispatch: pd.DataFrame, data: xr.Dataset, *, mode: str, scenario_label: Optional[str]) -> pd.DataFrame:
+def select_dispatch_view(dispatch: pd.DataFrame, data: xr.Dataset, *, mode: str, scenario_label: str | None) -> pd.DataFrame:
     frame = dispatch.copy()
     frame["scenario"] = frame["scenario"].astype(str)
     numeric_cols = [c for c in frame.columns if c not in {"period", "scenario"}]
@@ -73,7 +73,7 @@ def select_dispatch_view(dispatch: pd.DataFrame, data: xr.Dataset, *, mode: str,
     return expected.sort_values("period").reset_index(drop=True)
 
 
-def select_kpi_row(kpis: pd.DataFrame, data: xr.Dataset, *, mode: str, scenario_label: Optional[str]) -> pd.Series:
+def select_kpi_row(kpis: pd.DataFrame, data: xr.Dataset, *, mode: str, scenario_label: str | None) -> pd.Series:
     frame = kpis.copy()
     frame["scenario"] = frame["scenario"].astype(str)
     if mode == "scenario" and scenario_label is not None:
@@ -155,7 +155,7 @@ def build_reporting_tables(
     data: xr.Dataset,
     dispatch_df: pd.DataFrame,
     design_df: pd.DataFrame,
-    solver_objective_value: Optional[float],
+    solver_objective_value: float | None,
 ) -> TypicalYearReportingTables:
     dispatch = dispatch_df.copy()
     dispatch["scenario"] = dispatch["scenario"].astype(str)

@@ -8,7 +8,6 @@ import xarray as xr
 
 from microgridspy.io.csv_format import read_csv_with_format
 
-
 CONVEXITY_TOL = 1e-8
 MONOTONIC_TOL = 1e-10
 

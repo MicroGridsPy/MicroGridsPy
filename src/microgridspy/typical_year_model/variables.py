@@ -1,12 +1,13 @@
 # generation_planning/modeling/variables.py
 from __future__ import annotations
 
-from typing import Dict
-
-import xarray as xr
 import linopy as lp
+import xarray as xr
 
-from microgridspy.data_pipeline.battery_loss_model import CONVEX_LOSS_EPIGRAPH, normalize_battery_loss_model
+from microgridspy.data_pipeline.battery_loss_model import (
+    CONVEX_LOSS_EPIGRAPH,
+    normalize_battery_loss_model,
+)
 
 
 class InputValidationError(RuntimeError):
@@ -29,7 +30,7 @@ def _bool_from_attrs(obj: xr.Dataset, path: list[str], default: bool = False) ->
     return bool(cur)
 
 
-def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> Dict[str, lp.Variable]:
+def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict[str, lp.Variable]:
     """
     Define steady_state (typical-year) decision variables using labeled coords from `sets`.
 
@@ -96,7 +97,7 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> Dict
         )
     is_integer = _bool_from_attrs(data, ["settings", "unit_commitment"], default=False)
 
-    vars: Dict[str, lp.Variable] = {}
+    vars: dict[str, lp.Variable] = {}
 
     # =========================================================================
     # Design / sizing variables (scenario-invariant)

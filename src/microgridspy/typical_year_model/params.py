@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 import xarray as xr
 
@@ -13,9 +13,9 @@ class Params:
     # Core time series
     load_demand: xr.DataArray
     resource_availability: xr.DataArray
-    grid_import_price: Optional[xr.DataArray]
-    grid_export_price: Optional[xr.DataArray]
-    grid_availability: Optional[xr.DataArray]
+    grid_import_price: xr.DataArray | None
+    grid_export_price: xr.DataArray | None
+    grid_availability: xr.DataArray | None
 
     # Weights / policy / externalities
     scenario_weight: xr.DataArray
@@ -52,16 +52,16 @@ class Params:
     battery_fixed_om_share_per_year: xr.DataArray
     battery_inverter_fixed_om_share_per_year: xr.DataArray
     battery_embedded_emissions_kgco2e_per_kwh: xr.DataArray
-    battery_max_installable_capacity_kwh: Optional[xr.DataArray]
+    battery_max_installable_capacity_kwh: xr.DataArray | None
     battery_charge_efficiency: xr.DataArray
     battery_discharge_efficiency: xr.DataArray
     battery_initial_soc: xr.DataArray
     battery_depth_of_discharge: xr.DataArray
     battery_inverter_nominal_power_kw: xr.DataArray
-    battery_max_charge_c_rate: Optional[xr.DataArray]
-    battery_max_discharge_c_rate: Optional[xr.DataArray]
-    battery_cycle_fade_coefficient_per_kwh_throughput: Optional[xr.DataArray]
-    battery_calendar_time_increment_per_step: Optional[xr.DataArray]
+    battery_max_charge_c_rate: xr.DataArray | None
+    battery_max_discharge_c_rate: xr.DataArray | None
+    battery_cycle_fade_coefficient_per_kwh_throughput: xr.DataArray | None
+    battery_calendar_time_increment_per_step: xr.DataArray | None
 
     # Generator / fuel
     generator_nominal_capacity_kw: xr.DataArray
@@ -77,25 +77,25 @@ class Params:
     fuel_direct_emissions_kgco2e_per_unit_fuel: xr.DataArray
 
     # Grid
-    grid_line_capacity_kw: Optional[xr.DataArray]
-    grid_transmission_efficiency: Optional[xr.DataArray]
-    grid_renewable_share: Optional[xr.DataArray]
-    grid_emissions_factor_kgco2e_per_kwh: Optional[xr.DataArray]
+    grid_line_capacity_kw: xr.DataArray | None
+    grid_transmission_efficiency: xr.DataArray | None
+    grid_renewable_share: xr.DataArray | None
+    grid_emissions_factor_kgco2e_per_kwh: xr.DataArray | None
 
     # Optional curve vars
-    generator_eff_curve_rel_power: Optional[xr.DataArray]
-    generator_eff_curve_eff: Optional[xr.DataArray]
-    generator_fuel_curve_rel_fuel_use: Optional[xr.DataArray]
+    generator_eff_curve_rel_power: xr.DataArray | None
+    generator_eff_curve_eff: xr.DataArray | None
+    generator_fuel_curve_rel_fuel_use: xr.DataArray | None
 
     def is_grid_on(self) -> bool:
-        return bool(((self.settings.get("grid", {}) or {}).get("on_grid", False)))
+        return bool((self.settings.get("grid", {}) or {}).get("on_grid", False))
 
     def is_grid_export_enabled(self) -> bool:
-        return bool(((self.settings.get("grid", {}) or {}).get("allow_export", False)))
+        return bool((self.settings.get("grid", {}) or {}).get("allow_export", False))
 
     def constraints_enforcement(self, default: str = "scenario_wise") -> str:
         return str(
-            ((self.settings.get("optimization_constraints", {}) or {}).get("enforcement", default))
+            (self.settings.get("optimization_constraints", {}) or {}).get("enforcement", default)
         )
 
 
@@ -104,7 +104,7 @@ def get_params(ds: xr.Dataset) -> Params:
     if not isinstance(settings, dict):
         settings = {}
 
-    def _opt(name: str) -> Optional[xr.DataArray]:
+    def _opt(name: str) -> xr.DataArray | None:
         return ds[name] if name in ds.data_vars else None
 
     return Params(

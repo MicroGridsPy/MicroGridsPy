@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,16 +9,16 @@ import pandas as pd
 import streamlit as st
 import xarray as xr
 
+from microgridspy.app.page_helpers import read_json_file, resolve_active_project_from_session
 from microgridspy.data_pipeline.loader import load_project_dataset
 from microgridspy.data_pipeline.typical_year_loader import regenerate_grid_availability_typical_year
-from microgridspy.io.csv_format import read_csv_with_format
 from microgridspy.export.yaml_reader import read_yaml
+from microgridspy.io.csv_format import read_csv_with_format
 from microgridspy.io.utils import project_paths
 from microgridspy.io.vintage_labels import load_multi_year_vintage_labels, vintage_display_for_step
 from microgridspy.multi_year_model.data import regenerate_grid_availability_dynamic
 from microgridspy.multi_year_model.sets import initialize_sets as initialize_multi_year_sets
 from microgridspy.typical_year_model.sets import initialize_sets as initialize_typical_year_sets
-from microgridspy.app.page_helpers import read_json_file, resolve_active_project_from_session
 from microgridspy.visualization.input_plots import (
     build_timeseries_figures,
     compute_series_stats,
@@ -26,8 +26,7 @@ from microgridspy.visualization.input_plots import (
     slice_timeseries,
 )
 
-
-REQUIRED_INPUTS: Dict[str, str] = {
+REQUIRED_INPUTS: dict[str, str] = {
     "formulation.json": "Project formulation and workflow settings.",
     "load_demand.csv": "Hourly demand time series template.",
     "resource_availability.csv": "Hourly renewable resource availability time series.",
@@ -36,7 +35,7 @@ REQUIRED_INPUTS: Dict[str, str] = {
     "generator.yaml": "Generator and fuel techno-economic parameters.",
 }
 
-OPTIONAL_INPUTS: Dict[str, str] = {
+OPTIONAL_INPUTS: dict[str, str] = {
     "generator_efficiency_curve.csv": "Optional generator partial-load efficiency curve used when generator.yaml points to it. Preferred semantics: normalized multiplier relative to generator nominal full-load efficiency.",
     "battery_efficiency_curve.csv": "Optional battery one-way efficiency curve used by the advanced convex loss model. Preferred semantics: normalized multipliers relative to the scalar charge/discharge efficiencies in battery.yaml.",
     "battery_calendar_fade_curve.csv": "Optional battery yearly-average-SoC-dependent calendar-fade coefficient curve used when enabled in formulation.json. The exact filename can be customized in Project Setup.",
@@ -59,7 +58,7 @@ REQUIRED_SETTINGS_KEYS = [
     "grid",
 ]
 
-STATIC_PARAMETER_METADATA: Dict[str, Dict[str, str]] = {
+STATIC_PARAMETER_METADATA: dict[str, dict[str, str]] = {
     "scenario_weight": {
         "unit": "share",
         "description": "Probability weight assigned to each scenario.",
@@ -143,7 +142,7 @@ STATIC_PARAMETER_METADATA: Dict[str, Dict[str, str]] = {
 }
 
 
-def _build_file_table(paths, files: Dict[str, str]) -> pd.DataFrame:
+def _build_file_table(paths, files: dict[str, str]) -> pd.DataFrame:
     rows = []
     for name, description in files.items():
         rows.append(
@@ -156,7 +155,7 @@ def _build_file_table(paths, files: Dict[str, str]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _project_specific_optional_inputs(formulation: Dict[str, Any], paths) -> Dict[str, str]:
+def _project_specific_optional_inputs(formulation: dict[str, Any], paths) -> dict[str, str]:
     files = dict(OPTIONAL_INPUTS)
     battery_cfg = _battery_curve_config(formulation, paths)
     generator_cfg = _generator_curve_config(paths)
@@ -189,7 +188,7 @@ def _project_specific_optional_inputs(formulation: Dict[str, Any], paths) -> Dic
     return files
 
 
-def _required_missing_for_configuration(formulation: Dict[str, Any], paths) -> List[str]:
+def _required_missing_for_configuration(formulation: dict[str, Any], paths) -> list[str]:
     missing = [name for name in REQUIRED_INPUTS if not (paths.inputs_dir / name).exists()]
 
     if bool(formulation.get("on_grid", False)):
@@ -202,7 +201,7 @@ def _required_missing_for_configuration(formulation: Dict[str, Any], paths) -> L
     return sorted(set(missing))
 
 
-def _load_sets_and_dataset(project_name: str, formulation: Dict[str, Any]) -> Tuple[xr.Dataset, xr.Dataset, str]:
+def _load_sets_and_dataset(project_name: str, formulation: dict[str, Any]) -> tuple[xr.Dataset, xr.Dataset, str]:
     formulation_mode = str(formulation.get("core_formulation", "steady_state")).strip()
     loader_mode = "multi_year" if formulation_mode == "dynamic" else "typical_year"
 
@@ -215,7 +214,7 @@ def _load_sets_and_dataset(project_name: str, formulation: Dict[str, Any]) -> Tu
     return sets, ds, loader_mode
 
 
-def _build_project_summary(formulation: Dict[str, Any]) -> str:
+def _build_project_summary(formulation: dict[str, Any]) -> str:
     formulation_mode = str(formulation.get("core_formulation", "steady_state")).strip()
     mode_label = "Typical-year" if formulation_mode == "steady_state" else "Multi-year"
     system_label = "On-grid" if bool(formulation.get("on_grid", False)) else "Off-grid"
@@ -243,8 +242,8 @@ def _build_project_summary(formulation: Dict[str, Any]) -> str:
     return " | ".join(parts)
 
 
-def _load_yaml_parameter_metadata(paths) -> Dict[str, Dict[str, str]]:
-    metadata: Dict[str, Dict[str, str]] = {}
+def _load_yaml_parameter_metadata(paths) -> dict[str, dict[str, str]]:
+    metadata: dict[str, dict[str, str]] = {}
     yaml_files = ("renewables.yaml", "battery.yaml", "generator.yaml", "grid.yaml")
     for name in yaml_files:
         path = paths.inputs_dir / name
@@ -395,8 +394,8 @@ def _optimization_constraints_summary(ds: xr.Dataset) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _soft_checks(ds: xr.Dataset) -> List[Tuple[str, str]]:
-    checks: List[Tuple[str, str]] = []
+def _soft_checks(ds: xr.Dataset) -> list[tuple[str, str]]:
+    checks: list[tuple[str, str]] = []
 
     if "scenario_weight" in ds:
         wsum = float(np.sum(ds["scenario_weight"].values.astype(float)))
@@ -460,7 +459,7 @@ def _safe_yaml_float(value: Any, default: float) -> float:
     return float(default)
 
 
-def _battery_curve_config(formulation: Dict[str, Any], paths) -> Dict[str, Any]:
+def _battery_curve_config(formulation: dict[str, Any], paths) -> dict[str, Any]:
     battery_model = (formulation.get("battery_model", {}) or {})
     degradation_model = (battery_model.get("degradation_model", {}) or {})
     loss_model = str(battery_model.get("loss_model", "constant_efficiency") or "constant_efficiency").strip()
@@ -535,7 +534,7 @@ def _battery_curve_config(formulation: Dict[str, Any], paths) -> Dict[str, Any]:
     }
 
 
-def _generator_curve_config(paths) -> Dict[str, Any]:
+def _generator_curve_config(paths) -> dict[str, Any]:
     generator_yaml = {}
     try:
         generator_yaml = read_yaml(paths.inputs_dir / "generator.yaml")
@@ -596,7 +595,7 @@ def _render_curve_plot(
     df: pd.DataFrame,
     *,
     x: str,
-    y_columns: List[str],
+    y_columns: list[str],
     title: str,
     x_label: str,
     y_label: str,
@@ -614,7 +613,7 @@ def _render_curve_plot(
     st.pyplot(fig, width="stretch")
 
 
-def _render_curve_diagnostics(formulation: Dict[str, Any], paths) -> None:
+def _render_curve_diagnostics(formulation: dict[str, Any], paths) -> None:
     battery_cfg = _battery_curve_config(formulation, paths)
     generator_cfg = _generator_curve_config(paths)
     vintage_labels = load_multi_year_vintage_labels(paths.root.name)
@@ -745,7 +744,7 @@ def _render_curve_diagnostics(formulation: Dict[str, Any], paths) -> None:
             st.warning(f"`{gen_curve_path.name}` does not contain the expected columns.")
 
 
-def _render_file_section(project_root: Path, formulation: Dict[str, Any], paths) -> bool:
+def _render_file_section(project_root: Path, formulation: dict[str, Any], paths) -> bool:
     st.subheader("Required Input Files")
     st.caption(f"Check that the active project contains the inputs required to construct the canonical dataset. Project path: `{project_root}`")
 
@@ -818,7 +817,7 @@ def _render_dataset_section(ds: xr.Dataset, loader_mode: str, paths) -> None:
     _render_soft_check_warnings(ds)
 
 
-def _render_grid_controls(project_name: str, formulation: Dict[str, Any], ds: xr.Dataset, paths) -> None:
+def _render_grid_controls(project_name: str, formulation: dict[str, Any], ds: xr.Dataset, paths) -> None:
     formulation_mode = str(formulation.get("core_formulation", "steady_state")).strip()
     if formulation_mode not in {"steady_state", "dynamic"}:
         return
@@ -917,7 +916,7 @@ def _format_selector_label(option) -> str:
     return option.label
 
 
-def _selector_index(values: List[Any], preferred: Any) -> int:
+def _selector_index(values: list[Any], preferred: Any) -> int:
     try:
         return values.index(preferred)
     except ValueError:
@@ -962,7 +961,7 @@ def _render_timeseries_section(ds: xr.Dataset) -> None:
         key="audit_ts_variable",
     )
 
-    selectors: Dict[str, Any] = {}
+    selectors: dict[str, Any] = {}
     for dim in variable.extra_dims:
         values = ds.coords[dim].values.tolist() if dim in ds.coords else ds[variable.variable].coords[dim].values.tolist()
         selectors[dim] = st.selectbox(
@@ -1028,7 +1027,7 @@ def _format_plot_title(text: str) -> str:
     return text.replace("_", " ")
 
 
-def _comparison_options(ds: xr.Dataset) -> List[Any]:
+def _comparison_options(ds: xr.Dataset) -> list[Any]:
     options = []
     for option in list_timeseries_options(ds):
         da = ds[option.variable]
@@ -1050,7 +1049,7 @@ def _daily_profile_frame(series: xr.DataArray) -> pd.DataFrame:
     return frame.groupby("hour_of_day", as_index=False)["value"].mean()
 
 
-def _style_bar_axis(ax: plt.Axes, labels: List[str]) -> None:
+def _style_bar_axis(ax: plt.Axes, labels: list[str]) -> None:
     if not labels:
         return
 
@@ -1102,8 +1101,8 @@ def _render_bar_plot(df: pd.DataFrame, *, x: str, y: str, hue: str | None, title
     st.pyplot(fig, width="stretch")
 
 
-def _comparison_metric_specs(ds: xr.Dataset) -> Dict[str, Dict[str, Any]]:
-    specs: Dict[str, Dict[str, Any]] = {}
+def _comparison_metric_specs(ds: xr.Dataset) -> dict[str, dict[str, Any]]:
+    specs: dict[str, dict[str, Any]] = {}
     if "load_demand" in ds:
         specs["Load demand"] = {
             "variable": "load_demand",
@@ -1161,7 +1160,7 @@ def _aggregate_series_for_comparison(series: xr.DataArray, aggregation: str) -> 
 def _comparison_series(
     ds: xr.Dataset,
     *,
-    metric_spec: Dict[str, Any],
+    metric_spec: dict[str, Any],
     scenario: str,
     year: Any | None,
     selector_value: Any | None,
@@ -1180,7 +1179,7 @@ def _comparison_series(
 
 
 def _plot_daily_profile_comparison(
-    series_map: Dict[str, xr.DataArray],
+    series_map: dict[str, xr.DataArray],
     *,
     title: str,
     y_label: str,
@@ -1237,8 +1236,8 @@ def _render_scenario_input_comparison(
         )
 
     scenario_labels = [str(s) for s in ds.coords["scenario"].values.tolist()]
-    series_map: Dict[str, xr.DataArray] = {}
-    rows: List[Dict[str, Any]] = []
+    series_map: dict[str, xr.DataArray] = {}
+    rows: list[dict[str, Any]] = []
     for scenario_label in scenario_labels:
         series = _comparison_series(
             ds,

@@ -4,18 +4,12 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, List, Tuple, Literal, Optional
+from typing import Literal
 
 import pandas as pd
 import streamlit as st
 
 from microgridspy.data_pipeline.utils import normalize_weights
-from microgridspy.io.utils import (
-    ensure_project_structure,
-    project_exists,
-    project_paths,
-    sanitize_project_name,
-)
 from microgridspy.io.csv_format import (
     CSV_DECIMAL_OPTIONS,
     CSV_DELIMITER_OPTIONS,
@@ -25,6 +19,12 @@ from microgridspy.io.csv_format import (
 from microgridspy.io.jsonio import write_json
 from microgridspy.io.project_setup import build_formulation_payload
 from microgridspy.io.templates import TemplateSettings, write_templates
+from microgridspy.io.utils import (
+    ensure_project_structure,
+    project_exists,
+    project_paths,
+    sanitize_project_name,
+)
 
 # =============================================================================
 # Session keys and UI constants
@@ -123,13 +123,13 @@ class PageConfig:
     horizon_years: int | None
     social_discount_rate: float | None  # decimal (e.g. 0.05)
     capacity_expansion: bool
-    investment_steps: List[int] | None  # list of step durations (years)
+    investment_steps: list[int] | None  # list of step durations (years)
 
     # uncertainty
     multi_scenario: bool
     n_scenarios: int
-    scenario_labels: List[str]
-    scenario_weights: List[float]
+    scenario_labels: list[str]
+    scenario_weights: list[float]
 
     # constraints
     constraints_enforcement: str
@@ -141,8 +141,8 @@ class PageConfig:
 
     # renewables naming
     n_res_sources: int
-    res_conversion_labels: List[str]
-    res_resource_labels: List[str]
+    res_conversion_labels: list[str]
+    res_resource_labels: list[str]
 
     # component labels
     battery_label: str
@@ -160,10 +160,10 @@ class PageConfig:
     fuel_label: str
     csv_delimiter: str
     csv_decimal: str
-    renewable_vintage_labels_by_step: Dict[str, Dict[str, str]]
-    battery_vintage_labels_by_step: Dict[str, str]
-    generator_vintage_labels_by_step: Dict[str, str]
-    fuel_vintage_labels_by_step: Dict[str, str]
+    renewable_vintage_labels_by_step: dict[str, dict[str, str]]
+    battery_vintage_labels_by_step: dict[str, str]
+    generator_vintage_labels_by_step: dict[str, str]
+    fuel_vintage_labels_by_step: dict[str, str]
 
 
 def _battery_endogenous_degradation_enabled(cfg: PageConfig) -> bool:
@@ -192,7 +192,7 @@ def _default_investment_steps_df(n_steps: int = 4, default_duration: int = 5) ->
 
 
 def init_session_state_defaults() -> None:
-    defaults: Dict[str, object] = {
+    defaults: dict[str, object] = {
         # core
         K["formulation"]: "steady_state",
         K["is_dynamic"]: False,
@@ -473,7 +473,7 @@ def _coerce_investment_df(df: pd.DataFrame, n_steps: int) -> pd.DataFrame:
     return df
 
 
-def _list_existing_projects() -> List[str]:
+def _list_existing_projects() -> list[str]:
     try:
         probe = project_paths("___probe___").root
         projects_dir = probe.parent
@@ -543,7 +543,7 @@ def _load_csv_format_from_project(project_name: str) -> tuple[str, str]:
 # =============================================================================
 # Configuration sections (kept as in your script)
 # =============================================================================
-def render_formulation_section() -> Tuple[str, bool, str | None, int | None, float | None, bool, List[int] | None]:
+def render_formulation_section() -> tuple[str, bool, str | None, int | None, float | None, bool, list[int] | None]:
     st.subheader("Model formulation")
 
     formulation = st.radio(
@@ -695,7 +695,7 @@ def render_formulation_section() -> Tuple[str, bool, str | None, int | None, flo
     return formulation, True, str(start_year), horizon_years, discount_rate_dec, True, step_years_list
 
 
-def render_externalities_section() -> Optional[float]:
+def render_externalities_section() -> float | None:
     include_carbon_cost = st.checkbox(
         "Include carbon emission cost within the objective function",
         value=bool(st.session_state.get(K["include_carbon_cost"], False)),
@@ -724,7 +724,7 @@ def render_externalities_section() -> Optional[float]:
     return None
 
 
-def render_uncertainty_section() -> Tuple[bool, int, List[str], List[float]]:
+def render_uncertainty_section() -> tuple[bool, int, list[str], list[float]]:
     st.subheader("Uncertainty modelling")
 
     mode = st.radio(
@@ -781,8 +781,8 @@ def render_uncertainty_section() -> Tuple[bool, int, List[str], List[float]]:
 
     st.markdown("**Scenarios** (labels + weights; weights must sum to 1.0)")
 
-    tmp_labels: List[str] = []
-    tmp_weights: List[float] = []
+    tmp_labels: list[str] = []
+    tmp_weights: list[float] = []
 
     for i in range(n_scen):
         c1, c2 = st.columns([2, 1])
@@ -838,14 +838,14 @@ def render_uncertainty_section() -> Tuple[bool, int, List[str], List[float]]:
     return True, n_scen, tmp_labels, normalized_weights
 
 
-def render_system_section() -> Tuple[
+def render_system_section() -> tuple[
     str,
     bool,
     bool,
     bool,
     int,
-    List[str],
-    List[str],
+    list[str],
+    list[str],
     str,
     str,
     str,
@@ -924,8 +924,8 @@ def render_system_section() -> Tuple[
     _ensure_res_label_lists_length(n_res)
     current_conv = list(st.session_state.get(K["res_conversion_labels"], []))
     current_res = list(st.session_state.get(K["res_resource_labels"], []))
-    updated_conv: List[str] = []
-    updated_res: List[str] = []
+    updated_conv: list[str] = []
+    updated_res: list[str] = []
     for i in range(n_res):
         col1, col2 = st.columns(2)
         with col1:
@@ -1189,7 +1189,7 @@ def render_system_section() -> Tuple[
     )
 
 
-def render_constraints_section() -> Tuple[str, float, float, float, float | None]:
+def render_constraints_section() -> tuple[str, float, float, float, float | None]:
     st.markdown("**Optimization constraints**")
     with st.expander("⚙️ System constraints", expanded=True):
         land_limit_enabled = st.checkbox(
@@ -1362,10 +1362,10 @@ def render_project_setup_page() -> None:
             st.markdown("---")
             enforcement, min_res, max_ll, lolc, land = render_constraints_section()
 
-            renewable_vintage_labels_by_step: Dict[str, Dict[str, str]] = {}
-            battery_vintage_labels_by_step: Dict[str, str] = {}
-            generator_vintage_labels_by_step: Dict[str, str] = {}
-            fuel_vintage_labels_by_step: Dict[str, str] = {}
+            renewable_vintage_labels_by_step: dict[str, dict[str, str]] = {}
+            battery_vintage_labels_by_step: dict[str, str] = {}
+            generator_vintage_labels_by_step: dict[str, str] = {}
+            fuel_vintage_labels_by_step: dict[str, str] = {}
 
             cfg = PageConfig(
                 formulation=formulation,

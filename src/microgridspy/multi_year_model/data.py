@@ -3,30 +3,39 @@ from __future__ import annotations
 
 from functools import partial
 from pathlib import Path
-from typing import Any, Dict, Optional, List, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 
-from microgridspy.data_pipeline.battery_loss_model import (
-    CONVEX_LOSS_EPIGRAPH,
-    InputValidationError as BatteryLossInputValidationError,
-    get_battery_loss_model_from_formulation,
-    load_battery_loss_curve_dataset,
-    resolve_efficiency_curve_values,
+from microgridspy.data_pipeline.battery_calendar_fade_model import (
+    InputValidationError as BatteryCalendarFadeInputValidationError,
 )
-from microgridspy.data_pipeline.generator_partial_load_model import build_generator_partial_load_surrogate
+from microgridspy.data_pipeline.battery_calendar_fade_model import (
+    load_battery_calendar_fade_curve_dataset,
+)
 from microgridspy.data_pipeline.battery_degradation_model import (
     InputValidationError as BatteryDegradationInputValidationError,
+)
+from microgridspy.data_pipeline.battery_degradation_model import (
     derive_cycle_fade_coefficient_from_cycle_life,
     get_battery_degradation_settings,
     suppress_exogenous_battery_capacity_degradation_when_endogenous,
 )
-from microgridspy.data_pipeline.battery_calendar_fade_model import (
-    InputValidationError as BatteryCalendarFadeInputValidationError,
-    load_battery_calendar_fade_curve_dataset,
+from microgridspy.data_pipeline.battery_loss_model import (
+    CONVEX_LOSS_EPIGRAPH,
+    get_battery_loss_model_from_formulation,
+    load_battery_loss_curve_dataset,
+    resolve_efficiency_curve_values,
 )
+from microgridspy.data_pipeline.battery_loss_model import (
+    InputValidationError as BatteryLossInputValidationError,
+)
+from microgridspy.data_pipeline.generator_partial_load_model import (
+    build_generator_partial_load_surrogate,
+)
+from microgridspy.data_pipeline.loader import load_project_dataset
 from microgridspy.data_pipeline.utils import (
     as_float,
     as_float_or_nan,
@@ -37,7 +46,6 @@ from microgridspy.data_pipeline.utils import (
     read_json_or_raise,
     read_yaml_or_raise,
 )
-from microgridspy.data_pipeline.loader import load_project_dataset
 from microgridspy.io.csv_format import read_csv_with_format, write_csv_with_format
 from microgridspy.io.utils import project_paths, simulate_grid_availability_dynamic
 
@@ -82,7 +90,7 @@ def _normalize_step_key(k: object) -> str:
         return tail
     return s  # already like "1" (or something else)
 
-def _remap_by_step_dict(path: Path, by_step: dict, *, expected_steps: List[str], context: str) -> Dict[str, dict]:
+def _remap_by_step_dict(path: Path, by_step: dict, *, expected_steps: list[str], context: str) -> dict[str, dict]:
     """
     Remap a YAML by_step mapping that may be keyed by:
       - canonical step labels ('1', '2', ...)
@@ -99,7 +107,7 @@ def _remap_by_step_dict(path: Path, by_step: dict, *, expected_steps: List[str],
         raise InputValidationError(f"{path.name}: {context} missing/invalid by_step mapping.")
 
     # Normalize keys
-    remapped: Dict[str, dict] = {}
+    remapped: dict[str, dict] = {}
     for k, v in by_step.items():
         nk = _normalize_step_key(k)
         remapped[str(nk)] = v
@@ -126,9 +134,9 @@ def _component_top_level_by_step(
     path: Path,
     component_block: dict,
     *,
-    expected_steps: List[str],
+    expected_steps: list[str],
     context: str,
-) -> Dict[str, dict] | None:
+) -> dict[str, dict] | None:
     by_step = component_block.get("by_step", None)
     if by_step is None:
         return None
@@ -162,13 +170,13 @@ def _shared_technology_error(component: str) -> str:
 def _collapse_shared_by_step_numeric(
     path: Path,
     *,
-    by_step: Dict[str, dict],
-    step_labels: List[str],
-    keys: List[str],
-    optional_defaults: Dict[str, float],
+    by_step: dict[str, dict],
+    step_labels: list[str],
+    keys: list[str],
+    optional_defaults: dict[str, float],
     context: str,
-) -> Dict[str, float]:
-    shared: Dict[str, float] = {}
+) -> dict[str, float]:
+    shared: dict[str, float] = {}
     for key in keys:
         baseline: float | None = None
         for step in step_labels:
@@ -199,12 +207,12 @@ def _collapse_shared_by_step_numeric(
 def _collapse_shared_by_step_paths(
     path: Path,
     *,
-    by_step: Dict[str, dict],
-    step_labels: List[str],
-    keys: List[str],
+    by_step: dict[str, dict],
+    step_labels: list[str],
+    keys: list[str],
     context: str,
-) -> Dict[str, str | None]:
-    shared: Dict[str, str | None] = {}
+) -> dict[str, str | None]:
+    shared: dict[str, str | None] = {}
     for key in keys:
         baseline: str | None = None
         for step in step_labels:
@@ -219,7 +227,7 @@ def _collapse_shared_by_step_paths(
 
 def _apply_shared_override_numeric(
     *,
-    current: Dict[str, float],
+    current: dict[str, float],
     key: str,
     value: float,
     component: str,
@@ -239,7 +247,7 @@ def _require_shared_legacy_scenario_value(
     path: Path,
     *,
     by_scenario: dict,
-    scenario_labels: List[str],
+    scenario_labels: list[str],
     key: str,
     context: str,
     numeric: bool = True,
@@ -369,8 +377,8 @@ def _load_load_demand_csv(
     # ------------------------------------------------------------
     # 2) required scenario/year columns
     # ------------------------------------------------------------
-    scenario_labels: List[str] = [str(s) for s in scenario_coord.values.tolist()]
-    year_labels: List[str] = [str(y) for y in year_coord.values.tolist()]
+    scenario_labels: list[str] = [str(s) for s in scenario_coord.values.tolist()]
+    year_labels: list[str] = [str(y) for y in year_coord.values.tolist()]
 
     required = [(s, y) for s in scenario_labels for y in year_labels]
     missing = [c for c in required if c not in df.columns]
@@ -496,11 +504,11 @@ def _load_resource_availability_csv(
     # ------------------------------------------------------------
     # 2) required columns for all (scenario, year, resource)
     # ------------------------------------------------------------
-    scenario_labels: List[str] = [str(s) for s in scenario_coord.values.tolist()]
-    year_labels: List[str] = [str(y) for y in year_coord.values.tolist()]
-    resource_labels: List[str] = [str(r) for r in resource_coord.values.tolist()]
+    scenario_labels: list[str] = [str(s) for s in scenario_coord.values.tolist()]
+    year_labels: list[str] = [str(y) for y in year_coord.values.tolist()]
+    resource_labels: list[str] = [str(r) for r in resource_coord.values.tolist()]
 
-    required: List[Tuple[str, str, str]] = [(s, y, r) for s in scenario_labels for y in year_labels for r in resource_labels]
+    required: list[tuple[str, str, str]] = [(s, y, r) for s in scenario_labels for y in year_labels for r in resource_labels]
     missing = [c for c in required if c not in df.columns]
     if missing:
         sample = ", ".join([f"({a},{b},{c})" for a, b, c in missing[:12]])
@@ -651,7 +659,7 @@ def _load_renewables_yaml(
         "inverter_fixed_om_share_per_year": np.full((n_k, n_r), np.nan, dtype=float),
         "production_subsidy_per_kwh": np.full((n_k, n_r), np.nan, dtype=float),
     }
-    conversion_technology_by_resource: Dict[str, str] = {}
+    conversion_technology_by_resource: dict[str, str] = {}
 
     # -----------------------------
     # Load each renewable entry
@@ -691,7 +699,7 @@ def _load_renewables_yaml(
             context=f"resource '{res_label}' investment.by_step",
         )
 
-        legacy_specific_area_by_step: Dict[str, float] = {}
+        legacy_specific_area_by_step: dict[str, float] = {}
         for st in step_labels:
             blk = inv_by_step[st]
             if not isinstance(blk, dict):
@@ -773,7 +781,7 @@ def _load_renewables_yaml(
     # -----------------------------
     # Build xr.Dataset
     # -----------------------------
-    data_vars: Dict[str, xr.DataArray] = {}
+    data_vars: dict[str, xr.DataArray] = {}
 
     # investment by step: (inv_step, resource)
     for k in PARAMS_INVESTMENT_BY_STEP:
@@ -1023,7 +1031,7 @@ def _load_generator_and_fuel_yaml(
     scenario_coord: xr.DataArray,
     inv_step_coord: xr.DataArray,
     year_coord: xr.DataArray,
-) -> Tuple[xr.Dataset, xr.Dataset, Optional[xr.Dataset], dict]:
+) -> tuple[xr.Dataset, xr.Dataset, xr.Dataset | None, dict]:
     """Load dynamic generator + fuel parameters from the current shared-technology schema."""
     payload = _read_yaml(path)
 

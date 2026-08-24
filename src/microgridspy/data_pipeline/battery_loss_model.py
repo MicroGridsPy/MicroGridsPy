@@ -9,7 +9,6 @@ import xarray as xr
 
 from microgridspy.io.csv_format import read_csv_with_format
 
-
 CONSTANT_EFFICIENCY = "constant_efficiency"
 CONVEX_LOSS_EPIGRAPH = "convex_loss_epigraph"
 VALID_BATTERY_LOSS_MODELS = {CONSTANT_EFFICIENCY, CONVEX_LOSS_EPIGRAPH}

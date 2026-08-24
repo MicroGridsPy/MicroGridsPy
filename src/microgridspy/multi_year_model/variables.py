@@ -1,12 +1,13 @@
 # generation_planning/modeling/variables.py
 from __future__ import annotations
 
-from typing import Dict
-
-import xarray as xr
 import linopy as lp
+import xarray as xr
 
-from microgridspy.data_pipeline.battery_loss_model import CONVEX_LOSS_EPIGRAPH, normalize_battery_loss_model
+from microgridspy.data_pipeline.battery_loss_model import (
+    CONVEX_LOSS_EPIGRAPH,
+    normalize_battery_loss_model,
+)
 from microgridspy.multi_year_model.params import get_params
 
 
@@ -14,7 +15,7 @@ class InputValidationError(RuntimeError):
     pass
 
 
-def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> Dict[str, lp.Variable]:
+def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict[str, lp.Variable]:
     """
     Define multi-year decision variables using labeled coords from `sets`.
 
@@ -73,7 +74,7 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> Dict
     # of investment-unit variables only; it is not chronological unit commitment.
     is_integer = bool(p.settings.get("unit_commitment", False))
 
-    vars: Dict[str, lp.Variable] = {}
+    vars: dict[str, lp.Variable] = {}
 
     # =========================================================================
     # Design / sizing variables (scenario-invariant)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,12 +10,11 @@ import streamlit as st
 import xarray as xr
 
 from microgridspy.export.common import safe_float
-from microgridspy.export.results_page_helpers import export_multi_year_results_from_object
 from microgridspy.export.multi_year_results import (
     MultiYearResults,
 )
+from microgridspy.export.results_page_helpers import export_multi_year_results_from_object
 from microgridspy.multi_year_model.params import get_params
-
 
 C_RES = "#FFD700"
 C_BAT = "#00ACC1"
@@ -34,7 +33,7 @@ class MultiYearResultsContext:
     results: MultiYearResults
     data: xr.Dataset
     sets: xr.Dataset
-    settings: Dict[str, Any]
+    settings: dict[str, Any]
     dispatch: pd.DataFrame
     design: pd.DataFrame
     kpis: pd.DataFrame
@@ -48,10 +47,10 @@ class MultiYearResultsContext:
     years: list[str]
     scenarios: list[str]
     file_backed: bool = False
-    results_dir: Optional[str] = None
+    results_dir: str | None = None
 
 
-def _get_settings(data: xr.Dataset) -> Dict[str, Any]:
+def _get_settings(data: xr.Dataset) -> dict[str, Any]:
     settings = (data.attrs or {}).get("settings", {})
     return settings if isinstance(settings, dict) else {}
 
@@ -60,7 +59,7 @@ def _safe_div(numerator: float, denominator: float) -> float:
     return float(numerator / denominator) if abs(float(denominator)) > 1e-12 else 0.0
 
 
-def _days_to_slice(T: int, start_day: int, ndays: int) -> Tuple[slice, int]:
+def _days_to_slice(T: int, start_day: int, ndays: int) -> tuple[slice, int]:
     ndays = int(np.clip(ndays, 1, 7))
     max_day = max(1, int(np.ceil(T / 24)))
     start_day = int(np.clip(start_day, 1, max_day))
@@ -70,13 +69,13 @@ def _days_to_slice(T: int, start_day: int, ndays: int) -> Tuple[slice, int]:
     return slice(i0, i1), i1 - i0
 
 
-def _scenario_options(settings: Dict[str, Any], data: xr.Dataset) -> list[str]:
-    ms_enabled = bool(((settings.get("multi_scenario", {}) or {}).get("enabled", False)))
+def _scenario_options(settings: dict[str, Any], data: xr.Dataset) -> list[str]:
+    ms_enabled = bool((settings.get("multi_scenario", {}) or {}).get("enabled", False))
     scen_labels = [str(s) for s in data.coords["scenario"].values.tolist()]
     return scen_labels if not ms_enabled else ["Expected"] + scen_labels
 
 
-def _build_expected_dispatch(view: pd.DataFrame, weights: Optional[xr.DataArray]) -> pd.DataFrame:
+def _build_expected_dispatch(view: pd.DataFrame, weights: xr.DataArray | None) -> pd.DataFrame:
     if not isinstance(weights, xr.DataArray):
         return view.groupby("period", as_index=False).mean(numeric_only=True)
     w_map = {str(s): float(weights.sel(scenario=s)) for s in weights.coords["scenario"].values}
@@ -223,8 +222,8 @@ def _build_context(results: MultiYearResults) -> MultiYearResultsContext:
         yearly_expected=yearly_expected,
         scenario_costs=scenario_costs,
         investment_summary=investment_summary,
-        on_grid=bool(((settings.get("grid", {}) or {}).get("on_grid", False))),
-        allow_export=bool(((settings.get("grid", {}) or {}).get("allow_export", False))),
+        on_grid=bool((settings.get("grid", {}) or {}).get("on_grid", False)),
+        allow_export=bool((settings.get("grid", {}) or {}).get("allow_export", False)),
         years=[str(y) for y in sets.coords["year"].values.tolist()],
         scenarios=[str(s) for s in sets.coords["scenario"].values.tolist()],
     )
@@ -254,13 +253,13 @@ def _build_context_from_files(results: MultiYearResults) -> MultiYearResultsCont
     )
 
 
-def _dispatch_kpi_summary(ctx: MultiYearResultsContext, selection: str) -> Dict[str, float]:
+def _dispatch_kpi_summary(ctx: MultiYearResultsContext, selection: str) -> dict[str, float]:
     dispatch = ctx.dispatch.copy()
     weights = _weights_da(ctx.data)
     weight_map = {str(s): float(weights.sel(scenario=s)) for s in weights.coords["scenario"].values}
     grid_ren = ctx.data.get("grid_renewable_share")
 
-    def _expected_for_year(year_value: str) -> Dict[str, float]:
+    def _expected_for_year(year_value: str) -> dict[str, float]:
         year_df = dispatch[dispatch["year"].astype(str) == str(year_value)].copy()
         rows = []
         for scenario, group in year_df.groupby("scenario", sort=False):
@@ -381,7 +380,7 @@ def _build_multi_year_diagnostics_table(ctx: MultiYearResultsContext, selection:
 
 
 def _battery_lifetime_soh_warning(ctx: MultiYearResultsContext) -> str | None:
-    degradation_settings = (((ctx.settings.get("battery_model", {}) or {}).get("degradation_model", {}) or {}))
+    degradation_settings = ((ctx.settings.get("battery_model", {}) or {}).get("degradation_model", {}) or {})
     end_of_life_soh_raw = degradation_settings.get("end_of_life_soh", None)
     if end_of_life_soh_raw in (None, ""):
         return None
@@ -859,7 +858,7 @@ def _render_scenario_costs_and_emissions(ctx: MultiYearResultsContext) -> None:
     st.pyplot(fig_scope)
 
 
-def _render_export_section(ctx: MultiYearResultsContext, project_name: Optional[str]) -> None:
+def _render_export_section(ctx: MultiYearResultsContext, project_name: str | None) -> None:
     st.subheader("Export Results")
     if ctx.file_backed:
         st.caption("Displaying saved results loaded from project files.")
@@ -885,7 +884,7 @@ def _render_export_section(ctx: MultiYearResultsContext, project_name: Optional[
             st.error(f"Export failed: {exc}")
 
 
-def render_multi_year_results(results: MultiYearResults, project_name: Optional[str]) -> None:
+def render_multi_year_results(results: MultiYearResults, project_name: str | None) -> None:
     _ = project_name
     try:
         ctx = _build_context(results)
@@ -901,7 +900,7 @@ def render_multi_year_results(results: MultiYearResults, project_name: Optional[
     _render_export_section(ctx, project_name)
 
 
-def render_multi_year_results_from_files(file_results: MultiYearResults, project_name: Optional[str]) -> None:
+def render_multi_year_results_from_files(file_results: MultiYearResults, project_name: str | None) -> None:
     _ = project_name
     try:
         ctx = _build_context_from_files(file_results)

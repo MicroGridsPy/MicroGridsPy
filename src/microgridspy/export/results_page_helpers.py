@@ -1,28 +1,16 @@
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Dict, Mapping, Optional
-
 import json
+from collections.abc import Mapping
+from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import xarray as xr
 
-from microgridspy.export.common import get_bundle_formulation, get_var_solution as _get_var_solution_common
-from microgridspy.export.results_bundle import ResultsBundle, build_results_bundle
 from microgridspy.data_pipeline.loader import load_project_dataset
-from microgridspy.io.utils import project_paths
-from microgridspy.multi_year_model.sets import initialize_sets as initialize_multi_year_sets
-from microgridspy.typical_year_model.sets import initialize_sets as initialize_typical_year_sets
-from microgridspy.export.typical_year_results import (
-    TypicalYearResults,
-    build_typical_year_results,
-    build_typical_year_results_from_tables,
-    build_dispatch_timeseries_table,
-    build_energy_balance_table,
-    export_typical_year_results,
-    export_typical_year_results_package,
-)
+from microgridspy.export.common import get_bundle_formulation
+from microgridspy.export.common import get_var_solution as _get_var_solution_common
 from microgridspy.export.multi_year_results import (
     MultiYearResults,
     build_dispatch_timeseries_table_multi_year,
@@ -32,9 +20,22 @@ from microgridspy.export.multi_year_results import (
     export_multi_year_results,
     export_multi_year_results_package,
 )
+from microgridspy.export.results_bundle import ResultsBundle, build_results_bundle
+from microgridspy.export.typical_year_results import (
+    TypicalYearResults,
+    build_dispatch_timeseries_table,
+    build_energy_balance_table,
+    build_typical_year_results,
+    build_typical_year_results_from_tables,
+    export_typical_year_results,
+    export_typical_year_results_package,
+)
+from microgridspy.io.utils import project_paths
+from microgridspy.multi_year_model.sets import initialize_sets as initialize_multi_year_sets
+from microgridspy.typical_year_model.sets import initialize_sets as initialize_typical_year_sets
 
 
-def _resolve_typical_year_results_dir(project_name: str) -> Optional[Path]:
+def _resolve_typical_year_results_dir(project_name: str) -> Path | None:
     paths = project_paths(project_name)
     candidates = [paths.results_dir / "typical_year", paths.results_dir]
     required = {
@@ -49,7 +50,7 @@ def _resolve_typical_year_results_dir(project_name: str) -> Optional[Path]:
     return None
 
 
-def load_typical_year_results_from_files(project_name: str) -> Optional[TypicalYearResults]:
+def load_typical_year_results_from_files(project_name: str) -> TypicalYearResults | None:
     paths = project_paths(project_name)
     if not paths.formulation_json.exists():
         return None
@@ -69,7 +70,7 @@ def load_typical_year_results_from_files(project_name: str) -> Optional[TypicalY
     sets = initialize_typical_year_sets(project_name)
     data = load_project_dataset(project_name, sets, mode="typical_year")
 
-    optional_frames: Dict[str, pd.DataFrame] = {}
+    optional_frames: dict[str, pd.DataFrame] = {}
     optional_files = {
         "upfront_df": "upfront_investment.csv",
         "expected_cost_components_df": "expected_cost_components.csv",
@@ -98,7 +99,7 @@ def load_typical_year_results_from_files(project_name: str) -> Optional[TypicalY
     )
 
 
-def _resolve_multi_year_results_dir(project_name: str) -> Optional[Path]:
+def _resolve_multi_year_results_dir(project_name: str) -> Path | None:
     paths = project_paths(project_name)
     candidates = [paths.results_dir]
     required = {
@@ -115,7 +116,7 @@ def _resolve_multi_year_results_dir(project_name: str) -> Optional[Path]:
     return None
 
 
-def load_multi_year_results_from_files(project_name: str) -> Optional[MultiYearResults]:
+def load_multi_year_results_from_files(project_name: str) -> MultiYearResults | None:
     paths = project_paths(project_name)
     if not paths.formulation_json.exists():
         return None
@@ -135,7 +136,7 @@ def load_multi_year_results_from_files(project_name: str) -> Optional[MultiYearR
     sets = initialize_multi_year_sets(project_name)
     data = load_project_dataset(project_name, sets, mode="multi_year")
 
-    optional_frames: Dict[str, pd.DataFrame] = {}
+    optional_frames: dict[str, pd.DataFrame] = {}
     optional_files = {
         "renewable_inverter_design_by_step_df": "renewable_inverter_design_by_step.csv",
         "battery_inverter_design_by_step_df": "battery_inverter_design_by_step.csv",
@@ -168,7 +169,7 @@ def load_multi_year_results_from_files(project_name: str) -> Optional[MultiYearR
     )
 
 
-def _dataset_project_name(data: Any) -> Optional[str]:
+def _dataset_project_name(data: Any) -> str | None:
     if not isinstance(data, xr.Dataset):
         return None
     settings = (data.attrs or {}).get("settings", {})
@@ -178,7 +179,7 @@ def _dataset_project_name(data: Any) -> Optional[str]:
     return str(raw) if raw is not None else None
 
 
-def get_results_bundle_from_session(session_state: Mapping[str, Any], *, active_project: str | None = None) -> Optional[ResultsBundle]:
+def get_results_bundle_from_session(session_state: Mapping[str, Any], *, active_project: str | None = None) -> ResultsBundle | None:
     raw = session_state.get("gp_results_bundle")
     if isinstance(raw, ResultsBundle):
         if active_project is not None and _dataset_project_name(raw.data) not in {None, active_project}:
@@ -211,7 +212,7 @@ def get_typical_year_results_from_session(
     session_state: Mapping[str, Any],
     *,
     active_project: str | None = None,
-) -> Optional[TypicalYearResults]:
+) -> TypicalYearResults | None:
     raw = session_state.get("gp_typical_year_results")
     if isinstance(raw, TypicalYearResults):
         raw_project = str(raw.metadata.get("project_name") or raw.project_name)
@@ -249,7 +250,7 @@ def get_multi_year_results_from_session(
     session_state: Mapping[str, Any],
     *,
     active_project: str | None = None,
-) -> Optional[MultiYearResults]:
+) -> MultiYearResults | None:
     raw = session_state.get("gp_multi_year_results")
     if isinstance(raw, MultiYearResults):
         raw_project = str(raw.metadata.get("project_name") or raw.project_name)
@@ -278,7 +279,7 @@ def get_multi_year_results_from_session(
         source="session_legacy",
     )
 
-def get_var_solution(*, bundle: ResultsBundle, name: str) -> Optional[xr.DataArray]:
+def get_var_solution(*, bundle: ResultsBundle, name: str) -> xr.DataArray | None:
     return _get_var_solution_common(
         vars_dict=bundle.vars if isinstance(bundle.vars, dict) else None,
         solution=bundle.solution if isinstance(bundle.solution, xr.Dataset) else None,
@@ -310,7 +311,7 @@ def export_results_from_bundle(
     project_name: str,
     bundle: ResultsBundle,
     model_obj: Any = None,
-) -> Dict[str, str]:
+) -> dict[str, str]:
     if bundle.data is None or not isinstance(bundle.vars, dict):
         raise RuntimeError("Missing data/vars in ResultsBundle.")
 
@@ -337,9 +338,9 @@ def export_results_from_bundle(
     )
 
 
-def export_typical_year_results_from_object(results: TypicalYearResults) -> Dict[str, str]:
+def export_typical_year_results_from_object(results: TypicalYearResults) -> dict[str, str]:
     return export_typical_year_results_package(results=results, out_dir=None)
 
 
-def export_multi_year_results_from_object(results: MultiYearResults) -> Dict[str, str]:
+def export_multi_year_results_from_object(results: MultiYearResults) -> dict[str, str]:
     return export_multi_year_results_package(results=results, out_dir=None)

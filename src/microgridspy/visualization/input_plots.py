@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 import xarray as xr
@@ -13,17 +13,17 @@ from microgridspy.export.plots import plot_8760, plot_daily_profile_band
 class TimeSeriesOption:
     variable: str
     label: str
-    extra_dims: List[str]
+    extra_dims: list[str]
 
 
-def list_timeseries_options(ds: xr.Dataset) -> List[TimeSeriesOption]:
+def list_timeseries_options(ds: xr.Dataset) -> list[TimeSeriesOption]:
     """
     Return data variables that can be explored as time series.
 
     A plottable variable must include the canonical `period` dimension. Any
     additional non-scenario/year dims are exposed as extra selectors in the UI.
     """
-    options: List[TimeSeriesOption] = []
+    options: list[TimeSeriesOption] = []
     for name, da in ds.data_vars.items():
         if "period" not in da.dims:
             continue
@@ -43,10 +43,10 @@ def slice_timeseries(
     variable: str,
     scenario: str | None = None,
     year: str | int | None = None,
-    selectors: Dict[str, Any] | None = None,
+    selectors: dict[str, Any] | None = None,
 ) -> xr.DataArray:
     da = ds[variable]
-    indexers: Dict[str, Any] = {}
+    indexers: dict[str, Any] = {}
 
     if scenario is not None and "scenario" in da.dims:
         indexers["scenario"] = scenario
@@ -60,7 +60,7 @@ def slice_timeseries(
     return da.sel(indexers)
 
 
-def compute_series_stats(da: xr.DataArray) -> Dict[str, float | int | None]:
+def compute_series_stats(da: xr.DataArray) -> dict[str, float | int | None]:
     values = np.asarray(da.values, dtype=float).reshape(-1)
     if values.size == 0:
         return {

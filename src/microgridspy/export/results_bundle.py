@@ -2,32 +2,32 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any
 
 import xarray as xr
 
 
 @dataclass
 class ResultsBundle:
-    formulation_mode: Optional[str] = None
-    sets: Optional[xr.Dataset] = None
-    data: Optional[xr.Dataset] = None
-    vars: Optional[Dict[str, Any]] = None
-    solution: Optional[xr.Dataset] = None
-    objective_value: Optional[float] = None
-    status: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    formulation_mode: str | None = None
+    sets: xr.Dataset | None = None
+    data: xr.Dataset | None = None
+    vars: dict[str, Any] | None = None
+    solution: xr.Dataset | None = None
+    objective_value: float | None = None
+    status: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 def build_results_bundle(
     *,
-    sets: Optional[xr.Dataset],
-    data: Optional[xr.Dataset],
-    vars: Optional[Dict[str, Any]],
+    sets: xr.Dataset | None,
+    data: xr.Dataset | None,
+    vars: dict[str, Any] | None,
     model_obj: Any = None,
-    solution: Optional[xr.Dataset] = None,
-    solution_summary: Optional[Dict[str, Any]] = None,
-    solver: Optional[str] = None,
+    solution: xr.Dataset | None = None,
+    solution_summary: dict[str, Any] | None = None,
+    solver: str | None = None,
 ) -> ResultsBundle:
     sol = solution
     if not isinstance(sol, xr.Dataset) and model_obj is not None:
@@ -49,7 +49,7 @@ def build_results_bundle(
         except Exception:
             pass
 
-    meta: Dict[str, Any] = {
+    meta: dict[str, Any] = {
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
     }
     if solver is not None:

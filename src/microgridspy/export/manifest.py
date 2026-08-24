@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
 import json
+from dataclasses import dataclass
+from typing import Any
 
+from microgridspy.io.input_labels import component_labels_from_yaml, renewable_labels_from_yaml
 from microgridspy.io.utils import project_paths
-from microgridspy.io.input_labels import renewable_labels_from_yaml, component_labels_from_yaml
 
 
 @dataclass(frozen=True)
@@ -16,15 +16,15 @@ class CoreSets:
     on_grid: bool
     allow_export: bool
     multi_scenario: bool
-    scenarios: List[str]
-    scenario_weights: List[float]
-    years: List[str]
+    scenarios: list[str]
+    scenario_weights: list[float]
+    years: list[str]
     capacity_expansion: bool
-    steps: List[str]
-    investment_steps_years: Optional[List[int]]
+    steps: list[str]
+    investment_steps_years: list[int] | None
     n_sources: int
-    conversion_technologies: List[str]
-    resources: List[str]
+    conversion_technologies: list[str]
+    resources: list[str]
     battery_label: str
     generator_label: str
     fuel_label: str
@@ -32,22 +32,22 @@ class CoreSets:
 
 @dataclass(frozen=True)
 class ManifestBundle:
-    payload: Dict[str, Any]
+    payload: dict[str, Any]
     sets: CoreSets
 
 
-def _safe_list(x: Any, default: List[Any]) -> List[Any]:
+def _safe_list(x: Any, default: list[Any]) -> list[Any]:
     return x if isinstance(x, list) else default
 
 
-def _normalize_named_list(values: List[Any], *, n: int, prefix: str) -> List[str]:
+def _normalize_named_list(values: list[Any], *, n: int, prefix: str) -> list[str]:
     out = [str(v) for v in values[:n]]
     if len(out) < n:
         out += [f"{prefix}_{i+1}" for i in range(len(out), n)]
     return out
 
 
-def _parse_years(formulation: str, start_year_label: Any, horizon_years: Any) -> List[str]:
+def _parse_years(formulation: str, start_year_label: Any, horizon_years: Any) -> list[str]:
     if formulation != "dynamic":
         return ["typical_year"]
     n = max(int(horizon_years or 1), 1)
@@ -58,7 +58,7 @@ def _parse_years(formulation: str, start_year_label: Any, horizon_years: Any) ->
         return [f"year_{i+1}" for i in range(n)]
 
 
-def _parse_steps(formulation: str, capexp: bool, investment_steps_years: Any) -> List[str]:
+def _parse_steps(formulation: str, capexp: bool, investment_steps_years: Any) -> list[str]:
     if formulation != "dynamic":
         return ["base"]
     if not capexp:

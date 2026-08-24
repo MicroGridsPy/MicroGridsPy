@@ -1,14 +1,21 @@
 # generation_planning/pages/3_results.py
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import xarray as xr
 import streamlit as st
+import xarray as xr
 
+from microgridspy.app.multi_year_results_page import (
+    render_multi_year_results,
+    render_multi_year_results_from_files,
+)
+from microgridspy.app.page_helpers import get_dataset_settings, get_nested_flag
+from microgridspy.app.page_helpers import safe_float as _safe_float
+from microgridspy.app.typical_year_results_page import render_typical_year_results
 from microgridspy.export.results_bundle import ResultsBundle
 from microgridspy.export.results_page_helpers import (
     build_energy_balance_dataframe,
@@ -21,14 +28,17 @@ from microgridspy.export.results_page_helpers import (
 )
 from microgridspy.export.typical_year_reporting import (
     build_reporting_tables,
+)
+from microgridspy.export.typical_year_reporting import (
     select_dispatch_view as select_reporting_dispatch_view,
+)
+from microgridspy.export.typical_year_reporting import (
     select_kpi_row as select_reporting_kpi_row,
 )
-from microgridspy.export.typical_year_results import build_design_summary_table, build_dispatch_timeseries_table
-from microgridspy.app.page_helpers import get_dataset_settings, get_nested_flag, safe_float as _safe_float
-from microgridspy.app.multi_year_results_page import render_multi_year_results, render_multi_year_results_from_files
-from microgridspy.app.typical_year_results_page import render_typical_year_results
-
+from microgridspy.export.typical_year_results import (
+    build_design_summary_table,
+    build_dispatch_timeseries_table,
+)
 
 # Keep aligned with your Optimization page
 KEYS = {
@@ -44,10 +54,10 @@ KEYS = {
 # -----------------------------------------------------------------------------
 def _get_var_solution(
     *,
-    vars_dict: Dict[str, Any],
-    sol_ds: Optional[xr.Dataset],
+    vars_dict: dict[str, Any],
+    sol_ds: xr.Dataset | None,
     name: str,
-) -> Optional[xr.DataArray]:
+) -> xr.DataArray | None:
     """
     Preferred source: solution dataset variable
     Fallback: linopy var.solution
@@ -72,13 +82,13 @@ def _get_var_solution(
     return None
 
 
-def _scenario_selector(settings: Dict[str, Any], data: xr.Dataset, *, key: str) -> Tuple[str, Optional[str]]:
+def _scenario_selector(settings: dict[str, Any], data: xr.Dataset, *, key: str) -> tuple[str, str | None]:
     """
     Returns:
       mode: "expected" or "scenario"
       scenario_label: if mode == "scenario", the selected scenario label (string)
     """
-    ms_enabled = bool(((settings.get("multi_scenario", {}) or {}).get("enabled", False)))
+    ms_enabled = bool((settings.get("multi_scenario", {}) or {}).get("enabled", False))
 
     if not ms_enabled:
         return "scenario", str(data.coords["scenario"].values[0])
@@ -104,7 +114,7 @@ def _weighted_over_scenario(da: xr.DataArray, w_s: xr.DataArray) -> xr.DataArray
     return (da * w).sum("scenario")
 
 
-def _pick_mode(da: xr.DataArray, *, mode: str, scenario_label: Optional[str], w_s: xr.DataArray) -> xr.DataArray:
+def _pick_mode(da: xr.DataArray, *, mode: str, scenario_label: str | None, w_s: xr.DataArray) -> xr.DataArray:
     """Return (period, ...) DataArray with scenario collapsed or selected."""
     if "scenario" not in da.dims:
         return da
@@ -123,15 +133,15 @@ def _safe_percent(numerator: float, denominator: float) -> float | None:
 def _build_typical_diagnostics_table(
     *,
     data: xr.Dataset,
-    vars_dict: Dict[str, Any],
-    sol_ds: Optional[xr.Dataset],
+    vars_dict: dict[str, Any],
+    sol_ds: xr.Dataset | None,
     mode: str,
-    scenario_label: Optional[str],
+    scenario_label: str | None,
     w_s: xr.DataArray,
 ) -> pd.DataFrame:
     settings = get_dataset_settings(data)
     battery_loss_model = str(((settings.get("battery_model", {}) or {}).get("loss_model", "constant_efficiency")) or "constant_efficiency").strip().lower()
-    generator_partial_load = bool(((settings.get("generator", {}) or {}).get("partial_load_modelling_enabled", False)))
+    generator_partial_load = bool((settings.get("generator", {}) or {}).get("partial_load_modelling_enabled", False))
     if battery_loss_model != "convex_loss_epigraph" and not generator_partial_load:
         return pd.DataFrame()
 
@@ -206,7 +216,7 @@ def _build_typical_diagnostics_table(
     return pd.DataFrame(rows)
 
 
-def _days_to_slice(T: int, start_day: int, ndays: int) -> Tuple[slice, int, int]:
+def _days_to_slice(T: int, start_day: int, ndays: int) -> tuple[slice, int, int]:
     """
     Convert day window to a 0-based slice for numpy arrays.
     Assumes hourly typical year: 24 hours/day.
@@ -359,8 +369,8 @@ def render_generation_planning_results_page() -> None:
         return
 
     data: xr.Dataset = bundle.data
-    vars_dict: Dict[str, Any] = bundle.vars
-    sol_ds: Optional[xr.Dataset] = bundle.solution if isinstance(bundle.solution, xr.Dataset) else None
+    vars_dict: dict[str, Any] = bundle.vars
+    sol_ds: xr.Dataset | None = bundle.solution if isinstance(bundle.solution, xr.Dataset) else None
 
     settings = get_dataset_settings(data)
     formulation = str(settings.get("formulation", "steady_state"))
@@ -787,7 +797,7 @@ def render_generation_planning_results_page() -> None:
     st.subheader("Scenario-specific operational costs & emissions")
     st.caption("Variable operating cost and emissions can be inspected scenario-by-scenario.")
 
-    ms_enabled = bool(((settings.get("multi_scenario", {}) or {}).get("enabled", False)))
+    ms_enabled = bool((settings.get("multi_scenario", {}) or {}).get("enabled", False))
     if ms_enabled:
         scen_vals = [str(s) for s in data.coords["scenario"].values.tolist()]
         view = st.selectbox("View:", ["Expected"] + [f"Scenario {s}" for s in scen_vals], key="fuel_view_sel")

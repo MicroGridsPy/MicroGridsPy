@@ -1,18 +1,21 @@
 from __future__ import annotations
 
-from typing import Dict
-
+import linopy as lp
 import numpy as np
 import xarray as xr
-import linopy as lp
 
-from microgridspy.data_pipeline.battery_degradation_model import suppress_exogenous_battery_capacity_degradation_when_endogenous
-from microgridspy.data_pipeline.battery_loss_model import CONVEX_LOSS_EPIGRAPH, normalize_battery_loss_model
+from microgridspy.data_pipeline.battery_degradation_model import (
+    suppress_exogenous_battery_capacity_degradation_when_endogenous,
+)
+from microgridspy.data_pipeline.battery_loss_model import (
+    CONVEX_LOSS_EPIGRAPH,
+    normalize_battery_loss_model,
+)
 from microgridspy.data_pipeline.utils import finite_nonnegative_scalar_limit
 from microgridspy.multi_year_model.lifecycle import (
+    repeating_degradation_factor,
     replacement_active_mask,
     replacement_commission_mask,
-    repeating_degradation_factor,
 )
 from microgridspy.multi_year_model.params import get_params
 
@@ -100,7 +103,7 @@ def validate_constraint_shapes(
     *,
     sets: xr.Dataset,
     p: object,
-    vars: Dict[str, lp.Variable],
+    vars: dict[str, lp.Variable],
 ) -> None:
     required_sets = ("period", "year", "inv_step", "scenario", "resource")
     for c in required_sets:
@@ -142,7 +145,7 @@ def validate_constraint_shapes(
 def initialize_constraints(
     sets: xr.Dataset,
     data: xr.Dataset,
-    vars: Dict[str, lp.Variable],
+    vars: dict[str, lp.Variable],
     model: lp.Model,
 ) -> None:
     if not isinstance(sets, xr.Dataset):

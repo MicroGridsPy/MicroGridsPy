@@ -3,27 +3,27 @@ from __future__ import annotations
 from pathlib import Path
 from textwrap import dedent
 
+import linopy as lp
 import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
-import linopy as lp
 
 from microgridspy.export.multi_year_results import (
     MultiYearResults,
     build_battery_inverter_design_by_step_table_multi_year,
     build_design_by_step_table_multi_year,
     build_discounted_cashflows_table_multi_year,
-    build_investment_summary_table_multi_year,
     build_inverter_capacity_by_year_table_multi_year,
     build_inverter_metrics_table_multi_year,
+    build_investment_summary_table_multi_year,
     build_multi_year_results,
     build_multi_year_results_from_tables,
     build_yearly_kpis_table_multi_year,
     export_multi_year_results,
 )
-from microgridspy.io.paths import ProjectPaths
 from microgridspy.export.results_page_helpers import load_multi_year_results_from_files
+from microgridspy.io.paths import ProjectPaths
 from microgridspy.multi_year_model.constraints import initialize_constraints
 from microgridspy.multi_year_model.data import _load_battery_yaml, _load_renewables_yaml
 from microgridspy.multi_year_model.objective import initialize_objective
