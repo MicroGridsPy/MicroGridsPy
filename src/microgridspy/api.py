@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
 import xarray as xr
 
@@ -23,8 +23,8 @@ from microgridspy.export.typical_year_results import TypicalYearResults
 from microgridspy.multi_year_model.model import MultiYearModel
 from microgridspy.typical_year_model.model import InputValidationError, SteadyStateModel
 
-AnyModel = Union[SteadyStateModel, MultiYearModel]
-AnyResults = Union[TypicalYearResults, MultiYearResults]
+AnyModel = SteadyStateModel | MultiYearModel
+AnyResults = TypicalYearResults | MultiYearResults
 
 _STEADY = {"steady_state", "typical_year"}
 _DYNAMIC = {"dynamic", "multi_year"}
