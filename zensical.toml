@@ -7,7 +7,60 @@ repo_name = "MicroGridsPy/MicroGridsPy"
 
 nav = [
   { "Home" = "index.md" },
-  { "API Reference" = "api.md" },
+
+  { "Getting Started" = [
+    { "Installation" = "getting-started/installation.md" },
+    { "Quickstart" = "getting-started/quickstart.md" },
+  ] },
+
+  { "User Guide" = [
+    { "Input Data" = "user-guide/input-data.md" },
+    { "Planning Modes" = "user-guide/planning-modes.md" },
+    { "Running a Model" = "user-guide/running.md" },
+    { "Results" = "user-guide/results.md" },
+  ] },
+
+  { "Tutorials" = [
+    { "Typical Year" = "tutorials/typical-year.md" },
+    { "Multi-Year" = "tutorials/multi-year.md" },
+  ] },
+
+  { "Methodology" = [
+    { "Overview" = "methodology/overview.md" },
+    { "Planning Modes" = "methodology/planning-modes.md" },
+    { "Objective Function" = "methodology/objective-function.md" },
+    { "Cost Accounting" = "methodology/cost-accounting.md" },
+    { "Renewable Technologies" = "methodology/renewable.md" },
+    { "Battery" = "methodology/battery.md" },
+    { "Generators" = "methodology/generator.md" },
+    { "Grid Connection" = "methodology/grid.md" },
+    { "System Constraints" = "methodology/constraints.md" },
+  ] },
+
+  { "Data Reference" = [
+    { "Overview" = "data-reference/overview.md" },
+    { "Internal Data Contract" = "data-reference/data-contract.md" },
+  ] },
+
+  { "API Reference" = [
+    { "Overview" = "api/index.md" },
+    { "Project Management" = "api/project.md" },
+    { "Models" = "api/models.md" },
+    { "Optimization" = "api/optimization.md" },
+    { "Results" = "api/results.md" },
+  ] },
+
+  { "Developers" = [
+    { "Architecture" = "developers/architecture.md" },
+    { "Contributing" = "developers/contributing.md" },
+  ] },
+]
+
+# MathJax: local config (defines window.MathJax) must load before the CDN engine.
+# Renders the LaTeX produced by pymdownx.arithmatex (generic mode).
+extra_javascript = [
+  "javascripts/mathjax.js",
+  "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js",
 ]
 
 [project.theme]

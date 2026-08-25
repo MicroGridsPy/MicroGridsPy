@@ -181,7 +181,8 @@ def plot_input_timeseries(
         variable: the time-series variable to plot; defaults to the first
             available (see :func:`list_input_timeseries`).
         formulation: auto-detected when None.
-        scenario, year: optional selectors when the variable has those dimensions.
+        scenario: optional scenario selector when the variable has that dimension.
+        year: optional year selector when the variable has that dimension.
         **selectors: further dimension selectors (e.g. ``resource="solar"``).
 
     Returns:
