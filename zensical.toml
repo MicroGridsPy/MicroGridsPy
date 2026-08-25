@@ -25,6 +25,14 @@ nav = [
     { "Multi-Year" = "tutorials/multi-year.md" },
   ] },
 
+  { "Examples" = [
+    { "Overview" = "examples/index.md" },
+    { "The Kalobeyei Case Study" = "examples/case-study.md" },
+    { "Technology Choice" = "examples/technology-choice.md" },
+    { "Planning for Growth" = "examples/planning-for-growth.md" },
+    { "Uncertainty & Externalities" = "examples/uncertainty.md" },
+  ] },
+
   { "Methodology" = [
     { "Overview" = "methodology/overview.md" },
     { "Planning Modes" = "methodology/planning-modes.md" },
