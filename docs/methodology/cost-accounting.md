@@ -1,107 +1,140 @@
 # Cost Accounting
 
-MicroGridsPy follows a **bottom-up** cost-accounting approach: all cost components are
+MicroGridsPy follows a **bottom-up** cost-accounting approach: every cost component is
 explicitly parameterized and mapped to decision variables. The same conceptual structure is
-used in both planning modes, but the *dimensionality* of costs differs between the
-typical-year (steady-state) and multi-year (dynamic) formulations.
+used in both planning modes, but the **temporal treatment** of costs differs between the
+typical-year and multi-year formulations.
 
-For each technology $j$, total system cost is decomposed into three components:
+Total system cost is decomposed into four categories:
 
-1. **Annualized investment costs**, including fixed operation and maintenance;
-2. **Variable operational costs and revenues**, dependent on dispatch decisions;
-3. **Externalities**, such as emissions and unserved-energy penalties.
+1. **Annualized investment costs**,
+2. **Fixed operation and maintenance costs**,
+3. **Variable operational costs and revenues**,
+4. **Externalities and penalty terms**.
 
-Investment-related costs depend only on capacity-sizing decisions and are therefore
-**scenario-independent**, while operational costs and externalities depend on
-scenario-specific dispatch variables.
+Investment-related costs depend on capacity-sizing decisions and are therefore
+**scenario-independent**. Most operational costs, revenues, and reliability penalties depend
+on scenario-specific dispatch variables. The two modes differ mainly in how time is
+represented:
+
+- In the **typical-year** formulation, all costs are interpreted as (steady-state) annual
+  equivalents.
+- In the **multi-year** formulation, costs are tracked explicitly by year and discounted to
+  present value. If capacity expansion is enabled, investments are introduced at discrete steps
+  and tracked as **capacity cohorts**, with annualized costs active from the commissioning year
+  to the end of the horizon.
 
 ## Investment cost
 
-Installed capacity is unit-based (kW or kWh). For technology $j$:
+Installed capacity of technology $j$ is unit-based:
 
 \[
 C_j = N_j \cdot P_j
-\tag{8}
 \]
 
 where $N_j$ is the number of installed units and $P_j$ the nominal capacity per unit. The
-annualized investment cost is:
+annualized investment cost is
 
 \[
-\text{INV}^{ann}_j = C_j \cdot
-\Big[ CRF_j\cdot \text{CAPEX}^{eff}_j + \text{CAPEX}_j\cdot \text{FOM}_j \Big]
-\tag{9}
+\text{Annuity}_j = C_j \cdot \text{CAPEX}^{\text{eff}}_j \cdot \text{CRF}_j
 \]
 
-where:
+where $\text{CAPEX}^{\text{eff}}_j = (1-g_j)\,\text{CAPEX}_j$ accounts for investment grants
+$g_j$, and $\text{CRF}_j$ is the [capital recovery factor](objective-function.md#annuities-and-the-capital-recovery-factor)
+computed from $\text{WACC}_j$ and the lifetime $LT_j$.
 
-- $\text{CAPEX}^{eff}_j = (1-g_j)\,\text{CAPEX}_j$ accounts for possible investment grants $g_j$;
-- $\text{FOM}_j$ is the fixed O&M cost as a fraction of CAPEX;
-- $CRF_j$ is the [capital recovery factor](objective-function.md#annuities-and-the-capital-recovery-factor)
-  from $\text{WACC}_j$ and the technical lifetime.
+## Fixed operation and maintenance cost
 
-In the **typical-year** formulation, investment costs are computed once and interpreted as
-steady-state annual costs. In the **multi-year** formulation, they are defined per
-investment step and translated into year-dependent annuities, enabling phased expansion and
-replacements.
+Fixed O&M costs are capacity-dependent, hence **scenario-independent**. For technology $j$:
 
-## Operational costs
+\[
+\text{FixedO\&M}_j = C_j \cdot \text{CAPEX}_j \cdot f^{\text{FOM}}_j
+\]
 
-Operational costs depend on dispatch variables, computed at hourly resolution and aggregated
-annually. For each scenario $\omega$:
+where $f^{\text{FOM}}_j$ is the fixed-O&M fraction. In the **typical-year** formulation, total
+annual fixed O&M is computed once from installed capacities and added **outside** the scenario
+expectation:
+
+\[
+\text{FixedO\&M} = \sum_j \text{FixedO\&M}_j
+\]
+
+In the **multi-year** formulation, it is computed per active cohort and included in yearly
+system costs:
+
+\[
+\text{FOM}_y = \sum_{j,k} \alpha_{j,k,y}\cdot \text{FOM}_{j,k}
+\]
+
+where $\alpha_{j,k,y}$ is the cohort activation mask.
+
+## Operational costs and revenues
+
+Operational costs depend on dispatch variables at hourly resolution. For each scenario
+$\omega$:
 
 **Fuel costs**
 
 \[
-\text{FuelCost}_\omega = \sum_{t,g} f_{t,\omega,g}\cdot c^{fuel}_g
-\tag{10}
+\text{FuelCost}_{\omega} = \sum_{t,g} f_{t,\omega,g}\cdot c^{\text{fuel}}_g
 \]
 
-**Grid interaction costs and revenues** (if enabled)
+**Grid interaction (net cost)**
 
 \[
-\text{GridCost}_\omega = \sum_{t}
-\left( e^{imp}_{t,\omega}\cdot c^{imp}_{t,\omega} - e^{exp}_{t,\omega}\cdot c^{exp}_{t,\omega} \right)
-\tag{11}
+\text{GridNetCost}_{\omega} = \sum_t \left( e^{\text{imp}}_{t,\omega}\,c^{\text{imp}}_{t,\omega} - e^{\text{exp}}_{t,\omega}\,c^{\text{exp}}_{t,\omega} \right)
 \]
 
 **Renewable production subsidies**
 
 \[
-\text{Subsidy}_\omega = \sum_{t,r} p^{ren}_{t,\omega,r}\cdot s_r
-\tag{12}
+\text{Subsidy}_{\omega} = \sum_{t,r} p^{\text{ren}}_{t,\omega,r}\cdot s_r
 \]
 
 **Lost-load penalties**
 
 \[
-\text{LLCost}_\omega = \sum_{t} \ell_{t,\omega}\cdot c^{LL}
-\tag{13}
+\text{LLCost}_{\omega} = \sum_t \ell_{t,\omega}\cdot c^{\text{LL}}
 \]
 
-The expected annual operational cost is the probability-weighted sum across scenarios.
+The expected annual operational cost is the probability-weighted sum across scenarios. Grid
+costs and revenues are computed on the **raw** interchange variables at the point of common
+coupling — see [Grid Cost and Emissions](grid.md#grid-cost-and-emissions-accounting).
 
 ## Externalities
 
-Externalities include both operational and embodied emissions. For each scenario $\omega$:
+Externalities include direct operational emissions, optional grid-related (scope-2) emissions,
+and embodied emissions. In the **typical-year** formulation, embodied emissions are annualized
+consistently with the steady-state interpretation:
 
 \[
-\text{EXT}_\omega = c^{CO_2}
+\text{Externalities}_{\omega} = c^{\text{CO}_2}
 \left(
-\sum_{t,g} f_{t,\omega,g}\cdot \epsilon^{fuel}_g
-+ \sum_j \frac{C_j\cdot \epsilon^{emb}_j}{LT_j}
+\sum_{t,g} f_{t,\omega,g}\,\epsilon^{\text{fuel}}_g
++ \sum_j \frac{C_j\,\epsilon^{\text{emb}}_j}{LT_j}
++ \sum_t e^{\text{imp}}_{t,\omega}\,\epsilon^{\text{grid}}_t
 \right)
-\tag{14}
 \]
 
-where the first term is direct operational emissions and the second is annualized embodied
-emissions from installed capacity.
+where the three terms are direct fuel emissions, annualized embodied emissions, and grid-related
+indirect emissions. In the **multi-year** formulation, embodied emissions are tracked explicitly
+by year and cohort rather than annualized:
+
+\[
+\text{Externalities}_{y,\omega} = c^{\text{CO}_2}
+\left(
+\sum_{t,g} f_{t,y,\omega,g}\,\epsilon^{\text{fuel}}_g
++ \sum_{j,k} \beta_{j,k,y}\,\epsilon^{\text{emb}}_j
++ \sum_t e^{\text{imp}}_{t,y,\omega}\,\epsilon^{\text{grid}}_t
+\right)
+\]
+
+where $\beta_{j,k,y}$ activates embodied emissions at commissioning. Direct fuel-emission costs
+and optional grid-emission costs are evaluated within each modelled year and scenario, then
+discounted together with the other annual system costs.
 
 !!! note "Same economics, different time representation"
-    The two modes differ in how time is represented, not in the underlying economic logic.
-    In the **typical-year** formulation, investment costs are annualized over the technical
-    lifetime, yielding steady-state annual equivalents independent of the chosen horizon. In
-    the **multi-year** formulation, time is modelled explicitly: investment, operational, and
-    externality costs are resolved year by year and discounted to present value. Both rely on
-    the same bottom-up cost structure, so the typical-year model is the steady-state limit of
-    the dynamic one.
+    Both modes rely on the same bottom-up cost structure. In the typical-year formulation costs
+    are annualized into horizon-independent equivalents; in the multi-year formulation they are
+    resolved year by year and discounted to present value. The typical-year model is the
+    steady-state limit of the dynamic one.

@@ -1,106 +1,113 @@
 # Backup Generators
 
-Dispatchable backup generation is modelled through one or more generator technologies
-$g\in\mathcal{G}$. Each generator has a unit-based sizing variable and an hourly production
-variable. Fuel consumption is modelled explicitly and linked to electrical production
-through either a **nominal-efficiency** relationship or a **partial-load efficiency curve**.
+MicroGridsPy models dispatchable backup generation through a single generator technology
+representing the backup unit of the mini-grid, described by a unit-based sizing variable and an
+hourly production variable. Fuel consumption is modelled explicitly and linked to electrical
+output through either a **nominal-efficiency relationship** or a **partial-load efficiency
+curve** represented as a convex piecewise-linear epigraph.
+
+The same structure is used in both modes; in the **multi-year** formulation, generator
+investment and operation are **cohort-based**, so production limits and fuel relations are
+indexed by year $y$ and step $k$. At hourly resolution $\Delta t = 1\,\text{h}$, generation in
+kWh over one step equals average power in kW.
 
 ## Installed capacity and production limit
 
-Generators are sized in discrete units $N_g$, each with nominal electrical capacity $P_g$
-(kW). Total installed generator capacity is:
+### Typical-year formulation
+
+The generator is sized in discrete units $N^{\text{gen}}$, each with nominal capacity
+$P^{\text{gen}}$ (kW), for a total $C^{\text{gen}} = N^{\text{gen}} \cdot P^{\text{gen}}$.
+Hourly production is bounded by installed capacity, with an optional maximum-installable bound:
 
 \[
-C_g = N_g\cdot P_g
-\tag{25}
+E^{\text{gen}}_{t,\omega} \le N^{\text{gen}} \cdot P^{\text{gen}} \qquad \forall t,\omega,
+\qquad\qquad
+N^{\text{gen}} \cdot P^{\text{gen}} \le \overline{C}^{\text{gen}}
 \]
 
-Hourly production is bounded by installed capacity:
+### Multi-year formulation
+
+Generator investment is cohort-based. Each step $k$ introduces $N^{\text{gen}}_{k}$ units, with
+nominal cohort capacity $C^{\text{gen}}_{k} = N^{\text{gen}}_{k} \cdot P^{\text{gen}}$. The
+available cohort capacity in year $y$ is
 
 \[
-E^{gen}_{t,\omega,g} \le N_g\cdot P_g \qquad \forall t,\omega,g
-\tag{26}
+\widetilde{C}^{\text{gen}}_{y,k} = N^{\text{gen}}_{k}\cdot P^{\text{gen}}\cdot \alpha_{y,k}\cdot \delta_{y,k}
 \]
+
+where $\alpha_{y,k}$ is the cohort activity/replacement mask and $\delta_{y,k}$ an optional
+exogenous degradation factor. Production is bounded cohort by cohort and aggregated:
+
+\[
+E^{\text{gen}}_{t,y,\omega,k} \le \widetilde{C}^{\text{gen}}_{y,k} \qquad \forall t,y,\omega,k,
+\qquad\qquad
+E^{\text{gen,tot}}_{t,y,\omega} = \sum_k E^{\text{gen}}_{t,y,\omega,k}
+\]
+
+The maximum-installable bound applies to the cumulative design:
+$\sum_k N^{\text{gen}}_{k} \cdot P^{\text{gen}} \le \overline{C}^{\text{gen}}$.
 
 ## Fuel–power relationship (nominal efficiency)
 
-Fuel consumption is expressed in volumetric units (e.g. litres) and linked to electrical
-production through the fuel lower heating value (LHV) and an efficiency factor. For
-generators **without** partial-load modelling, the relationship is an equality using a
-nominal conversion efficiency $\eta^{nom}_g$:
+When partial-load modelling is disabled, fuel consumption is linked to output through a constant
+nominal efficiency $\eta^{\text{nom}}$ and the fuel lower heating value $\text{LHV}$:
 
 \[
-E^{gen}_{t,\omega,g} = F_{t,\omega,g}\cdot \text{LHV}_g\cdot \eta^{nom}_g
-\qquad \forall t,\omega,\; g\in\mathcal{G}_{noPL}
-\tag{27}
+E^{\text{gen}}_{t,\omega} = F_{t,\omega}\cdot \text{LHV}\cdot \eta^{\text{nom}}
+\qquad\text{(typical-year)}
 \]
 
-where $F_{t,\omega,g}$ is fuel consumption and $\text{LHV}_g$ is the energy content per unit
-of fuel.
+\[
+E^{\text{gen}}_{t,y,\omega,k} = F_{t,y,\omega,k}\cdot \text{LHV}\cdot \eta^{\text{nom}}
+\qquad\text{(multi-year)}
+\]
+
+where $F$ is fuel consumption in units consistent with the LHV. The implied specific fuel
+consumption is constant over the whole operating range.
 
 ## Partial-load efficiency and piecewise-linear approximation
 
-When partial-load modelling is enabled, generator efficiency becomes output-dependent.
-MicroGridsPy implements a **convex piecewise-linear lower bound** on fuel consumption as a
-function of electrical production. This keeps the formulation linear while capturing the
-increase in specific fuel consumption at low load.
+When partial-load modelling is enabled, efficiency becomes output-dependent and is represented
+through a **convex piecewise-linear epigraph** of fuel consumption. The curve is provided as
+relative loading breakpoints $r_b \in [0,1]$ with efficiencies $\eta_b$.
 
-Let $r\in[0,1]$ be the generator loading fraction and let breakpoints $\{r_p\}_{p=0}^{P}$ be
-given with corresponding efficiencies $\eta_{g,p}$. The electrical power at each breakpoint
-is:
+### Typical-year formulation
 
-\[
-p_{g,p} = P_g\cdot r_p
-\tag{28}
-\]
-
-and the corresponding fuel consumption per unit:
+At each breakpoint $b$, the output and fuel per unit are $p_b = P^{\text{gen}} r_b$ and
+$f_b = p_b / (\eta_b\,\text{LHV})$, and the segment slope is $m_b = (f_{b+1}-f_b)/(p_{b+1}-p_b)$.
+Fuel consumption lies above all affine secants:
 
 \[
-f_{g,p} = \frac{p_{g,p}}{\eta_{g,p}\,\text{LHV}_g}
-\tag{29}
+F_{t,\omega} \ge m_b\left( E^{\text{gen}}_{t,\omega} - N^{\text{gen}}\,p_b \right) + N^{\text{gen}}\,f_b
+\qquad \forall t,\omega,b
 \]
 
-For each segment $k$ connecting consecutive breakpoints $(p_{g,k}, f_{g,k})$ and
-$(p_{g,k+1}, f_{g,k+1})$, the slope is:
+### Multi-year formulation
+
+The same curve is applied cohort by cohort, scaled by the active available capacity:
 
 \[
-m_{g,k} = \frac{f_{g,k+1} - f_{g,k}}{p_{g,k+1} - p_{g,k}}
-\tag{30}
+F_{t,y,\omega,k} \ge \widehat{m}_{b}\, E^{\text{gen}}_{t,y,\omega,k} + \widehat{q}_{b}\, \widetilde{C}^{\text{gen}}_{y,k}
+\qquad \forall t,y,\omega,k,b
 \]
 
-Fuel consumption is then constrained to lie above all segment lines (epigraph form), scaled
-by the number of installed units:
-
-\[
-F_{t,\omega,g} \ge m_{g,k}\left( E^{gen}_{t,\omega,g} - N_g\, p_{g,k} \right) + N_g\, f_{g,k}
-\qquad \forall t,\omega,\; g\in\mathcal{G}_{PL},\;\forall k
-\tag{31}
-\]
-
-This yields a convex piecewise-linear approximation of the true nonlinear fuel curve and
-guarantees fuel consumption is **not underestimated**, enabling realistic part-load
-performance while preserving linearity and tractability.
+where $\widehat{m}_{b}, \widehat{q}_{b}$ are the affine coefficients derived from the relative
+efficiency curve — algebraically equivalent to scaling the piecewise fuel curve by the active
+cohort capacity.
 
 ![Generator efficiency: left, a real efficiency curve compared with a constant-efficiency approximation; right, the curve sampled at relative-output breakpoints to build the piecewise-linear approximation](../assets/methodology/partial_load_curve.png)
 
 *Generator efficiency under the constant and partial-load formulations. **Left:** a real
-generator efficiency curve versus the constant-efficiency approximation — real efficiency
-falls sharply at low load. **Right:** the efficiency curve sampled at relative-output
-breakpoints, used to construct the convex piecewise-linear approximation adopted in the
-optimization.*
+generator efficiency curve versus the constant-efficiency approximation — real efficiency falls
+sharply at low load. **Right:** the efficiency curve sampled at relative-output breakpoints, used
+to construct the convex piecewise-linear approximation. The approximation guarantees fuel
+consumption is **not underestimated** while preserving linearity.*
 
-!!! note "Convexity assumption and possible extensions"
-    The part-load formulation is valid under the assumption that the fuel-consumption curve
-    is **convex** with respect to electrical output — consistent with most internal
-    combustion engines and small diesel generators. The current formulation is deliberately
-    minimal for tractability. Consistent extensions include:
-
-    - **Mixed-integer unit commitment** — binary on/off variables for minimum load, start-up
-      costs, and non-convex efficiency regions (at higher computational cost).
-    - **Piecewise efficiency with minimum load** — a lower bound $E^{gen}\ge \alpha P_g N_g$
-      to reflect technical operating limits, without altering the convex structure.
-    - **Technology-specific degradation** — time-dependent $\eta_{g,p}$ to reflect aging or
-      maintenance, compatible with the piecewise-linear structure.
-
-    These preserve the separation between **capacity planning** and **operational realism**.
+!!! note "Convexity, and what is not modelled"
+    The partial-load formulation is valid when the implied fuel-consumption curve is **convex**
+    in electrical output (specific fuel consumption worsens at lower load — realistic for
+    backup diesel generators). Convexity of the input curve is **validated during
+    preprocessing**. The formulation is deliberately continuous and linear: **no mixed-integer
+    unit commitment** (on/off, startup/shutdown costs, minimum up/down times) and **no minimum
+    stable output** are modelled, so the generator may run continuously at low output if that is
+    optimal within the convex fuel envelope.

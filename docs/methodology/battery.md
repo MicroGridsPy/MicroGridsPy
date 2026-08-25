@@ -1,143 +1,220 @@
 # Battery Storage
 
-MicroGridsPy models the battery energy-storage system as a **single aggregated battery
-bank**, parameterized through an installed energy capacity and operational constraints on
-charging, discharging, and state of charge (SOC). The battery is described through three
-groups of constraints: **flow constraints**, **SOC dynamics**, and **capacity bounds**. The
-mathematical structure is identical in both planning modes; in the multi-year formulation,
-parameters (costs, lifetime, availability) can be indexed by year.
+MicroGridsPy models the battery energy storage system as an aggregated electrochemical device
+described through charging, discharging, and state-of-charge (SOC) dynamics. The model combines
+three layers:
 
-Let $t\in\mathcal{T}$ denote the time periods (typically hourly) and $\omega\in\Omega$ the
-scenarios. Installed battery energy capacity is:
+- **power limits**, which bound charging and discharging rates;
+- **energy-balance constraints**, which govern the evolution of stored energy;
+- **usable-capacity constraints**, which limit operation according to nominal or degraded
+  available energy.
+
+Two representations are supported: a **constant-efficiency** special case, and an **advanced
+convex-loss formulation** where AC-side efficiency varies with power. In the **typical-year**
+formulation the battery is a single block operated cyclically over a representative year; in
+the **multi-year** formulation, storage investment is **cohort-based**, enabling cohort
+availability, inter-year state propagation, and degradation. At hourly resolution
+$\Delta t = 1\,\text{h}$, so power (kW) and one-hour energy transfers (kWh) are interchangeable
+in the storage balance.
+
+## Constant-efficiency dispatch
+
+The simplest representation uses fixed charge/discharge efficiencies $\eta_{\text{ch}},
+\eta_{\text{dis}}$.
+
+### Typical-year formulation
+
+Charging and discharging are bounded by time-to-full parameters:
 
 \[
-C^{bat} = N^{bat}\cdot E^{unit}
-\tag{17}
+P^{\text{ch}}_{t,\omega} \le \frac{C^{\text{bat}}}{t_{\text{ch}}}, \qquad
+P^{\text{dis}}_{t,\omega} \le \frac{C^{\text{bat}}}{t_{\text{dis}}}
+\qquad \forall t,\omega
 \]
 
-where $N^{bat}$ is the number of battery units and $E^{unit}$ the nominal energy capacity
-per unit (kWh). Battery operation is described by charging power $P^{ch}_{t,\omega}$,
-discharging power $P^{dis}_{t,\omega}$, and stored energy $SOC_{t,\omega}$. At hourly
-resolution ($\Delta t = 1$), kW and kWh are used interchangeably.
-
-## Flow constraints
-
-Charging and discharging power are bounded using **time-to-full** parameters, which define
-the maximum admissible rate as a fraction of installed energy capacity:
+The state of charge evolves as
 
 \[
-P^{ch}_{t,\omega} \le \frac{C^{bat}}{t^{ch}} \qquad \forall t,\omega
-\tag{18}
+\begin{aligned}
+\text{SOC}_{0,\omega} &= \text{SOC}_0\, C^{\text{bat}} \\[3pt]
+\text{SOC}_{t,\omega} &= \text{SOC}_{t-1,\omega}
++ \eta_{\text{ch}} P^{\text{ch}}_{t-1,\omega}
+- \frac{P^{\text{dis}}_{t-1,\omega}}{\eta_{\text{dis}}}
+\qquad \forall t=1,\dots,|\mathcal{T}|-1
+\end{aligned}
 \]
 
+A **cyclic boundary condition** closes the representative year:
+
 \[
-P^{dis}_{t,\omega} \le \frac{C^{bat}}{t^{dis}} \qquad \forall t,\omega
-\tag{19}
+\text{SOC}_{|\mathcal{T}|-1,\omega}
++ \eta_{\text{ch}} P^{\text{ch}}_{|\mathcal{T}|-1,\omega}
+- \frac{P^{\text{dis}}_{|\mathcal{T}|-1,\omega}}{\eta_{\text{dis}}}
+= \text{SOC}_0\, C^{\text{bat}} \qquad \forall\omega
 \]
 
-where $t^{ch}$ and $t^{dis}$ are the times (hours) required to fully charge or discharge the
-battery at maximum rate.
-
-## State of charge
-
-SOC dynamics follow a standard energy balance including charge/discharge efficiencies. For
-an hourly time step ($\Delta t = 1\,\text{h}$):
+and the SOC is bounded by the depth-of-discharge limit:
 
 \[
-SOC_{0,\omega} = SOC_0\cdot C^{bat} + \eta_c P^{ch}_{0,\omega} - \frac{P^{dis}_{0,\omega}}{\eta_d}
-\qquad \forall\omega
-\tag{20}
+(1-\text{DoD})\, C^{\text{bat}} \le \text{SOC}_{t,\omega} \le C^{\text{bat}} \qquad \forall t,\omega
 \]
 
-\[
-SOC_{t,\omega} = SOC_{t-1,\omega} + \eta_c P^{ch}_{t,\omega} - \frac{P^{dis}_{t,\omega}}{\eta_d}
-\qquad \forall t = 1,\dots,|\mathcal{T}|-1,\;\forall\omega
-\tag{21}
-\]
+### Multi-year formulation
 
-where $\eta_c$ and $\eta_d$ are the charging and discharging efficiencies and
-$SOC_0\in[0,1]$ is the initial SOC fraction.
-
-A **cyclic boundary condition** avoids end-of-horizon artefacts and ensures consistent
-operation across repeated years:
+For each year $y$, scenario $\omega$, and cohort $k$, the power and capacity bounds use the
+available cohort capacity $\overline{C}^{\text{bat}}_{y,k}$:
 
 \[
-SOC_{|\mathcal{T}|-1,\omega} = SOC_0\cdot C^{bat} \qquad \forall\omega
-\tag{22}
-\]
-
-## Capacity constraints
-
-The SOC is bounded between a minimum and maximum admissible stored energy, based on usable
-capacity and the depth-of-discharge limit:
-
-\[
-SOC_{t,\omega} \le C^{bat} \qquad \forall t,\omega
-\tag{23}
+P^{\text{ch}}_{t,y,\omega,k} \le \frac{\overline{C}^{\text{bat}}_{y,k}}{t_{\text{ch}}}, \qquad
+P^{\text{dis}}_{t,y,\omega,k} \le \frac{\overline{C}^{\text{bat}}_{y,k}}{t_{\text{dis}}}
 \]
 
 \[
-SOC_{t,\omega} \ge (1-\text{DoD})\,C^{bat} \qquad \forall t,\omega
-\tag{24}
+(1-\text{DoD})\,\overline{C}^{\text{bat}}_{y,k} \le \text{SOC}_{t,y,\omega,k} \le \overline{C}^{\text{bat}}_{y,k}
 \]
 
-where $\text{DoD}\in[0,1]$ is the maximum depth of discharge.
+Within each year, SOC follows the same constant-efficiency recursion, indexed by $(y,\omega,k)$.
+A key difference from the typical-year case is that the multi-year model does **not** impose a
+cyclic yearly boundary: the terminal state of one year is carried forward as the initial state
+of the next, unless a cohort is newly installed or replaced.
 
-!!! note "Degradation is treated implicitly"
-    In the current planning formulation, battery degradation is treated implicitly through a
-    **calendar-lifetime assumption**: the battery technical lifetime (in years) drives the
-    annualized investment cost (via CRF) and the replacement logic in the multi-year
-    formulation. Degradation does **not** directly constrain operation, and the usable
-    capacity is assumed constant during the battery's lifetime.
+## Advanced battery loss model
 
-    A natural, still-linear extension is **exogenous capacity fade** via a time-dependent
-    multiplier $\alpha_y\in(0,1]$, so the effective capacity becomes $C^{bat}_y = \alpha_y
-    C^{bat}$. In the multi-year formulation this enables constraints such as
-    $SOC_{t,\omega,y} \le \alpha_y C^{bat}$ and $SOC_{t,\omega,y} \ge (1-\text{DoD})\alpha_y
-    C^{bat}$, with the charge/discharge limits (18)–(19) scaled analogously. The trajectory
-    $\alpha_y$ can come from empirical calendar-aging models, manufacturer data, or scenario
-    assumptions. Temperature-driven derating can be incorporated the same way by defining
-    $\alpha_y$ (or a higher-resolution $\alpha_{t,y}$) as a deterministic function of
-    ambient/battery temperature — preserving linearity as long as the factors are exogenous.
+The advanced model replaces the constant one-way efficiencies with an explicit representation
+of **power-dependent conversion losses**, recast as an LP-safe **convex piecewise-linear
+epigraph**.
 
-## Advanced loss and degradation models
+The public AC-side variables ($P^{\text{ch}}, P^{\text{dis}}$, and the stored energy SOC) are
+complemented by internal DC-side variables: the DC power actually stored/withdrawn
+($P^{\text{ch,dc}}, P^{\text{dis,dc}}$) and the conversion losses $L^{\text{ch}}, L^{\text{dis}}$.
+The AC/DC balances are
 
-Beyond the constant-efficiency case above, MicroGridsPy provides two optional, still-linear
-refinements of the battery model. Both recast a nonlinear behaviour as a **convex
-piecewise-linear** relationship precomputed from input curves, so the optimization stays a
-tractable linear program.
+\[
+P^{\text{ch}} = P^{\text{ch,dc}} + L^{\text{ch}}, \qquad
+P^{\text{dis}} = P^{\text{dis,dc}} - L^{\text{dis}}
+\]
 
-### Power-dependent conversion losses
+so when charging, the AC power drawn exceeds the energy stored, and when discharging, the AC
+power delivered is lower than the internal energy withdrawn. With reference powers
+$P^{\text{ref,ch}} = C^{\text{bat}}/t_{\text{ch}}$ and $P^{\text{ref,dis}} = C^{\text{bat}}/t_{\text{dis}}$,
+the losses satisfy epigraph constraints for each interpolation segment $i$:
 
-The advanced loss model replaces the constant one-way efficiencies $\eta_c,\eta_d$ with an
-explicit representation of **power-dependent conversion losses**. Internal DC-side charge and
-discharge powers are introduced, and the AC/DC losses $L^{ch}, L^{dis}$ are bounded below by a
-set of supporting segments (an epigraph) derived from the battery efficiency curve. The SOC
-balance is then written in terms of the DC-side flows actually stored and withdrawn.
+\[
+\begin{aligned}
+L^{\text{ch}}_{t,\omega} &\ge m^{\text{ch}}_i\,P^{\text{ch,dc}}_{t,\omega} + q^{\text{ch}}_i\,P^{\text{ref,ch}} \\[3pt]
+L^{\text{dis}}_{t,\omega} &\ge m^{\text{dis}}_i\,P^{\text{dis,dc}}_{t,\omega} + q^{\text{dis}}_i\,P^{\text{ref,dis}}
+\end{aligned}
+\qquad \forall i,t,\omega
+\]
+
+The coefficients $m_i, q_i$ are precomputed from the battery efficiency-curve input, keeping the
+optimization **linear and tractable**. Under the advanced model the SOC balance uses the DC-side
+flows,
+
+\[
+\text{SOC}_{t,\omega} = \text{SOC}_{t-1,\omega} + P^{\text{ch,dc}}_{t-1,\omega} - P^{\text{dis,dc}}_{t-1,\omega}
+\]
+
+so the constant-efficiency recursion is a **special case**: when the advanced model is active,
+$\eta_{\text{ch}}, \eta_{\text{dis}}$ are no longer used directly and efficiency is captured
+through explicit losses.
 
 ![Battery losses: left, a convex loss curve approximated by piecewise-linear segments; right, the resulting charge and discharge efficiency decreasing with relative DC power](../assets/methodology/battery_loss_curve.png)
 
-*Power-dependent battery losses and the resulting one-way efficiency. **Left:** the convex
-loss curve approximated through piecewise-linear segments. **Right:** the corresponding charge
-and discharge efficiency, which decrease as relative DC-side power increases.*
+*Power-dependent battery losses and the resulting one-way efficiency. **Left:** the convex loss
+curve approximated through piecewise-linear segments. **Right:** the corresponding charge and
+discharge efficiency, which decrease as relative DC-side power increases.*
 
-### Endogenous degradation: cycle and calendar fade
+## Multi-year degradation model
 
-In the multi-year formulation, the usable capacity can be reduced endogenously by two ageing
-mechanisms: **cycle fade**, accumulated from hourly battery throughput, and **calendar fade**,
-applied once per year as a function of the yearly-average state of charge (higher average SOC
-accelerates ageing). Both are expressed through precomputed piecewise-linear curves, so the
-effective capacity becomes a yearly state variable that shrinks over time — reducing both the
-maximum stored energy and the admissible charge/discharge power.
+The multi-year implementation includes a hybrid degradation representation combining hourly
+operational effects with yearly capacity updates, capturing three ageing mechanisms: **cycle
+fade** (from hourly throughput), **calendar fade** (applied yearly as a function of average
+SOC), and optional **exogenous annual degradation**. The effective capacity is a **yearly state
+variable**, constant within a year and updated at year transitions.
+
+### Available and effective capacity
+
+Two capacity concepts are distinguished. The **available nominal capacity** of a cohort is
+
+\[
+\overline{C}^{\text{bat}}_{y,k} = u_k\, C^{\text{bat}}_{\text{nom}}\, a_{y,k}\, g_{y,k}
+\]
+
+where $u_k$ is the number of units in cohort $k$, $C^{\text{bat}}_{\text{nom}}$ the nominal
+unit capacity, $a_{y,k}$ the activity mask, and $g_{y,k}$ an optional exogenous annual
+degradation factor. The **effective usable capacity** $C^{\text{eff}}_{y,\omega,k} \le
+\overline{C}^{\text{bat}}_{y,k}$ is the usable energy remaining after endogenous degradation;
+it is constant within each year and evolves only across years.
+
+### Cycle and calendar fade
+
+**Cycle fade** is modelled from hourly throughput,
+
+\[
+F^{\text{cyc}}_{t,y,\omega,k} = \gamma^{\text{cyc}}\cdot \frac{P^{\text{ch,dc}}_{t,y,\omega,k} + P^{\text{dis,dc}}_{t,y,\omega,k}}{2}
+\]
+
+with $\gamma^{\text{cyc}}$ a cycle-degradation coefficient. **Calendar fade** is applied once per
+year using the scenario-weighted expected yearly-average SOC, through an epigraph:
+
+\[
+F^{\text{cal}}_{y,k} \ge a_{y,k}\, \Delta\tau_{\text{yr}}
+\left( m^{\text{cal}}_j\, \overline{\text{SOC}}^{\text{exp}}_{y,k} + q^{\text{cal}}_j\, \overline{C}^{\text{bat}}_{y,k} \right) \quad \forall j
+\]
+
+where $m^{\text{cal}}_j, q^{\text{cal}}_j$ define the piecewise-linear calendar-ageing curve.
+This captures the empirical observation that prolonged operation at high average SOC
+accelerates ageing.
 
 ![Battery advanced-model inputs: left, one-way efficiency versus relative DC power; right, the calendar-fade coefficient increasing with state of charge](../assets/methodology/battery_efficiency_calendar_curve.png)
 
-*Inputs to the advanced battery model. **Left:** charge and discharge one-way efficiency
-versus relative DC-side power. **Right:** the calendar-fade coefficient as a function of state
-of charge — prolonged operation at high SOC accelerates long-term ageing.*
+*Inputs to the advanced battery model. **Left:** charge and discharge one-way efficiency versus
+relative DC-side power. **Right:** the calendar-fade coefficient as a function of state of charge
+— prolonged operation at high SOC accelerates long-term ageing.*
+
+### Year-to-year capacity evolution
+
+Effective capacity carries over between years, minus accumulated degradation,
+
+\[
+C^{\text{cont}}_{y,\omega,k} = C^{\text{eff}}_{y-1,\omega,k} - \sum_t F^{\text{cyc}}_{t,y-1,\omega,k} - F^{\text{cal}}_{y-1,k}
+\]
+
+while a newly commissioned cohort is reset to $C^{\text{reset}}_{y,k} = \text{SoH}_0\,
+\overline{C}^{\text{bat}}_{y,k}$. The implemented transition is an upper bound,
+
+\[
+C^{\text{eff}}_{y,\omega,k} \le (1-b_{y,k})\, C^{\text{cont}}_{y,\omega,k} + b_{y,k}\, C^{\text{reset}}_{y,k}
+\]
+
+where $b_{y,k}$ marks commissioning years, and a small objective regularization keeps effective
+capacity at its largest feasible value. When degradation is enabled, the effective capacity
+directly limits both the maximum stored energy and the admissible charge/discharge power (the
+power and SOC bounds above use $C^{\text{eff}}_{y,\omega,k}$).
+
+### Configuration logic
+
+| Mode | Behaviour |
+|---|---|
+| Constant-efficiency | fixed capacity, no endogenous degradation |
+| Advanced loss model | convex loss functions, no ageing |
+| Cycle-fade | hourly throughput drives degradation (optionally with exogenous annual) |
+| Calendar-fade | yearly expected SOC drives degradation (exogenous annual auto-disabled to avoid double counting) |
+
+Endogenous degradation requires the convex loss formulation to be active.
 
 !!! note "Replacement vs. degradation"
-    These degradation dynamics affect **operational feasibility** within a cohort's life, but
-    do not by themselves trigger a replacement: replacement timing is still governed
-    exogenously by the battery lifetime and cohort logic. Users should therefore keep the
-    lifetime, end-of-life state-of-health threshold, and fade parameters mutually consistent.
+    Two mechanisms must be distinguished: **economic replacement**, governed exogenously by the
+    battery lifetime and cohort masks, which affects sizing and investment timing; and
+    **internal degradation**, which reduces usable capacity within a cohort's life and affects
+    dispatch. The current implementation does **not** include an endogenous state-of-health
+    decision variable or an end-of-life replacement trigger — replacement timing is imposed
+    externally. Users should therefore keep the lifetime, end-of-life SoH threshold, cycle-life,
+    calendar-fade, and exogenous degradation assumptions mutually consistent, so batteries are
+    neither replaced too early nor operated too long in a heavily degraded state.
+
+!!! info "Future extensions"
+    Possible developments include temperature-dependent degradation, efficiency, or capacity
+    limits (treatable as exogenous inputs, preserving linearity), and an explicit SoH state with
+    replacement decisions linked directly to degradation thresholds.

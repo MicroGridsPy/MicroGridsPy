@@ -1,77 +1,102 @@
 # Planning Modes
 
-MicroGridsPy supports two complementary modelling modes. Both are investment-oriented,
-rely on an annuity-based cost formulation, and minimize an **expected total system cost**
-that includes annuitized investment costs (with capital recovery), operating costs, and
-optional externalities.
+MicroGridsPy supports two complementary modelling modes, addressing different levels of
+temporal complexity and data availability:
 
-## Typical-Year Planning
+- **Multi-year planning mode** (dynamic);
+- **Typical-year planning mode** (steady-state).
 
-The **typical-year planning mode** is a tractable **steady-state** approximation of
-long-term system economics. The system is described by a single representative operating
-year assumed to repeat identically over time, so the objective reduces to minimizing the
-**expected annual (welfare) cost**.
+Both are **investment-oriented** and rely on an **annuity-based cost formulation**, making
+them suitable for long-term, multi-scenario techno-economic planning. In both cases the model
+minimizes the **expected total system cost** — annuitized investment costs (with capital
+recovery), operating costs, and optional externalities.
 
-It can be interpreted as a *collapsed* version of the multi-year model under the assumption
-of **single-year operation**: load demand, resource availability, technology performance,
-and operating conditions are assumed identical in every year. Inter-annual variability,
-demand growth, technology learning, and degradation are neglected.
+The optimization runs at **hourly resolution** and can account for multiple **scenarios**
+representing alternative realizations of demand, renewable availability, or grid conditions,
+each with a probability. The resulting problem is a **two-stage stochastic optimization with
+recourse**, solved in deterministic-equivalent form: sizing and investment are here-and-now
+decisions shared across scenarios, while operational decisions are scenario-dependent recourse
+actions. Both modes can represent a fully off-grid or a weakly grid-connected system through a
+**grid-availability matrix**.
 
-Under this assumption, the annuity-based investment cost becomes mathematically equivalent
-to an **infinite discounted sequence of identical replacements** — each asset is implicitly
-replaced by an identical one at the end of its technical lifetime, and the system operates
-indefinitely in a steady-state regime.
+## What the total system cost includes
 
-This mode is particularly suited to:
+- **Investment costs** — annualized using a technology-specific WACC to reflect the
+  opportunity cost of capital, financing conditions, and risk premia. Here the WACC is used
+  solely within the annuity formulation and does not model private bankability.
+- **Operating costs** — fuel, maintenance, and replacement expenditures.
+- **Externalities** *(optional)* — social or environmental damages such as CO₂ emissions,
+  internalized through cost adders.
 
-- steady-state or mature systems;
-- early-stage feasibility studies;
-- comparative technology assessments;
-- stochastic analyses with multiple scenarios, where computational tractability is a priority.
+In the **multi-year** formulation, a **social discount rate** discounts future costs to
+present value. This rate is conceptually distinct from the WACC: the WACC captures the cost of
+financing capital equipment, while the social discount rate reflects society's valuation of
+future expenditures and long-term benefits.
 
-!!! note "Discounting does not affect sizing in typical-year mode"
-    Because all costs are evaluated on an annual basis and the system is assumed to operate
-    indefinitely under stationary conditions, **intertemporal discounting does not affect
-    system sizing**. Annuity-based capital recovery already embeds discounting at the asset
-    level through the WACC. System sizing is therefore driven exclusively by the trade-off
-    between annualized investment costs and expected annual operating costs.
+This structure captures the key long-term trade-offs in mini-grid planning: **CAPEX vs OPEX**
+substitution (e.g. PV + battery vs diesel), **renewable integration** and **emissions
+reduction** under externality pricing, **grid interaction** under variable pricing and
+availability, and **reliability vs cost**.
 
-The objective is the **expected equivalent annual cost (EAC)** — see
-[Objective Function](objective-function.md#typical-year-planning).
+!!! note "Public planning, not private appraisal"
+    The model does not incorporate tariffs, revenues, profitability metrics, or affordability
+    constraints. Outputs are intended to support **policy-making, planning, and techno-economic
+    analysis**, not private investment appraisal. Private bankability and financial feasibility
+    are instead evaluated in post-processing if required. This preserves a clean separation
+    between **economic least-cost planning** (public view) and **financial viability analysis**
+    (private view), which generally require different discounting and risk assumptions.
 
 ## Multi-Year Planning
 
-The **multi-year planning mode** is the most comprehensive formulation. It is defined over
-a multi-year planning horizon $y = 1,\dots,H$, where both system decisions and exogenous
-parameters may evolve over time. Time-dependent inputs — demand, renewable availability,
-prices, grid conditions — are explicitly indexed by **year** and **scenario**.
+The multi-year mode is the most comprehensive formulation. It is defined over a horizon
+$y = 1,\dots,H$, where both system decisions and exogenous parameters may evolve over time.
+Time-dependent inputs — demand, renewable availability, prices, grid conditions — are indexed
+by **year** and **scenario**.
 
-It is formulated as a **single-stage stochastic capacity-expansion problem** and captures
-three key effects:
+It is formulated as a **two-stage stochastic capacity-expansion problem with recourse** and
+captures three key effects:
 
-- **Monotone capacity expansion.** Investments are phased across predefined planning
-  steps, allowing the system to grow over time while enforcing non-decreasing installed
-  capacity and explicitly modelling technology roll-out and replacement cycles.
-- **Intertemporal economic valuation.** All system costs are evaluated in present-value
-  terms using a **dual-rate logic**: capital recovery uses technology-specific financial
-  discount rates ($\text{WACC}_j$), while system-level discounting uses a **social discount
-  rate** $r_s$.
-- **Residual value of long-lived assets.** An economically consistent **salvage value** is
-  credited for assets whose technical lifetime exceeds the horizon, avoiding short-horizon
-  bias and ensuring neutrality between early and late investments.
+- **Monotone capacity expansion.** Investments are phased across predefined planning steps,
+  letting the system grow over time while enforcing non-decreasing installed capacity and
+  modelling technology roll-out through cohort-specific capacity additions.
+- **Intertemporal economic valuation.** All system costs are evaluated in present-value terms
+  using a **dual-rate logic**: capital recovery uses technology-specific financial discount
+  rates ($\text{WACC}_j$), while system-level discounting uses a **social discount rate**
+  $r_s$.
+- **Cohort-based annuity persistence.** Once an investment cohort is activated, its annualized
+  cost stream remains active over the remaining modelled horizon through an implicit
+  like-for-like replacement logic. Replacement expenditures are therefore represented through
+  the persistence of the annuity stream rather than separate overnight reinvestment terms.
 
-The objective is the **expected Net Present Welfare Cost (NPWC)** — see
-[Objective Function](objective-function.md#multi-year-planning).
+The objective is the **discounted expected system cost within the modelled horizon** — see
+[Objective Function → Multi-Year](objective-function.md#multi-year-planning).
 
 ### Investment cohorts
 
-In the multi-year formulation, capacity expansion is not restricted to the initial year but
-can occur at discrete **investment steps** $\tau$, each corresponding to a commissioning
-year within the horizon. Each step defines a distinct **investment cohort**, characterized
-by its installation time, technical lifetime, and financial parameters. Rather than charging
-the full capital expenditure at installation, each cohort is converted into an equivalent
-stream of constant annual payments (an *annuity*) over its technical lifetime; those
-payments contribute to system cost only for the years in which the asset is operational.
+Capacity expansion is not restricted to the initial year but can occur at discrete
+**investment steps** $\tau$ (equivalently, cohorts $k$), each commissioned at a specific year.
+Each cohort is characterized by its installation time, technical lifetime, and financial
+parameters, and contributes annualized costs from its commissioning year onward.
+
+## Typical-Year Planning
+
+The typical-year mode is a tractable **steady-state** approximation of long-term economics.
+The system is described by a single representative operating year assumed to repeat
+identically over time, so the objective reduces to minimizing the **expected annual (welfare)
+cost**.
+
+It is well suited to systems assumed to have reached long-term equilibrium, where key
+time-varying parameters (most notably demand) are not expected to evolve significantly. It can
+be interpreted as a **collapsed** version of the multi-year model under **single-year
+operation**: load, resource availability, performance, and operating conditions are identical
+every year; inter-annual variability, demand growth, technology learning, and degradation are
+neglected.
+
+Under this assumption, the annuity-based investment cost becomes mathematically equivalent to
+an **infinite discounted sequence of identical replacements** — the system is implicitly
+assumed to operate indefinitely in steady state, each asset replaced by an identical one at
+end of life. The objective is the **expected equivalent annual cost (EAC)** — see
+[Objective Function → Typical-Year](objective-function.md#typical-year-planning).
 
 ## Choosing a mode
 
@@ -79,12 +104,11 @@ payments contribute to system cost only for the years in which the asset is oper
 |---|---|---|
 | Formulation | steady-state | dynamic |
 | Time representation | one representative year | explicit horizon $y=1,\dots,H$ |
-| Objective | expected annual cost (EAC) | expected Net Present Welfare Cost (NPWC) |
+| Objective | expected annual cost (EAC) | discounted expected cost (NPWC) |
 | Capacity expansion | — | phased investment steps, non-decreasing |
+| Cohorts | single block | cohort-based (year- and step-indexed) |
 | Discounting affects sizing? | no | yes (social discount rate) |
-| Salvage value | not applicable | credited for long-lived assets |
 | Typical use | screening, steady-state, tractability | long-term planning, phased investment |
 
-Both modes rely on the **same bottom-up cost structure**, so the typical-year model can be
-interpreted as the steady-state limit of the dynamic formulation under time-invariant
-conditions.
+Both modes rely on the same bottom-up [cost structure](cost-accounting.md), so the typical-year
+model is the steady-state limit of the dynamic one under time-invariant conditions.

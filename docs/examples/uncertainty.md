@@ -25,7 +25,7 @@ connection (`on_grid_5`) starts less reliable (more, longer outages) than the la
 zero; afterwards it is high but imperfect, reflecting the modelled outage process (see the
 [grid-availability methodology](../methodology/grid.md#grid-availability-simulation)).*
 
-This is a **single-stage stochastic** problem: MicroGridsPy chooses **one** system design
+This is a **two-stage stochastic** problem with recourse: MicroGridsPy chooses **one** system design
 (shared across both futures) but lets **operation adapt** to each future separately. The
 dispatch makes the difference tangible — in 2030, the early-connection future can already
 import grid electricity in the evening, while the late-connection future still runs as an

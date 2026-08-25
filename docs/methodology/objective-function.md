@@ -1,157 +1,148 @@
 # Objective Function
 
 Both planning modes minimize an **expected total system cost** built from annuitized
-investment costs, expected operating costs, and optional externalities. The two modes
-differ in how time is represented, but share the same underlying economic logic.
+investment costs, expected operating costs, and optional externalities. The two modes share
+the same economic logic but differ in how time is represented.
 
-All monetary quantities are expressed in **real (inflation-free) terms**, measured in
-today's money. Prices and costs are net of general inflation, and intertemporal discounting
-uses real discount rates, so values occurring at different times are directly comparable.
+All monetary quantities are expressed in **real (inflation-free) terms**, measured in today's
+money. Prices and costs are net of general inflation, and intertemporal discounting uses real
+discount rates, so values at different times are directly comparable.
 
 ## Multi-Year Planning
 
-The multi-year mode minimizes the expected **Net Present Welfare Cost (NPWC)** over the
-planning horizon, accounting for long-term investment decisions, system operation, and
-external effects, all in present-value terms:
+The multi-year mode minimizes the **discounted expected system cost incurred within the
+modelled horizon**, accounting for annualized investment payments, expected operating costs,
+externality costs, and embodied-emission costs, all in present value:
 
 \[
-\min \;
-\sum_{y=1}^{H}
-\frac{
-\sum_j \text{Annuity}_{y,j}
-+ \sum_{\omega\in\Omega} p_\omega \sum_j \left( \text{OPEX}_{y,j,\omega} + A^{ext}_{y,j,\omega} \right)
-}{(1+r_s)^{y}}
-\;-\;
-\sum_j \frac{SV_j}{(1+r_s)^{H}}
-\tag{1}
+\min \; \sum_{y=1}^{H} \frac{SC_y}{(1+r_s)^{y}}
 \]
 
-where $\omega\in\Omega$ denotes the set of scenarios, each with probability $p_\omega$, and
-$r_s$ is the social discount rate. The final term credits the **salvage value** of
-long-lived assets at the end of the horizon.
+where $r_s$ is the social discount rate and the **annual system cost** $SC_y$ is
+
+\[
+SC_y = \text{Annuity}_y
++ \sum_{\omega\in\Omega} p_\omega \left( \text{O\&M}_{y,\omega} + \text{Externalities}_{y,\omega} \right)
++ \text{EmbodiedEmissionCost}_y ,
+\]
+
+with $\omega\in\Omega$ the scenarios, each of probability $p_\omega$. The three cost blocks
+decompose as
+
+\[
+\begin{aligned}
+\text{Annuity}_y &= \sum_{j,k} \alpha_{j,k,y}\,\text{CAPEX}_{j,k}\,\text{CRF}_{j,k} \\[4pt]
+\text{O\&M}_{y,\omega} &= \text{FixedO\&M}_{y,\omega} + \text{FuelCost}_{y,\omega}
++ \text{GridImportCost}_{y,\omega} - \text{GridExportRevenue}_{y,\omega} - \text{Subsidy}_{y,\omega} \\[4pt]
+\text{Externalities}_{y,\omega} &= \text{LLCost}_{y,\omega} + \text{DirectEmissionCost}_{y,\omega} + \text{GridEmissionCost}_{y,\omega}
+\end{aligned}
+\]
+
+where $\alpha_{j,k,y}$ is an **activation mask** that switches on the contribution of cohort
+$k$ of technology $j$ from its commissioning step onward.
 
 ### Annuities and the capital recovery factor
 
-For a generic investment cohort of technology $j$ commissioned at step $\tau$, with present
-investment cost $I_{j,\tau}$, technical lifetime $LT_j$, and weighted average cost of
-capital $\text{WACC}_j$, the annualized investment cost is:
+Investment costs use an **annuity-based accounting framework** with explicit **investment
+steps**. Each cohort of technology $j$, commissioned at step $\tau$ with present investment
+cost $I_{j,\tau}$, technical lifetime $LT_j$, and weighted average cost of capital
+$\text{WACC}_{j,\tau}$, is converted into a stream of constant annual payments through the
+**capital recovery factor (CRF)**:
 
 \[
-\text{Annuity}_{j,\tau} = I_{j,\tau}\cdot CRF_j
-\tag{2}
+\text{CRF}_{j,\tau} =
+\frac{\text{WACC}_{j,\tau}\,(1+\text{WACC}_{j,\tau})^{LT_j}}
+{(1+\text{WACC}_{j,\tau})^{LT_j}-1}
 \]
 
-with the **capital recovery factor (CRF)**:
-
-\[
-CRF_j = \frac{\text{WACC}_j\,(1+\text{WACC}_j)^{LT_j}}{(1+\text{WACC}_j)^{LT_j}-1}
-\tag{3}
-\]
-
-The total annuity paid in a given model year sums the contributions of all investment
-cohorts still within their technical lifetime, so capital costs are counted only while the
-corresponding assets are available.
+The annuities are activated from the commissioning year and, in the current implementation,
+persist over the remaining horizon through an implicit **like-for-like replacement** logic.
+This represents phased investment and delayed deployment while avoiding explicit reinvestment
+variables.
 
 !!! note "Technical vs. economic lifetime"
-    The annuity formulation implicitly assumes capital repayment is spread evenly over the
-    **entire technical lifetime** of each technology — a fully amortized investment with
-    constant annual payments. The current implementation makes **no distinction between
-    technical and economic lifetime**. The formulation can be extended in future to allow an
-    explicit economic lifetime or repayment period per technology.
+    The annuity formulation implicitly spreads capital repayment over the **technical
+    lifetime**; no distinction is made between technical and economic lifetime. Cohort annuity
+    streams remain active over the remaining modelled horizon via an implicit replacement
+    convention. This ensures internal consistency and avoids explicit reinvestment variables,
+    but differs from a full-upfront-CAPEX accounting framework.
 
 ### Weighted Average Cost of Capital
 
-The WACC represents the opportunity cost of capital and is defined as:
+The WACC represents the opportunity cost of capital:
 
 \[
 \text{WACC}_j =
 \frac{E_j}{E_j + D_j}\,K^E_j
 + \frac{D_j}{E_j + D_j}\,K^D_j\,(1-T)
-\tag{4}
 \]
 
-where $E_j$ and $D_j$ are the equity and debt shares, $K^E_j$ and $K^D_j$ the costs of
-equity and debt, and $T$ the corporate tax rate.
-
-!!! note "WACC as a configurable financing lever"
-    Although the annuity structure mirrors project finance, MicroGridsPy treats the WACC as
-    an explicit, configurable parameter. It can therefore represent concessional finance,
-    public-sector investment, or policy-driven de-risking. Combined with externalities in
-    the objective, the formulation extends naturally to **social cost–benefit analysis**.
-    The WACC is assumed constant over time per technology, but the cohort-based structure
-    allows time-dependent WACC values in principle.
+where $E_j$ and $D_j$ are equity and debt shares, $K^E_j$ and $K^D_j$ the costs of equity and
+debt, and $T$ the corporate tax rate. In MicroGridsPy the WACC is an explicit, configurable
+parameter, able to represent concessional finance, public-sector investment, or policy-driven
+de-risking.
 
 ### Dual-rate discounting
 
-Intertemporal evaluation follows a **dual-rate** logic. Capital recovery for individual
-technologies uses their respective WACC values, while all system-level cash flows entering
-the objective — investment annuities, operational costs, externalities — are discounted to
-present value using a **social discount rate** $r_s$. This separates financial opportunity
-costs at the asset level from societal time preferences at the system level.
-
-In welfare-based analysis, $r_s$ is commonly defined through the **Ramsey formulation**:
+Intertemporal evaluation follows a **dual-rate logic**. Capital recovery for each technology
+uses its WACC, while all system-level cash flows entering the objective — annuities, operating
+costs, externalities, embodied-emission costs — are discounted to present value using a
+**social discount rate** $r_s$. This separates financial opportunity costs at the asset level
+from societal time preferences at the system level. Following the **Ramsey** formulation:
 
 \[
 r_s = \rho + \eta g
-\tag{5}
 \]
 
-where $\rho$ is the pure rate of time preference, $\eta$ the elasticity of marginal utility
-of consumption, and $g$ the expected long-term growth rate of per-capita consumption.
+where $\rho$ is the pure rate of time preference, $\eta$ the elasticity of marginal utility of
+consumption, and $g$ the expected long-term growth of per-capita consumption.
 
-### Salvage value
+### Time horizon, end-of-horizon bias, and accounting conventions
 
-For assets whose technical lifetime exceeds the planning horizon, an economically
-consistent salvage value is credited at the end of the horizon. For a cohort of technology
-$j$ commissioned in year $\tau$:
+Long-term capacity expansion is conceptually an **infinite-horizon** problem, but optimization
+is performed over a **finite modelled horizon**. This truncation can introduce **end-of-horizon
+bias**, where investments near the terminal year are mis-valued if their remaining lifetime is
+not accounted for — particularly for long-lived, capital-intensive technologies.
 
-\[
-SV_{j,\tau} =
-\begin{cases}
-\text{InvPresent}_{j,\tau}\cdot
-\dfrac{(1+\text{WACC}_j)^{LT_j} - (1+\text{WACC}_j)^{H-\tau}}{(1+\text{WACC}_j)^{LT_j}-1},
-& H-\tau < LT_j, \\[2ex]
-0, & H-\tau \ge LT_j.
-\end{cases}
-\tag{6}
-\]
+How horizon-end effects are treated depends on the **accounting convention**:
 
-This credits the fraction of unrecovered capital associated with the asset's remaining
-technical lifetime beyond the horizon, discounted with the technology-specific WACC.
-Economic consistency implies the annualized cost of an asset is **invariant to the chosen
-horizon**: evaluating an investment over a truncated horizon *with salvage* yields the same
-annual cost as evaluating it over its full lifetime. This ensures neutrality between early
-and late investments.
+- Under a **full-upfront-CAPEX** convention, the entire investment is charged at commissioning
+  and a **salvage value** correction is required for useful life beyond the horizon.
+- Under an **annuity-based** convention, investment costs are annualized and only payments
+  within the modelled years are counted, which naturally mitigates the most severe truncation
+  effects.
+
+MicroGridsPy's multi-year objective follows the **annuity-based** convention: only annualized
+payments falling within the horizon enter the objective. A salvage-related quantity may still
+be computed **in post-processing** for reporting, but it does **not** enter the optimization.
+The formulation should therefore be read as a **finite-horizon approximation** of a long-term
+planning problem, not one fully immune to terminal-horizon distortions.
 
 ## Typical-Year Planning
 
-The typical-year mode minimizes the expected **equivalent annual cost (EAC)**. Investment
+The typical-year mode minimizes the **expected equivalent annual cost (EAC)**. Investment
 decisions are shared across scenarios; operational decisions and costs are scenario-specific:
 
 \[
-\min \;
-\sum_j \big[ \text{CAPEX}_j\cdot CRF_j(\text{WACC}_j, LT_j) \big]
-+ \sum_{\omega\in\Omega} p_\omega \sum_j
-\left( \text{OPEX}_{j,\omega} + \text{FuelCost}_{j,\omega} + A^{ext}_{j,\omega} \right)
-\tag{7}
+\min \; \text{Annuity}
++ \sum_{\omega\in\Omega} p_\omega \Big(
+\text{FixedO\&M}_{\omega} + \text{FuelCost}_{\omega}
++ \text{GridImportCost}_{\omega} - \text{GridExportRevenue}_{\omega} - \text{Subsidy}_{\omega}
++ \text{LLCost}_{\omega} + \text{EmissionCost}_{\omega} \Big)
 \]
-
-The first term is the annualized investment cost; the second is the expected annual
-operating cost and externalities across scenarios.
 
 !!! note "Discounting and sizing"
     In contrast to the multi-year formulation, **intertemporal discounting does not affect
-    system sizing** in the typical-year model. All costs are evaluated on an annual basis and
-    the system is assumed to operate indefinitely under stationary conditions; annuity-based
-    capital recovery already embeds discounting at the asset level through the WACC. Sizing
-    is driven exclusively by the trade-off between annualized investment costs and expected
-    annual operating costs.
+    system sizing** in the typical-year model. Costs are evaluated on an annual basis and the
+    system is assumed to operate indefinitely under stationary conditions; annuity-based
+    capital recovery already embeds discounting at the asset level through the WACC. Sizing is
+    therefore driven exclusively by the trade-off between annualized investment costs and
+    expected annual operating costs.
 
 ## Relationship between the two objectives
 
 Both objectives rely on the same bottom-up [cost accounting](cost-accounting.md). The
-typical-year EAC can be interpreted as the **steady-state limit** of the multi-year NPWC
-under time-invariant conditions: the multi-year model resolves investment, operational, and
-externality costs year by year and discounts them to present value, while the typical-year
-model annualizes investment over the technical lifetime to yield horizon-independent annual
-equivalents.
+typical-year EAC is the **steady-state limit** of the multi-year objective under time-invariant
+conditions: the multi-year model resolves investment, operating, and externality costs year by
+year and discounts them, while the typical-year model annualizes investment over the technical
+lifetime to yield horizon-independent annual equivalents.

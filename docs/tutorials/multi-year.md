@@ -56,15 +56,16 @@ print(results.kpis)            # present-value cost, renewable share, ...
 
 ## What the model solved
 
-The dynamic formulation minimized the expected
-[Net Present Welfare Cost (NPWC)](../methodology/objective-function.md#multi-year-planning):
-each investment cohort's capital cost is converted to a WACC-based
+The dynamic formulation minimized the expected discounted system cost over the horizon (the
+[multi-year objective](../methodology/objective-function.md#multi-year-planning)): each
+investment cohort's capital cost is converted to a WACC-based
 [annuity](../methodology/objective-function.md#annuities-and-the-capital-recovery-factor),
-system-level cash flows are discounted with the social discount rate, installed capacity is
-**non-decreasing** across steps, and a
-[salvage value](../methodology/objective-function.md#salvage-value) credits assets whose
-technical lifetime extends beyond the horizon. Sizing is shared across scenarios while
-dispatch is scenario-specific.
+system-level cash flows are discounted with the social discount rate, and installed capacity is
+**non-decreasing** across steps. The objective follows an
+[annuity-based convention](../methodology/objective-function.md#time-horizon-end-of-horizon-bias-and-accounting-conventions)
+— only annualized payments within the horizon are counted (a salvage value may be reported in
+post-processing but does not enter the optimization). Sizing (here-and-now) is shared across
+scenarios while dispatch (recourse) is scenario-specific.
 
 ## Example projects
 

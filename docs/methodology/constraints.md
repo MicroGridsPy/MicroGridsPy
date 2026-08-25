@@ -1,85 +1,119 @@
 # System Constraints
 
 The system-level constraints couple all technologies and ensure feasibility of supply,
-reliability, and policy or resource limits. Constraints are enforced at hourly resolution
-for each scenario, while additional aggregate constraints may apply at annual level.
+reliability, and policy or resource limits. Constraints are enforced at hourly resolution for
+each scenario; aggregate constraints may additionally apply annually.
 
 ## Energy balance constraint
 
-At each time period $t\in\mathcal{T}$ and scenario $\omega\in\Omega$, total net supply must
-equal demand. MicroGridsPy adopts the convention that **storage charging and grid export act
-as demand-side sinks**, while **storage discharging and grid import act as supply-side
-sources**:
+At each time step, total net supply equals demand. MicroGridsPy adopts the convention that
+storage charging and grid export act as demand-side sinks, while storage discharging and grid
+import act as supply-side sources. Grid flows enter **after** multiplication by the grid
+efficiency $\eta^{\text{grid}}$ (see the [PCC convention](grid.md#grid-efficiency-in-the-energy-balance)).
+
+### Typical-year formulation
+
+For each $t\in\mathcal{T}$ and $\omega\in\Omega$:
 
 \[
-\sum_r E^{res}_{t,\omega,r}
-+ \sum_g E^{gen}_{t,\omega,g}
-+ E^{imp}_{t,\omega} - E^{exp}_{t,\omega}
-+ P^{dis}_{t,\omega} - P^{ch}_{t,\omega}
-+ \ell_{t,\omega}
+\sum_{r} E^{\text{res}}_{t,\omega,r}
++ E^{\text{gen}}_{t,\omega}
++ \eta^{\text{grid}} E^{\text{imp}}_{t,\omega}
+- \eta^{\text{grid}} E^{\text{exp}}_{t,\omega}
++ E^{\text{dis}}_{t,\omega}
+- E^{\text{ch}}_{t,\omega}
++ E^{\text{LL}}_{t,\omega}
 = D_{t,\omega}
-\qquad \forall t,\omega
-\tag{34}
 \]
 
-where $\ell_{t,\omega}$ is lost load (unserved energy) and $D_{t,\omega}$ is electrical
-demand. If the system is off-grid, then $E^{imp}_{t,\omega}=E^{exp}_{t,\omega}=0$. If grid
-connection is enabled but export is disabled, $E^{exp}_{t,\omega}=0$ and only imports are
-allowed. In all cases, the balance retains the same structure.
+where $\sum_r E^{\text{res}}$ is total renewable generation, $E^{\text{gen}}$ generator
+production, $E^{\text{imp}}/E^{\text{exp}}$ the raw grid flows at the PCC, $E^{\text{dis}}/
+E^{\text{ch}}$ battery discharge/charge on the AC-side balance, $E^{\text{LL}}$ lost load (a
+slack supply term ensuring feasibility), and $D$ demand.
+
+### Multi-year formulation
+
+Generator and battery operations are cohort-indexed and summed across investment steps:
+
+\[
+\sum_{r} E^{\text{res}}_{t,y,\omega,r}
++ \sum_k E^{\text{gen}}_{t,y,\omega,k}
++ \eta^{\text{grid}} E^{\text{imp}}_{t,y,\omega}
+- \eta^{\text{grid}} E^{\text{exp}}_{t,y,\omega}
++ \sum_k E^{\text{dis}}_{t,y,\omega,k}
+- \sum_k E^{\text{ch}}_{t,y,\omega,k}
++ E^{\text{LL}}_{t,y,\omega}
+= D_{t,y,\omega}
+\]
 
 ## Minimum renewable penetration
 
-A minimum renewable-penetration constraint can represent policy targets or sustainability
-requirements. Define $E_{tot}$ as the total annual electricity supplied to meet demand
-(renewables, generators, and grid imports), and $E_{ren}$ as the annual renewable
-contribution. The constraint is:
+A minimum renewable-penetration constraint can represent policy or sustainability targets. It is
+defined on **served supply components**, not total load: renewable generation contributes to both
+the numerator and the denominator; generator output contributes only to the denominator; only
+the renewable share $\rho^{\text{grid}}\in[0,1]$ of **delivered** grid imports contributes to the
+numerator; lost load and exports do not enter the ratio.
+
+### Typical-year formulation
+
+For each scenario $\omega$:
 
 \[
-E_{ren} \ge \alpha^{ren}_{min}\, E_{tot}
-\tag{35}
+E^{\text{tot}}_{\omega} = \sum_t \left( \sum_r E^{\text{res}}_{t,\omega,r} + E^{\text{gen}}_{t,\omega} + \eta^{\text{grid}} E^{\text{imp}}_{t,\omega} \right),
+\]
+\[
+E^{\text{ren}}_{\omega} = \sum_t \left( \sum_r E^{\text{res}}_{t,\omega,r} + \rho^{\text{grid}}\,\eta^{\text{grid}} E^{\text{imp}}_{t,\omega} \right)
 \]
 
-where $\alpha^{ren}_{min}\in[0,1]$ is the minimum renewable-penetration fraction. In the
-implemented accounting, grid imports contribute to $E_{tot}$ and are treated as
-non-renewable unless explicitly modelled otherwise.
+The constraint is imposed either **scenario-wise** or in **expectation**:
+
+\[
+E^{\text{ren}}_{\omega} \ge \alpha^{\text{ren}}_{\min,\omega}\, E^{\text{tot}}_{\omega} \quad \forall\omega,
+\qquad\text{or}\qquad
+\sum_{\omega} p_{\omega} E^{\text{ren}}_{\omega} \ge \alpha^{\text{ren}}_{\min} \sum_{\omega} p_{\omega} E^{\text{tot}}_{\omega}
+\]
+
+### Multi-year formulation
+
+The same logic applies **year by year**, with $E^{\text{tot}}_{y,\omega}$ and
+$E^{\text{ren}}_{y,\omega}$ defined analogously (summing generator output over cohorts):
+
+\[
+E^{\text{ren}}_{y,\omega} \ge \alpha^{\text{ren}}_{\min,y,\omega}\, E^{\text{tot}}_{y,\omega} \quad \forall y,\omega,
+\qquad\text{or}\qquad
+\sum_{\omega} p_{\omega} E^{\text{ren}}_{y,\omega} \ge \alpha^{\text{ren}}_{\min,y} \sum_{\omega} p_{\omega} E^{\text{tot}}_{y,\omega} \quad \forall y
+\]
 
 ## Maximum lost-load share
 
-System reliability can be enforced through an upper bound on the share of demand that may
-remain unserved. Let total annual lost load and demand be:
+Reliability can be enforced through an upper bound on the fraction of demand that may remain
+unserved. **Typical-year**, with $E^{\text{LL}}_{\omega} = \sum_t E^{\text{LL}}_{t,\omega}$ and
+$E^{\text{dem}}_{\omega} = \sum_t D_{t,\omega}$:
 
 \[
-LL_{tot} = \sum_{t,\omega} \ell_{t,\omega}, \qquad
-E_{dem} = \sum_{t,\omega} D_{t,\omega}
-\tag{36}
+E^{\text{LL}}_{\omega} \le \alpha^{\text{LL}}_{\max,\omega}\, E^{\text{dem}}_{\omega} \quad \forall\omega,
+\qquad\text{or}\qquad
+\sum_{\omega} p_{\omega} E^{\text{LL}}_{\omega} \le \alpha^{\text{LL}}_{\max} \sum_{\omega} p_{\omega} E^{\text{dem}}_{\omega}
 \]
 
-The constraint is:
+**Multi-year**, enforced year by year:
 
 \[
-LL_{tot} \le \alpha^{LL}_{max}\, E_{dem}
-\tag{37}
+E^{\text{LL}}_{y,\omega} \le \alpha^{\text{LL}}_{\max,y,\omega}\, E^{\text{dem}}_{y,\omega} \quad \forall y,\omega,
+\qquad\text{or}\qquad
+\sum_{\omega} p_{\omega} E^{\text{LL}}_{y,\omega} \le \alpha^{\text{LL}}_{\max,y} \sum_{\omega} p_{\omega} E^{\text{dem}}_{y,\omega} \quad \forall y
 \]
 
-where $\alpha^{LL}_{max}\in[0,1]$ is the maximum admissible fraction of unmet demand.
-
-## Land-availability constraint
-
-When spatial limitations are relevant, an upper bound can be enforced on the total land area
-required by renewable technologies. Let $a_r$ be the specific land requirement per installed
-kW for technology $r$ ($\text{m}^2/\text{kW}$) and $C_r = N_r P_r$ the installed renewable
-capacity:
-
-\[
-\sum_{r\in R} C_r\, a_r \le A_{max}
-\tag{38}
-\]
-
-where $A_{max}$ is the maximum available land area ($\text{m}^2$). This constraint applies
-only when a positive land limit is specified.
+!!! note "Constraint enforcement mode"
+    For both minimum renewable penetration and maximum lost-load share, MicroGridsPy supports two
+    enforcement philosophies: **scenario-wise**, where the constraint holds separately for each
+    scenario, and **expected**, where it holds only in probability-weighted expectation across
+    scenarios. In the typical-year formulation the aggregates are computed over the representative
+    year; in the multi-year formulation, separately for each modelled year.
 
 ---
 
-Together, these constraints allow technical feasibility, reliability, policy requirements,
-and spatial limitations to be represented alongside the economic
-[objective](objective-function.md).
+Spatial limits on renewable deployment are handled by the
+[land-availability constraint](renewable.md#land-availability-constraint-optional). Together with
+the economic [objective](objective-function.md), these constraints let technical feasibility,
+reliability, and policy requirements be represented explicitly.

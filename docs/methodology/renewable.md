@@ -1,47 +1,85 @@
 # Renewable Technologies
 
-Renewable technologies are modelled with a **generic, technology-agnostic** formulation
-based on installed capacity, resource availability, and conversion efficiency. This common
-structure — driven by time-series inputs and a small set of techno-economic parameters — can
-represent photovoltaic systems, wind turbines, hydropower, or any renewable source
-describable through a production profile.
+Renewable technologies are modelled with a **generic, technology-agnostic** formulation based
+on installed capacity, resource availability, and conversion efficiency. This common structure
+— driven by time-series inputs and a small set of techno-economic parameters — represents
+photovoltaics, wind turbines, hydropower, or any renewable source describable through a
+production profile.
+
+Renewable production is always treated as an **upper-bounded** quantity: **curtailment is
+implicitly allowed** whenever available renewable energy exceeds demand or network capability.
+The mathematical structure differs slightly between the typical-year and multi-year
+formulations because the latter treats capacity evolution explicitly.
 
 ## Renewable production constraint
 
-Renewable electricity production is limited by installed capacity and by the availability of
-the primary energy resource. For each time period $t$, scenario $\omega$, and renewable
-technology $r$:
+### Typical-year formulation
+
+For each time period $t$, scenario $\omega$, and renewable technology $r$, production is bounded
+by installed capacity and resource availability:
 
 \[
-E_{t,\omega,r} \le A_{t,\omega,r}\cdot \eta_r\cdot P_r\cdot N_r
-\tag{15}
+E_{t,\omega,r} \;\le\; A_{t,\omega,r}\cdot \eta_r\cdot P_r\cdot N_r
 \]
 
-where:
+where $E_{t,\omega,r}$ is renewable production, $A_{t,\omega,r}$ is the normalized resource-
+availability profile (e.g. capacity factor), $\eta_r$ is the inverter/conversion efficiency,
+and $P_r\cdot N_r$ is the installed nominal capacity.
 
-- $E_{t,\omega,r}$ is the renewable electricity production;
-- $A_{t,\omega,r}$ is the **normalized resource-availability** time series (e.g. solar
-  irradiation, wind capacity factor);
-- $\eta_r$ is the inverter/conversion efficiency;
-- $P_r\cdot N_r$ is the installed nominal capacity ($N_r$ units of nominal capacity $P_r$).
+### Multi-year formulation
 
-This enforces that generation cannot exceed the maximum power output allowed by both
-installed capacity and resource availability at each time step. Because production is bounded
-*from above* (not fixed), the model can implicitly **curtail** surplus renewable energy.
-
-## Maximum installable capacity
-
-An optional upper bound can reflect physical, spatial, or regulatory limits on each
-renewable technology. When enabled:
+Renewable capacity is built incrementally through investment cohorts and evolves over time due
+to aging and replacement. Let $k$ denote the investment step (cohort) and $y$ the year. The
+available capacity in year $y$ is
 
 \[
-N_r\cdot P_r \le \mathcal{C}_r
-\tag{16}
+C^{\text{avail}}_{y,r} = \sum_k N_{k,r}\cdot P_r\cdot \alpha_{k,y}\cdot \delta_{k,y,r}
 \]
 
-where $\mathcal{C}_r$ is the maximum allowable installed capacity for technology $r$.
+where $N_{k,r}$ is the number of units installed at step $k$, $\alpha_{k,y}$ is the cohort
+activation mask (accounting for lifetime and replacement), and $\delta_{k,y,r}$ is the
+degradation factor applied to capacity. Renewable production is then bounded by the available
+capacity:
 
-The same conceptual structure is used across planning modes, with appropriate year and
-scenario indexing in the multi-year formulation. A system-level
-[land-availability constraint](constraints.md#land-availability-constraint) can additionally
-bound total renewable area.
+\[
+E_{t,y,\omega,r} \;\le\; A_{t,y,\omega,r}\cdot \eta_r\cdot C^{\text{avail}}_{y,r}
+\]
+
+## Maximum installable capacity (optional)
+
+Physical, spatial, or regulatory limits can bound the installed capacity of each renewable
+technology.
+
+**Typical-year** — applies to the total installed capacity:
+
+\[
+N_r\cdot P_r \;\le\; \overline{C}_r
+\]
+
+**Multi-year** — applies to the cumulative capacity across all cohorts:
+
+\[
+\sum_k N_{k,r}\cdot P_r \;\le\; \overline{C}_r
+\]
+
+where $\overline{C}_r$ is the maximum allowable installed capacity.
+
+## Land availability constraint (optional)
+
+When spatial limitations are relevant, MicroGridsPy can bound the total land area used by
+renewables. Let $a_r$ be the specific land requirement of technology $r$ ($\text{m}^2/\text{kW}$)
+and $A^{\max}$ the total available area.
+
+**Typical-year** — with $C_r = N_r P_r$:
+
+\[
+\sum_{r} C_r\, a_r \;\le\; A^{\max}
+\]
+
+**Multi-year** — land use is computed on the cumulative renewable design across all steps:
+
+\[
+\sum_k \sum_r N_{k,r}\, P_r\, a_r \;\le\; A^{\max}
+\]
+
+so renewable land occupation is a cumulative design-side constraint over all installed cohorts.

@@ -92,8 +92,9 @@ MicroGridsPy supports two complementary planning formulations:
   intertemporal economic valuation.
 
 Both formulations can include multiple **scenarios**. Investment (sizing) decisions are
-shared across scenarios, while operational decisions are scenario-specific, resulting in a
-**single-stage stochastic** planning problem.
+here-and-now decisions shared across scenarios, while operational decisions are
+scenario-specific recourse actions, resulting in a **two-stage stochastic** planning problem
+with recourse.
 
 ## Technology representation
 
@@ -112,10 +113,10 @@ At each time step the model enforces an energy balance between supply and demand
 
 \[
 \sum_r E^{res}_{t,\omega,r}
-+ \sum_g E^{gen}_{t,\omega,g}
-+ E^{imp}_{t,\omega} - E^{exp}_{t,\omega}
-+ P^{dis}_{t,\omega} - P^{ch}_{t,\omega}
-+ \ell_{t,\omega}
++ E^{gen}_{t,\omega}
++ \eta^{grid} E^{imp}_{t,\omega} - \eta^{grid} E^{exp}_{t,\omega}
++ E^{dis}_{t,\omega} - E^{ch}_{t,\omega}
++ E^{LL}_{t,\omega}
 = D_{t,\omega}
 \]
 

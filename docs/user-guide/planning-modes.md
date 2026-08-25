@@ -18,7 +18,8 @@ discounting does **not** affect sizing in this mode.
 **Multi-year** represents an explicit horizon $y = 1,\dots,H$ with year- and
 scenario-dependent inputs. It supports **capacity expansion** across predefined investment
 steps (with non-decreasing installed capacity), technology-specific WACC-based annuities,
-a social discount rate, replacement cycles, and salvage value for long-lived assets.
+a social discount rate, and cohort-based annuity persistence (implicit like-for-like
+replacement) over the modelled horizon.
 
 ## Selecting a mode in code
 
