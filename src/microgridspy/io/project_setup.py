@@ -76,7 +76,7 @@ def build_formulation_payload(
     """Build the ``formulation.json`` payload for a project.
 
     This is the single source of truth for the formulation document; both the
-    GUI and :func:`create_project` call it so the two stay in lock-step. All
+    GUI and `create_project()` call it so the two stay in lock-step. All
     arguments have GUI-matching defaults, so a bare call yields a valid
     off-grid, steady-state, single-scenario configuration.
     """
@@ -189,7 +189,7 @@ def create_project(
         fuel_label: fuel display name.
         csv_delimiter: CSV field delimiter written into the templates.
         csv_decimal: CSV decimal separator written into the templates.
-        settings: a fully-built :class:`TemplateSettings` for complete control;
+        settings: a fully-built `TemplateSettings` for complete control;
             when given, the individual template arguments above are ignored.
         overwrite: overwrite existing input templates if the project exists.
 

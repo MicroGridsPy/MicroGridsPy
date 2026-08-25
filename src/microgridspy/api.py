@@ -1,13 +1,15 @@
 """High-level convenience API for MicroGridsPy.
 
 These are thin wrappers over the model, export, and IO layers that give library
-users a short path from a project name to solved, analysis-ready results::
+users a short path from a project name to solved, analysis-ready results:
 
-    import microgridspy as mgp
+```python
+import microgridspy as mgp
 
-    results = mgp.solve("Kalobeyei_1", solver="highs").results()
-    results.kpis                      # pandas DataFrame
-    mgp.export_results(results)       # write CSV/Excel to the project folder
+results = mgp.solve("Kalobeyei_1", solver="highs").results()
+results.kpis                      # pandas DataFrame
+mgp.export_results(results)       # write CSV/Excel to the project folder
+```
 """
 
 from __future__ import annotations
@@ -72,12 +74,12 @@ def solve(
             from the project's ``formulation.json``.
         solver: ``"highs"`` (open source) or ``"gurobi"`` (licensed).
         **solver_kwargs: forwarded to
-            :meth:`SteadyStateModel.solve_single_objective` (e.g. ``solver_params``,
+            `SteadyStateModel.solve_single_objective()` (e.g. ``solver_params``,
             ``problem_fn``, ``log_file_path``).
 
     Returns:
-        The solved model instance, ready for :meth:`results` /
-        :meth:`results_summary`.
+        The solved model instance, ready for `results()` /
+        `results_summary()`.
     """
     if formulation is None:
         formulation = _detect_formulation(project_name)
@@ -117,7 +119,7 @@ def export_results(results: AnyResults, out_dir: Path | None = None) -> dict[str
     """Write a results object to CSV/Excel files.
 
     Args:
-        results: a :class:`TypicalYearResults` or :class:`MultiYearResults`.
+        results: a `TypicalYearResults` or `MultiYearResults`.
         out_dir: destination directory; when ``None``, writes to the project's
             ``results/`` folder.
 
@@ -179,7 +181,7 @@ def plot_input_timeseries(
     Args:
         project_name: the project to read.
         variable: the time-series variable to plot; defaults to the first
-            available (see :func:`list_input_timeseries`).
+            available (see `list_input_timeseries()`).
         formulation: auto-detected when None.
         scenario: optional scenario selector when the variable has that dimension.
         year: optional year selector when the variable has that dimension.

@@ -1,21 +1,23 @@
 """MicroGridsPy: bottom-up optimization tool for planning mini-grids.
 
-Public API::
+Public API:
 
-    import microgridspy as mgp
+```python
+import microgridspy as mgp
 
-    # one-liner: solve and get analysis-ready tables
-    results = mgp.solve("Kalobeyei_1", solver="highs").results()
-    results.kpis                      # pandas DataFrame
-    mgp.export_results(results)       # write CSV/Excel to the project folder
+# one-liner: solve and get analysis-ready tables
+results = mgp.solve("Kalobeyei_1", solver="highs").results()
+results.kpis                      # pandas DataFrame
+mgp.export_results(results)       # write CSV/Excel to the project folder
 
-    # or drive the models directly
-    from microgridspy import SteadyStateModel
-    model = SteadyStateModel("demo_typical_year")
-    model.solve_single_objective(solver="highs")
-    summary = model.results_summary()
+# or drive the models directly
+from microgridspy import SteadyStateModel
+model = SteadyStateModel("demo_typical_year")
+model.solve_single_objective(solver="highs")
+summary = model.results_summary()
+```
 
-The Streamlit GUI lives in :mod:`microgridspy.app` and is installed only with
+The Streamlit GUI lives in `microgridspy.app` and is installed only with
 the ``[gui]`` extra; importing this package never imports Streamlit.
 
 Stability: ``SteadyStateModel``, ``MultiYearModel`` and ``InputValidationError``

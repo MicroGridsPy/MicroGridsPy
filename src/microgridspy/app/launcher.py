@@ -2,7 +2,7 @@
 
 Registered in ``pyproject.toml`` under ``[project.scripts]`` as
 ``microgridspy-gui = "microgridspy.app.launcher:main"``. It locates the
-packaged ``Home.py`` via :mod:`importlib.resources`, so it works regardless of
+packaged ``Home.py`` via `importlib.resources`, so it works regardless of
 where the package was installed or which directory the user runs it from.
 """
 

@@ -1,12 +1,14 @@
 """Command-line interface: the ``microgridspy`` console command.
 
 Registered in ``pyproject.toml`` as ``microgridspy = "microgridspy.cli:main"``.
-It wraps the public API for common project operations from the terminal::
+It wraps the public API for common project operations from the terminal:
 
-    microgridspy list
-    microgridspy create my_site --resources solar wind
-    microgridspy validate my_site
-    microgridspy solve my_site --solver highs --export
+```bash
+microgridspy list
+microgridspy create my_site --resources solar wind
+microgridspy validate my_site
+microgridspy solve my_site --solver highs --export
+```
 """
 
 from __future__ import annotations

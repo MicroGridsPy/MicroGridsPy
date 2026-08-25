@@ -332,7 +332,7 @@ class MultiYearModel:
     def results(self) -> MultiYearResults:
         """Assemble the full multi-year results object from the solved model.
 
-        Call this after :meth:`solve_single_objective`. Returns a
+        Call this after `solve_single_objective()`. Returns a
         ``MultiYearResults`` holding the analysis-ready pandas tables
         (dispatch, energy balance, design by step, KPIs, discounted cash
         flows, ...) - the same content the GUI Results page renders.

@@ -310,7 +310,7 @@ class SteadyStateModel:
     def results(self) -> TypicalYearResults:
         """Assemble the full typical-year results object from the solved model.
 
-        Call this after :meth:`solve_single_objective`. Returns a
+        Call this after `solve_single_objective()`. Returns a
         ``TypicalYearResults`` holding the analysis-ready pandas tables
         (dispatch, energy balance, design summary, KPIs, cash flows, ...) -
         the same content the GUI Results page renders, with no manual plumbing.

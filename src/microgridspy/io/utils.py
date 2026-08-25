@@ -110,7 +110,7 @@ def list_projects(base_dir: Path | None = None) -> list[str]:
 
     Args:
         base_dir: optional explicit workspace; defaults to the resolution used
-            by :func:`get_projects_root` (``MICROGRIDSPY_WORKSPACE`` or cwd).
+            by `get_projects_root()` (``MICROGRIDSPY_WORKSPACE`` or cwd).
 
     Returns:
         list[str]: sorted names of the sub-directories under ``projects/``,
