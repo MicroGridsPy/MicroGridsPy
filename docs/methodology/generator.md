@@ -82,6 +82,14 @@ This yields a convex piecewise-linear approximation of the true nonlinear fuel c
 guarantees fuel consumption is **not underestimated**, enabling realistic part-load
 performance while preserving linearity and tractability.
 
+![Generator efficiency: left, a real efficiency curve compared with a constant-efficiency approximation; right, the curve sampled at relative-output breakpoints to build the piecewise-linear approximation](../assets/methodology/partial_load_curve.png)
+
+*Generator efficiency under the constant and partial-load formulations. **Left:** a real
+generator efficiency curve versus the constant-efficiency approximation — real efficiency
+falls sharply at low load. **Right:** the efficiency curve sampled at relative-output
+breakpoints, used to construct the convex piecewise-linear approximation adopted in the
+optimization.*
+
 !!! note "Convexity assumption and possible extensions"
     The part-load formulation is valid under the assumption that the fuel-consumption curve
     is **convex** with respect to electrical output — consistent with most internal

@@ -71,6 +71,11 @@ extra_javascript = [
   "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js",
 ]
 
+# Local styles: horizontally scrollable display equations, figure captions.
+extra_css = [
+  "stylesheets/extra.css",
+]
+
 [project.theme]
 language = "en"
 features = [

@@ -65,3 +65,10 @@ The simulation logic proceeds as follows:
 This yields a flexible representation of grid reliability — from fully unavailable (off-grid)
 to perfectly reliable, to weak grids with stochastic outages — while preserving full
 transparency of the underlying availability assumptions.
+
+![Stochastic grid-availability generation: sampled time-between-outages and outage-duration distributions with fitted Weibull curves, and the resulting binary hourly availability trajectory over a year](../assets/methodology/grid_simulation.png)
+
+*The stochastic grid-availability generation process. **Top left:** the sampled distribution
+of time between outages (TBO) versus the fitted Weibull distribution. **Top right:** the
+sampled outage-duration (OD) distribution. **Bottom:** the resulting binary hourly
+availability trajectory over a representative year.*

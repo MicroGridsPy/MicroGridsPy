@@ -99,3 +99,45 @@ where $\text{DoD}\in[0,1]$ is the maximum depth of discharge.
     assumptions. Temperature-driven derating can be incorporated the same way by defining
     $\alpha_y$ (or a higher-resolution $\alpha_{t,y}$) as a deterministic function of
     ambient/battery temperature — preserving linearity as long as the factors are exogenous.
+
+## Advanced loss and degradation models
+
+Beyond the constant-efficiency case above, MicroGridsPy provides two optional, still-linear
+refinements of the battery model. Both recast a nonlinear behaviour as a **convex
+piecewise-linear** relationship precomputed from input curves, so the optimization stays a
+tractable linear program.
+
+### Power-dependent conversion losses
+
+The advanced loss model replaces the constant one-way efficiencies $\eta_c,\eta_d$ with an
+explicit representation of **power-dependent conversion losses**. Internal DC-side charge and
+discharge powers are introduced, and the AC/DC losses $L^{ch}, L^{dis}$ are bounded below by a
+set of supporting segments (an epigraph) derived from the battery efficiency curve. The SOC
+balance is then written in terms of the DC-side flows actually stored and withdrawn.
+
+![Battery losses: left, a convex loss curve approximated by piecewise-linear segments; right, the resulting charge and discharge efficiency decreasing with relative DC power](../assets/methodology/battery_loss_curve.png)
+
+*Power-dependent battery losses and the resulting one-way efficiency. **Left:** the convex
+loss curve approximated through piecewise-linear segments. **Right:** the corresponding charge
+and discharge efficiency, which decrease as relative DC-side power increases.*
+
+### Endogenous degradation: cycle and calendar fade
+
+In the multi-year formulation, the usable capacity can be reduced endogenously by two ageing
+mechanisms: **cycle fade**, accumulated from hourly battery throughput, and **calendar fade**,
+applied once per year as a function of the yearly-average state of charge (higher average SOC
+accelerates ageing). Both are expressed through precomputed piecewise-linear curves, so the
+effective capacity becomes a yearly state variable that shrinks over time — reducing both the
+maximum stored energy and the admissible charge/discharge power.
+
+![Battery advanced-model inputs: left, one-way efficiency versus relative DC power; right, the calendar-fade coefficient increasing with state of charge](../assets/methodology/battery_efficiency_calendar_curve.png)
+
+*Inputs to the advanced battery model. **Left:** charge and discharge one-way efficiency
+versus relative DC-side power. **Right:** the calendar-fade coefficient as a function of state
+of charge — prolonged operation at high SOC accelerates long-term ageing.*
+
+!!! note "Replacement vs. degradation"
+    These degradation dynamics affect **operational feasibility** within a cohort's life, but
+    do not by themselves trigger a replacement: replacement timing is still governed
+    exogenously by the battery lifetime and cohort logic. Users should therefore keep the
+    lifetime, end-of-life state-of-health threshold, and fade parameters mutually consistent.

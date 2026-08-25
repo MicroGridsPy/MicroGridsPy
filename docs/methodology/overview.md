@@ -32,6 +32,14 @@ backup generation:
 This modular representation captures the technical and economic interactions between
 generation, storage, and dispatch decisions in off-grid and weak-grid contexts.
 
+![Conceptual technology interaction scheme of MicroGridsPy: renewable generators, battery storage, backup generator and optional grid connected to a common AC bus feeding the aggregated load](../assets/methodology/energy_system.png)
+
+*Conceptual technology interaction scheme used in MicroGridsPy. All technologies exchange
+power through a common **AC system bus**, with conversion efficiencies applied between each
+technology and the bus. The diagram represents the modelled connections rather than a
+physical electrical layout; **dashed** elements (grid connection) are optional and activated
+through parameter settings.*
+
 ## Planning workflow
 
 The conceptual sequence is:
