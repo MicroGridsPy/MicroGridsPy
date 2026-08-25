@@ -36,6 +36,30 @@ class _BuildFlags:
 
 
 class MultiYearModel:
+    """Multi-year (dynamic) capacity-expansion optimization model for a project.
+
+    Builds and solves the dynamic formulation in Linopy over an explicit planning
+    horizon: it assembles year- and scenario-indexed inputs, represents phased
+    investment through capacity cohorts, and solves for least-cost staged sizing
+    and hourly dispatch with intertemporal (social-discount-rate) valuation.
+
+    Construct it with a project name (resolved in the active workspace), then call
+    `solve_single_objective()`; afterwards use `results()` for the structured
+    `MultiYearResults` tables or `results_summary()` for the raw solved dataset. The
+    convenience wrapper `microgridspy.solve()` covers the common path.
+
+    ```python
+    from microgridspy import MultiYearModel
+
+    model = MultiYearModel("Kalobeyei_1")
+    model.solve_single_objective(solver="highs")
+    results = model.results()
+    ```
+
+    Args:
+        project_name: the project folder in the active workspace.
+    """
+
     def __init__(self, project_name: str) -> None:
         self.project_name = project_name
 

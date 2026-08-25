@@ -25,6 +25,19 @@ from microgridspy.typical_year_model.params import get_params
 
 @dataclass
 class TypicalYearResults:
+    """Structured, analysis-ready results of a solved typical-year model.
+
+    Returned by `SteadyStateModel.results()` (and `microgridspy.load_results()`).
+    Its fields are `pandas` DataFrames covering the main result families — headline
+    `kpis`, `design_summary` (installed capacity), `dispatch` and `energy_balance`
+    time series, the cost breakdown (`upfront`, `annuities`, `expected_fixed_om`,
+    `expected_cost_components`), emissions, and per-technology / inverter design
+    tables — plus the underlying solved `data` (an `xarray.Dataset`) and run
+    `metadata`. Write them to disk with `microgridspy.export_results()` or `to_excel`.
+
+    Stability: provisional until the 1.0 release (the set of tables may grow).
+    """
+
     project_name: str
     data: xr.Dataset
     metadata: dict[str, Any]

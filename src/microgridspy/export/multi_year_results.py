@@ -38,6 +38,19 @@ from microgridspy.multi_year_model.params import get_params
 
 @dataclass
 class MultiYearResults:
+    """Structured, analysis-ready results of a solved multi-year model.
+
+    Returned by `MultiYearModel.results()` (and `microgridspy.load_results()`).
+    Analogous to `TypicalYearResults`, but with quantities resolved over the planning
+    horizon: `pandas` DataFrames for headline KPIs, per-year installed capacity,
+    staged design by investment step, dispatch and energy balances, discounted cash
+    flows and cost components, and emissions — plus the underlying solved
+    `data`/`sets` (`xarray.Dataset`). Write them to disk with
+    `microgridspy.export_results()`.
+
+    Stability: provisional until the 1.0 release (the set of tables may grow).
+    """
+
     project_name: str
     data: xr.Dataset
     sets: xr.Dataset

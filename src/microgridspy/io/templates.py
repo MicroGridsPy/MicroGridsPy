@@ -17,6 +17,20 @@ from microgridspy.io.paths import ProjectPaths
 # =============================================================================
 @dataclass(frozen=True)
 class TemplateSettings:
+    """Full specification of the input templates written for a project.
+
+    An immutable bundle of every choice that shapes the generated ``formulation.json``
+    and the CSV/YAML input templates: the formulation and system type, scenario and
+    year/investment-step structure, renewable/battery/generator/fuel labels and
+    modelling options (battery loss and degradation models, generator efficiency
+    model), and the CSV delimiter/decimal format.
+
+    Most users never build this directly — `microgridspy.create_project()` derives a
+    sensible instance from its keyword arguments. Construct one explicitly and pass it
+    as `create_project(..., settings=...)` only when you need full control over the
+    generated templates.
+    """
+
     formulation: str  # "steady_state" | "dynamic"
     system_type: str  # "off_grid" | "on_grid"
     allow_export: bool

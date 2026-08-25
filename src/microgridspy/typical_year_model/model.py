@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 class InputValidationError(RuntimeError):
-    pass
+    """Raised when a project's inputs are missing, malformed, or inconsistent."""
 
 
 SolverKw = dict[str, Any]
@@ -36,6 +36,31 @@ class _BuildFlags:
 
 
 class SteadyStateModel:
+    """Typical-year (steady-state) optimization model for a project.
+
+    Builds and solves the single-representative-year formulation in Linopy: it
+    assembles the sets and input data from the project folder, constructs the
+    variables, constraints, and objective, and solves for least-cost sizing and
+    hourly dispatch.
+
+    Construct it with a project name (resolved in the active workspace), then call
+    `solve_single_objective()`; afterwards use `results()` for the structured
+    `TypicalYearResults` tables or `results_summary()` for the raw solved dataset.
+    The convenience wrapper `microgridspy.solve()` covers the common path.
+
+    ```python
+    from microgridspy import SteadyStateModel
+
+    model = SteadyStateModel("demo_typical_year")
+    model.solve_single_objective(solver="highs")
+    results = model.results()
+    results.kpis            # pandas DataFrame
+    ```
+
+    Args:
+        project_name: the project folder in the active workspace.
+    """
+
     def __init__(self, project_name: str) -> None:
         self.project_name = project_name
 
