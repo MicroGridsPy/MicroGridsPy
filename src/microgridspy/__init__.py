@@ -11,7 +11,7 @@ Public API::
 
     # or drive the models directly
     from microgridspy import SteadyStateModel
-    model = SteadyStateModel("inverter_test_2")
+    model = SteadyStateModel("demo_typical_year")
     model.solve_single_objective(solver="highs")
     summary = model.results_summary()
 

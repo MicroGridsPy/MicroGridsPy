@@ -2,7 +2,7 @@
 
 These exercise the library the way a user would - create/validate projects,
 inspect inputs, manage and solve them - using an isolated per-test workspace and
-the bundled ``inverter_test_2`` example as realistic input data. They guard the
+the bundled ``demo_typical_year`` example as realistic input data. They guard the
 public surface (`__init__.__all__`) against packaging and API regressions.
 """
 
@@ -17,15 +17,15 @@ import pytest
 import microgridspy as mgp
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-EXAMPLE_PROJECT = REPO_ROOT / "projects" / "inverter_test_2"
+EXAMPLE_PROJECT = REPO_ROOT / "projects" / "demo_typical_year"
 
 
 @pytest.fixture
 def workspace(tmp_path: Path) -> Path:
-    """An isolated workspace with the inverter_test_2 example copied in."""
+    """An isolated workspace with the demo_typical_year example copied in."""
     mgp.set_workspace(tmp_path)
     if EXAMPLE_PROJECT.exists():
-        shutil.copytree(EXAMPLE_PROJECT, tmp_path / "projects" / "inverter_test_2")
+        shutil.copytree(EXAMPLE_PROJECT, tmp_path / "projects" / "demo_typical_year")
     return tmp_path
 
 
@@ -78,10 +78,10 @@ def test_validate_rejects_incomplete_project(tmp_path: Path) -> None:
         mgp.validate_project("empty")
 
 
-@pytest.mark.skipif(not EXAMPLE_PROJECT.exists(), reason="inverter_test_2 example not present")
+@pytest.mark.skipif(not EXAMPLE_PROJECT.exists(), reason="demo_typical_year example not present")
 def test_solve_end_to_end(workspace: Path) -> None:
     try:
-        model = mgp.solve("inverter_test_2", solver="highs")
+        model = mgp.solve("demo_typical_year", solver="highs")
     except Exception as exc:  # solver may be unavailable in some CI environments
         if "highs" in str(exc).lower() or "solver" in str(exc).lower():
             pytest.skip(f"HiGHS solver unavailable: {exc}")

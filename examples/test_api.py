@@ -1,7 +1,7 @@
 """Example: use MicroGridsPy as a Python library.
 
 Creates a NEW project from scratch with create_project(), reuses the input data
-from the bundled ``inverter_test_2`` example, then validates, solves (HiGHS), and
+from the bundled ``demo_typical_year`` example, then validates, solves (HiGHS), and
 reads the structured results.
 
 Run from anywhere:  python examples/test_api.py
@@ -16,10 +16,10 @@ import microgridspy as mgp
 # Resolve the repo root from this file, so the example works from any directory.
 REPO_ROOT = Path(__file__).resolve().parent.parent
 mgp.set_workspace(REPO_ROOT)  # projects/ lives under the repo root
-src_inputs = REPO_ROOT / "projects" / "inverter_test_2" / "inputs"
+src_inputs = REPO_ROOT / "projects" / "demo_typical_year" / "inputs"
 
-# 1) create a NEW project from scratch, matching inverter_test_2's config.
-#    NB: inverter_test_2 uses European CSV format -> delimiter ';', decimal ','.
+# 1) create a NEW project from scratch, matching demo_typical_year's config.
+#    NB: demo_typical_year uses European CSV format -> delimiter ';', decimal ','.
 paths = mgp.create_project(
     "smoke_test",
     formulation="steady_state",
@@ -31,7 +31,7 @@ paths = mgp.create_project(
 )
 print("created:", paths.root)
 
-# 2) reuse inverter_test_2's REAL data, keeping create_project's formulation.json.
+# 2) reuse demo_typical_year's REAL data, keeping create_project's formulation.json.
 for f in [
     "load_demand.csv",
     "resource_availability.csv",
@@ -40,7 +40,7 @@ for f in [
     "generator.yaml",
 ]:
     shutil.copy(src_inputs / f, paths.inputs_dir / f)
-print("copied real inputs from inverter_test_2")
+print("copied real inputs from demo_typical_year")
 
 # 3) validate -> solve -> results.
 mgp.validate_project("smoke_test")

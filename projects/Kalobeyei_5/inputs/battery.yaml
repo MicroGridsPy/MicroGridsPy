@@ -1,0 +1,105 @@
+# -----------------------------------------------------------------------------
+# Metadata reference section.
+# Units, context, and descriptions below are informational and normally do not
+# need to be edited during project setup.
+# -----------------------------------------------------------------------------
+meta:
+  units:
+    battery_nominal_capacity_kwh: kWh
+    battery_specific_investment_cost_per_kwh: currency_per_kWh
+    battery_inverter_specific_investment_cost_per_kw: currency_per_kW
+    battery_wacc: '-'
+    battery_calendar_lifetime_years: years
+    battery_embedded_emissions_kgco2e_per_kwh: kgCO2e_per_kWh
+    battery_fixed_om_share_per_year: share_per_year
+    battery_inverter_fixed_om_share_per_year: share_per_year
+    battery_charge_efficiency: '-'
+    battery_discharge_efficiency: '-'
+    battery_initial_soc: share
+    battery_depth_of_discharge: share
+    battery_inverter_nominal_power_kw: kW
+    battery_max_discharge_c_rate: per_hour
+    battery_max_charge_c_rate: per_hour
+    battery_max_installable_capacity_kwh: kWh
+    battery_capacity_degradation_rate_per_year: per_year
+  context:
+    formulation: dynamic
+    multi_scenario: true
+    capacity_expansion: false
+    investment_steps: null
+  description:
+    summary: Battery inputs define step-dependent investment data and shared technical
+      parameters.
+    parameters:
+      battery_nominal_capacity_kwh: Nominal energy capacity represented by one battery
+        unit.
+      battery_specific_investment_cost_per_kwh: Specific investment cost of battery
+        capacity.
+      battery_inverter_specific_investment_cost_per_kw: Specific investment cost of
+        the explicit battery converter/inverter power capacity used as the charge/discharge
+        reference.
+      battery_wacc: Weighted average cost of capital used for battery annuities.
+      battery_calendar_lifetime_years: Calendar lifetime used for battery replacement
+        economics.
+      battery_embedded_emissions_kgco2e_per_kwh: Embodied emissions associated with
+        battery capacity.
+      battery_fixed_om_share_per_year: Fixed annual O&M cost expressed as a share
+        of battery CAPEX. In the typical-year formulation this input is scenario-independent.
+      battery_inverter_fixed_om_share_per_year: Fixed annual O&M cost expressed as
+        a share of battery inverter CAPEX.
+      battery_charge_efficiency: Battery one-way charging efficiency used directly
+        in constant-efficiency mode and as the full-load baseline in curve mode.
+      battery_discharge_efficiency: Battery one-way discharging efficiency used directly
+        in constant-efficiency mode and as the full-load baseline in curve mode.
+      battery_initial_soc: Initial state of charge as a share of usable capacity.
+      battery_depth_of_discharge: Usable fraction of nominal battery capacity. When
+        cycle fade is enabled, the same value is also used as the reference DoD for
+        deriving the internal cycle-fade coefficient from cycle life and end-of-life
+        SoH.
+      battery_inverter_nominal_power_kw: Nominal inverter/converter power represented
+        by one battery inverter unit. Installed battery inverter power equals inverter
+        units multiplied by this value.
+      battery_max_discharge_c_rate: Optional upper bound on explicit battery inverter
+        discharge power relative to installed battery energy capacity. Use this as
+        the primary discharge-side power-to-energy coupling input in the typical-year
+        formulation.
+      battery_max_charge_c_rate: Optional upper bound on explicit battery inverter
+        charge power relative to installed battery energy capacity. Use this as the
+        primary charge-side power-to-energy coupling input in the typical-year formulation.
+      battery_max_installable_capacity_kwh: Optional upper bound on total installed
+        battery capacity used as a planning/siting limit. It is not the physics reference
+        for the current endogenous degradation model.
+      battery_capacity_degradation_rate_per_year: Simplified exogenous annual reduction
+        in effective battery capacity. It remains active in the dynamic formulation
+        unless calendar fade is enabled; when calendar fade is enabled, this linear
+        term is ignored to avoid double-counting background ageing.
+
+# -----------------------------------------------------------------------------
+# Editable battery inputs.
+# Update the values below to define the storage technology in your project.
+# -----------------------------------------------------------------------------
+battery:
+  label: Battery
+  investment:
+    by_step:
+      '1':
+        nominal_capacity_kwh: 1.0
+        specific_investment_cost_per_kwh: 300
+        wacc: 0.05
+        calendar_lifetime_years: 10
+        embedded_emissions_kgco2e_per_kwh: 0.0
+        fixed_om_share_per_year: 0.02
+        inverter_specific_investment_cost_per_kw: 160
+        inverter_lifetime_years: 15
+        inverter_fixed_om_share_per_year: 0.01
+  technical:
+    charge_efficiency: 0.93
+    discharge_efficiency: 0.93
+    initial_soc: 1.0
+    depth_of_discharge: 0.8
+    inverter_nominal_power_kw: 1.0
+    max_discharge_c_rate: 0.25
+    max_charge_c_rate: 0.25
+    max_installable_capacity_kwh: null
+    efficiency_curve_csv: null
+    capacity_degradation_rate_per_year: 0.005

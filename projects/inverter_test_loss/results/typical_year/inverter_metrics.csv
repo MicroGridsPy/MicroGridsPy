@@ -1,3 +1,0 @@
-Component,Installed inverter AC capacity [kW_ac],Peak dispatched renewable output [kW_ac],Peak utilization [%],Pre-inverter renewable AC-equivalent potential [kWh],Effective inverter-limited renewable potential [kWh],Inverter clipping potential [kWh]
-Solar Irradiation inverter,611.7375417082782,481.16848504308234,78.6560333863798,1189931.5410777107,1189931.5410777107,0.0
-Battery inverter,322.0989107909283,,105.26315789473686,,,
