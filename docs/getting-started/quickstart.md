@@ -1,7 +1,46 @@
 # Quickstart
 
-This page walks through the minimum end-to-end workflow: create a project, populate and
-validate its inputs, solve, and read the results.
+This page shows the fastest way to see MicroGridsPy run — solving the **bundled example
+project** — and then the full workflow for building your own case study.
+
+## Run the bundled example
+
+The repository ships one ready-to-run project, **`demo_typical_year`**: a small off-grid,
+typical-year case with real hourly demand and solar data. With the package installed (including
+the `highs` extra) and working from a clone of the repository, you can solve it in one call:
+
+```python
+import microgridspy as mgp
+
+# Projects are resolved from <workspace>/projects/. Running from the repo root
+# finds projects/demo_typical_year automatically; otherwise point the workspace at
+# the folder that contains projects/:
+# mgp.set_workspace("/path/to/MicroGridsPy")
+
+model = mgp.solve("demo_typical_year", solver="highs")
+results = model.results()
+
+print(results.kpis)            # headline KPIs (LCOE, renewable share, total cost, …)
+print(results.design_summary)  # installed capacity by technology
+```
+
+The active **workspace** is the directory containing a `projects/` folder — by default the
+current working directory, or the path in the `MICROGRIDSPY_WORKSPACE` environment variable, or
+whatever you pass to [`set_workspace`](../api/index.md#workspace-helpers). The
+[Examples](../examples/index.md) section walks through the larger `Kalobeyei_*` projects the same
+way.
+
+## Build your own project
+
+To start a new case study, `create_project` writes a project folder with a `formulation.json`
+and input templates.
+
+!!! note "Templates are scaffolding to fill in"
+    The generated **time-series CSVs are empty (all cells `0.0`)** and the **YAML economic
+    parameters default to `0.0`** (only a few technical defaults — efficiencies, depth of
+    discharge, lifetimes — are pre-filled). A freshly created project therefore does not solve
+    to a meaningful result until you populate demand, resource availability, and costs. Use
+    `demo_typical_year` above (or an example project) as a reference for a complete input set.
 
 ## The workflow
 
