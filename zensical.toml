@@ -20,6 +20,8 @@ nav = [
     { "Results" = "user-guide/results.md" },
   ] },
 
+  { "Graphical Interface" = "gui/index.md" },
+
   { "Tutorials" = [
     { "Typical Year" = "tutorials/typical-year.md" },
     { "Multi-Year" = "tutorials/multi-year.md" },
