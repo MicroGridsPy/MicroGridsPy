@@ -22,7 +22,7 @@ where $r_s$ is the social discount rate and the **annual system cost** $SC_y$ is
 
 \[
 SC_y = \text{Annuity}_y
-+ \sum_{\omega\in\Omega} p_\omega \left( \text{O\&M}_{y,\omega} + \text{Externalities}_{y,\omega} \right)
++ \sum_{\omega\in\Omega} p_\omega \left( \text{O}\&\text{M}_{y,\omega} + \text{Externalities}_{y,\omega} \right)
 + \text{EmbodiedEmissionCost}_y ,
 \]
 
@@ -32,7 +32,7 @@ decompose as
 \[
 \begin{aligned}
 \text{Annuity}_y &= \sum_{j,k} \alpha_{j,k,y}\,\text{CAPEX}_{j,k}\,\text{CRF}_{j,k} \\[4pt]
-\text{O\&M}_{y,\omega} &= \text{FixedO\&M}_{y,\omega} + \text{FuelCost}_{y,\omega}
+\text{O}\&\text{M}_{y,\omega} &= \text{FixedO}\&\text{M}_{y,\omega} + \text{FuelCost}_{y,\omega}
 + \text{GridImportCost}_{y,\omega} - \text{GridExportRevenue}_{y,\omega} - \text{Subsidy}_{y,\omega} \\[4pt]
 \text{Externalities}_{y,\omega} &= \text{LLCost}_{y,\omega} + \text{DirectEmissionCost}_{y,\omega} + \text{GridEmissionCost}_{y,\omega}
 \end{aligned}
@@ -126,7 +126,7 @@ decisions are shared across scenarios; operational decisions and costs are scena
 \[
 \min \; \text{Annuity}
 + \sum_{\omega\in\Omega} p_\omega \Big(
-\text{FixedO\&M}_{\omega} + \text{FuelCost}_{\omega}
+\text{FixedO}\&\text{M}_{\omega} + \text{FuelCost}_{\omega}
 + \text{GridImportCost}_{\omega} - \text{GridExportRevenue}_{\omega} - \text{Subsidy}_{\omega}
 + \text{LLCost}_{\omega} + \text{EmissionCost}_{\omega} \Big)
 \]

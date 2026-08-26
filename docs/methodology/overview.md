@@ -7,11 +7,6 @@ sizing and dispatch of mini-grids. It explicitly addresses the challenges of ene
 scaling, technology selection, and operational planning in contexts characterized by
 **limited data availability, high uncertainty, and strong economic constraints**.
 
-!!! abstract "Source"
-    This section reproduces and explains the *MicroGridsPy — Mathematical Formulation*
-    document (A. Onori). Where the implemented code and the document differ, the code is
-    authoritative; discrepancies should be reported as issues.
-
 ## An integrated modelling platform
 
 MicroGridsPy is part of a broader **integrated modelling platform** designed to address the

@@ -9,12 +9,6 @@ storage, dispatchable backup generation, and optional weak-grid interaction.
 MicroGridsPy is designed as a transparent, modular tool for energy-access modelling,
 with a focus on bottom-up system planning and reproducible optimization workflows.
 
-!!! note "Documentation architecture"
-    This documentation is built with **Zensical**, **mkdocstrings**, and **Read the Docs**.
-    Explanatory pages are written in Markdown, while the [API Reference](api/index.md) is
-    generated automatically from the Python package and its docstrings — so signatures and
-    parameters stay in sync with the code.
-
 ## What MicroGridsPy does
 
 At a high level, the workflow is:
@@ -160,10 +154,39 @@ Each stage remains modular while sharing well-defined data interfaces. This sepa
 the reason MicroGridsPy keeps an explicit [internal data contract](data-reference/data-contract.md)
 between its data-loading and formulation layers.
 
-## Citation and reference
+## Citation and references
 
-For the detailed mathematical formulation, see the project formulation document,
-*MicroGridsPy — Mathematical Formulation* (A. Onori, December 2025), which defines the
-planning modes, objective functions, economic accounting, renewable production, battery
-operation, generator modelling, grid availability and system-level constraints. The
-[Methodology](methodology/overview.md) section reproduces and explains this content.
+If you use MicroGridsPy in your work, please cite the relevant publications from the SESAM
+research group at Politecnico di Milano, on whose methodology the tool is based:
+
+- Sergio Balderrama, Francesco Lombardi, Fabio Riva, Walter Canedo, Emanuela Colombo, Sylvain
+  Quoilin, *"A two-stage linear programming optimization framework for isolated hybrid
+  microgrids in a rural context: The case study of the 'El Espino' community"*, **Energy**,
+  2019, 188, 116073.
+- Nicolò Stevanato, Francesco Lombardi, Emanuela Colombo, Sergio Balderrama, Sylvain Quoilin,
+  *"Two-Stage Stochastic Sizing of a Rural Micro-Grid Based on Stochastic Load Generation"*,
+  **2019 IEEE Milan PowerTech**, pp. 1–6.
+- Nicolò Stevanato, Francesco Lombardi, Giulia Guidicini, Lorenzo Rinaldi, Sergio L.
+  Balderrama, Matija Pavičević, Sylvain Quoilin, Emanuela Colombo, *"Long-term sizing of rural
+  microgrids: Accounting for load evolution through multi-step investment plan and stochastic
+  optimization"*, **Energy for Sustainable Development**, 2020, 58, pp. 16–29.
+- Nicolò Stevanato, Gianluca Pellecchia, Ivan Sangiorgio, Diana Shendrikova, Castro Antonio
+  Soares, Riccardo Mereu, Emanuela Colombo, *"Planning third generation minigrids:
+  Multi-objective optimization and brownfield investment approaches in modelling village-scale
+  on-grid and off-grid energy systems"*, **Renewable and Sustainable Energy Transition**, 2023,
+  3, 100053.
+- Giacomo Crevani, Castro Soares, Emanuela Colombo, *"Modelling Financing Schemes for Energy
+  System Planning: A Mini-Grid Case Study"*, **ECOS 2023**, pp. 1958–1969.
+- N. Stevanato, I. Sangiorgio, R. Mereu, E. Colombo, *"Archetypes of Rural Users in Sub-Saharan
+  Africa for Load Demand Estimation"*, **2023 IEEE PES/IAS PowerAfrica**, Marrakech, Morocco,
+  2023, pp. 1–5, doi: [10.1109/PowerAfrica57932.2023.10363287](https://doi.org/10.1109/PowerAfrica57932.2023.10363287).
+
+## Online course
+
+A free, self-paced online course introduces MicroGridsPy and the broader Comprehensive Energy
+System Planning (CESP) methodology for energy-access planning:
+
+- **[Comprehensive Energy System Planning for Energy Access](https://www.open.edu/openlearncreate/course/view.php?id=17733)**
+  (OpenLearn Create) — walks through the modelling workflow, from demand and resource
+  assessment to mini-grid optimization with MicroGridsPy, with hands-on material and case
+  studies.

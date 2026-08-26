@@ -48,7 +48,7 @@ computed from $\text{WACC}_j$ and the lifetime $LT_j$.
 Fixed O&M costs are capacity-dependent, hence **scenario-independent**. For technology $j$:
 
 \[
-\text{FixedO\&M}_j = C_j \cdot \text{CAPEX}_j \cdot f^{\text{FOM}}_j
+\text{FixedO}\&\text{M}_j = C_j \cdot \text{CAPEX}_j \cdot f^{\text{FOM}}_j
 \]
 
 where $f^{\text{FOM}}_j$ is the fixed-O&M fraction. In the **typical-year** formulation, total
@@ -56,7 +56,7 @@ annual fixed O&M is computed once from installed capacities and added **outside*
 expectation:
 
 \[
-\text{FixedO\&M} = \sum_j \text{FixedO\&M}_j
+\text{FixedO}\&\text{M} = \sum_j \text{FixedO}\&\text{M}_j
 \]
 
 In the **multi-year** formulation, it is computed per active cohort and included in yearly
