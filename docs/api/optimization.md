@@ -11,6 +11,13 @@ separately in the [Methodology](../methodology/objective-function.md) section.
 
 ::: microgridspy.solve
 
+## `solve_example`
+
+One-call end-to-end quick start over the [bundled examples](project.md#example-projects) —
+works straight after `pip install`.
+
+::: microgridspy.solve_example
+
 ## `load_inputs`
 
 ::: microgridspy.load_inputs

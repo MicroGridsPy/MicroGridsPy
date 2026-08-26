@@ -5,6 +5,8 @@ It wraps the public API for common project operations from the terminal:
 
 ```bash
 microgridspy list
+microgridspy examples                 # list bundled example projects
+microgridspy demo                     # load + solve a bundled example, end-to-end
 microgridspy create my_site --resources solar wind
 microgridspy validate my_site
 microgridspy solve my_site --solver highs --export
@@ -35,6 +37,21 @@ def _build_parser(version: str) -> argparse.ArgumentParser:
 
     p_list = sub.add_parser("list", help="list projects in the workspace")
     _add_workspace_arg(p_list)
+
+    sub.add_parser("examples", help="list the example projects bundled with the package")
+
+    p_demo = sub.add_parser(
+        "demo", help="load a bundled example and solve it end-to-end (quick start)"
+    )
+    p_demo.add_argument(
+        "name",
+        nargs="?",
+        default="demo_typical_year",
+        help="example name (default: demo_typical_year)",
+    )
+    p_demo.add_argument("--solver", choices=["highs", "gurobi"], default="highs")
+    p_demo.add_argument("--export", action="store_true", help="write results to the project folder")
+    _add_workspace_arg(p_demo)
 
     p_create = sub.add_parser("create", help="create a new project and its input templates")
     p_create.add_argument("name")
@@ -73,6 +90,22 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command == "list":
             projects = mgp.list_projects()
             print("\n".join(projects) if projects else "(no projects found)")
+        elif args.command == "examples":
+            from microgridspy.io.examples import EXAMPLES
+
+            for name in mgp.list_examples():
+                print(f"{name}\n    {EXAMPLES[name]}")
+        elif args.command == "demo":
+            project = mgp.load_example(args.name, overwrite=True)
+            model = mgp.solve(project, solver=args.solver)
+            results = model.results()
+            print(
+                f"Solved example '{project}' with {args.solver}: "
+                f"objective = {results.metadata.get('objective_value')}"
+            )
+            if args.export:
+                written = mgp.export_results(results)
+                print(f"Wrote {len(written)} result files.")
         elif args.command == "create":
             paths = mgp.create_project(
                 args.name,

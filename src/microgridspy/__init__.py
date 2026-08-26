@@ -38,11 +38,13 @@ from microgridspy.api import (
     load_results,
     plot_input_timeseries,
     solve,
+    solve_example,
 )
 from microgridspy.export.multi_year_results import MultiYearResults
 
 # --- Structured results (provisional) ---------------------------------------
 from microgridspy.export.typical_year_results import TypicalYearResults
+from microgridspy.io.examples import list_examples, load_example
 
 # --- Project scaffolding & management ---------------------------------------
 from microgridspy.io.project_setup import (
@@ -65,6 +67,9 @@ __all__ = [
     "SteadyStateModel",
     "MultiYearModel",
     "solve",
+    "solve_example",
+    "list_examples",
+    "load_example",
     "load_results",
     "export_results",
     "load_inputs",

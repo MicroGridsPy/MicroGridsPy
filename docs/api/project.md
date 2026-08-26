@@ -33,3 +33,17 @@ For full control over the generated input templates, build a `TemplateSettings` 
 pass it to `create_project(..., settings=...)`.
 
 ::: microgridspy.TemplateSettings
+
+## Example projects
+
+Two ready-to-run example projects are bundled with the package, so a project can be solved
+end-to-end immediately after `pip install` (no repository clone). See
+[`solve_example`](optimization.md#solve_example) for the one-call quick start.
+
+### `list_examples`
+
+::: microgridspy.list_examples
+
+### `load_example`
+
+::: microgridspy.load_example

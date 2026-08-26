@@ -3,32 +3,45 @@
 This page shows the fastest way to see MicroGridsPy run — solving the **bundled example
 project** — and then the full workflow for building your own case study.
 
-## Run the bundled example
+## Run a bundled example
 
-The repository ships one ready-to-run project, **`demo_typical_year`**: a small off-grid,
-typical-year case with real hourly demand and solar data. With the package installed (including
-the `highs` extra) and working from a clone of the repository, you can solve it in one call:
+The package **ships two ready-to-run example projects** (no repository clone needed):
+**`demo_typical_year`** (a small off-grid typical-year case) and **`demo_multi_year`** (an
+off-grid 10-year dynamic case). Straight after `pip install "microgridspy[highs]"`, solve one
+end-to-end in a single call:
 
 ```python
 import microgridspy as mgp
 
-# Projects are resolved from <workspace>/projects/. Running from the repo root
-# finds projects/demo_typical_year automatically; otherwise point the workspace at
-# the folder that contains projects/:
-# mgp.set_workspace("/path/to/MicroGridsPy")
+print(mgp.list_examples())      # ['demo_multi_year', 'demo_typical_year']
 
-model = mgp.solve("demo_typical_year", solver="highs")
+model = mgp.solve_example("demo_typical_year", solver="highs")
 results = model.results()
 
-print(results.kpis)            # headline KPIs (LCOE, renewable share, total cost, …)
-print(results.design_summary)  # installed capacity by technology
+print(results.kpis)             # headline KPIs (LCOE, renewable share, total cost, …)
+print(results.design_summary)   # installed capacity by technology
+```
+
+`solve_example` copies the example into the active workspace (`./projects/<name>/`) and solves
+it. If you prefer the two steps explicitly:
+
+```python
+mgp.load_example("demo_typical_year")            # -> ./projects/demo_typical_year
+model = mgp.solve("demo_typical_year", solver="highs")
+```
+
+Or from the terminal:
+
+```bash
+microgridspy examples     # list the bundled examples
+microgridspy demo         # load + solve demo_typical_year end-to-end
 ```
 
 The active **workspace** is the directory containing a `projects/` folder — by default the
 current working directory, or the path in the `MICROGRIDSPY_WORKSPACE` environment variable, or
 whatever you pass to [`set_workspace`](../api/index.md#workspace-helpers). The
-[Examples](../examples/index.md) section walks through the larger `Kalobeyei_*` projects the same
-way.
+[Examples](../examples/index.md) section walks through the larger `Kalobeyei_*` case studies the
+same way.
 
 ## Build your own project
 

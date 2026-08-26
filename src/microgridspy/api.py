@@ -88,6 +88,38 @@ def solve(
     return model
 
 
+def solve_example(
+    name: str = "demo_typical_year",
+    *,
+    solver: str = "highs",
+    dest: str | None = None,
+    overwrite: bool = True,
+    **solver_kwargs: Any,
+) -> AnyModel:
+    """Load a bundled example project and solve it, end-to-end.
+
+    A one-call quick start that works straight after ``pip install`` (no repository
+    clone needed): it copies the example into the active workspace and solves it.
+
+    Args:
+        name: the bundled example to run (see
+            `microgridspy.list_examples()`); ``"demo_typical_year"`` or
+            ``"demo_multi_year"``.
+        solver: ``"highs"`` (open source) or ``"gurobi"`` (licensed).
+        dest: destination project name; defaults to ``name``.
+        overwrite: replace the destination project if it already exists (default
+            True, so the example is re-runnable).
+        **solver_kwargs: forwarded to the model's ``solve_single_objective``.
+
+    Returns:
+        The solved model instance, ready for `results()` / `results_summary()`.
+    """
+    from microgridspy.io.examples import load_example
+
+    project = load_example(name, dest=dest, overwrite=overwrite)
+    return solve(project, solver=solver, **solver_kwargs)
+
+
 def load_results(
     project_name: str,
     *,

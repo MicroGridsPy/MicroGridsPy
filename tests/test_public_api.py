@@ -8,7 +8,6 @@ public surface (`__init__.__all__`) against packaging and API regressions.
 
 from __future__ import annotations
 
-import shutil
 import sys
 from pathlib import Path
 
@@ -16,16 +15,12 @@ import pytest
 
 import microgridspy as mgp
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-EXAMPLE_PROJECT = REPO_ROOT / "projects" / "demo_typical_year"
-
 
 @pytest.fixture
 def workspace(tmp_path: Path) -> Path:
-    """An isolated workspace with the demo_typical_year example copied in."""
+    """An isolated workspace with the bundled demo_typical_year example loaded in."""
     mgp.set_workspace(tmp_path)
-    if EXAMPLE_PROJECT.exists():
-        shutil.copytree(EXAMPLE_PROJECT, tmp_path / "projects" / "demo_typical_year")
+    mgp.load_example("demo_typical_year")  # copies the packaged example into the workspace
     return tmp_path
 
 
@@ -78,7 +73,15 @@ def test_validate_rejects_incomplete_project(tmp_path: Path) -> None:
         mgp.validate_project("empty")
 
 
-@pytest.mark.skipif(not EXAMPLE_PROJECT.exists(), reason="demo_typical_year example not present")
+def test_bundled_examples_load_and_validate(tmp_path: Path) -> None:
+    mgp.set_workspace(tmp_path)
+    assert mgp.list_examples() == ["demo_multi_year", "demo_typical_year"]
+    for name in mgp.list_examples():
+        project = mgp.load_example(name, overwrite=True)
+        assert project == name
+        mgp.validate_project(name)  # the bundled example inputs are complete/valid
+
+
 def test_solve_end_to_end(workspace: Path) -> None:
     try:
         model = mgp.solve("demo_typical_year", solver="highs")
@@ -93,3 +96,14 @@ def test_solve_end_to_end(workspace: Path) -> None:
 
     written = mgp.export_results(results, workspace / "out")
     assert len(written) > 0
+
+
+def test_solve_example_one_liner(tmp_path: Path) -> None:
+    mgp.set_workspace(tmp_path)
+    try:
+        model = mgp.solve_example("demo_typical_year", solver="highs")
+    except Exception as exc:  # solver may be unavailable in some CI environments
+        if "highs" in str(exc).lower() or "solver" in str(exc).lower():
+            pytest.skip(f"HiGHS solver unavailable: {exc}")
+        raise
+    assert not model.results().kpis.empty

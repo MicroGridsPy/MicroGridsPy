@@ -56,9 +56,7 @@ def _base_sets(periods: int = 2) -> xr.Dataset:
             ),
             # year -> inv_step mapping (built by the real initialize_sets); required
             # by map_inv_step_to_year for step-indexed params such as subsidies.
-            "year_inv_step": xr.DataArray(
-                ["1"], dims=("year",), coords={"year": ["2026"]}
-            ),
+            "year_inv_step": xr.DataArray(["1"], dims=("year",), coords={"year": ["2026"]}),
         },
         coords={
             "period": ("period", np.arange(periods, dtype=int)),
