@@ -24,11 +24,13 @@ The simplest representation uses fixed charge/discharge efficiencies $\eta_{\tex
 
 ### Typical-year formulation
 
-Charging and discharging are bounded by time-to-full parameters:
+Charging and discharging are bounded by the installed battery **inverter (converter) power**
+$P^{\text{inv}}$, an explicit sizing variable that may optionally be coupled to the installed
+energy through a maximum C-rate $c^{\text{rate}}$ ($P^{\text{inv}} \le c^{\text{rate}}\,C^{\text{bat}}$):
 
 \[
-P^{\text{ch}}_{t,\omega} \le \frac{C^{\text{bat}}}{t_{\text{ch}}}, \qquad
-P^{\text{dis}}_{t,\omega} \le \frac{C^{\text{bat}}}{t_{\text{dis}}}
+P^{\text{ch}}_{t,\omega} \le P^{\text{inv}}, \qquad
+P^{\text{dis}}_{t,\omega} \le P^{\text{inv}}
 \qquad \forall t,\omega
 \]
 
@@ -61,12 +63,13 @@ and the SOC is bounded by the depth-of-discharge limit:
 
 ### Multi-year formulation
 
-For each year $y$, scenario $\omega$, and cohort $k$, the power and capacity bounds use the
-available cohort capacity $\overline{C}^{\text{bat}}_{y,k}$:
+For each year $y$, scenario $\omega$, and cohort $k$, charge/discharge power is bounded by the
+active installed inverter power $P^{\text{inv}}$, while the SOC is bounded by the available cohort
+energy capacity $\overline{C}^{\text{bat}}_{y,k}$:
 
 \[
-P^{\text{ch}}_{t,y,\omega,k} \le \frac{\overline{C}^{\text{bat}}_{y,k}}{t_{\text{ch}}}, \qquad
-P^{\text{dis}}_{t,y,\omega,k} \le \frac{\overline{C}^{\text{bat}}_{y,k}}{t_{\text{dis}}}
+P^{\text{ch}}_{t,y,\omega,k} \le P^{\text{inv}}, \qquad
+P^{\text{dis}}_{t,y,\omega,k} \le P^{\text{inv}}
 \]
 
 \[
@@ -95,9 +98,10 @@ P^{\text{dis}} = P^{\text{dis,dc}} - L^{\text{dis}}
 \]
 
 so when charging, the AC power drawn exceeds the energy stored, and when discharging, the AC
-power delivered is lower than the internal energy withdrawn. With reference powers
-$P^{\text{ref,ch}} = C^{\text{bat}}/t_{\text{ch}}$ and $P^{\text{ref,dis}} = C^{\text{bat}}/t_{\text{dis}}$,
-the losses satisfy epigraph constraints for each interpolation segment $i$:
+power delivered is lower than the internal energy withdrawn. The curve is normalized on the
+installed inverter power, so both reference powers equal the inverter design variable,
+$P^{\text{ref,ch}} = P^{\text{ref,dis}} = P^{\text{inv}}$, and the losses satisfy epigraph
+constraints for each interpolation segment $i$:
 
 \[
 \begin{aligned}
@@ -155,8 +159,13 @@ it is constant within each year and evolves only across years.
 F^{\text{cyc}}_{t,y,\omega,k} = \gamma^{\text{cyc}}\cdot \frac{P^{\text{ch,dc}}_{t,y,\omega,k} + P^{\text{dis,dc}}_{t,y,\omega,k}}{2}
 \]
 
-with $\gamma^{\text{cyc}}$ a cycle-degradation coefficient. **Calendar fade** is applied once per
-year using the scenario-weighted expected yearly-average SOC, through an epigraph:
+with $\gamma^{\text{cyc}}$ a cycle-degradation coefficient. When derived from a rated cycle life,
+$\gamma^{\text{cyc}} = (\text{SoH}_0-\text{SoH}_{\text{eol}})/(N_{\text{cyc}}\,\text{DoD}\,\text{SoH}_0)$:
+the fade is expressed **per unit of DC throughput relative to the beginning-of-life usable
+capacity**, which is why the initial SoH appears in the denominator. The definition is
+scale-invariant in the installed energy, so it is independent of the nominal unit size.
+**Calendar fade** is applied once per year using the scenario-weighted expected yearly-average
+SOC, through an epigraph:
 
 \[
 F^{\text{cal}}_{y,k} \ge a_{y,k}\, \Delta\tau_{\text{yr}}
@@ -189,9 +198,13 @@ C^{\text{eff}}_{y,\omega,k} \le (1-b_{y,k})\, C^{\text{cont}}_{y,\omega,k} + b_{
 \]
 
 where $b_{y,k}$ marks commissioning years, and a small objective regularization keeps effective
-capacity at its largest feasible value. When degradation is enabled, the effective capacity
-directly limits both the maximum stored energy and the admissible charge/discharge power (the
-power and SOC bounds above use $C^{\text{eff}}_{y,\omega,k}$).
+capacity at its largest feasible value (so the reported state of health,
+$\text{SoH} = C^{\text{eff}}/\overline{C}^{\text{bat}}$, is the effective-capacity state at the
+optimum). When degradation is enabled, the effective capacity limits the **maximum stored
+energy** through the SOC bounds $(1-\text{DoD})\,C^{\text{eff}}_{y,\omega,k} \le
+\text{SOC}_{t,y,\omega,k} \le C^{\text{eff}}_{y,\omega,k}$. Charge/discharge **power** remains
+limited by the installed inverter power $P^{\text{inv}}$ (and its optional C-rate), i.e. capacity
+fade reduces usable energy but not power capability.
 
 ### Configuration logic
 
