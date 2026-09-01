@@ -211,14 +211,14 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict
             )
             vars["battery_average_soc"] = model.add_variables(
                 lower=0.0,
-                dims=("year", "inv_step"),
-                coords={"year": year, "inv_step": inv_step},
+                dims=("year", "scenario", "inv_step"),
+                coords={"year": year, "scenario": scenario, "inv_step": inv_step},
                 name="battery_average_soc",
             )
             vars["battery_calendar_fade"] = model.add_variables(
                 lower=0.0,
-                dims=("year", "inv_step"),
-                coords={"year": year, "inv_step": inv_step},
+                dims=("year", "scenario", "inv_step"),
+                coords={"year": year, "scenario": scenario, "inv_step": inv_step},
                 name="battery_calendar_fade",
             )
             vars["battery_effective_energy_capacity"] = model.add_variables(

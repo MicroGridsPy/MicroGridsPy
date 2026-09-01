@@ -570,9 +570,11 @@ def initialize_constraints(
                 cal_seg = data.coords["battery_calendar_segment"]
                 cal_slope = data["battery_calendar_fade_slope"]
                 cal_intercept = data["battery_calendar_fade_intercept"]
-                avg_soc_y_s_k = soc.sum("period") / float(T)
+                # Scenario-wise average SOC: each scenario ages its own battery, so the
+                # calendar-fade channel uses the same scenario-wise convention as cycle fade
+                # and the effective-capacity state (rather than a scenario-collapsed expectation).
                 model.add_constraints(
-                    bat_avg_soc == (avg_soc_y_s_k * scenario_weight).sum("scenario"),
+                    bat_avg_soc == soc.sum("period") / float(T),
                     name="battery_average_soc_definition",
                 )
                 bat_calendar_fade_b = bat_calendar_fade.expand_dims(
@@ -597,9 +599,11 @@ def initialize_constraints(
                     name="battery_calendar_fade_epigraph",
                 )
             else:
-                avg_soc_y_s_k = soc.sum("period") / float(T)
+                # Scenario-wise average SOC: each scenario ages its own battery, so the
+                # calendar-fade channel uses the same scenario-wise convention as cycle fade
+                # and the effective-capacity state (rather than a scenario-collapsed expectation).
                 model.add_constraints(
-                    bat_avg_soc == (avg_soc_y_s_k * scenario_weight).sum("scenario"),
+                    bat_avg_soc == soc.sum("period") / float(T),
                     name="battery_average_soc_definition",
                 )
                 model.add_constraints(
@@ -624,9 +628,7 @@ def initialize_constraints(
                 continued_eff_cap = (
                     bat_eff_cap.sel(year=prev_year)
                     - bat_cycle_fade.sel(year=prev_year).sum("period")
-                    - bat_calendar_fade.sel(year=prev_year).expand_dims(
-                        scenario=sets.coords["scenario"]
-                    )
+                    - bat_calendar_fade.sel(year=prev_year)
                 )
                 reset_eff_cap = soh0_scalar * bat_cap_available.sel(year=cur_year)
                 target_eff_cap = continued_eff_cap + commission_cur_state * (

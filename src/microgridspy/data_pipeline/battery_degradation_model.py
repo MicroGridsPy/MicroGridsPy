@@ -33,6 +33,20 @@ def derive_cycle_fade_coefficient_from_cycle_life(
     cycle_lifetime_to_eol_cycles: float,
     reference_depth_of_discharge: float,
 ) -> float:
+    """
+    Derive the cycle-fade coefficient (usable-capacity fade per unit of DC throughput).
+
+    The coefficient is
+
+        gamma = (initial_soh - end_of_life_soh) / (cycle_lifetime * dod * initial_soh)
+
+    Rationale: one reference cycle moves ``dod * initial_soh`` per unit of beginning-of-life
+    usable capacity, and ``cycle_lifetime`` such cycles consume ``initial_soh - end_of_life_soh``
+    of capacity. The ``initial_soh`` in the denominator therefore measures throughput relative to
+    the beginning-of-life usable capacity (not the nominal capacity); it is intentional, and only
+    changes the result when ``initial_soh < 1``. The coefficient is scale-invariant in installed
+    energy, so it does not depend on the nominal unit size.
+    """
     try:
         initial_soh_f = float(initial_soh)
         end_of_life_soh_f = float(end_of_life_soh)

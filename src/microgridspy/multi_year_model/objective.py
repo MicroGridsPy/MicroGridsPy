@@ -344,7 +344,9 @@ def initialize_objective(
     cal_fade_reg_cost_y = 0.0
     eff_cap_reg_credit_y = 0.0
     if bat_calendar_fade is not None:
-        cal_fade_reg_cost_y = epsilon * bat_calendar_fade.sum("inv_step")
+        # Calendar fade is scenario-wise; collapse to an expected yearly value like the
+        # other regularization terms before it enters the per-year cashflow.
+        cal_fade_reg_cost_y = epsilon * (bat_calendar_fade.sum("inv_step") * w_s).sum("scenario")
     if bat_eff_cap is not None:
         # Keep the effective usable-capacity state at its largest feasible value
         # when the LP is otherwise indifferent. This is an internal tie-break,

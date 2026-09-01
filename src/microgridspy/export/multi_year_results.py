@@ -281,6 +281,43 @@ def _broadcast_year_state_to_period(x: Any, sets: xr.Dataset) -> Any:
     return x
 
 
+def _physical_effective_capacity(
+    *,
+    nominal_available: xr.DataArray,
+    cycle_fade_year: xr.DataArray,
+    calendar_fade: xr.DataArray,
+    commission: xr.DataArray,
+    soh0: float,
+) -> xr.DataArray:
+    """
+    Reconstruct the physical effective usable capacity from the initial SoH and the
+    (reliable, equality/epigraph-tight) cycle and calendar fade solutions via the
+    year-link recursion, clipped by the available capacity and reset in commissioning
+    years. This makes the reported SoH independent of any LP slack in the
+    effective-capacity state variable, which is only pushed tight by a tiny regularizer.
+
+    All inputs are indexed by (year, scenario, inv_step) except ``commission`` which is
+    (year, inv_step); ``cycle_fade_year`` is already summed over periods.
+    """
+    years = [str(y) for y in nominal_available.coords["year"].values.tolist()]
+    per_year: dict[str, xr.DataArray] = {}
+    for i, y in enumerate(years):
+        cap_y = nominal_available.sel(year=y)
+        if i == 0:
+            per_year[y] = soh0 * cap_y
+        else:
+            prev = years[i - 1]
+            continued = (
+                per_year[prev] - cycle_fade_year.sel(year=prev) - calendar_fade.sel(year=prev)
+            )
+            reset = soh0 * cap_y
+            comm = commission.sel(year=y)
+            per_year[y] = xr.where(comm > 0.0, reset, np.minimum(continued, cap_y))
+    return xr.concat([per_year[y].assign_coords(year=y) for y in years], dim="year").transpose(
+        "year", *[d for d in nominal_available.dims if d != "year"]
+    )
+
+
 def _renewable_display_name(data: xr.Dataset, resource: Any) -> str:
     mapping = (data.attrs or {}).get("conversion_technology_by_resource", {})
     if isinstance(mapping, dict):
@@ -402,6 +439,39 @@ def build_dispatch_timeseries_table_multi_year(
     raw_beff = get_var_solution(
         vars_dict=vars, solution=solution, name="battery_effective_energy_capacity"
     )
+    # Reported SoH must reflect the physical effective capacity, not the raw LP state
+    # variable, which the regularizer only nudges tight (it can stay slack-low in
+    # degenerate corners). Rebuild it from the initial SoH and the reliable cycle/
+    # calendar fade solutions via the year-link recursion.
+    if (
+        isinstance(raw_beff, xr.DataArray)
+        and isinstance(raw_bcycle, xr.DataArray)
+        and isinstance(raw_bcal, xr.DataArray)
+        and p.battery_nominal_capacity_kwh is not None
+        and p.battery_calendar_lifetime_years is not None
+        and p.battery_initial_soh is not None
+    ):
+        bat_units_sol = get_var_solution(vars_dict=vars, solution=solution, name="battery_units")
+        if isinstance(bat_units_sol, xr.DataArray):
+            nominal_available = (
+                (bat_units_sol * p.battery_nominal_capacity_kwh)
+                * replacement_active_mask(sets)
+                * repeating_degradation_factor(
+                    sets,
+                    p.battery_calendar_lifetime_years,
+                    p.battery_capacity_degradation_rate_per_year,
+                )
+            )
+            nominal_available = nominal_available.expand_dims(
+                scenario=sets.coords["scenario"]
+            ).transpose("year", "scenario", "inv_step")
+            raw_beff = _physical_effective_capacity(
+                nominal_available=nominal_available,
+                cycle_fade_year=raw_bcycle.sum("period"),
+                calendar_fade=raw_bcal,
+                commission=replacement_commission_mask(sets, p.battery_calendar_lifetime_years),
+                soh0=float(np.asarray(p.battery_initial_soh.values).reshape(-1)[0]),
+            )
     bcycle = _sum_if_has_inv_step(raw_bcycle)
     bcal = _broadcast_year_state_to_period(_sum_if_has_inv_step(raw_bcal), sets)
     beff = _broadcast_year_state_to_period(_sum_if_has_inv_step(raw_beff), sets)
