@@ -25,7 +25,7 @@ The package lives under `src/microgridspy/`:
 |---|---|
 | `api.py` | high-level convenience API (`solve`, `load_results`, `export_results`, `load_inputs`, …) re-exported at the top level |
 | `io/` | project scaffolding, templates, paths, workspace helpers, JSON/CSV formats |
-| `data_pipeline/` | input loaders and surrogate models (battery loss/fade, generator part-load) that assemble the canonical dataset |
+| `data_pipeline/` | input loaders and preprocessing models (battery loss/fade surrogates, generator Willans part-load fit) that assemble the canonical dataset |
 | `typical_year_model/` | steady-state sets, params, variables, constraints, objective, and `SteadyStateModel` |
 | `multi_year_model/` | dynamic formulation with investment-step lifecycle logic and `MultiYearModel` |
 | `export/` | structured results objects and CSV/Excel export |

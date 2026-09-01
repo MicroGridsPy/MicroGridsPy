@@ -98,7 +98,7 @@ The reference energy system contains four technology groups:
 |---|---|---|
 | **Renewable generation** | installed capacity, resource-availability time series, conversion efficiency, techno-economic parameters | [Renewable Technologies](methodology/renewable.md) |
 | **Battery storage** | one aggregated bank: energy capacity, charge/discharge flows and efficiencies, SOC, depth-of-discharge, cyclic boundary | [Battery](methodology/battery.md) |
-| **Backup generation** | one or more dispatchable generators; nominal or convex piecewise-linear part-load fuel curve | [Generators](methodology/generator.md) |
+| **Backup generation** | one or more dispatchable generators; nominal efficiency or a Willans part-load fuel line with clustered unit commitment | [Generators](methodology/generator.md) |
 | **Weak-grid connection** | line capacity, time-dependent availability matrix, import/export efficiencies and prices | [Grid Connection](methodology/grid.md) |
 
 ## Optimization structure

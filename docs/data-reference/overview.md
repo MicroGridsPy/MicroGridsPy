@@ -36,7 +36,7 @@ hand · **no** = reference only.
     | `grid_export_price.csv` | CSV | conditional | `on_grid=true` and `allow_export=true` | yes | hourly export tariff → export revenue |
     | `grid_availability.csv` | CSV | derived | `on_grid=true` | no | hourly availability after outage simulation |
     | `battery_efficiency_curve.csv` | CSV | conditional | `loss_model = convex_loss_epigraph` | yes | advanced convex battery loss formulation |
-    | `generator_efficiency_curve.csv` | CSV | conditional | `efficiency_model = efficiency_curve` | yes | partial-load generator surrogate |
+    | `generator_efficiency_curve.csv` | CSV | conditional | `efficiency_model = efficiency_curve` | yes | partial-load generator efficiency curve |
     | `README_inputs.md` | Markdown | no | always | no | human-readable summary of generated inputs |
 
 === "Multi-year"

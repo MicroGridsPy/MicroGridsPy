@@ -3,8 +3,8 @@
 MicroGridsPy models dispatchable backup generation through a single generator technology
 representing the backup unit of the mini-grid, described by a unit-based sizing variable and an
 hourly production variable. Fuel consumption is modelled explicitly and linked to electrical
-output through either a **nominal-efficiency relationship** or a **partial-load efficiency
-curve** represented as a convex piecewise-linear epigraph.
+output through either a **nominal-efficiency relationship** or a **partial-load model** that
+combines an affine Willans fuel line with a clustered unit-commitment variable.
 
 The same structure is used in both modes; in the **multi-year** formulation, generator
 investment and operation are **cohort-based**, so production limits and fuel relations are
@@ -65,49 +65,74 @@ E^{\text{gen}}_{t,y,\omega,k} = F_{t,y,\omega,k}\cdot \text{LHV}\cdot \eta^{\tex
 where $F$ is fuel consumption in units consistent with the LHV. The implied specific fuel
 consumption is constant over the whole operating range.
 
-## Partial-load efficiency and piecewise-linear approximation
+## Partial-load efficiency and unit commitment
 
-When partial-load modelling is enabled, efficiency becomes output-dependent and is represented
-through a **convex piecewise-linear epigraph** of fuel consumption. The curve is provided as
-relative loading breakpoints $r_b \in [0,1]$ with efficiencies $\eta_b$.
+When partial-load modelling is enabled, efficiency becomes output-dependent. A real diesel
+genset burns fuel just to stay running (a **no-load intercept**) plus extra fuel per unit of
+output, so specific fuel consumption worsens sharply at low load. This is captured by an
+**affine Willans fuel line** paired with a **committed-capacity** variable.
 
-### Typical-year formulation
+### Willans fuel line
 
-At each breakpoint $b$, the output and fuel per unit are $p_b = P^{\text{gen}} r_b$ and
-$f_b = p_b / (\eta_b\,\text{LHV})$, and the segment slope is $m_b = (f_{b+1}-f_b)/(p_{b+1}-p_b)$.
-Fuel consumption lies above all affine secants:
-
-\[
-F_{t,\omega} \ge m_b\left( E^{\text{gen}}_{t,\omega} - N^{\text{gen}}\,p_b \right) + N^{\text{gen}}\,f_b
-\qquad \forall t,\omega,b
-\]
-
-### Multi-year formulation
-
-The same curve is applied cohort by cohort, scaled by the active available capacity:
+The user-provided efficiency curve gives relative loading points $r_b \in (0,1]$ with
+efficiencies $\eta_b$. The implied relative fuel-use is $\phi(r) = r/\eta(r)$, which is fit to the
+affine function
 
 \[
-F_{t,y,\omega,k} \ge \widehat{m}_{b}\, E^{\text{gen}}_{t,y,\omega,k} + \widehat{q}_{b}\, \widetilde{C}^{\text{gen}}_{y,k}
-\qquad \forall t,y,\omega,k,b
+\phi(r) = q_0 + q_1\, r
 \]
 
-where $\widehat{m}_{b}, \widehat{q}_{b}$ are the affine coefficients derived from the relative
-efficiency curve — algebraically equivalent to scaling the piecewise fuel curve by the active
-cohort capacity.
+anchored at full load so the datasheet full-load efficiency is preserved exactly
+($q_0 + q_1 = 1/\eta^{\text{nom}}$). Here $q_0 \ge 0$ is the relative **no-load fuel use** and
+$q_1 > 0$ the **marginal** relative fuel use. Because the origin is handled by the commitment
+variable below, the curve is **not** anchored at $(0,0)$ and no convex majorant is needed.
 
-![Generator efficiency: left, a real efficiency curve compared with a constant-efficiency approximation; right, the curve sampled at relative-output breakpoints to build the piecewise-linear approximation](../assets/methodology/partial_load_curve.png)
+### Committed capacity and unit commitment
+
+A commitment variable $N^{\text{on}}$ counts the generator units **online**, so the online
+capacity is $N^{\text{on}} P^{\text{gen}}$. Output is bounded by the online capacity (with an
+optional minimum stable load $m \in [0,1)$), the online count cannot exceed the available
+capacity, and fuel carries the no-load intercept **per online unit**:
+
+\[
+\begin{aligned}
+m\, N^{\text{on}}_{t,\omega} P^{\text{gen}} \;\le\; E^{\text{gen}}_{t,\omega} &\;\le\; N^{\text{on}}_{t,\omega} P^{\text{gen}} \\[3pt]
+N^{\text{on}}_{t,\omega} P^{\text{gen}} &\;\le\; N^{\text{gen}} P^{\text{gen}} \\[3pt]
+F_{t,\omega} &\;\ge\; \frac{q_1}{\text{LHV}}\, E^{\text{gen}}_{t,\omega} + \frac{q_0}{\text{LHV}}\, N^{\text{on}}_{t,\omega} P^{\text{gen}}
+\end{aligned}
+\qquad \forall t,\omega
+\]
+
+Minimising fuel makes the epigraph tight, so idling committed capacity burns the no-load fuel
+even at zero output. In the **multi-year** formulation the same relations are written per
+cohort $k$, with the online capacity $N^{\text{on}}_{t,y,\omega,k} P^{\text{gen}}$ bounded by the
+available (degraded) cohort capacity $\widetilde{C}^{\text{gen}}_{y,k}$.
+
+### Commitment modes
+
+| Mode | $N^{\text{on}}$ | Behaviour |
+|---|---|---|
+| `off` | — | constant full-load efficiency (nominal relationship) |
+| `relaxed` | continuous | committed capacity is fractional; a linear program and a valid lower bound. At the optimum it commits exactly the online capacity it needs, so it reproduces constant full-load efficiency |
+| `integer` | integer | whole online units (clustered unit commitment, after Palmintier & Webster). The no-load fuel and the minimum stable load become binding, so the genset refuses sub-minimum loads and pays the part-load penalty |
+
+Clustered integer commitment uses a **single integer per timestep** (per cohort), keeping the
+mixed-integer problem far smaller than one binary per unit while still capturing on/off and
+minimum-load physics.
+
+![Generator efficiency: left, a real efficiency curve compared with a constant-efficiency approximation; right, the curve sampled at relative-output points used to fit the Willans fuel line](../assets/methodology/partial_load_curve.png)
 
 *Generator efficiency under the constant and partial-load formulations. **Left:** a real
 generator efficiency curve versus the constant-efficiency approximation — real efficiency falls
-sharply at low load. **Right:** the efficiency curve sampled at relative-output breakpoints, used
-to construct the convex piecewise-linear approximation. The approximation guarantees fuel
-consumption is **not underestimated** while preserving linearity.*
+sharply at low load because of the no-load fuel intercept. **Right:** the sampled efficiency
+points used to fit the affine Willans fuel line, which preserves the datasheet full-load
+efficiency.*
 
-!!! note "Convexity, and what is not modelled"
-    The partial-load formulation is valid when the implied fuel-consumption curve is **convex**
-    in electrical output (specific fuel consumption worsens at lower load — realistic for
-    backup diesel generators). Convexity of the input curve is **validated during
-    preprocessing**. The formulation is deliberately continuous and linear: **no mixed-integer
-    unit commitment** (on/off, startup/shutdown costs, minimum up/down times) and **no minimum
-    stable output** are modelled, so the generator may run continuously at low output if that is
-    optimal within the convex fuel envelope.
+!!! note "What is and is not modelled"
+    The Willans fit preserves the datasheet full-load efficiency and introduces a genuine
+    no-load fuel intercept; the input curve is validated at model build (strictly positive
+    efficiencies, a non-decreasing implied fuel curve). The `integer` mode adds a minimum stable
+    load and true on/off behaviour, but **start-up and shut-down costs and minimum up/down
+    times are not yet modelled**. The `relaxed` mode is a pure LP that stays a valid lower bound
+    but does not by itself penalise part-load operation — use `integer` (typically in the
+    typical-year formulation, or with representative periods) when that fidelity matters.

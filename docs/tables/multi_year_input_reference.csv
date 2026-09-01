@@ -11,5 +11,5 @@ grid_export_price.csv,Hourly export tariff,CSV,conditional,on_grid=true and grid
 grid_availability.csv,Derived hourly grid availability matrix,CSV,derived,on_grid=true,no,backend-generated availability after outage simulation,period x scenario x year
 battery_efficiency_curve.csv,Battery advanced efficiency curve,CSV,conditional,battery_model.loss_model=convex_loss_epigraph,yes,advanced convex battery loss formulation,curve points
 battery_calendar_fade_curve.csv,Battery calendar-fade coefficient curve,CSV,conditional,battery_model.degradation_model.calendar_fade_enabled=true,yes,endogenous battery calendar ageing surrogate,curve points
-generator_efficiency_curve.csv,Generator part-load efficiency curve,CSV,conditional,generator_model.efficiency_model=efficiency_curve,yes,partial-load generator surrogate,curve points
+generator_efficiency_curve.csv,Generator part-load efficiency curve,CSV,conditional,generator_model.efficiency_model=efficiency_curve,yes,partial-load generator efficiency curve,curve points
 README_inputs.md,Human-readable summary of generated inputs,Markdown,no,always,no,reference only,not parsed as model input
