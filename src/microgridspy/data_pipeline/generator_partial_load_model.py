@@ -1,97 +1,76 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import numpy as np
 
 
-def build_generator_partial_load_surrogate(
-    *,
+def fit_generator_willans_from_curve(
     rel: np.ndarray,
     eff: np.ndarray,
-    path: Path,
+    *,
     error_cls: type[Exception] = RuntimeError,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[float, float]:
     """
-    Build an LP-safe convex generator fuel-use surrogate from sampled efficiency points.
+    Fit an affine Willans relative fuel-use line to a generator efficiency curve.
 
-    Inputs:
-    - rel: relative output support points in [0, 1]
-    - eff: absolute efficiencies at those support points
+    The relative fuel-use is ``phi(r) = r / eta(r)``. A real diesel genset follows
+    a Willans line (a no-load intercept plus a roughly constant marginal slope),
+    so ``phi`` is represented as the affine function
+
+        phi(r) = q0 + q1 * r
+
+    where ``q0 >= 0`` is the relative no-load fuel use (per unit of nominal
+    capacity) and ``q1 > 0`` is the marginal relative fuel use. This fit is paired
+    with a unit-commitment variable that supplies the on/off origin behaviour, so
+    it does NOT anchor the curve at the origin and therefore does not need to
+    flatten a physical (efficiency-increasing) diesel curve.
+
+    The line is anchored at the full-load point ``r = 1`` so the datasheet
+    full-load efficiency is preserved exactly, and the slope is least-squares
+    fitted to the remaining positive-load points.
+
+    Inputs may include a leading zero anchor (``rel[0] == 0``); it is ignored.
+    ``eff`` must be the absolute efficiency at each relative-power point.
 
     Returns:
-    - rel_full: zero-anchored relative output points
-    - eff_full: zero-anchored absolute efficiency points
-    - fuel_raw_full: raw relative fuel-use points phi(r) = r / eta(r)
-    - fuel_surrogate_full: convex majorant used by the LP formulation
-
-    Notes:
-    - The raw fuel-use curve is derived from the user-facing efficiency curve.
-    - The LP formulation needs a convex fuel-vs-output epigraph that never
-      underestimates fuel, so we replace any non-convex raw curve with a
-      conservative convex majorant built on the same support points.
+        (q0, q1): intercept and slope of ``phi(r) = q0 + q1 * r``.
     """
     rel = np.asarray(rel, dtype=float)
     eff = np.asarray(eff, dtype=float)
+    if rel.shape != eff.shape:
+        raise error_cls("Generator efficiency curve rel/eff arrays must have the same shape.")
 
-    if np.any(~np.isfinite(rel)) or np.any(~np.isfinite(eff)):
-        raise error_cls(f"{path.name}: generator efficiency curve contains non-finite values.")
-    if rel.size == 0:
-        raise error_cls(f"{path.name}: generator efficiency curve is empty.")
-
-    # Accept an explicit zero row for backward compatibility, but normalize the
-    # internal representation to a single origin anchor.
-    if np.isclose(rel[0], 0.0, atol=1e-10):
-        rel = rel[1:]
-        eff = eff[1:]
-
-    if rel.size == 0:
+    mask = rel > 0.0
+    r = rel[mask]
+    e = eff[mask]
+    if r.size == 0:
+        raise error_cls("Generator efficiency curve must contain at least one positive-load point.")
+    if np.any(~np.isfinite(r)) or np.any(~np.isfinite(e)) or np.any(e <= 0.0):
         raise error_cls(
-            f"{path.name}: generator efficiency curve must contain at least one positive-load point."
+            "Generator efficiency values must be finite and strictly positive at positive load."
         )
-    if np.any(rel <= 0.0) or np.any(rel > 1.0):
-        raise error_cls(f"{path.name}: generator relative power points must lie in (0, 1].")
-    if not np.isclose(rel[-1], 1.0, atol=1e-9):
-        raise error_cls(f"{path.name}: the last generator relative-power point must be 1.0.")
-    if np.any(np.diff(rel) <= 0.0):
+    if not np.isclose(r[-1], 1.0, atol=1e-9):
+        raise error_cls("Generator efficiency curve must include the full-load point r=1.0.")
+
+    phi = r / e  # relative fuel use phi(r) = r / eta(r)
+    phi_full = float(phi[-1])  # = 1 / eta_full
+
+    if r.size == 1:
+        # Only the full-load point is known: fall back to constant full-load efficiency.
+        return 0.0, phi_full
+
+    # Anchor at full load (preserve datasheet full-load efficiency) and least-squares
+    # fit the slope to the remaining points: phi(r) = phi_full + q1 * (r - 1).
+    dr = r[:-1] - 1.0
+    dphi = phi[:-1] - phi_full
+    denom = float(np.dot(dr, dr))
+    q1 = float(np.dot(dr, dphi) / denom) if denom > 0.0 else phi_full
+    q0 = phi_full - q1
+
+    if q1 <= 0.0:
         raise error_cls(
-            f"{path.name}: generator partial-load curve must be strictly increasing after zero anchoring."
+            "Implied generator fuel-use curve is non-increasing in output, which is not physical."
         )
-    if np.any(eff <= 0.0):
-        raise error_cls(
-            f"{path.name}: generator efficiency values must be strictly positive for all positive-load points."
-        )
-
-    rel_full = np.concatenate(([0.0], rel))
-    eff_full = np.concatenate(([0.0], eff))
-
-    fuel_raw_full = np.zeros_like(rel_full, dtype=float)
-    fuel_raw_full[1:] = rel / eff
-
-    dx = np.diff(rel_full)
-    if np.any(dx <= 0.0):
-        raise error_cls(
-            f"{path.name}: generator partial-load curve must be strictly increasing after zero anchoring."
-        )
-    if np.any(fuel_raw_full < -1e-10):
-        raise error_cls(f"{path.name}: implied generator fuel curve contains negative values.")
-
-    # Conservative LP-friendly surrogate:
-    # enforce nondecreasing segment slopes by taking the cumulative maximum of
-    # the raw segment slopes. This keeps the same support points, preserves
-    # linearity, and guarantees fuel is never underestimated.
-    raw_slopes = np.diff(fuel_raw_full) / dx
-    if np.any(raw_slopes < -1e-8):
-        raise error_cls(
-            f"{path.name}: implied generator fuel curve decreases, which is not physical."
-        )
-    surrogate_slopes = np.maximum.accumulate(raw_slopes)
-    fuel_surrogate_full = np.zeros_like(fuel_raw_full, dtype=float)
-    fuel_surrogate_full[1:] = np.cumsum(surrogate_slopes * dx)
-
-    return (
-        rel_full.astype(float),
-        eff_full.astype(float),
-        fuel_raw_full.astype(float),
-        fuel_surrogate_full.astype(float),
-    )
+    if q0 < 0.0:
+        # No genuine no-load penalty implied by the curve; use constant full-load efficiency.
+        return 0.0, phi_full
+    return float(q0), float(q1)

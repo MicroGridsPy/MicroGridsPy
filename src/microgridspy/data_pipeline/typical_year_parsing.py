@@ -9,9 +9,6 @@ import pandas as pd
 import xarray as xr
 
 from microgridspy.data_pipeline.battery_loss_model import resolve_efficiency_curve_values
-from microgridspy.data_pipeline.generator_partial_load_model import (
-    build_generator_partial_load_surrogate,
-)
 from microgridspy.data_pipeline.utils import (
     as_float,
     as_float_or_nan,
@@ -78,37 +75,6 @@ def _select_typical_year_step_block(
     raise InputValidationError(
         f"{path.name}: {context} must contain a single step block for the steady_state typical-year formulation. "
         "Use `base`, or keep exactly one step entry."
-    )
-
-
-def _validate_generator_partial_load_curve(
-    *,
-    rel: np.ndarray,
-    eff: np.ndarray,
-    path: Path,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Validate the implied generator fuel curve in relative units.
-
-    We work with:
-      x = relative power output in [0, 1]
-      y = relative fuel use = x / eta(x)
-
-    Here eta(x) is the absolute generator efficiency after resolving the CSV
-    column either as:
-    - a normalized multiplier relative to `generator_nominal_efficiency_full_load`
-      with a full-load point equal to 1.0, or
-    - a legacy absolute-efficiency curve in (0, 1].
-
-    The current steady-state formulation uses segment secants as lower bounds on
-    fuel use. We therefore build a conservative convex surrogate of the implied
-    fuel curve and return both the raw and surrogate fuel-use samples.
-    """
-    return build_generator_partial_load_surrogate(
-        rel=rel,
-        eff=eff,
-        path=path,
-        error_cls=InputValidationError,
     )
 
 
@@ -1046,21 +1012,13 @@ def _load_generator_and_fuel_yaml(
             allow_zero=True,
         )
 
-        rel_full, eff_full, fuel_raw_full, fuel_surrogate_full = (
-            _validate_generator_partial_load_curve(
-                rel=rel,
-                eff=eff,
-                path=curve_path,
-            )
-        )
-
-        n_pts = int(rel_full.size)
-        curve_point = xr.IndexVariable("curve_point", list(range(n_pts)))
-
+        # The efficiency curve feeds the Willans partial-load fit at model-build
+        # time; only the (relative power, absolute efficiency) samples are stored.
+        curve_point = xr.IndexVariable("curve_point", list(range(int(rel.size))))
         eff_curve_ds = xr.Dataset(
             data_vars={
                 "generator_eff_curve_rel_power": xr.DataArray(
-                    rel_full,
+                    rel,
                     coords={"curve_point": curve_point},
                     dims=("curve_point",),
                     attrs={
@@ -1070,35 +1028,13 @@ def _load_generator_and_fuel_yaml(
                     },
                 ),
                 "generator_eff_curve_eff": xr.DataArray(
-                    eff_full,
+                    eff,
                     coords={"curve_point": curve_point},
                     dims=("curve_point",),
                     attrs={
                         "units": "-",
                         "source_file": str(curve_path),
                         "scenario_dependent": False,
-                    },
-                ),
-                "generator_fuel_curve_rel_fuel_use": xr.DataArray(
-                    fuel_surrogate_full,
-                    coords={"curve_point": curve_point},
-                    dims=("curve_point",),
-                    attrs={
-                        "units": "-",
-                        "source_file": str(curve_path),
-                        "scenario_dependent": False,
-                        "description": "Convex surrogate of the relative fuel-use curve phi(r)=r/eta(r) used internally by the LP partial-load formulation.",
-                    },
-                ),
-                "generator_fuel_curve_rel_fuel_use_raw": xr.DataArray(
-                    fuel_raw_full,
-                    coords={"curve_point": curve_point},
-                    dims=("curve_point",),
-                    attrs={
-                        "units": "-",
-                        "source_file": str(curve_path),
-                        "scenario_dependent": False,
-                        "description": "Raw relative fuel-use curve phi(r)=r/eta(r) derived from the user CSV before convex LP surrogate construction.",
                     },
                 ),
             }
@@ -1106,6 +1042,12 @@ def _load_generator_and_fuel_yaml(
 
     meta_flags = {
         "partial_load_modelling_enabled": partial_load_enabled,
+        "partial_load_commitment": str(
+            tech_block.get("partial_load_commitment", "relaxed") or "relaxed"
+        )
+        .strip()
+        .lower(),
+        "min_load_fraction": float(tech_block.get("min_load_fraction", 0.0) or 0.0),
         "efficiency_curve_file": shared_curve_file,
         "generator_label": gen_ds.attrs.get("generator_label", "Generator"),
         "fuel_label": fuel_ds.attrs.get("fuel_label", "Fuel"),

@@ -158,6 +158,21 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict
         name="fuel_consumption",
     )
 
+    # Generator committed (online) units [dimensionless]. Under the clustered
+    # unit-commitment partial-load model, this is the number of generator units
+    # online each hour; the no-load fuel intercept is charged per online unit.
+    gen_settings = (data.attrs.get("settings", {}) or {}).get("generator", {}) or {}
+    partial_load_enabled = bool(gen_settings.get("partial_load_modelling_enabled", False))
+    commitment_mode = str(gen_settings.get("partial_load_commitment", "relaxed")).strip().lower()
+    if partial_load_enabled and commitment_mode in ("relaxed", "integer"):
+        vars["generator_online_units"] = model.add_variables(
+            lower=0.0,
+            integer=(commitment_mode == "integer"),
+            dims=("period", "scenario"),
+            coords={"period": period, "scenario": scenario},
+            name="generator_online_units",
+        )
+
     # Battery charge/discharge/SoC [kWh]
     vars["battery_charge"] = model.add_variables(
         lower=0.0,

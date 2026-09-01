@@ -85,7 +85,6 @@ class Params:
     # Optional curve vars
     generator_eff_curve_rel_power: xr.DataArray | None
     generator_eff_curve_eff: xr.DataArray | None
-    generator_fuel_curve_rel_fuel_use: xr.DataArray | None
 
     def is_grid_on(self) -> bool:
         return bool((self.settings.get("grid", {}) or {}).get("on_grid", False))
@@ -177,5 +176,4 @@ def get_params(ds: xr.Dataset) -> Params:
         grid_emissions_factor_kgco2e_per_kwh=_opt("grid_emissions_factor_kgco2e_per_kwh"),
         generator_eff_curve_rel_power=_opt("generator_eff_curve_rel_power"),
         generator_eff_curve_eff=_opt("generator_eff_curve_eff"),
-        generator_fuel_curve_rel_fuel_use=_opt("generator_fuel_curve_rel_fuel_use"),
     )

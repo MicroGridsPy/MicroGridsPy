@@ -9,6 +9,9 @@ from microgridspy.data_pipeline.battery_loss_model import (
     CONVEX_LOSS_EPIGRAPH,
     normalize_battery_loss_model,
 )
+from microgridspy.data_pipeline.generator_partial_load_model import (
+    fit_generator_willans_from_curve,
+)
 from microgridspy.data_pipeline.utils import finite_nonnegative_scalar_limit
 from microgridspy.typical_year_model.params import get_params
 
@@ -210,73 +213,50 @@ def initialize_constraints(
     #   - If partial-load enabled: convex piecewise lower bound on fuel_cons
     # ---------------------------------------------------------------------
 
-    pl_rel = p.generator_eff_curve_rel_power
-    pl_fuel_rel = p.generator_fuel_curve_rel_fuel_use
-
-    pl_points_ok = (
-        pl_rel is not None
-        and pl_fuel_rel is not None
-        and ("curve_point" in pl_rel.dims)
-        and ("curve_point" in pl_fuel_rel.dims)
-        and (pl_rel.sizes["curve_point"] >= 2)
+    gen_settings = p.settings.get("generator", {}) or {}
+    partial_load_enabled = (
+        p.generator_eff_curve_rel_power is not None and p.generator_eff_curve_eff is not None
     )
+    commitment_mode = str(gen_settings.get("partial_load_commitment", "relaxed")).strip().lower()
+    if not partial_load_enabled:
+        commitment_mode = "off"
+    if commitment_mode not in ("off", "relaxed", "integer"):
+        raise InputValidationError(
+            f"Invalid generator.partial_load_commitment='{commitment_mode}'. "
+            "Allowed: 'off' | 'relaxed' | 'integer'."
+        )
 
-    if pl_points_ok:
-        # segment coordinate: 0..P-2
-        P = int(pl_rel.sizes["curve_point"])
-        seg = xr.IndexVariable("segment", np.arange(P - 1))
-        scenario_labels = [str(s) for s in sets.coords["scenario"].values.tolist()]
-
-        for s in scenario_labels:
-            # Scalar per scenario
-            lhv_s = fuel_lhv.sel(scenario=s)  # scalar DA
-            cap = gen_nom_kw  # scalar DA (kW per unit)
-
-            # Shared technology curve
-            r_full = pl_rel  # (curve_point,)
-            phi_full = pl_fuel_rel  # (curve_point,)
-
-            # Basic sanity (optional but recommended)
-            # - drop NaNs (if present) by requiring all finite
-            if not (np.isfinite(r_full.values).all() and np.isfinite(phi_full.values).all()):
-                raise ValueError(
-                    "Generator partial-load fuel-use curve contains NaNs; provide full curve_point series."
-                )
-
-            # r0,r1 and phi0,phi1
-            r0 = r_full.isel(curve_point=seg)  # (segment,)
-            r1 = r_full.isel(curve_point=seg + 1)  # (segment,)
-            phi0 = phi_full.isel(curve_point=seg)  # (segment,)
-            phi1 = phi_full.isel(curve_point=seg + 1)  # (segment,)
-
-            # Convert to power at breakpoints for ONE unit (kW)
-            p0 = cap * r0  # (segment,)
-            p1 = cap * r1  # (segment,)
-
-            # Fuel at breakpoints for ONE unit (unit_fuel/h since Δt=1h)
-            # fc = P / (eta * LHV)
-            fc0 = cap * phi0 / lhv_s  # (segment,)
-            fc1 = cap * phi1 / lhv_s  # (segment,)
-
-            # Segment slope in fuel per kWh (unit_fuel/kWh)
-            denom = p1 - p0
-            slope = xr.where(denom != 0.0, (fc1 - fc0) / denom, 0.0)  # (segment,)
-
-            # Variables for this scenario
-            gen_ts = gen_gen.sel(scenario=s)  # (period,)
-            fuel_ts = fuel_cons.sel(scenario=s)  # (period,)
-
-            # Broadcast to (period, segment)
-            gen_b = gen_ts.expand_dims({"segment": seg})
-            fuel_b = fuel_ts.expand_dims({"segment": seg})
-
-            # RHS: slope*(gen - p0*units) + fc0*units
-            rhs = slope * (gen_b - p0 * gen_units) + fc0 * gen_units
-
-            model.add_constraints(
-                fuel_b >= rhs,
-                name=f"fuel_to_power_partial_load_{s}",
+    if commitment_mode in ("relaxed", "integer"):
+        # Clustered unit-commitment partial-load model (Palmintier & Webster).
+        # A count of committed generator units carries the affine Willans no-load
+        # fuel intercept, so idling committed capacity burns fuel at zero output
+        # and part-load operation is penalised.
+        n_online = vars.get("generator_online_units")
+        if n_online is None:
+            raise InputValidationError(
+                "Generator commitment mode is active but the 'generator_online_units' "
+                "variable is missing."
             )
+        q0, q1 = fit_generator_willans_from_curve(
+            p.generator_eff_curve_rel_power.values,
+            p.generator_eff_curve_eff.values,
+            error_cls=InputValidationError,
+        )
+        min_load = float(gen_settings.get("min_load_fraction", 0.0) or 0.0)
+        if not (0.0 <= min_load < 1.0):
+            raise InputValidationError("generator.min_load_fraction must be within [0, 1).")
+
+        online_cap = n_online * gen_nom_kw  # committed nominal capacity (period, scenario)
+        model.add_constraints(
+            online_cap <= gen_units * gen_nom_kw, name="generator_commitment_availability"
+        )
+        model.add_constraints(gen_gen <= online_cap, name="generator_online_max")
+        if min_load > 0.0:
+            model.add_constraints(gen_gen >= min_load * online_cap, name="generator_online_min")
+        model.add_constraints(
+            fuel_cons >= (q1 / fuel_lhv) * gen_gen + (q0 / fuel_lhv) * online_cap,
+            name="generator_fuel_willans",
+        )
     else:
         model.add_constraints(
             gen_gen == fuel_cons * fuel_lhv * gen_eta_full,

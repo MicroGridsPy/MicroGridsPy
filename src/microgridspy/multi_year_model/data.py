@@ -32,9 +32,6 @@ from microgridspy.data_pipeline.battery_loss_model import (
 from microgridspy.data_pipeline.battery_loss_model import (
     InputValidationError as BatteryLossInputValidationError,
 )
-from microgridspy.data_pipeline.generator_partial_load_model import (
-    build_generator_partial_load_surrogate,
-)
 from microgridspy.data_pipeline.loader import load_project_dataset
 from microgridspy.data_pipeline.utils import (
     as_float,
@@ -301,30 +298,6 @@ def _require_shared_legacy_scenario_value(
                     "In the shared-technology multi-year model this parameter must be technology-based."
                 )
     return first
-
-
-def _validate_generator_partial_load_curve(
-    *,
-    rel: np.ndarray,
-    eff: np.ndarray,
-    path: Path,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Validate the implied generator fuel curve in relative units and return a
-    zero-anchored raw curve together with the convex surrogate used by the LP
-    secant-envelope formulation.
-
-    The generator CSV column is resolved upstream either as a normalized
-    multiplier relative to `generator_nominal_efficiency_full_load` or as a
-    backward-compatible absolute-efficiency curve. This validator works on the
-    resulting absolute efficiencies.
-    """
-    return build_generator_partial_load_surrogate(
-        rel=rel,
-        eff=eff,
-        path=path,
-        error_cls=InputValidationError,
-    )
 
 
 # -----------------------------------------------------------------------------
@@ -1408,11 +1381,8 @@ def _load_generator_and_fuel_yaml(
             column_name="Efficiency [-]",
             allow_zero=True,
         )
-        rel, eff, fuel_raw_rel, fuel_surrogate_rel = _validate_generator_partial_load_curve(
-            rel=rel,
-            eff=eff,
-            path=curve_path,
-        )
+        # The efficiency curve feeds the Willans partial-load fit at model-build
+        # time; only the (relative power, absolute efficiency) samples are stored.
         curve_point = xr.IndexVariable("curve_point", list(range(rel.size)))
         eff_curve_ds = xr.Dataset(
             data_vars={
@@ -1428,31 +1398,17 @@ def _load_generator_and_fuel_yaml(
                     dims=("curve_point",),
                     attrs={"units": "-", "scenario_dependent": False},
                 ),
-                "generator_fuel_curve_rel_fuel_use": xr.DataArray(
-                    fuel_surrogate_rel,
-                    coords={"curve_point": curve_point},
-                    dims=("curve_point",),
-                    attrs={
-                        "units": "-",
-                        "scenario_dependent": False,
-                        "description": "Convex surrogate of the relative fuel-use curve phi(r)=r/eta(r) used internally by the LP partial-load formulation.",
-                    },
-                ),
-                "generator_fuel_curve_rel_fuel_use_raw": xr.DataArray(
-                    fuel_raw_rel,
-                    coords={"curve_point": curve_point},
-                    dims=("curve_point",),
-                    attrs={
-                        "units": "-",
-                        "scenario_dependent": False,
-                        "description": "Raw relative fuel-use curve phi(r)=r/eta(r) derived from the user CSV before convex LP surrogate construction.",
-                    },
-                ),
             }
         )
 
     meta_flags = {
         "partial_load_modelling_enabled": partial_load_enabled,
+        "partial_load_commitment": str(
+            tech_block.get("partial_load_commitment", "relaxed") or "relaxed"
+        )
+        .strip()
+        .lower(),
+        "min_load_fraction": float(tech_block.get("min_load_fraction", 0.0) or 0.0),
         "efficiency_curve_file": shared_curve_file,
         "generator_label": gen_ds.attrs.get("generator_label", "Generator"),
         "fuel_label": fuel_ds.attrs.get("fuel_label", "Fuel"),
@@ -2373,6 +2329,12 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
     data.attrs["settings"].setdefault("generator", {})
     data.attrs["settings"]["generator"]["partial_load_modelling_enabled"] = bool(
         genfuel_meta.get("partial_load_modelling_enabled", False)
+    )
+    data.attrs["settings"]["generator"]["partial_load_commitment"] = genfuel_meta.get(
+        "partial_load_commitment", "relaxed"
+    )
+    data.attrs["settings"]["generator"]["min_load_fraction"] = genfuel_meta.get(
+        "min_load_fraction", 0.0
     )
     data.attrs["settings"]["generator"]["efficiency_curve_file"] = genfuel_meta.get(
         "efficiency_curve_file"

@@ -1215,6 +1215,12 @@ def _write_generator_yaml(path: Path, settings: TemplateSettings, overwrite: boo
                 if generator_efficiency_model == "efficiency_curve"
                 else None
             ),
+            # Partial-load unit-commitment (used only with an efficiency curve):
+            #   off      -> constant full-load efficiency
+            #   relaxed  -> continuous committed capacity (LP)
+            #   integer  -> whole committed units (MILP, part-load penalty bites)
+            "partial_load_commitment": "relaxed",
+            "min_load_fraction": 0.0,  # minimum stable load as a fraction of unit capacity
             "max_installable_capacity_kw": None,  # optional (kW)
             **({"capacity_degradation_rate_per_year": 0.0} if is_dynamic else {}),
         }
@@ -1307,6 +1313,7 @@ def _write_generator_yaml(path: Path, settings: TemplateSettings, overwrite: boo
         "generator_embedded_emissions_kgco2e_per_kw": "kgCO2e_per_kW",
         "generator_fixed_om_share_per_year": "share_per_year",
         "generator_nominal_efficiency_full_load": "-",
+        "generator_min_load_fraction": "-",
         "generator_max_installable_capacity_kw": "kW",
         "fuel_lhv_kwh_per_unit_fuel": "kWh_per_unit_fuel",
         "fuel_direct_emissions_kgco2e_per_unit_fuel": "kgCO2e_per_unit_fuel",
@@ -1334,7 +1341,9 @@ def _write_generator_yaml(path: Path, settings: TemplateSettings, overwrite: boo
             "generator_embedded_emissions_kgco2e_per_kw": "Embodied emissions associated with generator capacity.",
             "generator_fixed_om_share_per_year": "Fixed annual O&M cost expressed as a share of generator CAPEX. In the typical-year formulation this input is scenario-independent.",
             "generator_nominal_efficiency_full_load": "Generator full-load efficiency used directly in constant-efficiency mode and as the baseline in partial-load curve mode.",
-            "generator_partial_load_curve_note": "When a generator efficiency-curve CSV is provided, the user-facing CSV is interpreted as sampled efficiency behavior (preferably normalized to 1.0 at full load). The solver internally converts those samples into a relative fuel-use curve and builds a convex piecewise-linear surrogate for the LP formulation.",
+            "generator_partial_load_curve_note": "When a generator efficiency-curve CSV is provided, its samples are fit to an affine Willans fuel line (a no-load intercept plus a marginal slope) that preserves the datasheet full-load efficiency. The line is paired with a committed-capacity unit-commitment variable so idling committed units carry no-load fuel and part-load operation is penalised.",
+            "generator_partial_load_commitment": "Partial-load unit-commitment mode used with an efficiency curve: 'off' (constant full-load efficiency), 'relaxed' (continuous committed capacity, LP), or 'integer' (whole committed units, MILP; the part-load penalty and minimum stable load become binding).",
+            "generator_min_load_fraction": "Minimum stable load of a committed generator unit, as a fraction of its nominal capacity, in [0, 1). Only binding in 'integer' commitment mode.",
             "generator_max_installable_capacity_kw": "Upper bound on installed generator capacity.",
             "fuel_lhv_kwh_per_unit_fuel": "Lower heating value of the fuel.",
             "fuel_direct_emissions_kgco2e_per_unit_fuel": "Direct combustion emissions per unit of fuel.",

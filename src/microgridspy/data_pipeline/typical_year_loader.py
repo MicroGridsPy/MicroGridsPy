@@ -387,6 +387,12 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
     data.attrs["settings"]["generator"]["partial_load_modelling_enabled"] = bool(
         genfuel_meta.get("partial_load_modelling_enabled", False)
     )
+    data.attrs["settings"]["generator"]["partial_load_commitment"] = genfuel_meta.get(
+        "partial_load_commitment", "relaxed"
+    )
+    data.attrs["settings"]["generator"]["min_load_fraction"] = genfuel_meta.get(
+        "min_load_fraction", 0.0
+    )
     data.attrs["settings"]["generator"]["efficiency_curve_file"] = genfuel_meta.get(
         "efficiency_curve_file"
     )
