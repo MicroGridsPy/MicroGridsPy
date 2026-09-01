@@ -554,3 +554,125 @@ def test_multi_year_file_loader_reads_dedicated_inverter_csvs(
     assert not loaded.inverter_metrics_yearly.empty
     assert not loaded.capacity_by_year.empty
     assert loaded.results_dir == results_dir
+
+
+def test_multi_year_relaxed_commitment_dims_and_full_load_efficiency() -> None:
+    eta_full = 0.34
+    lhv = 10.0
+    sets = _base_sets()
+    data = _base_data()
+
+    # Force the generator to be the sole supply for the period-1 load.
+    data["resource_availability"] = xr.zeros_like(data["resource_availability"])
+    data["battery_max_installable_capacity_kwh"] = xr.DataArray(0.0)
+    data["generator_max_installable_capacity_kw"] = xr.DataArray(np.nan)
+    data["fuel_cost_per_unit_fuel"] = xr.DataArray(1.0)
+    data["fuel_fuel_cost_per_unit_fuel"] = xr.DataArray(1.0)
+    data["generator_nominal_efficiency_full_load"] = xr.DataArray(eta_full)
+    data["fuel_lhv_kwh_per_unit_fuel"] = xr.DataArray(lhv)
+
+    rel = np.array([0.0, 0.20, 0.40, 0.60, 0.80, 1.00])
+    multiplier = np.array([0.0, 0.75, 0.82, 0.89, 0.95, 1.00])
+    cp = xr.IndexVariable("curve_point", np.arange(rel.size))
+    data = data.assign_coords({"curve_point": cp})
+    data["generator_eff_curve_rel_power"] = xr.DataArray(
+        rel, dims=("curve_point",), coords={"curve_point": cp}
+    )
+    data["generator_eff_curve_eff"] = xr.DataArray(
+        eta_full * multiplier, dims=("curve_point",), coords={"curve_point": cp}
+    )
+    data.attrs["settings"]["generator"] = {
+        "partial_load_modelling_enabled": True,
+        "partial_load_commitment": "relaxed",
+    }
+
+    model = lp.Model()
+    vars_dict = initialize_vars(sets, data, model)
+    initialize_constraints(sets, data, vars_dict, model)
+    initialize_objective(sets, data, vars_dict, model)
+
+    # The commitment variable must carry the full multi-year sets structure.
+    assert "generator_online_units" in vars_dict
+    assert set(vars_dict["generator_online_units"].dims) == {
+        "period",
+        "year",
+        "scenario",
+        "inv_step",
+    }
+
+    solution = _solve_with_highs_or_skip(model)
+
+    gen_total = float(np.asarray(solution["generator_generation"].values).sum())
+    fuel_total = float(np.asarray(solution["fuel_consumption"].values).sum())
+    assert gen_total == pytest.approx(1.0, abs=1e-6)
+    assert fuel_total > 0.0
+
+    effective_eff = gen_total / (fuel_total * lhv)
+    assert effective_eff == pytest.approx(eta_full, rel=1e-4)
+    assert effective_eff > 0.30
+
+
+def test_multi_year_integer_commitment_penalizes_part_load() -> None:
+    from microgridspy.data_pipeline.generator_partial_load_model import (
+        fit_generator_willans_from_curve,
+    )
+
+    eta_full = 0.34
+    lhv = 10.0
+    sets = _base_sets()
+    data = _base_data()
+
+    data["load_demand"] = xr.DataArray(
+        [[[0.0], [0.7]]],
+        dims=("year", "period", "scenario"),
+        coords={"year": sets.year, "period": sets.period, "scenario": sets.scenario},
+    )
+    data["resource_availability"] = xr.zeros_like(data["resource_availability"])
+    data["battery_max_installable_capacity_kwh"] = xr.DataArray(0.0)
+    data["generator_max_installable_capacity_kw"] = xr.DataArray(np.nan)
+    data["fuel_cost_per_unit_fuel"] = xr.DataArray(1.0)
+    data["fuel_fuel_cost_per_unit_fuel"] = xr.DataArray(1.0)
+    data["generator_nominal_efficiency_full_load"] = xr.DataArray(eta_full)
+    data["fuel_lhv_kwh_per_unit_fuel"] = xr.DataArray(lhv)
+
+    rel = np.array([0.0, 0.20, 0.40, 0.60, 0.80, 1.00])
+    multiplier = np.array([0.0, 0.75, 0.82, 0.89, 0.95, 1.00])
+    cp = xr.IndexVariable("curve_point", np.arange(rel.size))
+    data = data.assign_coords({"curve_point": cp})
+    data["generator_eff_curve_rel_power"] = xr.DataArray(
+        rel, dims=("curve_point",), coords={"curve_point": cp}
+    )
+    data["generator_eff_curve_eff"] = xr.DataArray(
+        eta_full * multiplier, dims=("curve_point",), coords={"curve_point": cp}
+    )
+    data.attrs["settings"]["generator"] = {
+        "partial_load_modelling_enabled": True,
+        "partial_load_commitment": "integer",
+        "min_load_fraction": 0.5,
+    }
+
+    model = lp.Model()
+    vars_dict = initialize_vars(sets, data, model)
+    initialize_constraints(sets, data, vars_dict, model)
+    initialize_objective(sets, data, vars_dict, model)
+
+    assert set(vars_dict["generator_online_units"].dims) == {
+        "period",
+        "year",
+        "scenario",
+        "inv_step",
+    }
+
+    solution = _solve_with_highs_or_skip(model)
+    n = np.asarray(solution["generator_online_units"].values, dtype=float).reshape(-1)
+    gen = float(np.asarray(solution["generator_generation"].values).sum())
+    fuel = float(np.asarray(solution["fuel_consumption"].values).sum())
+
+    assert max(n) == pytest.approx(1.0, abs=1e-6)
+    assert all(abs(v - round(v)) < 1e-6 for v in n)
+    assert gen == pytest.approx(0.7, abs=1e-6)
+
+    effective_eff = gen / (fuel * lhv)
+    assert effective_eff < eta_full - 0.005
+    q0, q1 = fit_generator_willans_from_curve(rel, eta_full * multiplier, error_cls=ValueError)
+    assert fuel == pytest.approx((q1 * 0.7 + q0 * 1.0) / lhv, rel=1e-4)

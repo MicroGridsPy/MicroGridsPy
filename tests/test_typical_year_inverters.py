@@ -615,3 +615,129 @@ def test_canonical_typical_year_results_are_self_sufficient_and_exportable(tmp_p
     assert (tmp_path / "battery_inverter_design.csv").exists()
     assert (tmp_path / "inverter_metrics.csv").exists()
     assert written["out_dir"] == str(tmp_path)
+
+
+def _add_generator_curve(data: xr.Dataset, *, eta_full: float) -> xr.Dataset:
+    """Attach a shipped-style efficiency curve (absolute efficiency) to test data."""
+    rel = np.array([0.0, 0.20, 0.40, 0.60, 0.80, 1.00])
+    multiplier = np.array([0.0, 0.75, 0.82, 0.89, 0.95, 1.00])
+    eff = eta_full * multiplier
+    cp = xr.IndexVariable("curve_point", np.arange(rel.size))
+    data = data.assign_coords({"curve_point": cp})
+    data["generator_eff_curve_rel_power"] = xr.DataArray(
+        rel, dims=("curve_point",), coords={"curve_point": cp}
+    )
+    data["generator_eff_curve_eff"] = xr.DataArray(
+        eff, dims=("curve_point",), coords={"curve_point": cp}
+    )
+    return data
+
+
+def test_typical_year_relaxed_commitment_preserves_full_load_efficiency() -> None:
+    eta_full = 0.34
+    lhv = 10.0
+    data = _base_data(
+        periods=2,
+        load=[0.0, 1.0],
+        availability=[0.0, 0.0],  # renewables cannot serve -> generator must run
+    )
+    # Block battery so the generator is the only supply for the period-1 load.
+    data["battery_max_installable_capacity_kwh"] = xr.DataArray(0.0)
+    # Make the generator usable and cheap to run, with a realistic curve.
+    data["generator_max_installable_capacity_kw"] = xr.DataArray(np.nan)
+    data["generator_specific_investment_cost_per_kw"] = xr.DataArray(1.0)
+    data["generator_nominal_efficiency_full_load"] = xr.DataArray(eta_full)
+    data["fuel_lhv_kwh_per_unit_fuel"] = xr.DataArray(
+        [lhv], dims=("scenario",), coords={"scenario": ["scenario_1"]}
+    )
+    data["fuel_fuel_cost_per_unit_fuel"] = xr.DataArray(
+        [1.0], dims=("scenario",), coords={"scenario": ["scenario_1"]}
+    )
+    data = _add_generator_curve(data, eta_full=eta_full)
+    data.attrs["settings"]["generator"] = {
+        "partial_load_modelling_enabled": True,
+        "partial_load_commitment": "relaxed",
+    }
+
+    _, vars_dict, solution, _ = _build_and_solve_case(data)
+
+    assert "generator_online_units" in vars_dict
+    assert "generator_online_units" in solution.data_vars
+
+    gen_total = float(np.asarray(solution["generator_generation"].values).sum())
+    fuel_total = float(np.asarray(solution["fuel_consumption"].values).sum())
+    assert gen_total == pytest.approx(1.0, abs=1e-6)
+    assert fuel_total > 0.0
+
+    # Effective efficiency at the relaxed optimum equals the datasheet full-load
+    # efficiency (no 33% fuel inflation, no flattening to the low-load value).
+    effective_eff = gen_total / (fuel_total * lhv)
+    assert effective_eff == pytest.approx(eta_full, rel=1e-4)
+    assert effective_eff > 0.30  # strictly above the flattened 0.255 the old surrogate gave
+
+
+def _willans_q(eta_full: float) -> tuple[float, float]:
+    from microgridspy.data_pipeline.generator_partial_load_model import (
+        fit_generator_willans_from_curve,
+    )
+
+    rel = np.array([0.0, 0.20, 0.40, 0.60, 0.80, 1.00])
+    multiplier = np.array([0.0, 0.75, 0.82, 0.89, 0.95, 1.00])
+    return fit_generator_willans_from_curve(rel, eta_full * multiplier, error_cls=ValueError)
+
+
+def _integer_commitment_generator_data(*, load: list[float], min_load: float) -> xr.Dataset:
+    eta_full = 0.34
+    lhv = 10.0
+    data = _base_data(periods=len(load), load=load, availability=[0.0] * len(load))
+    data["battery_max_installable_capacity_kwh"] = xr.DataArray(0.0)
+    data["generator_max_installable_capacity_kw"] = xr.DataArray(np.nan)
+    data["generator_specific_investment_cost_per_kw"] = xr.DataArray(1.0)
+    data["generator_nominal_efficiency_full_load"] = xr.DataArray(eta_full)
+    data["fuel_lhv_kwh_per_unit_fuel"] = xr.DataArray(
+        [lhv], dims=("scenario",), coords={"scenario": ["scenario_1"]}
+    )
+    data["fuel_fuel_cost_per_unit_fuel"] = xr.DataArray(
+        [1.0], dims=("scenario",), coords={"scenario": ["scenario_1"]}
+    )
+    data = _add_generator_curve(data, eta_full=eta_full)
+    data.attrs["settings"]["generator"] = {
+        "partial_load_modelling_enabled": True,
+        "partial_load_commitment": "integer",
+        "min_load_fraction": min_load,
+    }
+    return data
+
+
+def test_typical_year_integer_commitment_penalizes_part_load() -> None:
+    eta_full = 0.34
+    lhv = 10.0
+    data = _integer_commitment_generator_data(load=[0.0, 0.7], min_load=0.5)
+    _, _, solution, _ = _build_and_solve_case(data)
+
+    n = np.asarray(solution["generator_online_units"].values, dtype=float).reshape(-1)
+    gen = float(np.asarray(solution["generator_generation"].values).sum())
+    fuel = float(np.asarray(solution["fuel_consumption"].values).sum())
+
+    assert max(n) == pytest.approx(1.0, abs=1e-6)  # one whole unit committed
+    assert all(abs(v - round(v)) < 1e-6 for v in n)  # integer-valued commitment
+    assert gen == pytest.approx(0.7, abs=1e-6)
+
+    # No-load fuel is charged on the full committed unit even at 70% output, so the
+    # effective efficiency is strictly below the datasheet full-load value.
+    effective_eff = gen / (fuel * lhv)
+    assert effective_eff < eta_full - 0.005
+    q0, q1 = _willans_q(eta_full)
+    assert fuel == pytest.approx((q1 * 0.7 + q0 * 1.0) / lhv, rel=1e-4)
+
+
+def test_typical_year_integer_min_load_refuses_sub_minimum_load() -> None:
+    data = _integer_commitment_generator_data(load=[0.0, 0.3], min_load=0.5)
+    data["max_lost_load_fraction"] = xr.DataArray(1.0)  # allow the sub-min load to go unserved
+    _, _, solution, _ = _build_and_solve_case(data)
+
+    gen = float(np.asarray(solution["generator_generation"].values).sum())
+    lost_load = float(np.asarray(solution["lost_load"].values).sum())
+    # A 0.3 kW load is below the 0.5 kW minimum stable load, so the genset stays off.
+    assert gen == pytest.approx(0.0, abs=1e-6)
+    assert lost_load == pytest.approx(0.3, abs=1e-6)
