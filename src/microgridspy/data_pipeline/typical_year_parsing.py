@@ -1043,7 +1043,7 @@ def _load_generator_and_fuel_yaml(
     meta_flags = {
         "partial_load_modelling_enabled": partial_load_enabled,
         "partial_load_commitment": str(
-            tech_block.get("partial_load_commitment", "relaxed") or "relaxed"
+            tech_block.get("partial_load_commitment", "integer") or "integer"
         )
         .strip()
         .lower(),

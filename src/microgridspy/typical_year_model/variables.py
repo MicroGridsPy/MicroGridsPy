@@ -163,11 +163,13 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict
     # online each hour; the no-load fuel intercept is charged per online unit.
     gen_settings = (data.attrs.get("settings", {}) or {}).get("generator", {}) or {}
     partial_load_enabled = bool(gen_settings.get("partial_load_modelling_enabled", False))
-    commitment_mode = str(gen_settings.get("partial_load_commitment", "relaxed")).strip().lower()
-    if partial_load_enabled and commitment_mode in ("relaxed", "integer"):
+    commitment_mode = str(gen_settings.get("partial_load_commitment", "integer")).strip().lower()
+    if commitment_mode == "relaxed":  # legacy: the LP relaxation was removed
+        commitment_mode = "integer"
+    if partial_load_enabled and commitment_mode == "integer":
         vars["generator_online_units"] = model.add_variables(
             lower=0.0,
-            integer=(commitment_mode == "integer"),
+            integer=True,
             dims=("period", "scenario"),
             coords={"period": period, "scenario": scenario},
             name="generator_online_units",

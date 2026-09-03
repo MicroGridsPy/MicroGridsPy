@@ -140,19 +140,19 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict
     )
 
     # Generator committed (online) units [dimensionless]. Under the clustered
-    # unit-commitment partial-load model, this is the number of cohort units
-    # online each hour; the no-load fuel intercept is charged per online unit.
-    # In "relaxed" mode it is continuous (an LP lower bound); in "integer" mode
-    # it is a general integer count.
+    # unit-commitment partial-load model, this is the integer number of cohort
+    # units online each hour; the no-load fuel intercept is charged per online unit.
     commitment_mode = (
-        str((p.settings.get("generator", {}) or {}).get("partial_load_commitment", "relaxed"))
+        str((p.settings.get("generator", {}) or {}).get("partial_load_commitment", "integer"))
         .strip()
         .lower()
     )
-    if partial_load_enabled and commitment_mode in ("relaxed", "integer"):
+    if commitment_mode == "relaxed":  # legacy: the LP relaxation was removed
+        commitment_mode = "integer"
+    if partial_load_enabled and commitment_mode == "integer":
         vars["generator_online_units"] = model.add_variables(
             lower=0.0,
-            integer=(commitment_mode == "integer"),
+            integer=True,
             dims=("period", "year", "scenario", "inv_step"),
             coords={"period": period, "year": year, "scenario": scenario, "inv_step": inv_step},
             name="generator_online_units",

@@ -158,6 +158,11 @@ def load_battery_loss_curve_dataset(
       and y = L / P_ref, so the absolute epigraph is:
         L >= m * P_dc + q * P_ref
       where P_ref is the formulation-side DC power reference used to normalize the curve.
+    - The curve is fit through the sampled points only (no forced (0, 0) origin), so
+      the lowest segment may carry a positive intercept representing a no-load /
+      standby loss. This is what lets a physically realistic *peaked* efficiency curve
+      (worse at both very low and very high power) be represented; a curve forced
+      through the origin can only ever be monotonically more efficient at low power.
     """
     if not path.exists():
         raise InputValidationError(f"Missing required battery efficiency curve file: {path}")
@@ -213,11 +218,21 @@ def load_battery_loss_curve_dataset(
         allow_zero=False,
     )
 
-    x = np.concatenate(([0.0], rel))
-    eta_ch_full = np.concatenate(([1.0], eta_ch))
-    eta_dis_full = np.concatenate(([1.0], eta_dis))
-    charge_multiplier_full = np.concatenate(([1.0], charge_multiplier))
-    discharge_multiplier_full = np.concatenate(([1.0], discharge_multiplier))
+    # Build the piecewise loss curve from the sampled operating points directly; do
+    # NOT prepend a (0, 0) origin point. Forcing the loss through the origin makes
+    # L(0) = 0, which mathematically restricts the representable efficiency to a
+    # monotonically-decreasing-in-power shape (always most efficient at the lowest
+    # load) and makes a physically realistic *peaked* efficiency curve impossible.
+    # Letting the lowest-power segment carry its own intercept lets the fit express a
+    # genuine no-load / standby loss (L(0) = c0 > 0), so efficiency can fall at both
+    # very low power (standby-dominated) and very high power (conversion/resistive).
+    # For monotone curves the extrapolated intercept is <= 0 and stays non-binding,
+    # because the charge/discharge loss variables are bounded L >= 0.
+    x = rel
+    eta_ch_full = eta_ch
+    eta_dis_full = eta_dis
+    charge_multiplier_full = charge_multiplier
+    discharge_multiplier_full = discharge_multiplier
 
     charge_loss_pu = x * ((1.0 / eta_ch_full) - 1.0)
     discharge_loss_pu = x * (1.0 - eta_dis_full)

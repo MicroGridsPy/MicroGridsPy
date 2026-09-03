@@ -346,20 +346,24 @@ def initialize_constraints(
     partial_load_enabled = (
         p.generator_eff_curve_rel_power is not None and p.generator_eff_curve_eff is not None
     )
-    commitment_mode = str(gen_settings.get("partial_load_commitment", "relaxed")).strip().lower()
+    commitment_mode = str(gen_settings.get("partial_load_commitment", "integer")).strip().lower()
     if not partial_load_enabled:
         commitment_mode = "off"
-    if commitment_mode not in ("off", "relaxed", "integer"):
+    if commitment_mode == "relaxed":
+        # Legacy: the LP relaxation was removed (it was equivalent to constant
+        # efficiency). Part-load now always uses the exact integer commitment.
+        commitment_mode = "integer"
+    if commitment_mode not in ("off", "integer"):
         raise InputValidationError(
             f"Invalid generator.partial_load_commitment='{commitment_mode}'. "
-            "Allowed: 'off' | 'relaxed' | 'integer'."
+            "Allowed: 'off' | 'integer'."
         )
 
-    if commitment_mode in ("relaxed", "integer"):
+    if commitment_mode == "integer":
         # Clustered unit-commitment partial-load model (Palmintier & Webster).
-        # An integer/continuous count of committed cohort units carries the
-        # affine Willans no-load fuel intercept, so idling committed capacity
-        # burns fuel even at zero output and part-load operation is penalised.
+        # An integer count of committed cohort units carries the affine Willans
+        # no-load fuel intercept, so idling committed capacity burns fuel even at
+        # zero output and part-load operation is penalised.
         n_online = vars.get("generator_online_units")
         if n_online is None:
             raise InputValidationError(

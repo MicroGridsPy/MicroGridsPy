@@ -217,16 +217,18 @@ def initialize_constraints(
     partial_load_enabled = (
         p.generator_eff_curve_rel_power is not None and p.generator_eff_curve_eff is not None
     )
-    commitment_mode = str(gen_settings.get("partial_load_commitment", "relaxed")).strip().lower()
+    commitment_mode = str(gen_settings.get("partial_load_commitment", "integer")).strip().lower()
     if not partial_load_enabled:
         commitment_mode = "off"
-    if commitment_mode not in ("off", "relaxed", "integer"):
+    if commitment_mode == "relaxed":  # legacy: the LP relaxation was removed
+        commitment_mode = "integer"
+    if commitment_mode not in ("off", "integer"):
         raise InputValidationError(
             f"Invalid generator.partial_load_commitment='{commitment_mode}'. "
-            "Allowed: 'off' | 'relaxed' | 'integer'."
+            "Allowed: 'off' | 'integer'."
         )
 
-    if commitment_mode in ("relaxed", "integer"):
+    if commitment_mode == "integer":
         # Clustered unit-commitment partial-load model (Palmintier & Webster).
         # A count of committed generator units carries the affine Willans no-load
         # fuel intercept, so idling committed capacity burns fuel at zero output

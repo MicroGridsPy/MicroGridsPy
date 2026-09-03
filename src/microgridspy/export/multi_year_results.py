@@ -299,23 +299,29 @@ def _physical_effective_capacity(
     All inputs are indexed by (year, scenario, inv_step) except ``commission`` which is
     (year, inv_step); ``cycle_fade_year`` is already summed over periods.
     """
-    years = [str(y) for y in nominal_available.coords["year"].values.tolist()]
-    per_year: dict[str, xr.DataArray] = {}
-    for i, y in enumerate(years):
-        cap_y = nominal_available.sel(year=y)
-        if i == 0:
-            per_year[y] = soh0 * cap_y
+    # Iterate over the native year coordinate values (may be int or str) and drop the
+    # scalar year coord during the recursion so the year-less arrays align cleanly.
+    year_values = list(nominal_available.coords["year"].values)
+    eff_by_year: list[xr.DataArray] = []
+    prev_eff: xr.DataArray | None = None
+    for i, y in enumerate(year_values):
+        cap_y = nominal_available.sel(year=y, drop=True)
+        if i == 0 or prev_eff is None:
+            eff_y = soh0 * cap_y
         else:
-            prev = years[i - 1]
+            prev = year_values[i - 1]
             continued = (
-                per_year[prev] - cycle_fade_year.sel(year=prev) - calendar_fade.sel(year=prev)
+                prev_eff
+                - cycle_fade_year.sel(year=prev, drop=True)
+                - calendar_fade.sel(year=prev, drop=True)
             )
             reset = soh0 * cap_y
-            comm = commission.sel(year=y)
-            per_year[y] = xr.where(comm > 0.0, reset, np.minimum(continued, cap_y))
-    return xr.concat([per_year[y].assign_coords(year=y) for y in years], dim="year").transpose(
-        "year", *[d for d in nominal_available.dims if d != "year"]
-    )
+            comm = commission.sel(year=y, drop=True)
+            eff_y = xr.where(comm > 0.0, reset, np.minimum(continued, cap_y))
+        prev_eff = eff_y
+        eff_by_year.append(eff_y)
+    result = xr.concat(eff_by_year, dim="year").assign_coords(year=("year", year_values))
+    return result.transpose("year", *[d for d in nominal_available.dims if d != "year"])
 
 
 def _renewable_display_name(data: xr.Dataset, resource: Any) -> str:

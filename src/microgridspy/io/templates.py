@@ -67,6 +67,14 @@ class TemplateSettings:
     fuel_label: str
     csv_delimiter: str = ","
     csv_decimal: str = "."
+    # Generator part-load unit commitment (used only with an efficiency curve):
+    #   "integer" -> whole committed units (part-load penalty + minimum stable load)
+    #   "off"     -> constant full-load efficiency
+    generator_partial_load_commitment: str = "integer"
+    generator_min_load_fraction: float = 0.0
+    # Battery "simple" calendar ageing: a flat %/yr capacity fade. Written only when
+    # SOC-dependent calendar fade is off (the two are mutually exclusive time-ageing flavors).
+    battery_capacity_degradation_rate_per_year: float = 0.0
     renewable_vintage_labels_by_step: Mapping[str, Mapping[str, str]] | None = None
     battery_vintage_labels_by_step: Mapping[str, str] | None = None
     generator_vintage_labels_by_step: Mapping[str, str] | None = None
@@ -557,12 +565,12 @@ def _write_inputs_readme(path: Path, settings: TemplateSettings, overwrite: bool
             [
                 f"\n## {_safe_battery_efficiency_curve_csv(settings)}\n",
                 "- Optional battery conversion-efficiency curve used only when `formulation.json -> battery_model.loss_model = convex_loss_epigraph`.\n",
-                "- Preferred semantics: the CSV stores normalized efficiency multipliers relative to the scalar efficiencies in `battery.yaml`, with the full-load row equal to `1.0`.\n",
-                "- Legacy absolute-efficiency curves are still accepted for backward compatibility.\n",
+                "- Two accepted forms: (a) absolute one-way efficiencies in (0,1] (shipped default; the full-load row need not be 1.0), or (b) normalized multipliers relative to the scalar efficiencies in `battery.yaml`, with the full-load row equal to `1.0`.\n",
+                "- The shipped default is a realistic *peaked* curve (best near ~40% power, worse at very low and full power) so the power-dependent model is not uniformly more efficient than the constant baseline.\n",
                 "- Columns:\n",
                 "  - `relative_power_pu`: relative DC-side battery power in (0,1]\n",
-                "  - `charge_efficiency`: normalized charge-efficiency multiplier (actual eta = `battery.technical.charge_efficiency * charge_efficiency`)\n",
-                "  - `discharge_efficiency`: normalized discharge-efficiency multiplier (actual eta = `battery.technical.discharge_efficiency * discharge_efficiency`)\n",
+                "  - `charge_efficiency`: one-way charge efficiency at that power (absolute in (0,1], or a multiplier if the full-load row is `1.0`)\n",
+                "  - `discharge_efficiency`: one-way discharge efficiency at that power (absolute in (0,1], or a multiplier if the full-load row is `1.0`)\n",
             ]
         )
     if _battery_calendar_fade_active(settings):
@@ -888,8 +896,8 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
             1.0e6 if _battery_requires_lp_soh_capacity_reference(settings) else None
         )
         params = {
-            "charge_efficiency": 0.95,  # full-load one-way charge efficiency
-            "discharge_efficiency": 0.96,  # full-load one-way discharge efficiency
+            "charge_efficiency": 0.975,  # one-way charge efficiency (round-trip ~95%)
+            "discharge_efficiency": 0.975,  # one-way discharge efficiency (round-trip ~95%)
             "initial_soc": 0.5,  # absolute fraction of installed/effective capacity (0..1)
             "depth_of_discharge": 0.8,  # fraction (0..1), usable fraction of nominal capacity
             "inverter_nominal_power_kw": 1.0,  # kW per inverter unit
@@ -917,7 +925,11 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
                 getattr(settings, "battery_calendar_time_increment_per_step", 1.0) or 1.0
             )
         if is_dynamic and not calendar_fade_active:
-            params["capacity_degradation_rate_per_year"] = 0.0  # /year (effective capacity fade)
+            # Simple flat calendar ageing (%/yr). Mutually exclusive with SOC-dependent
+            # calendar fade, which is why it is only written when calendar fade is off.
+            params["capacity_degradation_rate_per_year"] = float(
+                getattr(settings, "battery_capacity_degradation_rate_per_year", 0.0) or 0.0
+            )
         return params
 
     # -------------------------------------------------------------------------
@@ -1005,8 +1017,8 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
                     "battery_embedded_emissions_kgco2e_per_kwh": "Embodied emissions associated with battery capacity.",
                     "battery_fixed_om_share_per_year": "Fixed annual O&M cost expressed as a share of battery CAPEX. In the typical-year formulation this input is scenario-independent.",
                     "battery_inverter_fixed_om_share_per_year": "Fixed annual O&M cost expressed as a share of battery inverter CAPEX.",
-                    "battery_charge_efficiency": "Battery one-way charging efficiency used directly in constant-efficiency mode and as the full-load baseline in curve mode.",
-                    "battery_discharge_efficiency": "Battery one-way discharging efficiency used directly in constant-efficiency mode and as the full-load baseline in curve mode.",
+                    "battery_charge_efficiency": "Battery one-way charging efficiency (AC-to-DC). Used directly in constant-efficiency mode; in curve mode it is the baseline for normalized-multiplier curves and is ignored when the curve gives absolute efficiencies.",
+                    "battery_discharge_efficiency": "Battery one-way discharging efficiency (DC-to-AC). Used directly in constant-efficiency mode; in curve mode it is the baseline for normalized-multiplier curves and is ignored when the curve gives absolute efficiencies.",
                     "battery_initial_soc": "Initial state of charge as an absolute share of installed/effective battery capacity. In the current equations it is applied directly to capacity at the first modeled period and replacement resets; if positive battery capacity is installed, values below 1 - depth_of_discharge conflict with the enforced minimum SOC.",
                     "battery_depth_of_discharge": "Usable fraction of nominal battery capacity. When cycle fade is enabled, the same value is also used as the reference DoD for deriving the internal cycle-fade coefficient from cycle life and end-of-life SoH.",
                     "battery_inverter_nominal_power_kw": "Nominal inverter/converter power represented by one battery inverter unit. Installed battery inverter power equals inverter units multiplied by this value.",
@@ -1066,7 +1078,7 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
                     **(
                         {
                             "battery_capacity_degradation_rate_per_year": (
-                                "Simplified exogenous annual reduction in effective battery capacity. It remains active in the dynamic formulation unless calendar fade is enabled; when calendar fade is enabled, this linear term is ignored to avoid double-counting background ageing."
+                                "Simple (flat %/yr) calendar ageing: a constant yearly reduction in effective battery capacity. It is the mutually exclusive alternative to the SOC-dependent calendar-fade curve, so it is written only when the curve is off."
                             )
                         }
                         if is_dynamic and not _battery_calendar_fade_active(settings)
@@ -1107,19 +1119,29 @@ def _write_battery_efficiency_curve_csv(
 
     Columns:
       - relative_power_pu: relative DC-side battery power in (0, 1]
-      - charge_efficiency: preferred normalized multiplier relative to
-        battery.yaml `battery.technical.charge_efficiency`
-      - discharge_efficiency: preferred normalized multiplier relative to
-        battery.yaml `battery.technical.discharge_efficiency`
+      - charge_efficiency: one-way charge efficiency at that power
+      - discharge_efficiency: one-way discharge efficiency at that power
+
+    The shipped default is a physically realistic *peaked* absolute-efficiency curve
+    for a modern LFP + hybrid-inverter system (AC-to-AC boundary): efficiency is best
+    near ~40% power and falls at both very low power (standby / no-load loss dominates)
+    and full power (conversion + resistive loss). One-way efficiency runs ~95.4% at 10%
+    power, ~97.8% at the ~40% peak, and ~97.0% at full power; the corresponding round-trip
+    efficiency is ~91% at very low power, ~95.6% at the peak, and ~94% at full power.
+    Because the full-load point (0.9695) is *not* 1.0, the loader
+    reads these as absolute one-way efficiencies (independent of the battery.yaml scalar
+    baseline). This makes the power-dependent model fairly comparable to the ~95% constant
+    baseline: it is more efficient than the baseline only in a narrow mid-power band and
+    *less* efficient at both low and high power, instead of being uniformly better.
     """
     if path.exists() and not overwrite:
         return
 
     df = pd.DataFrame(
         {
-            "relative_power_pu": [0.05, 0.10, 0.25, 0.50, 0.75, 1.00],
-            "charge_efficiency": [1.0368, 1.0332, 1.0263, 1.0168, 1.0074, 1.0000],
-            "discharge_efficiency": [1.0302, 1.0271, 1.0219, 1.0135, 1.0052, 1.0000],
+            "relative_power_pu": [0.10, 0.20, 0.40, 0.60, 0.80, 1.00],
+            "charge_efficiency": [0.9539, 0.9720, 0.9775, 0.9762, 0.9732, 0.9695],
+            "discharge_efficiency": [0.9539, 0.9720, 0.9775, 0.9762, 0.9732, 0.9695],
         }
     )
 
@@ -1216,11 +1238,21 @@ def _write_generator_yaml(path: Path, settings: TemplateSettings, overwrite: boo
                 else None
             ),
             # Partial-load unit-commitment (used only with an efficiency curve):
-            #   off      -> constant full-load efficiency
-            #   relaxed  -> continuous committed capacity (LP)
-            #   integer  -> whole committed units (MILP, part-load penalty bites)
-            "partial_load_commitment": "relaxed",
-            "min_load_fraction": 0.0,  # minimum stable load as a fraction of unit capacity
+            #   integer -> whole committed units (MILP; the part-load penalty and
+            #              minimum stable load bite) -- the meaningful part-load mode
+            #   off     -> constant full-load efficiency
+            # Only "off" or "integer" are ever written (any other value normalizes to "integer").
+            "partial_load_commitment": (
+                "off"
+                if str(getattr(settings, "generator_partial_load_commitment", "integer"))
+                .strip()
+                .lower()
+                == "off"
+                else "integer"
+            ),
+            "min_load_fraction": float(
+                getattr(settings, "generator_min_load_fraction", 0.0) or 0.0
+            ),  # minimum stable load as a fraction of unit capacity
             "max_installable_capacity_kw": None,  # optional (kW)
             **({"capacity_degradation_rate_per_year": 0.0} if is_dynamic else {}),
         }
@@ -1342,8 +1374,8 @@ def _write_generator_yaml(path: Path, settings: TemplateSettings, overwrite: boo
             "generator_fixed_om_share_per_year": "Fixed annual O&M cost expressed as a share of generator CAPEX. In the typical-year formulation this input is scenario-independent.",
             "generator_nominal_efficiency_full_load": "Generator full-load efficiency used directly in constant-efficiency mode and as the baseline in partial-load curve mode.",
             "generator_partial_load_curve_note": "When a generator efficiency-curve CSV is provided, its samples are fit to an affine Willans fuel line (a no-load intercept plus a marginal slope) that preserves the datasheet full-load efficiency. The line is paired with a committed-capacity unit-commitment variable so idling committed units carry no-load fuel and part-load operation is penalised.",
-            "generator_partial_load_commitment": "Partial-load unit-commitment mode used with an efficiency curve: 'off' (constant full-load efficiency), 'relaxed' (continuous committed capacity, LP), or 'integer' (whole committed units, MILP; the part-load penalty and minimum stable load become binding).",
-            "generator_min_load_fraction": "Minimum stable load of a committed generator unit, as a fraction of its nominal capacity, in [0, 1). Only binding in 'integer' commitment mode.",
+            "generator_partial_load_commitment": "Partial-load unit-commitment mode used with an efficiency curve: 'off' (constant full-load efficiency) or 'integer' (whole committed units, MILP; the part-load penalty and minimum stable load become binding).",
+            "generator_min_load_fraction": "Minimum stable load of a committed generator unit, as a fraction of its nominal capacity, in [0, 1). Only binding when partial-load commitment is 'integer'.",
             "generator_max_installable_capacity_kw": "Upper bound on installed generator capacity.",
             "fuel_lhv_kwh_per_unit_fuel": "Lower heating value of the fuel.",
             "fuel_direct_emissions_kgco2e_per_unit_fuel": "Direct combustion emissions per unit of fuel.",
