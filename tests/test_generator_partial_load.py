@@ -55,3 +55,71 @@ def test_willans_fit_single_point_falls_back_to_constant_efficiency() -> None:
     )
     assert q0 == pytest.approx(0.0)
     assert q1 == pytest.approx(1.0 / 0.34, rel=1e-9)
+
+
+# ---------------------------------------------------------------------------
+# Template surface: enabling the generator efficiency curve must default to the
+# meaningful "integer" unit-commitment mode (not the no-op "relaxed"), so the
+# GUI/template "efficiency curve" choice actually penalizes part-load operation.
+# ---------------------------------------------------------------------------
+def _generator_template_settings(**overrides):
+    from microgridspy.io.templates import TemplateSettings
+
+    base = dict(
+        formulation="dynamic",
+        system_type="off_grid",
+        allow_export=False,
+        multi_scenario=False,
+        n_scenarios=1,
+        scenario_labels=["scenario_1"],
+        scenario_weights=[1.0],
+        start_year_label="2026",
+        horizon_years=10,
+        capacity_expansion=False,
+        investment_steps_years=None,
+        n_res_sources=1,
+        resource_labels=["Solar"],
+        conversion_labels=["Solar PV"],
+        battery_label="Battery",
+        battery_loss_model="constant_efficiency",
+        battery_cycle_fade_enabled=False,
+        battery_calendar_fade_enabled=False,
+        battery_efficiency_curve_csv="battery_efficiency_curve.csv",
+        battery_cycle_lifetime_to_eol_cycles=6000.0,
+        battery_calendar_fade_curve_csv="battery_calendar_fade_curve.csv",
+        battery_calendar_time_increment_per_step=1.0,
+        battery_end_of_life_soh=0.8,
+        generator_label="Generator",
+        generator_efficiency_model="efficiency_curve",
+        generator_efficiency_curve_csv="generator_efficiency_curve.csv",
+        fuel_label="Fuel",
+    )
+    base.update(overrides)
+    return TemplateSettings(**base)
+
+
+def _written_generator_yaml(tmp_path, name, settings):
+    import microgridspy as mgp
+
+    mgp.set_workspace(tmp_path)
+    mgp.create_project(
+        name, formulation="dynamic", horizon_years=10, settings=settings, overwrite=True
+    )
+    return next(tmp_path.rglob("generator.yaml")).read_text(encoding="utf-8")
+
+
+def test_generator_curve_template_defaults_to_integer_commitment(tmp_path) -> None:
+    text = _written_generator_yaml(tmp_path, "gen_commit_default", _generator_template_settings())
+    assert "partial_load_commitment: integer" in text
+    assert "min_load_fraction:" in text
+
+
+def test_generator_commitment_legacy_relaxed_normalizes_to_integer(tmp_path) -> None:
+    # The LP relaxation was removed; a legacy "relaxed" value normalizes to "integer".
+    text = _written_generator_yaml(
+        tmp_path,
+        "gen_commit_relaxed",
+        _generator_template_settings(generator_partial_load_commitment="relaxed"),
+    )
+    assert "partial_load_commitment: integer" in text
+    assert "relaxed" not in text

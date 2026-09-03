@@ -556,7 +556,10 @@ def test_multi_year_file_loader_reads_dedicated_inverter_csvs(
     assert loaded.results_dir == results_dir
 
 
-def test_multi_year_relaxed_commitment_dims_and_full_load_efficiency() -> None:
+def test_multi_year_integer_commitment_full_load_efficiency() -> None:
+    # At full load the committed unit runs at 100%, so there is no part-load penalty and
+    # the effective efficiency equals the datasheet full-load value. Also checks the
+    # commitment variable carries the full multi-year sets structure.
     eta_full = 0.34
     lhv = 10.0
     sets = _base_sets()
@@ -583,7 +586,7 @@ def test_multi_year_relaxed_commitment_dims_and_full_load_efficiency() -> None:
     )
     data.attrs["settings"]["generator"] = {
         "partial_load_modelling_enabled": True,
-        "partial_load_commitment": "relaxed",
+        "partial_load_commitment": "integer",
     }
 
     model = lp.Model()

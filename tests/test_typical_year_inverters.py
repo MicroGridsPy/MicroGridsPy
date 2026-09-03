@@ -633,7 +633,9 @@ def _add_generator_curve(data: xr.Dataset, *, eta_full: float) -> xr.Dataset:
     return data
 
 
-def test_typical_year_relaxed_commitment_preserves_full_load_efficiency() -> None:
+def test_typical_year_integer_commitment_full_load_efficiency() -> None:
+    # At full load the committed unit runs at 100%, so the effective efficiency equals
+    # the datasheet full-load value (no fuel inflation, no flattening to the low-load value).
     eta_full = 0.34
     lhv = 10.0
     data = _base_data(
@@ -656,7 +658,7 @@ def test_typical_year_relaxed_commitment_preserves_full_load_efficiency() -> Non
     data = _add_generator_curve(data, eta_full=eta_full)
     data.attrs["settings"]["generator"] = {
         "partial_load_modelling_enabled": True,
-        "partial_load_commitment": "relaxed",
+        "partial_load_commitment": "integer",
     }
 
     _, vars_dict, solution, _ = _build_and_solve_case(data)
@@ -669,8 +671,6 @@ def test_typical_year_relaxed_commitment_preserves_full_load_efficiency() -> Non
     assert gen_total == pytest.approx(1.0, abs=1e-6)
     assert fuel_total > 0.0
 
-    # Effective efficiency at the relaxed optimum equals the datasheet full-load
-    # efficiency (no 33% fuel inflation, no flattening to the low-load value).
     effective_eff = gen_total / (fuel_total * lhv)
     assert effective_eff == pytest.approx(eta_full, rel=1e-4)
     assert effective_eff > 0.30  # strictly above the flattened 0.255 the old surrogate gave

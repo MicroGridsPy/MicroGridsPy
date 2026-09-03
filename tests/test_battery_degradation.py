@@ -290,3 +290,116 @@ def test_reported_effective_capacity_uses_physical_recursion() -> None:
         df.loc[df["year"].astype(str) == "2027", "battery_effective_energy_capacity"].iloc[0]
     )
     assert reported_y1 == pytest.approx(expected_y1, abs=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# Template surface (Stage 2): calendar/time ageing is one control with two
+# mutually exclusive flavors. The simple flat %/yr is a first-class, controllable
+# field; the SOC-dependent curve suppresses it (never both in the written YAML).
+# ---------------------------------------------------------------------------
+def _battery_template_settings(**overrides):
+    from microgridspy.io.templates import TemplateSettings
+
+    base = dict(
+        formulation="dynamic",
+        system_type="off_grid",
+        allow_export=False,
+        multi_scenario=False,
+        n_scenarios=1,
+        scenario_labels=["scenario_1"],
+        scenario_weights=[1.0],
+        start_year_label="2026",
+        horizon_years=10,
+        capacity_expansion=False,
+        investment_steps_years=None,
+        n_res_sources=1,
+        resource_labels=["Solar"],
+        conversion_labels=["Solar PV"],
+        battery_label="Battery",
+        battery_loss_model="constant_efficiency",
+        battery_cycle_fade_enabled=False,
+        battery_calendar_fade_enabled=False,
+        battery_efficiency_curve_csv="battery_efficiency_curve.csv",
+        battery_cycle_lifetime_to_eol_cycles=6000.0,
+        battery_calendar_fade_curve_csv="battery_calendar_fade_curve.csv",
+        battery_calendar_time_increment_per_step=1.0,
+        battery_end_of_life_soh=0.8,
+        generator_label="Generator",
+        generator_efficiency_model="constant_efficiency",
+        generator_efficiency_curve_csv="generator_efficiency_curve.csv",
+        fuel_label="Fuel",
+    )
+    base.update(overrides)
+    return TemplateSettings(**base)
+
+
+def _written_battery_technical(tmp_path, name, settings):
+    import yaml
+
+    import microgridspy as mgp
+
+    mgp.set_workspace(tmp_path)
+    mgp.create_project(
+        name, formulation="dynamic", horizon_years=10, settings=settings, overwrite=True
+    )
+    text = next(tmp_path.rglob("battery.yaml")).read_text(encoding="utf-8")
+    return yaml.safe_load(text)["battery"]["technical"]
+
+
+def test_battery_simple_flat_ageing_is_written(tmp_path) -> None:
+    tech = _written_battery_technical(
+        tmp_path,
+        "bat_flat",
+        _battery_template_settings(battery_capacity_degradation_rate_per_year=0.02),
+    )
+    assert tech.get("capacity_degradation_rate_per_year") == pytest.approx(0.02)
+
+
+def test_battery_calendar_curve_suppresses_flat_rate(tmp_path) -> None:
+    tech = _written_battery_technical(
+        tmp_path,
+        "bat_cal",
+        _battery_template_settings(
+            battery_loss_model="convex_loss_epigraph",
+            battery_calendar_fade_enabled=True,
+            battery_capacity_degradation_rate_per_year=0.02,
+        ),
+    )
+    # Mutually exclusive: with SOC-dependent calendar fade, the flat rate is not written.
+    assert "capacity_degradation_rate_per_year" not in tech
+    assert tech.get("calendar_fade_curve_csv")
+
+
+def test_physical_effective_capacity_handles_integer_year_coord() -> None:
+    # Regression: the real pipeline uses an integer 'year' coordinate; the reporting
+    # recursion must not assume string years (it did, causing a sel KeyError).
+    from microgridspy.export.multi_year_results import _physical_effective_capacity
+
+    years = [2026, 2027]
+    scen, inv = ["s1"], ["1"]
+
+    def _da(vals):
+        return xr.DataArray(
+            np.array(vals, dtype=float).reshape(2, 1, 1),
+            dims=("year", "scenario", "inv_step"),
+            coords={"year": years, "scenario": scen, "inv_step": inv},
+        )
+
+    nominal = _da([1.0, 1.0])
+    cycle = _da([0.1, 0.0])
+    calendar = _da([0.05, 0.0])
+    commission = xr.DataArray(
+        np.array([1.0, 0.0]).reshape(2, 1),
+        dims=("year", "inv_step"),
+        coords={"year": years, "inv_step": inv},
+    )
+    out = _physical_effective_capacity(
+        nominal_available=nominal,
+        cycle_fade_year=cycle,
+        calendar_fade=calendar,
+        commission=commission,
+        soh0=1.0,
+    )
+    assert float(out.sel(year=2026).values.reshape(-1)[0]) == pytest.approx(1.0)
+    # year 2 = prev(1.0) - cycle(0.1) - calendar(0.05) = 0.85
+    assert float(out.sel(year=2027).values.reshape(-1)[0]) == pytest.approx(0.85)
