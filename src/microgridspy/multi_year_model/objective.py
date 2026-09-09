@@ -176,9 +176,49 @@ def initialize_objective(
     gen_active = replacement_active_mask(sets)
 
     ann_res_y = ((res_annuity + res_inv_ac_annuity) * res_active).sum("inv_step").sum("resource")
-    ann_bat_y = ((bat_annuity + bat_inv_power_annuity) * bat_active).sum("inv_step")
     ann_gen_y = (gen_annuity * gen_active).sum("inv_step")
-    annuity_y = ann_res_y + ann_bat_y + ann_gen_y  # (year,)
+
+    # Battery energy (cell) CAPEX and battery inverter CAPEX are amortized separately.
+    # The inverter is always calendar-amortized. The energy CAPEX is amortized over the
+    # BINDING life via an epigraph (see below) when cycle-fade degradation is active;
+    # otherwise it is calendar-amortized like everything else.
+    bat_energy_annuity_cal = bat_annuity * bat_active  # (year, inv_step) calendar
+    bat_inv_annuity_y = (bat_inv_power_annuity * bat_active).sum("inv_step")  # (year,)
+    bat_cycle_fade_var = vars.get("battery_cycle_fade", None)
+    bat_repl_cost = vars.get("battery_replacement_cost", None)
+    degradation_on = bat_cycle_fade_var is not None and bat_repl_cost is not None
+
+    if degradation_on:
+        # Endogenous battery energy replacement cost Z_{y,s,k} = max(calendar, cycle):
+        #   Z >= calendar annuity                        (CAPEX / calendar life, WACC via CRF)
+        #   Z >= c_repl * phi * F_cyc                     (CAPEX amortized over cycle-limited life)
+        # with c_repl = CAPEX / (SoH0 - SoH_eol) and the financing gross-up
+        # phi = CRF(wacc, calendar_life) * calendar_life, chosen so the two bounds
+        # coincide exactly at the crossover (cycle life == calendar life). At the optimum
+        # Z = CAPEX amortized over min(calendar, cycle-limited) life -> the effective
+        # (economic == technical) lifetime, fully consistent with the annuity/no-salvage
+        # cash-flow convention and free of the earlier double count.
+        soh0 = _require_finite_da("battery_initial_soh", p.battery_initial_soh)
+        soh_eol = _require_finite_da("battery_end_of_life_soh", p.battery_end_of_life_soh)
+        usable_life_fraction = soh0 - soh_eol
+        c_repl = bat_capex_kwh / usable_life_fraction  # (inv_step) currency / kWh fade
+        phi = _crf(bat_wacc, bat_life_y) * bat_life_y  # (inv_step) financing gross-up (>=1)
+        model.add_constraints(
+            bat_repl_cost >= bat_energy_annuity_cal,
+            name="battery_replacement_cost_calendar",
+        )
+        model.add_constraints(
+            bat_repl_cost >= (c_repl * phi) * bat_cycle_fade_var,
+            name="battery_replacement_cost_cycle",
+        )
+        # scenario-independent annuities only; battery energy replacement is
+        # scenario-dependent (throughput is recourse) and enters the weighted cashflow.
+        annuity_y = ann_res_y + bat_inv_annuity_y + ann_gen_y  # (year,)
+        bat_energy_repl_y_s = bat_repl_cost.sum("inv_step")  # (year, scenario)
+    else:
+        ann_bat_y = (bat_energy_annuity_cal + bat_inv_power_annuity * bat_active).sum("inv_step")
+        annuity_y = ann_res_y + ann_bat_y + ann_gen_y  # (year,)
+        bat_energy_repl_y_s = None
 
     # ------------------------------------------------------------------
     # OPEX (year, scenario) then expected value
@@ -293,7 +333,11 @@ def initialize_objective(
         grid_scope2_cost_y_s = 0.0
 
     ext_y_s = ll_cost_y_s + direct_em_cost_y_s + grid_scope2_cost_y_s
-    expected_cashflow_y = annuity_y + ((opex_y_s + ext_y_s) * w_s).sum("scenario")
+    opex_ext_y_s = opex_y_s + ext_y_s
+    if bat_energy_repl_y_s is not None:
+        # Battery energy CAPEX amortized over the binding (endogenous) life, scenario-weighted.
+        opex_ext_y_s = opex_ext_y_s + bat_energy_repl_y_s
+    expected_cashflow_y = annuity_y + (opex_ext_y_s * w_s).sum("scenario")
 
     # Embedded emissions at commissioning year (optional)
     commission_res = replacement_commission_mask(sets, res_life_y)
@@ -334,26 +378,20 @@ def initialize_objective(
     #
     # epsilon in currency/kWh (tiny), aligned with the typical-year model.
     epsilon = 1e-6
-    epsilon_eff_cap = 1e-9
     bat_ch = vars["battery_charge"]
     bat_dis = vars["battery_discharge"]
-    bat_calendar_fade = vars.get("battery_calendar_fade", None)
     bat_eff_cap = vars.get("battery_effective_energy_capacity", None)
     bat_throughput_y_s = (bat_ch + bat_dis).sum("period").sum("inv_step")
     bat_reg_cost_y = epsilon * (bat_throughput_y_s * w_s).sum("scenario")
-    cal_fade_reg_cost_y = 0.0
+
+    # The economic cost of cycle-fade degradation is carried by the max-of-annuities
+    # epigraph above (battery_replacement_cost), NOT by a separate wear charge, so there
+    # is no double count with the calendar annuity. A tiny credit keeps the raw
+    # effective-capacity LP state pushed to its largest feasible value for reporting
+    # robustness (the physical SoH used in reports is reconstructed separately).
     eff_cap_reg_credit_y = 0.0
-    if bat_calendar_fade is not None:
-        # Calendar fade is scenario-wise; collapse to an expected yearly value like the
-        # other regularization terms before it enters the per-year cashflow.
-        cal_fade_reg_cost_y = epsilon * (bat_calendar_fade.sum("inv_step") * w_s).sum("scenario")
     if bat_eff_cap is not None:
-        # Keep the effective usable-capacity state at its largest feasible value
-        # when the LP is otherwise indifferent. This is an internal tie-break,
-        # not a degradation credit.
-        eff_cap_reg_credit_y = -epsilon_eff_cap * (bat_eff_cap.sum("inv_step") * w_s).sum(
-            "scenario"
-        )
+        eff_cap_reg_credit_y = -1e-9 * (bat_eff_cap.sum("inv_step") * w_s).sum("scenario")
 
     # Reporting-only note: the discounted value of annuity payments that would
     # fall beyond the modeled horizon (a salvage / residual-value term) is
@@ -364,6 +402,6 @@ def initialize_objective(
     # `post_horizon_annuity_tail_memo` was unused and has been removed.)
 
     npwc = (
-        (total_cashflow_y + bat_reg_cost_y + cal_fade_reg_cost_y + eff_cap_reg_credit_y) * disc_y
+        (total_cashflow_y + bat_reg_cost_y + eff_cap_reg_credit_y) * disc_y
     ).sum("year")
     model.add_objective(npwc, overwrite=True)

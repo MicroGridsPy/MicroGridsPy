@@ -68,8 +68,7 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict
     battery_model_settings = p.settings.get("battery_model", {}) or {}
     degradation_settings = battery_model_settings.get("degradation_model", {}) or {}
     cycle_fade_enabled = bool(degradation_settings.get("cycle_fade_enabled", False))
-    calendar_fade_enabled = bool(degradation_settings.get("calendar_fade_enabled", False))
-    degradation_state_enabled = cycle_fade_enabled or calendar_fade_enabled
+    degradation_state_enabled = cycle_fade_enabled
     # In the current multi-year formulation this flag controls integer sizing
     # of investment-unit variables only; it is not chronological unit commitment.
     is_integer = bool(p.settings.get("unit_commitment", False))
@@ -203,29 +202,32 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict
             name="battery_discharge_loss",
         )
         if degradation_state_enabled:
+            # Annual cycle fade per cohort (kWh of capacity lost that year). Defined as
+            # the per-year sum of beta(T)*(charge_dc+discharge_dc); aggregating to a
+            # yearly variable (instead of one per hour) keeps the state recursion exact
+            # while removing the 8760x per-period fade variables/constraints.
             vars["battery_cycle_fade"] = model.add_variables(
                 lower=0.0,
-                dims=("period", "year", "scenario", "inv_step"),
-                coords={"period": period, "year": year, "scenario": scenario, "inv_step": inv_step},
+                dims=("year", "scenario", "inv_step"),
+                coords={"year": year, "scenario": scenario, "inv_step": inv_step},
                 name="battery_cycle_fade",
-            )
-            vars["battery_average_soc"] = model.add_variables(
-                lower=0.0,
-                dims=("year", "scenario", "inv_step"),
-                coords={"year": year, "scenario": scenario, "inv_step": inv_step},
-                name="battery_average_soc",
-            )
-            vars["battery_calendar_fade"] = model.add_variables(
-                lower=0.0,
-                dims=("year", "scenario", "inv_step"),
-                coords={"year": year, "scenario": scenario, "inv_step": inv_step},
-                name="battery_calendar_fade",
             )
             vars["battery_effective_energy_capacity"] = model.add_variables(
                 lower=0.0,
                 dims=("year", "scenario", "inv_step"),
                 coords={"year": year, "scenario": scenario, "inv_step": inv_step},
                 name="battery_effective_energy_capacity",
+            )
+            # Epigraph for the battery energy CAPEX amortized over the BINDING life:
+            # >= calendar annuity and >= cycle-limited annuity, so at the optimum it
+            # equals max(the two) = CAPEX amortized over min(calendar, cycle) life. This
+            # keeps degradation inside the annuity/no-salvage cash-flow convention (no
+            # double-counting wear charge).
+            vars["battery_replacement_cost"] = model.add_variables(
+                lower=0.0,
+                dims=("year", "scenario", "inv_step"),
+                coords={"year": year, "scenario": scenario, "inv_step": inv_step},
+                name="battery_replacement_cost",
             )
 
     # Lost load [kWh]

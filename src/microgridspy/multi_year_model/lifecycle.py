@@ -130,8 +130,33 @@ def repeating_degradation_factor(
     rate = xr.DataArray(degradation_rate).clip(min=0.0)
     age = replacement_cycle_age(sets, lifetime_years)
     # Capacity is at nominal level in the commissioning year, then degrades within each cycle.
-    factor = (1.0 - rate) ** (age - 1.0)
-    return xr.where(active > 0.0, factor, 0.0)
+    if "year" not in getattr(rate, "dims", ()):
+        factor = (1.0 - rate) ** (age - 1.0)
+        return xr.where(active > 0.0, factor, 0.0)
+    # Year-varying rate (e.g. temperature-derived calendar rate): the factor is the
+    # cumulative product of (1 - rate_j) over the calendar years the cohort has already
+    # lived within its current replacement cycle. Reduces to (1-rate)^(age-1) for a
+    # constant rate. Computed at build time, so an explicit loop is fine.
+    year_coord = sets.coords["year"]
+    rate_y = np.asarray(rate.reindex(year=year_coord).values, dtype=float).reshape(-1)
+    age_iy = age.transpose("inv_step", "year").values
+    active_iy = replacement_active_mask(sets).transpose("inv_step", "year").values
+    one_minus = 1.0 - rate_y
+    K, Y = age_iy.shape
+    fac = np.zeros((K, Y), dtype=float)
+    for k in range(K):
+        for j in range(Y):
+            if active_iy[k, j] <= 0.0:
+                continue
+            a = int(round(float(age_iy[k, j])))
+            start = max(j - (a - 1), 0)
+            fac[k, j] = float(np.prod(one_minus[start:j])) if j > start else 1.0
+    out = xr.DataArray(
+        fac,
+        coords={"inv_step": sets.coords["inv_step"], "year": year_coord},
+        dims=("inv_step", "year"),
+    )
+    return xr.where(active > 0.0, out, 0.0)
 
 
 def discounted_annuity_tail_memo(

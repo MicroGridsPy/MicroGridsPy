@@ -55,11 +55,10 @@ class Params:
     battery_discharge_efficiency: xr.DataArray | None
     battery_initial_soc: xr.DataArray | None
     battery_initial_soh: xr.DataArray | None
+    battery_end_of_life_soh: xr.DataArray | None
     battery_depth_of_discharge: xr.DataArray | None
     battery_max_charge_c_rate: xr.DataArray | None
     battery_max_discharge_c_rate: xr.DataArray | None
-    battery_cycle_fade_coefficient_per_kwh_throughput: xr.DataArray | None
-    battery_calendar_time_increment_per_year: xr.DataArray | None
     battery_capacity_degradation_rate_per_year: xr.DataArray | None
 
     # Generator / fuel
@@ -89,7 +88,6 @@ class Params:
     # Optional curve vars + coord
     generator_eff_curve_rel_power: xr.DataArray | None
     generator_eff_curve_eff: xr.DataArray | None
-    curve_point: xr.DataArray | None
 
     def is_grid_on(self) -> bool:
         return bool((self.settings.get("grid", {}) or {}).get("on_grid", False))
@@ -106,7 +104,6 @@ def get_params(ds: xr.Dataset) -> Params:
     def _opt(name: str) -> xr.DataArray | None:
         return ds[name] if name in ds.data_vars else None
 
-    curve_point = ds.coords["curve_point"] if "curve_point" in ds.coords else None
 
     return Params(
         settings=settings,
@@ -152,13 +149,10 @@ def get_params(ds: xr.Dataset) -> Params:
         battery_discharge_efficiency=_opt("battery_discharge_efficiency"),
         battery_initial_soc=_opt("battery_initial_soc"),
         battery_initial_soh=_opt("battery_initial_soh"),
+        battery_end_of_life_soh=_opt("battery_end_of_life_soh"),
         battery_depth_of_discharge=_opt("battery_depth_of_discharge"),
         battery_max_charge_c_rate=_opt("battery_max_charge_c_rate"),
         battery_max_discharge_c_rate=_opt("battery_max_discharge_c_rate"),
-        battery_cycle_fade_coefficient_per_kwh_throughput=_opt(
-            "battery_cycle_fade_coefficient_per_kwh_throughput"
-        ),
-        battery_calendar_time_increment_per_year=_opt("battery_calendar_time_increment_per_year"),
         battery_capacity_degradation_rate_per_year=_opt(
             "battery_capacity_degradation_rate_per_year"
         ),
@@ -190,5 +184,4 @@ def get_params(ds: xr.Dataset) -> Params:
         grid_export_price=_opt("grid_export_price"),
         generator_eff_curve_rel_power=_opt("generator_eff_curve_rel_power"),
         generator_eff_curve_eff=_opt("generator_eff_curve_eff"),
-        curve_point=curve_point,
     )

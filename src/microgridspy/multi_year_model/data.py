@@ -9,19 +9,16 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from microgridspy.data_pipeline.battery_calendar_fade_model import (
-    InputValidationError as BatteryCalendarFadeInputValidationError,
-)
-from microgridspy.data_pipeline.battery_calendar_fade_model import (
-    load_battery_calendar_fade_curve_dataset,
-)
 from microgridspy.data_pipeline.battery_degradation_model import (
     InputValidationError as BatteryDegradationInputValidationError,
 )
 from microgridspy.data_pipeline.battery_degradation_model import (
-    derive_cycle_fade_coefficient_from_cycle_life,
     get_battery_degradation_settings,
-    suppress_exogenous_battery_capacity_degradation_when_endogenous,
+)
+from microgridspy.data_pipeline.battery_degradation_coefficients import (
+    alpha_hourly,
+    evaluate_degradation_coefficients,
+    normalize_chemistry,
 )
 from microgridspy.data_pipeline.battery_loss_model import (
     CONVEX_LOSS_EPIGRAPH,
@@ -411,6 +408,88 @@ def _load_load_demand_csv(
     ).transpose("year", "period", "scenario")
 
     return da
+
+
+# -----------------------------------------------------------------------------
+# load ambient temperature from CSV template (same layout as load_demand)
+# -----------------------------------------------------------------------------
+def _load_ambient_temperature_csv(
+    path: Path,
+    *,
+    period_coord: xr.DataArray,
+    scenario_coord: xr.DataArray,
+    year_coord: xr.DataArray,
+) -> xr.DataArray:
+    """
+    Parse ambient_temperature.csv, which shares the multi-year load_demand.csv
+    2-row header layout (scenario, year) with one hourly column per combination.
+    Values are ambient/environment temperature in degrees Celsius. Returns an
+    xr.DataArray with dims (year, period, scenario).
+    """
+    if not path.exists():
+        raise InputValidationError(
+            f"Missing required file: {path}. ambient_temperature.csv is required when "
+            "battery degradation (cycle fade) is active, because the semi-empirical "
+            "degradation coefficients depend on ambient temperature."
+        )
+
+    df = read_csv_with_format(path, header=[0, 1])
+
+    if ("meta", "hour") not in df.columns:
+        raise InputValidationError(
+            f"{path.name}: missing required column ('meta','hour'). "
+            "Time-series templates must include meta/hour as the first column."
+        )
+
+    hour = pd.to_numeric(df[("meta", "hour")], errors="coerce")
+    if hour.isna().any():
+        raise InputValidationError(f"{path.name}: meta/hour contains non-numeric values.")
+    hour = hour.astype(int).to_numpy()
+    expected = np.asarray(period_coord.values, dtype=int)
+    if hour.shape[0] != expected.shape[0]:
+        raise InputValidationError(
+            f"{path.name}: expected {expected.shape[0]} hours, got {hour.shape[0]}."
+        )
+    if not np.array_equal(hour, expected):
+        mismatch_idx = int(np.where(hour != expected)[0][0])
+        raise InputValidationError(
+            f"{path.name}: meta/hour does not match sets.period. "
+            f"First mismatch at row {mismatch_idx}: file={hour[mismatch_idx]} vs sets={expected[mismatch_idx]}."
+        )
+
+    scenario_labels = [str(s) for s in scenario_coord.values.tolist()]
+    year_labels = [str(y) for y in year_coord.values.tolist()]
+    required = [(s, y) for s in scenario_labels for y in year_labels]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        missing_names = ", ".join([f"({a},{b})" for a, b in missing[:12]])
+        more = "" if len(missing) <= 12 else f" ... (+{len(missing) - 12} more)"
+        raise InputValidationError(
+            f"{path.name}: missing scenario/year columns: {missing_names}{more}. "
+            f"Expected all combinations of scenarios={scenario_labels} and years={year_labels}."
+        )
+
+    mat = df.loc[:, required].to_numpy()
+    mat = pd.DataFrame(mat).apply(pd.to_numeric, errors="coerce").to_numpy()
+    if np.isnan(mat).any():
+        r, c = np.argwhere(np.isnan(mat))[0]
+        s, y = required[int(c)]
+        raise InputValidationError(
+            f"{path.name}: found missing/non-numeric temperature value at hour={hour[int(r)]}, "
+            f"scenario='{s}', year='{y}'."
+        )
+
+    n_p = int(period_coord.size)
+    n_s = int(scenario_coord.size)
+    n_y = int(year_coord.size)
+    mat3 = mat.reshape(n_p, n_s, n_y)
+    return xr.DataArray(
+        mat3,
+        coords={"period": period_coord, "scenario": scenario_coord, "year": year_coord},
+        dims=("period", "scenario", "year"),
+        name="ambient_temperature",
+        attrs={"units": "degC", "source_file": str(path)},
+    ).transpose("year", "period", "scenario")
 
 
 # -----------------------------------------------------------------------------
@@ -875,8 +954,7 @@ def _load_battery_yaml(
     scenario_coord: xr.DataArray,
     inv_step_coord: xr.DataArray,
     require_initial_soh: bool = False,
-    require_cycle_fade_coefficient: bool = False,
-    require_calendar_time_increment: bool = False,
+    require_chemistry: bool = False,
 ) -> xr.Dataset:
     """Load dynamic battery parameters from the current shared-technology schema.
 
@@ -933,21 +1011,12 @@ def _load_battery_yaml(
         "initial_soh": 1.0,
         "end_of_life_soh": np.nan,
         "cycle_lifetime_to_eol_cycles": np.nan,
-        "cycle_fade_coefficient_per_kwh_throughput": np.nan,
-        "calendar_time_increment_per_year": 1.0,
     }
     REQUIRED_CONDITIONAL_TECHNICAL = {
-        key
-        for key, required in {
-            "initial_soh": require_initial_soh,
-            "cycle_fade_coefficient_per_kwh_throughput": require_cycle_fade_coefficient,
-            "calendar_time_increment_per_year": require_calendar_time_increment,
-        }.items()
-        if required
+        key for key, required in {"initial_soh": require_initial_soh}.items() if required
     }
     SHARED_TECHNICAL_PATH_KEYS = [
         "efficiency_curve_csv",
-        "calendar_fade_curve_csv",
     ]
     if "by_step" in bat:
         raise InputValidationError(
@@ -998,13 +1067,6 @@ def _load_battery_yaml(
     else:
         if not isinstance(legacy_tech, dict):
             raise InputValidationError(f"{path.name}: missing/invalid battery.technical mapping.")
-        if (
-            "calendar_time_increment_per_year" not in legacy_tech
-            and "calendar_time_increment_per_step" in legacy_tech
-        ):
-            legacy_tech["calendar_time_increment_per_year"] = legacy_tech[
-                "calendar_time_increment_per_step"
-            ]
         if "max_discharge_c_rate" not in legacy_tech and "max_discharge_time_hours" in legacy_tech:
             legacy_hours = _as_float_or_nan(
                 legacy_tech.get("max_discharge_time_hours"),
@@ -1085,10 +1147,21 @@ def _load_battery_yaml(
                 "scenario_dependent": False,
             },
         )
+    # Electrochemistry (string, non-numeric) selects the semi-empirical degradation curves.
+    raw_chemistry = legacy_tech.get("chemistry", None) if isinstance(legacy_tech, dict) else None
+    battery_chemistry: str | None = None
+    if raw_chemistry not in (None, ""):
+        battery_chemistry = normalize_chemistry(raw_chemistry)
+    elif require_chemistry:
+        raise InputValidationError(
+            f"{path.name}: battery.technical.chemistry is required when battery degradation "
+            "is active. Allowed values: ['LFP', 'NMC', 'lead_acid']."
+        )
+
     ds = xr.Dataset(data_vars=data_vars)
     ds.attrs["battery_label"] = str(bat.get("label", "Battery"))
+    ds.attrs["battery_chemistry"] = battery_chemistry
     ds.attrs["efficiency_curve_file"] = shared_paths.get("efficiency_curve_csv", None)
-    ds.attrs["battery_calendar_fade_curve_file"] = shared_paths.get("calendar_fade_curve_csv", None)
     ds.attrs["settings"] = {"inputs_loaded": {"battery_yaml": str(path)}, "formulation": "dynamic"}
     return ds
 
@@ -1992,24 +2065,13 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
         require_initial_soh=bool(
             battery_degradation_settings.get("endogenous_degradation_enabled", False)
         ),
-        require_cycle_fade_coefficient=False,
-        require_calendar_time_increment=bool(
-            battery_degradation_settings.get("calendar_fade_enabled", False)
-        ),
+        require_chemistry=bool(battery_degradation_settings.get("cycle_fade_enabled", False)),
     )
-    active_battery_capacity_degradation_rate, ignored_exogenous_battery_degradation = (
-        suppress_exogenous_battery_capacity_degradation_when_endogenous(
-            bat_params_ds.get("battery_capacity_degradation_rate_per_year", None),
-            calendar_fade_enabled=bool(
-                battery_degradation_settings.get("calendar_fade_enabled", False)
-            ),
-        )
+    # The flat exogenous yearly capacity-degradation rate (time-based) coexists with
+    # throughput-based cycle fade; they represent different ageing channels.
+    active_battery_capacity_degradation_rate = bat_params_ds.get(
+        "battery_capacity_degradation_rate_per_year", None
     )
-    if active_battery_capacity_degradation_rate is not None:
-        bat_params_ds = bat_params_ds.copy()
-        bat_params_ds["battery_capacity_degradation_rate_per_year"] = (
-            active_battery_capacity_degradation_rate
-        )
     active_battery_exogenous_degradation = False
     if active_battery_capacity_degradation_rate is not None:
         vals = np.asarray(active_battery_capacity_degradation_rate.values, dtype=float)
@@ -2017,57 +2079,6 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
         active_battery_exogenous_degradation = bool(
             vals.size > 0 and float(np.max(np.abs(vals))) > 0.0
         )
-    battery_calendar_curve_ds = None
-    battery_calendar_curve_path = bat_params_ds.attrs.get("battery_calendar_fade_curve_file", None)
-    if battery_degradation_settings.get("calendar_fade_enabled", False):
-        raw_curve_path = battery_calendar_curve_path or battery_degradation_settings.get(
-            "battery_calendar_fade_curve_csv"
-        )
-        if not raw_curve_path:
-            raise InputValidationError(
-                "battery.yaml: battery.technical.calendar_fade_curve_csv is required when calendar fade is enabled."
-            )
-        curve_path = Path(str(raw_curve_path))
-        if not curve_path.is_absolute():
-            curve_path = paths.inputs_dir / curve_path
-        try:
-            curve_ds = load_battery_calendar_fade_curve_dataset(curve_path)
-        except BatteryCalendarFadeInputValidationError as exc:
-            raise InputValidationError(str(exc)) from exc
-        calendar_curve_point = xr.IndexVariable(
-            "battery_calendar_curve_point", curve_ds.coords["battery_calendar_curve_point"].values
-        )
-        calendar_segment = xr.IndexVariable(
-            "battery_calendar_segment", curve_ds.coords["battery_calendar_segment"].values
-        )
-        battery_calendar_curve_ds = xr.Dataset(
-            data_vars={
-                "battery_calendar_soc_curve_pu": xr.DataArray(
-                    np.asarray(curve_ds["battery_calendar_soc_curve_pu"].values, dtype=float),
-                    coords={"battery_calendar_curve_point": calendar_curve_point},
-                    dims=("battery_calendar_curve_point",),
-                ),
-                "battery_calendar_fade_curve_coefficient_per_year": xr.DataArray(
-                    np.asarray(
-                        curve_ds["battery_calendar_fade_curve_coefficient_per_year"].values,
-                        dtype=float,
-                    ),
-                    coords={"battery_calendar_curve_point": calendar_curve_point},
-                    dims=("battery_calendar_curve_point",),
-                ),
-                "battery_calendar_fade_slope": xr.DataArray(
-                    np.asarray(curve_ds["battery_calendar_fade_slope"].values, dtype=float),
-                    coords={"battery_calendar_segment": calendar_segment},
-                    dims=("battery_calendar_segment",),
-                ),
-                "battery_calendar_fade_intercept": xr.DataArray(
-                    np.asarray(curve_ds["battery_calendar_fade_intercept"].values, dtype=float),
-                    coords={"battery_calendar_segment": calendar_segment},
-                    dims=("battery_calendar_segment",),
-                ),
-            }
-        )
-        battery_degradation_settings["battery_calendar_fade_curve_csv"] = str(curve_path)
     battery_degradation_settings["initial_soh"] = float(
         bat_params_ds["battery_initial_soh"].item()
         if "battery_initial_soh" in bat_params_ds.data_vars
@@ -2085,54 +2096,89 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
         and np.isfinite(float(bat_params_ds["battery_cycle_lifetime_to_eol_cycles"].item()))
         else battery_degradation_settings.get("cycle_lifetime_to_eol_cycles", None)
     )
-    legacy_cycle_fade_coefficient = (
-        float(bat_params_ds["battery_cycle_fade_coefficient_per_kwh_throughput"].item())
-        if "battery_cycle_fade_coefficient_per_kwh_throughput" in bat_params_ds.data_vars
-        and np.isfinite(
-            float(bat_params_ds["battery_cycle_fade_coefficient_per_kwh_throughput"].item())
-        )
-        else battery_degradation_settings.get("cycle_fade_coefficient_per_kwh_throughput", None)
-    )
     if battery_degradation_settings.get("cycle_fade_enabled", False):
-        cycle_lifetime_to_eol_cycles = battery_degradation_settings.get(
-            "cycle_lifetime_to_eol_cycles", None
-        )
-        end_of_life_soh = battery_degradation_settings.get("end_of_life_soh", None)
-        if cycle_lifetime_to_eol_cycles is not None and end_of_life_soh is not None:
-            battery_degradation_settings["cycle_fade_coefficient_per_kwh_throughput"] = float(
-                derive_cycle_fade_coefficient_from_cycle_life(
-                    initial_soh=float(battery_degradation_settings["initial_soh"]),
-                    end_of_life_soh=float(end_of_life_soh),
-                    cycle_lifetime_to_eol_cycles=float(cycle_lifetime_to_eol_cycles),
-                    reference_depth_of_discharge=float(
-                        bat_params_ds["battery_depth_of_discharge"].item()
-                    ),
-                )
-            )
-            battery_degradation_settings["cycle_fade_input_mode"] = "derived_from_cycle_lifetime"
-        elif legacy_cycle_fade_coefficient is not None:
-            battery_degradation_settings["cycle_fade_coefficient_per_kwh_throughput"] = float(
-                legacy_cycle_fade_coefficient
-            )
-            battery_degradation_settings["cycle_fade_input_mode"] = "direct_coefficient"
-        else:
+        # The semi-empirical curves are the single coefficient source. Require the
+        # SoH span and rated cycle life so beta(T) can be scaled and the cycle-fade
+        # wear cost / usable-life feedback are well defined.
+        if battery_degradation_settings.get("cycle_lifetime_to_eol_cycles", None) is None:
             raise InputValidationError(
-                "battery.yaml: enable cycle fade only when either battery.technical.cycle_lifetime_to_eol_cycles "
-                "and battery.technical.end_of_life_soh are provided, or the legacy "
-                "battery.technical.cycle_fade_coefficient_per_kwh_throughput is provided."
+                "battery.yaml: enable cycle fade only when "
+                "battery.technical.cycle_lifetime_to_eol_cycles is provided (it scales the "
+                "semi-empirical cycle coefficient to the battery's rated cycle life)."
             )
-    else:
-        battery_degradation_settings["cycle_fade_coefficient_per_kwh_throughput"] = float(
-            legacy_cycle_fade_coefficient if legacy_cycle_fade_coefficient is not None else 0.0
+        if battery_degradation_settings.get("end_of_life_soh", None) is None:
+            raise InputValidationError(
+                "battery.yaml: enable cycle fade only when battery.technical.end_of_life_soh "
+                "is provided (it sets the usable-life span used by the cycle-fade wear cost)."
+            )
+
+    # ------------------------------------------------------------------
+    # semi-empirical degradation coefficients (single source).
+    # When cycle fade is active, load the ambient-temperature series and evaluate
+    # the temperature- and DoD-aware alpha (calendar) / beta (cycle) coefficient
+    # fields. These are the canonical, physically-grounded coefficients; they are
+    # attached to the dataset for the endogenous degradation layer to consume.
+    # ------------------------------------------------------------------
+    if battery_degradation_settings.get("cycle_fade_enabled", False):
+        chemistry = normalize_chemistry(bat_params_ds.attrs.get("battery_chemistry", None))
+        dod_value = float(bat_params_ds["battery_depth_of_discharge"].item())
+        user_cycle_life = battery_degradation_settings.get("cycle_lifetime_to_eol_cycles", None)
+        ambient_path = paths.inputs_dir / "ambient_temperature.csv"
+        ambient_temperature = _load_ambient_temperature_csv(
+            ambient_path,
+            period_coord=period_coord,
+            scenario_coord=scenario_coord,
+            year_coord=year_coord,
         )
-        battery_degradation_settings["cycle_fade_input_mode"] = (
-            "direct_coefficient" if legacy_cycle_fade_coefficient is not None else "disabled"
+        coeffs = evaluate_degradation_coefficients(
+            chemistry=chemistry,
+            depth_of_discharge=dod_value,
+            temperature_degc=ambient_temperature.values,
+            user_cycle_life=user_cycle_life,
         )
-    battery_degradation_settings["battery_calendar_time_increment_per_year"] = float(
-        bat_params_ds["battery_calendar_time_increment_per_year"].item()
-        if "battery_calendar_time_increment_per_year" in bat_params_ds.data_vars
-        else battery_degradation_settings.get("battery_calendar_time_increment_per_year", 1.0)
-    )
+        alpha_da = xr.DataArray(
+            coeffs["alpha"],
+            coords=ambient_temperature.coords,
+            dims=ambient_temperature.dims,
+            name="battery_alpha_calendar",
+            attrs={"units": "fraction_nameplate_per_hour", "chemistry": chemistry},
+        )
+        beta_da = xr.DataArray(
+            coeffs["beta"],
+            coords=ambient_temperature.coords,
+            dims=ambient_temperature.dims,
+            name="battery_beta_cycle",
+            attrs={
+                "units": "fraction_nameplate_per_kwh_exchange",
+                "chemistry": chemistry,
+                "beta_dod_band": coeffs["beta_dod_band"],
+                "cycle_life_scaling": coeffs["cycle_life_scaling"],
+            },
+        )
+        # Calendar rate per year: r_cal,y = alpha_hour(T_bar_y) * 8760, where T_bar_y is
+        # the annual mean ambient temperature (over hours and scenarios; nominal capacity
+        # is a first-stage planning quantity, so the rate is scenario-independent). This
+        # keeps calendar ageing exogenous and static-within-solve but temperature-aware,
+        # replacing the flat user %/yr. It feeds the availability factor.
+        t_bar_y = ambient_temperature.mean(dim=("period", "scenario"))  # (year,)
+        alpha_mean = alpha_hourly(chemistry, dod_value, t_bar_y.values)
+        calendar_rate_year = xr.DataArray(
+            np.clip(alpha_mean * 8760.0, 0.0, None),
+            coords={"year": year_coord},
+            dims=("year",),
+            name="battery_calendar_rate_per_year",
+            attrs={"units": "fraction_nameplate_per_year", "chemistry": chemistry},
+        )
+        data["ambient_temperature"] = ambient_temperature
+        data["battery_alpha_calendar"] = alpha_da
+        data["battery_beta_cycle"] = beta_da
+        data["battery_calendar_rate_per_year"] = calendar_rate_year
+        battery_degradation_settings["chemistry"] = chemistry
+        battery_degradation_settings["coefficient_source"] = "semi_empirical"
+        battery_degradation_settings["alpha_soc_band_percent"] = coeffs["alpha_soc_band_percent"]
+        battery_degradation_settings["beta_dod_band"] = coeffs["beta_dod_band"]
+        battery_degradation_settings["cycle_life_scaling"] = coeffs["cycle_life_scaling"]
+
     battery_curve_path = bat_params_ds.attrs.get("efficiency_curve_file", None)
     battery_curve_ds = None
     if battery_loss_model == CONVEX_LOSS_EPIGRAPH:
@@ -2222,7 +2268,6 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
         fuel_ds,
         curve_ds,
         battery_curve_ds,
-        battery_calendar_curve_ds,
         compat="override",
     )
     data.attrs["conversion_technology_by_resource"] = dict(
@@ -2320,7 +2365,6 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
                 "renewables_yaml": str(renewables_path),
                 "battery_yaml": str(battery_path),
                 "battery_efficiency_curve_csv": battery_curve_path,
-                "battery_calendar_fade_curve_csv": battery_calendar_curve_path,
                 "generator_yaml": str(genfuel_path),
             },
         }
@@ -2349,9 +2393,6 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
     }
     data.attrs["settings"]["battery_model"]["exogenous_capacity_degradation_active"] = bool(
         active_battery_exogenous_degradation
-    )
-    data.attrs["settings"]["battery_model"]["exogenous_capacity_degradation_ignored"] = bool(
-        ignored_exogenous_battery_degradation
     )
 
     return data
