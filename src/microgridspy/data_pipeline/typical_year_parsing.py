@@ -183,6 +183,60 @@ def _load_load_demand_csv(
 
 
 # -----------------------------------------------------------------------------
+# load ambient temperature from CSV template (same layout as load_demand)
+# -----------------------------------------------------------------------------
+def _load_ambient_temperature_csv(
+    path: Path,
+    *,
+    period_coord: xr.DataArray,
+    scenario_coord: xr.DataArray,
+) -> xr.DataArray:
+    """
+    Parse the typical-year ambient_temperature.csv (same 2-row header as
+    load_demand.csv: scenario, 'typical_year'). Values are ambient/environment
+    temperature in degrees Celsius. Returns dims (period, scenario).
+    """
+    if not path.exists():
+        raise InputValidationError(
+            f"Missing required file: {path}. ambient_temperature.csv is required when "
+            "battery cycle-fade degradation is active, because the semi-empirical "
+            "degradation coefficient depends on ambient temperature."
+        )
+    df = _load_csv(path, header=[0, 1])
+    hour, _ = _validate_meta_hour_2level(
+        df,
+        path=path,
+        period_coord=period_coord,
+        missing_col_suffix="Your time series templates must include meta/hour as the first column.",
+    )
+    scenario_labels = _scenario_labels(scenario_coord)
+    missing_cols = [
+        (s, "typical_year") for s in scenario_labels if (s, "typical_year") not in df.columns
+    ]
+    if missing_cols:
+        missing_names = ", ".join([f"({a},{b})" for a, b in missing_cols])
+        raise InputValidationError(
+            f"{path.name}: missing scenario columns: {missing_names}. "
+            f"Expected scenarios: {scenario_labels} (each with 'typical_year')."
+        )
+    mat = df.loc[:, [(s, "typical_year") for s in scenario_labels]].to_numpy()
+    mat = coerce_numeric_array(mat)
+    if np.isnan(mat).any():
+        r, c = np.argwhere(np.isnan(mat))[0]
+        raise InputValidationError(
+            f"{path.name}: found missing/non-numeric temperature value at hour={hour[r]}, "
+            f"scenario='{scenario_labels[int(c)]}'."
+        )
+    return xr.DataArray(
+        mat,
+        coords={"period": period_coord, "scenario": scenario_coord},
+        dims=("period", "scenario"),
+        name="ambient_temperature",
+        attrs={"units": "degC", "source_file": str(path)},
+    )
+
+
+# -----------------------------------------------------------------------------
 # load resource availability from CSV template
 # -----------------------------------------------------------------------------
 def _load_resource_availability_csv(
@@ -620,22 +674,11 @@ def _load_battery_yaml(
 
     raw_curve = tech.get("efficiency_curve_csv", None)
     curve_file = raw_curve.strip() if isinstance(raw_curve, str) and raw_curve.strip() else None
-    raw_calendar_curve = tech.get("calendar_fade_curve_csv", None)
-    calendar_curve_file = (
-        raw_calendar_curve.strip()
-        if isinstance(raw_calendar_curve, str) and raw_calendar_curve.strip()
-        else None
-    )
     legacy_time_fields = [
         key for key in ("max_charge_time_hours", "max_discharge_time_hours") if key in tech
     ]
 
     tech_vals = {}
-    if "initial_soh" in tech:
-        raise InputValidationError(
-            f"{path.name}: `battery.technical.initial_soh` is not part of the steady_state typical-year battery schema. "
-            "Remove it from Typical Year projects."
-        )
     for k in TECHNICAL:
         if k not in tech:
             if k in OPTIONAL_TECHNICAL:
@@ -722,22 +765,24 @@ def _load_battery_yaml(
         },
     )
 
+    # Optional semi-empirical cycle-fade degradation inputs (used only when
+    # cycle fade is enabled; validated in the loader). In the typical-year
+    # formulation these drive a throughput wear-cost term, not a capacity state.
+    for _deg_key in ("initial_soh", "end_of_life_soh", "cycle_lifetime_to_eol_cycles"):
+        if _deg_key in tech and tech.get(_deg_key) not in (None, ""):
+            data_vars[f"{PREFIX}{_deg_key}"] = xr.DataArray(
+                _as_float(tech.get(_deg_key), name=f"battery/technical/{_deg_key}", default=0.0),
+                dims=(),
+                name=f"{PREFIX}{_deg_key}",
+                attrs={"source_file": str(path), "component": "battery", "original_key": _deg_key},
+            )
+
     ds = xr.Dataset(data_vars=data_vars)
     ds.attrs["battery_label"] = str(bat.get("label", "Battery"))
     ds.attrs["efficiency_curve_file"] = curve_file
-    if "cycle_fade_coefficient_per_kwh_throughput" in tech:
-        ds.attrs["battery_cycle_fade_coefficient_override"] = tech.get(
-            "cycle_fade_coefficient_per_kwh_throughput"
-        )
-    ds.attrs["battery_calendar_fade_curve_csv_override"] = calendar_curve_file
-    if "calendar_time_increment_mode" in tech:
-        ds.attrs["battery_calendar_time_increment_mode_override"] = tech.get(
-            "calendar_time_increment_mode"
-        )
-    if "calendar_time_increment_per_step" in tech:
-        ds.attrs["battery_calendar_time_increment_per_step_override"] = tech.get(
-            "calendar_time_increment_per_step"
-        )
+    ds.attrs["battery_chemistry"] = (
+        tech.get("chemistry", None) if tech.get("chemistry", None) not in (None, "") else None
+    )
     if legacy_time_fields:
         ds.attrs["ignored_legacy_technical_keys"] = legacy_time_fields
     ds.attrs["settings"] = {

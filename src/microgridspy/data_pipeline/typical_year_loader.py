@@ -6,6 +6,10 @@ import numpy as np
 import xarray as xr
 
 from microgridspy.data_pipeline import typical_year_parsing as p
+from microgridspy.data_pipeline.battery_degradation_coefficients import (
+    evaluate_degradation_coefficients,
+    normalize_chemistry,
+)
 from microgridspy.data_pipeline.battery_loss_model import (
     CONVEX_LOSS_EPIGRAPH,
     get_battery_loss_model_from_formulation,
@@ -319,12 +323,76 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
         battery_params_ds=bat_params_ds,
         inputs_dir=paths.inputs_dir,
     )
-    battery_degradation_settings = {
-        "cycle_fade_enabled": False,
-        "calendar_fade_enabled": False,
-    }
-    battery_calendar_curve_ds = None
-    battery_calendar_curve_path = None
+    # ------------------------------------------------------------------
+    # Semi-empirical cycle-fade degradation (typical-year: throughput WEAR COST,
+    # no capacity state). When enabled, load ambient temperature and evaluate the
+    # temperature- and DoD-aware cycle coefficient beta(T); the objective charges
+    # a marginal wear cost per unit of throughput. No convex-loss model required.
+    # ------------------------------------------------------------------
+    battery_model_cfg = formulation.get("battery_model", {}) or {}
+    degradation_cfg = battery_model_cfg.get("degradation_model", {}) or {}
+    cycle_fade_enabled = bool(degradation_cfg.get("cycle_fade_enabled", False))
+    battery_degradation_settings: dict = {"cycle_fade_enabled": cycle_fade_enabled}
+    ambient_temperature_da = None
+    beta_cycle_da = None
+    if cycle_fade_enabled:
+        chemistry = normalize_chemistry(bat_params_ds.attrs.get("battery_chemistry", None))
+
+        def _req_scalar(name: str, human: str) -> float:
+            if name not in bat_params_ds.data_vars or not np.isfinite(
+                float(bat_params_ds[name].item())
+            ):
+                raise InputValidationError(
+                    f"battery.technical.{human} is required in battery.yaml when battery "
+                    "cycle-fade degradation is enabled."
+                )
+            return float(bat_params_ds[name].item())
+
+        initial_soh = _req_scalar("battery_initial_soh", "initial_soh")
+        end_of_life_soh = _req_scalar("battery_end_of_life_soh", "end_of_life_soh")
+        user_cycle_life = _req_scalar(
+            "battery_cycle_lifetime_to_eol_cycles", "cycle_lifetime_to_eol_cycles"
+        )
+        if not (0.0 < end_of_life_soh < initial_soh <= 1.0):
+            raise InputValidationError(
+                "battery.technical requires 0 < end_of_life_soh < initial_soh <= 1 for cycle fade."
+            )
+        dod_value = float(bat_params_ds["battery_depth_of_discharge"].item())
+        ambient_temperature_da = p._load_ambient_temperature_csv(
+            paths.inputs_dir / "ambient_temperature.csv",
+            period_coord=sets.coords["period"],
+            scenario_coord=sets.coords["scenario"],
+        )
+        coeffs = evaluate_degradation_coefficients(
+            chemistry=chemistry,
+            depth_of_discharge=dod_value,
+            temperature_degc=ambient_temperature_da.values,
+            user_cycle_life=user_cycle_life,
+        )
+        beta_cycle_da = xr.DataArray(
+            coeffs["beta"],
+            coords=ambient_temperature_da.coords,
+            dims=ambient_temperature_da.dims,
+            name="battery_beta_cycle",
+            attrs={
+                "units": "fraction_nameplate_per_kwh_exchange",
+                "chemistry": chemistry,
+                "beta_dod_band": coeffs["beta_dod_band"],
+                "cycle_life_scaling": coeffs["cycle_life_scaling"],
+            },
+        )
+        battery_degradation_settings.update(
+            {
+                "chemistry": chemistry,
+                "coefficient_source": "semi_empirical",
+                "cycle_fade_mode": "throughput_wear_cost",
+                "initial_soh": initial_soh,
+                "end_of_life_soh": end_of_life_soh,
+                "cycle_lifetime_to_eol_cycles": user_cycle_life,
+                "beta_dod_band": coeffs["beta_dod_band"],
+                "cycle_life_scaling": coeffs["cycle_life_scaling"],
+            }
+        )
     genfuel_path = paths.inputs_dir / "generator.yaml"
     gen_ds, fuel_ds, curve_ds, genfuel_meta = p._load_generator_and_fuel_yaml(
         genfuel_path, inputs_dir=paths.inputs_dir, scenario_coord=scenario_coord
@@ -338,9 +406,12 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
         fuel_ds,
         curve_ds,
         battery_curve_ds,
-        battery_calendar_curve_ds,
         compat="override",
     )
+
+    if cycle_fade_enabled:
+        data["ambient_temperature"] = ambient_temperature_da
+        data["battery_beta_cycle"] = beta_cycle_da
 
     data.attrs["settings"] = {
         "project_name": project_name,
@@ -371,10 +442,6 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
     if battery_curve_path is not None:
         data.attrs["settings"]["inputs_loaded"]["battery_efficiency_curve_csv"] = str(
             battery_curve_path
-        )
-    if battery_calendar_curve_path is not None:
-        data.attrs["settings"]["inputs_loaded"]["battery_calendar_fade_curve_csv"] = str(
-            battery_calendar_curve_path
         )
     data.attrs["settings"]["battery_label"] = bat_params_ds.attrs.get("battery_label", "Battery")
     data.attrs["settings"]["battery_model"] = {
