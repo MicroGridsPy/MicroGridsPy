@@ -113,7 +113,6 @@ available (degraded) cohort capacity $\widetilde{C}^{\text{gen}}_{y,k}$.
 | Mode | $N^{\text{on}}$ | Behaviour |
 |---|---|---|
 | `off` | — | constant full-load efficiency (nominal relationship) |
-| `relaxed` | continuous | committed capacity is fractional; a linear program and a valid lower bound. At the optimum it commits exactly the online capacity it needs, so it reproduces constant full-load efficiency |
 | `integer` | integer | whole online units (clustered unit commitment, after Palmintier & Webster). The no-load fuel and the minimum stable load become binding, so the genset refuses sub-minimum loads and pays the part-load penalty |
 
 Clustered integer commitment uses a **single integer per timestep** (per cohort), keeping the
@@ -133,6 +132,5 @@ efficiency.*
     no-load fuel intercept; the input curve is validated at model build (strictly positive
     efficiencies, a non-decreasing implied fuel curve). The `integer` mode adds a minimum stable
     load and true on/off behaviour, but **start-up and shut-down costs and minimum up/down
-    times are not yet modelled**. The `relaxed` mode is a pure LP that stays a valid lower bound
-    but does not by itself penalise part-load operation — use `integer` (typically in the
-    typical-year formulation, or with representative periods) when that fidelity matters.
+    times are not yet modelled**. Part-load commitment is a mixed-integer program; over long
+    multi-year horizons pair it with representative periods to keep it tractable.

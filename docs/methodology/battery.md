@@ -13,7 +13,9 @@ Two representations are supported: a **constant-efficiency** special case, and a
 convex-loss formulation** where AC-side efficiency varies with power. In the **typical-year**
 formulation the battery is a single block operated cyclically over a representative year; in
 the **multi-year** formulation, storage investment is **cohort-based**, enabling cohort
-availability, inter-year state propagation, and degradation. At hourly resolution
+availability and inter-year state propagation. **Semi-empirical degradation** is available in
+both (as a throughput wear cost in the typical-year model and as a capacity-fade state in the
+multi-year model — see [Battery degradation](#battery-degradation)). At hourly resolution
 $\Delta t = 1\,\text{h}$, so power (kW) and one-hour energy transfers (kWh) are interchangeable
 in the storage balance.
 
@@ -112,8 +114,18 @@ L^{\text{dis}}_{t,\omega} &\ge m^{\text{dis}}_i\,P^{\text{dis,dc}}_{t,\omega} + 
 \]
 
 The coefficients $m_i, q_i$ are precomputed from the battery efficiency-curve input, keeping the
-optimization **linear and tractable**. Under the advanced model the SOC balance uses the DC-side
-flows,
+optimization **linear and tractable**. The curve is fit through the user's sampled operating
+points only — it is **not** forced through the origin — so the lowest segment can carry a
+positive intercept $q_i\,P^{\text{inv}}$ representing a **no-load / standby loss**. This is what
+lets the model express a physically realistic **peaked** efficiency: efficiency is best near an
+intermediate power and falls at both **very low power** (the fixed standby loss dominates a small
+throughput) and **full power** (conversion and resistive losses grow). A curve anchored at the
+origin would have $L(0)=0$ and could only ever be monotonically *more* efficient at low power,
+which would make the power-dependent model uniformly cheaper than the constant baseline. The
+system boundary is **AC-to-AC** (the inverter/converter plus the cell path), so the one-way
+efficiencies represent the full round-trip conversion of a modern LFP + hybrid-inverter system.
+
+Under the advanced model the SOC balance uses the DC-side flows,
 
 \[
 \text{SOC}_{t,\omega} = \text{SOC}_{t-1,\omega} + P^{\text{ch,dc}}_{t-1,\omega} - P^{\text{dis,dc}}_{t-1,\omega}
@@ -123,111 +135,194 @@ so the constant-efficiency recursion is a **special case**: when the advanced mo
 $\eta_{\text{ch}}, \eta_{\text{dis}}$ are no longer used directly and efficiency is captured
 through explicit losses.
 
-![Battery losses: left, a convex loss curve approximated by piecewise-linear segments; right, the resulting charge and discharge efficiency decreasing with relative DC power](../assets/methodology/battery_loss_curve.png)
+![Battery losses: left, a convex loss curve with a positive no-load intercept approximated by piecewise-linear segments; right, the resulting peaked charge and discharge efficiency versus relative DC power](../assets/methodology/battery_loss_curve.png)
 
 *Power-dependent battery losses and the resulting one-way efficiency. **Left:** the convex loss
-curve approximated through piecewise-linear segments. **Right:** the corresponding charge and
-discharge efficiency, which decrease as relative DC-side power increases.*
+curve, with a positive no-load (standby) intercept, approximated through piecewise-linear
+segments. **Right:** the corresponding charge and discharge efficiency — **peaked** at an
+intermediate power and lower at both very low power (standby-dominated) and full power
+(conversion/resistive losses).*
 
-## Multi-year degradation model
+## Battery degradation
 
-The multi-year implementation includes a hybrid degradation representation combining hourly
-operational effects with yearly capacity updates, capturing three ageing mechanisms: **cycle
-fade** (from hourly throughput), **calendar fade** (applied yearly as a function of average
-SOC), and optional **exogenous annual degradation**. The effective capacity is a **yearly state
-variable**, constant within a year and updated at year transitions.
-
-### Available and effective capacity
-
-Two capacity concepts are distinguished. The **available nominal capacity** of a cohort is
+Battery ageing is represented with a **linearised semi-empirical model**. The idea (after
+[Andrade's decomposition](#references)) is to collapse a physics-grade electro-thermal + ageing
+simulation into a single linear recursion on usable energy capacity,
 
 \[
-\overline{C}^{\text{bat}}_{y,k} = u_k\, C^{\text{bat}}_{\text{nom}}\, a_{y,k}\, g_{y,k}
+E_t = E_{t-1} \;-\; \alpha\, E^{\text{B}} \;-\; \beta\, P^{\text{BE}}_t
 \]
 
-where $u_k$ is the number of units in cohort $k$, $C^{\text{bat}}_{\text{nom}}$ the nominal
-unit capacity, $a_{y,k}$ the activity mask, and $g_{y,k}$ an optional exogenous annual
-degradation factor. The **effective usable capacity** $C^{\text{eff}}_{y,\omega,k} \le
-\overline{C}^{\text{bat}}_{y,k}$ is the usable energy remaining after endogenous degradation;
-it is constant within each year and evolves only across years.
+where $E^{\text{B}}$ is the nameplate energy, $P^{\text{BE}}_t$ the energy exchanged in hour $t$,
+$\alpha$ the **calendar** coefficient (always active, time-based) and $\beta$ the **cycle**
+coefficient (active only when power flows, use-based). The strength of the approach is that
+$\alpha$ and $\beta$ are **pre-fitted, exogenous coefficients**: they already carry the dominant
+stress factors — **temperature**, **depth-of-discharge** and **chemistry** — yet the optimisation
+sees them as constants, so it stays linear.
 
-### Cycle and calendar fade
+### Semi-empirical coefficients $\alpha(T)$ and $\beta(T)$
 
-**Cycle fade** is modelled from hourly throughput,
+Both coefficients are cubic polynomials in a scaled ambient temperature $y = T_{\text{env}}/10$:
 
 \[
-F^{\text{cyc}}_{t,y,\omega,k} = \gamma^{\text{cyc}}\cdot \frac{P^{\text{ch,dc}}_{t,y,\omega,k} + P^{\text{dis,dc}}_{t,y,\omega,k}}{2}
+\alpha_{\text{hour}}(T) = c_1 y^3 + c_2 y^2 + c_3 y + c_4,
+\qquad
+\beta_{\text{hour}}(T) = \big(d_1 y^3 + d_2 y^2 + d_3 y + d_4\big)\cdot \frac{N_{\text{ref}}}{N_{\text{user}}}
 \]
 
-with $\gamma^{\text{cyc}}$ a cycle-degradation coefficient. When derived from a rated cycle life,
-$\gamma^{\text{cyc}} = (\text{SoH}_0-\text{SoH}_{\text{eol}})/(N_{\text{cyc}}\,\text{DoD}\,\text{SoH}_0)$:
-the fade is expressed **per unit of DC throughput relative to the beginning-of-life usable
-capacity**, which is why the initial SoH appears in the denominator. The definition is
-scale-invariant in the installed energy, so it is independent of the nominal unit size.
-**Calendar fade** is applied once per year using the scenario-weighted expected yearly-average
-SOC, through an epigraph:
+The **shape** (the fitted $c_i, d_i$) is built in, selected by **chemistry** ∈ {LFP, NMC,
+lead-acid} and by stress band: $\beta$ per **DoD band** (50–90 % for Li-ion), $\alpha$ per
+**SoC band** chosen from the DoD (deep discharge → high-SoC storage → 20 % band; shallow →
+40 % band). Lead-acid uses a single temperature-independent $\beta$ in $z = 10\,\text{DoD} - 2$.
+The **magnitude** is user-scalable through a parameter you already provide — the **rated cycle
+life** $N_{\text{user}}$ — via the ratio $N_{\text{ref}}/N_{\text{user}}$, which ports the
+validated curve to a battery of any cycle life without re-fitting. This is the same
+"fixed shape × user scale" pattern used by the generator partial-load curve.
+
+![Semi-empirical degradation coefficients: beta rising with temperature for LFP DoD bands and NMC (left), and the annual calendar rate alpha rising with temperature by chemistry and SoC band (right)](../assets/methodology/battery_degradation_coefficients.png)
+
+*Semi-empirical coefficients versus ambient temperature. **Left:** the cycle coefficient
+$\beta(T)$ — rising with temperature, and depth- and chemistry-dependent. **Right:** the calendar
+coefficient expressed as an annual rate $\alpha(\bar T)\cdot 8760$ — rising with temperature and
+higher at higher average SoC. Both are evaluated offline, so the optimisation stays linear.*
+
+These are driven by two inputs, required only when cycle-fade degradation is enabled:
+
+- `ambient_temperature.csv` — an hourly ambient-temperature series (°C), with the same
+  scenario/year layout as `load_demand.csv`;
+- `battery.technical.chemistry` — one of `LFP`, `NMC`, `lead_acid`;
+
+together with `battery.technical.depth_of_discharge` (sets the band), the rated
+`cycle_lifetime_to_eol_cycles`, and the state-of-health span `initial_soh` / `end_of_life_soh`.
+
+### Typical-year: throughput wear cost
+
+The steady-state typical-year model has no multi-year capacity state, so degradation enters purely
+as an **operating cost** proportional to throughput (no new decision variables). Each hour of
+charging/discharging consumes battery life at the temperature- and DoD-aware rate $\beta(T)$, priced
+at the marginal cost of one kWh of capacity fade:
 
 \[
-F^{\text{cal}}_{y,k} \ge a_{y,k}\, \Delta\tau_{\text{yr}}
-\left( m^{\text{cal}}_j\, \overline{\text{SOC}}^{\text{exp}}_{y,k} + q^{\text{cal}}_j\, \overline{C}^{\text{bat}}_{y,k} \right) \quad \forall j
+\text{WearCost} = \sum_{\omega} w_\omega \; c^{\text{repl}} \sum_t \beta_{t,\omega}\,
+\big(P^{\text{ch}}_{t,\omega} + P^{\text{dis}}_{t,\omega}\big),
+\qquad
+c^{\text{repl}} = \frac{\text{CAPEX}}{\text{SoH}_0 - \text{SoH}_{\text{eol}}}
 \]
 
-where $m^{\text{cal}}_j, q^{\text{cal}}_j$ define the piecewise-linear calendar-ageing curve.
-This captures the empirical observation that prolonged operation at high average SOC
-accelerates ageing.
+Hotter operation therefore costs more per cycled kWh. This is a lightweight screening penalty and
+requires neither the convex-loss model nor a capacity state.
 
-![Battery advanced-model inputs: left, one-way efficiency versus relative DC power; right, the calendar-fade coefficient increasing with state of charge](../assets/methodology/battery_efficiency_calendar_curve.png)
+### Multi-year: capacity-fade state
 
-*Inputs to the advanced battery model. **Left:** charge and discharge one-way efficiency versus
-relative DC-side power. **Right:** the calendar-fade coefficient as a function of state of charge
-— prolonged operation at high SOC accelerates long-term ageing.*
-
-### Year-to-year capacity evolution
-
-Effective capacity carries over between years, minus accumulated degradation,
+The dynamic multi-year model tracks an explicit **yearly usable-capacity state** per scenario and
+investment cohort. The **available nominal capacity** of a cohort is
 
 \[
-C^{\text{cont}}_{y,\omega,k} = C^{\text{eff}}_{y-1,\omega,k} - \sum_t F^{\text{cyc}}_{t,y-1,\omega,k} - F^{\text{cal}}_{y-1,k}
+\overline{C}^{\text{bat}}_{y,k} = u_k\, C^{\text{bat}}_{\text{nom}}\, a_{y,k}\, g_{y,k},
 \]
 
-while a newly commissioned cohort is reset to $C^{\text{reset}}_{y,k} = \text{SoH}_0\,
-\overline{C}^{\text{bat}}_{y,k}$. The implemented transition is an upper bound,
+with $u_k$ units, activity mask $a_{y,k}$, and a **calendar-fade factor** $g_{y,k}$ (below). The
+**effective usable capacity** $C^{\text{eff}}_{y,\omega,k}\le \overline{C}^{\text{bat}}_{y,k}$ is
+the energy left after cycle fade; it is constant within a year and evolves across years.
+
+**Cycle fade** is the annual sum of $\beta(T)$ times the DC-side energy exchanged (both directions,
+matching $\beta$'s calibration of $2\,\text{DoD}$ throughput per full cycle):
 
 \[
-C^{\text{eff}}_{y,\omega,k} \le (1-b_{y,k})\, C^{\text{cont}}_{y,\omega,k} + b_{y,k}\, C^{\text{reset}}_{y,k}
+F^{\text{cyc}}_{y,\omega,k} = \sum_t \beta_{t,y,\omega}\,
+\big(P^{\text{ch,dc}}_{t,y,\omega,k} + P^{\text{dis,dc}}_{t,y,\omega,k}\big)
 \]
 
-where $b_{y,k}$ marks commissioning years, and a small objective regularization keeps effective
-capacity at its largest feasible value (so the reported state of health,
-$\text{SoH} = C^{\text{eff}}/\overline{C}^{\text{bat}}$, is the effective-capacity state at the
-optimum). When degradation is enabled, the effective capacity limits the **maximum stored
-energy** through the SOC bounds $(1-\text{DoD})\,C^{\text{eff}}_{y,\omega,k} \le
-\text{SOC}_{t,y,\omega,k} \le C^{\text{eff}}_{y,\omega,k}$. Charge/discharge **power** remains
-limited by the installed inverter power $P^{\text{inv}}$ (and its optional C-rate), i.e. capacity
-fade reduces usable energy but not power capability.
+**Calendar fade** is applied through the exogenous factor $g_{y,k}$, whose **rate is driven by
+$\alpha(T)$** rather than a flat user %/yr:
 
-### Configuration logic
+\[
+r^{\text{cal}}_{y} = \alpha_{\text{hour}}(\bar T_y)\cdot 8760,
+\qquad
+g_{y,k} = \prod_{j=\text{commission}}^{\,y-1}\big(1 - r^{\text{cal}}_{j}\big)
+\]
 
-| Mode | Behaviour |
+where $\bar T_y$ is the annual-mean ambient temperature. The product accumulates over the years a
+cohort has lived and restarts at each replacement; for a constant temperature it reduces to
+$(1-r^{\text{cal}})^{\text{age}-1}$.
+
+The state evolves by carrying capacity forward minus that year's cycle fade, resetting a newly
+commissioned cohort to $C^{\text{reset}}_{y,k} = \text{SoH}_0\,\overline{C}^{\text{bat}}_{y,k}$:
+
+\[
+C^{\text{eff}}_{y,\omega,k} \;\;\{\le\;\text{or}\;=\}\;\;
+\big(C^{\text{eff}}_{y-1,\omega,k} - F^{\text{cyc}}_{y-1,\omega,k}\big)\,(1-b_{y,k}) + C^{\text{reset}}_{y,k}\, b_{y,k}
+\]
+
+The link is an exact **equality** when the availability ceiling does not decline (no calendar rate),
+and an inequality (take the smaller of the carried state and the declining ceiling) otherwise. The
+effective capacity then limits the **stored energy**, so fade shrinks the usable SOC window while
+charge/discharge **power** stays bounded by the inverter:
+
+\[
+(1-\text{DoD})\,C^{\text{eff}}_{y,\omega,k} \le \text{SOC}_{t,y,\omega,k} \le C^{\text{eff}}_{y,\omega,k}
+\]
+
+The reported state of health $\text{SoH} = C^{\text{eff}}/\overline{C}^{\text{bat}}$ is
+reconstructed from this physical recursion.
+
+### Multi-year: replacement economics — amortisation over the binding life
+
+MicroGridsPy costs every asset as a **level annuity** (CRF × CAPEX paid each active year, cost of
+capital included), which is a pay-as-you-go rental: it needs no salvage term and already embeds
+replacement every *calendar* lifetime. Degradation must therefore act on the **effective lifetime**
+— not as a second, parallel wear charge (which would double-count the replacement already priced by
+the annuity). The battery **energy** CAPEX is recovered by amortising it over the **binding life**,
+i.e. the shorter of the calendar life and the cycle-limited life. This is written as a linear
+**max-of-two-annuities** epigraph on a per-cohort cost $Z_{y,\omega,k}$:
+
+\[
+\begin{aligned}
+Z_{y,\omega,k} &\ge \underbrace{u_k\,C^{\text{bat}}_{\text{nom}}\,\text{CAPEX}\,\cdot \text{CRF}(\text{wacc}, L^{\text{cal}})\, a_{y,k}}_{\text{calendar annuity}} \\[4pt]
+Z_{y,\omega,k} &\ge \underbrace{c^{\text{repl}}\,\varphi\; F^{\text{cyc}}_{y,\omega,k}}_{\text{cycle annuity}},
+\qquad \varphi = \text{CRF}(\text{wacc}, L^{\text{cal}})\cdot L^{\text{cal}}
+\end{aligned}
+\]
+
+Minimising $\sum_y \text{disc}_y \sum_\omega w_\omega \sum_k Z_{y,\omega,k}$ drives $Z$ to the
+**maximum** of the two, which equals the CAPEX amortised over $\min(L^{\text{cal}},
+L^{\text{cyc}})$ — the effective (economic = technical) lifetime. The financing gross-up $\varphi$
+is calibrated so the two bounds meet exactly at the crossover (cycle life = calendar life), making
+the switch continuous; $\varphi = 1$ when WACC = 0. The battery **inverter** CAPEX stays
+calendar-amortised.
+
+![Battery CAPEX amortised over the binding life: a flat calendar annuity, a rising cycle annuity, and their maximum forming a flat-then-rising envelope with a kink at the crossover](../assets/methodology/battery_replacement_annuity.png)
+
+*Amortising battery energy CAPEX over the binding life. Below the crossover (gentle cycling) the
+**calendar** limit binds and the charged cost is flat — degradation adds nothing beyond what the
+ordinary annuity already prices. Above it (hard cycling) the **cycle** limit binds and the cost
+rises, so cycling is penalised only when it actually shortens the battery's life. The optimiser can
+respond by oversizing storage to cycle each unit more gently and push the cycle life back toward the
+calendar limit.*
+
+### Configuration & inputs
+
+| Switch | Behaviour |
 |---|---|
-| Constant-efficiency | fixed capacity, no endogenous degradation |
-| Advanced loss model | convex loss functions, no ageing |
-| Cycle-fade | hourly throughput drives degradation (optionally with exogenous annual) |
-| Calendar-fade | yearly expected SOC drives degradation (exogenous annual auto-disabled to avoid double counting) |
+| Efficiency model | constant round-trip efficiency, or power-dependent convex losses (no ageing on its own) |
+| Cycle fade (`cycle_fade_enabled`) | semi-empirical $\beta(T)$: a throughput wear cost (typical-year) or a capacity-fade state + binding-life amortisation (multi-year) |
+| Calendar fade | in multi-year, the $\alpha(T)$-driven annual rate $r^{\text{cal}}_y$ on the availability factor |
 
-Endogenous degradation requires the convex loss formulation to be active.
-
-!!! note "Replacement vs. degradation"
-    Two mechanisms must be distinguished: **economic replacement**, governed exogenously by the
-    battery lifetime and cohort masks, which affects sizing and investment timing; and
-    **internal degradation**, which reduces usable capacity within a cohort's life and affects
-    dispatch. The current implementation does **not** include an endogenous state-of-health
-    decision variable or an end-of-life replacement trigger — replacement timing is imposed
-    externally. Users should therefore keep the lifetime, end-of-life SoH threshold, cycle-life,
-    calendar-fade, and exogenous degradation assumptions mutually consistent, so batteries are
-    neither replaced too early nor operated too long in a heavily degraded state.
+Endogenous cycle fade in the **multi-year** model requires the convex-loss efficiency model
+(throughput is defined on the internal DC-side powers); the typical-year throughput cost does not.
+When cycle fade is enabled, provide `ambient_temperature.csv`, `battery.technical.chemistry`,
+`cycle_lifetime_to_eol_cycles`, and `end_of_life_soh`.
 
 !!! info "Future extensions"
-    Possible developments include temperature-dependent degradation, efficiency, or capacity
-    limits (treatable as exogenous inputs, preserving linearity), and an explicit SoH state with
-    replacement decisions linked directly to degradation thresholds.
+    Discrete **state-of-health-triggered replacement** (replace exactly when SoH reaches
+    end-of-life) is the rigorous form of the binding-life idea, but it introduces integer
+    replacement decisions and a salvage term, so the linear max-of-annuities is used instead.
+    Other possible additions: power fade / SoH-dependent power derating, and representative-day
+    clustering to speed up the full 8760 × Y degradation solve.
+
+### References
+
+The decomposition and the fitted $\alpha$/$\beta$ coefficients follow S. Andrade, *Battery
+Degradation Modelling for Off-Grid Energy System Sizing: Methodology and Case Study in the African
+Context* (MSc dissertation, Politecnico di Milano / FCUL, 2023), which calibrates the linear
+recursion against a physics-based electro-thermal + semi-empirical reference model.
