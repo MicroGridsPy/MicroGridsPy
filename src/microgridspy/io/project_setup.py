@@ -68,7 +68,6 @@ def build_formulation_payload(
     n_sources: int = 1,
     battery_loss_model: str = "constant_efficiency",
     battery_cycle_fade_enabled: bool = False,
-    battery_calendar_fade_enabled: bool = False,
     generator_efficiency_model: str = "constant_efficiency",
     csv_delimiter: str = ",",
     csv_decimal: str = ".",
@@ -116,7 +115,6 @@ def build_formulation_payload(
             "loss_model": str(battery_loss_model or "constant_efficiency"),
             "degradation_model": {
                 "cycle_fade_enabled": bool(battery_cycle_fade_enabled),
-                "calendar_fade_enabled": bool(battery_calendar_fade_enabled),
             },
         },
         "generator_model": {
@@ -257,11 +255,8 @@ def create_project(
         battery_label=battery_label,
         battery_loss_model="constant_efficiency",
         battery_cycle_fade_enabled=False,
-        battery_calendar_fade_enabled=False,
         battery_efficiency_curve_csv="",
         battery_cycle_lifetime_to_eol_cycles=6000.0,
-        battery_calendar_fade_curve_csv="",
-        battery_calendar_time_increment_per_step=1.0,
         battery_end_of_life_soh=0.8,
         generator_label=generator_label,
         generator_efficiency_model="constant_efficiency",

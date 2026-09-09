@@ -285,16 +285,15 @@ def _physical_effective_capacity(
     *,
     nominal_available: xr.DataArray,
     cycle_fade_year: xr.DataArray,
-    calendar_fade: xr.DataArray,
     commission: xr.DataArray,
     soh0: float,
 ) -> xr.DataArray:
     """
     Reconstruct the physical effective usable capacity from the initial SoH and the
-    (reliable, equality/epigraph-tight) cycle and calendar fade solutions via the
-    year-link recursion, clipped by the available capacity and reset in commissioning
-    years. This makes the reported SoH independent of any LP slack in the
-    effective-capacity state variable, which is only pushed tight by a tiny regularizer.
+    (reliable, equality-tight) cycle fade solution via the year-link recursion, clipped
+    by the available capacity and reset in commissioning years. This makes the reported
+    SoH independent of any LP slack in the effective-capacity state variable, which is
+    only pushed tight by a tiny regularizer.
 
     All inputs are indexed by (year, scenario, inv_step) except ``commission`` which is
     (year, inv_step); ``cycle_fade_year`` is already summed over periods.
@@ -310,11 +309,7 @@ def _physical_effective_capacity(
             eff_y = soh0 * cap_y
         else:
             prev = year_values[i - 1]
-            continued = (
-                prev_eff
-                - cycle_fade_year.sel(year=prev, drop=True)
-                - calendar_fade.sel(year=prev, drop=True)
-            )
+            continued = prev_eff - cycle_fade_year.sel(year=prev, drop=True)
             reset = soh0 * cap_y
             comm = commission.sel(year=y, drop=True)
             eff_y = xr.where(comm > 0.0, reset, np.minimum(continued, cap_y))
@@ -441,18 +436,16 @@ def build_dispatch_timeseries_table_multi_year(
         get_var_solution(vars_dict=vars, solution=solution, name="battery_discharge_loss")
     )
     raw_bcycle = get_var_solution(vars_dict=vars, solution=solution, name="battery_cycle_fade")
-    raw_bcal = get_var_solution(vars_dict=vars, solution=solution, name="battery_calendar_fade")
     raw_beff = get_var_solution(
         vars_dict=vars, solution=solution, name="battery_effective_energy_capacity"
     )
     # Reported SoH must reflect the physical effective capacity, not the raw LP state
     # variable, which the regularizer only nudges tight (it can stay slack-low in
-    # degenerate corners). Rebuild it from the initial SoH and the reliable cycle/
-    # calendar fade solutions via the year-link recursion.
+    # degenerate corners). Rebuild it from the initial SoH and the reliable cycle-fade
+    # solution via the year-link recursion.
     if (
         isinstance(raw_beff, xr.DataArray)
         and isinstance(raw_bcycle, xr.DataArray)
-        and isinstance(raw_bcal, xr.DataArray)
         and p.battery_nominal_capacity_kwh is not None
         and p.battery_calendar_lifetime_years is not None
         and p.battery_initial_soh is not None
@@ -473,13 +466,22 @@ def build_dispatch_timeseries_table_multi_year(
             ).transpose("year", "scenario", "inv_step")
             raw_beff = _physical_effective_capacity(
                 nominal_available=nominal_available,
-                cycle_fade_year=raw_bcycle.sum("period"),
-                calendar_fade=raw_bcal,
+                cycle_fade_year=raw_bcycle,
                 commission=replacement_commission_mask(sets, p.battery_calendar_lifetime_years),
                 soh0=float(np.asarray(p.battery_initial_soh.values).reshape(-1)[0]),
             )
-    bcycle = _sum_if_has_inv_step(raw_bcycle)
-    bcal = _broadcast_year_state_to_period(_sum_if_has_inv_step(raw_bcal), sets)
+    # battery_cycle_fade is now an ANNUAL (year, scenario, inv_step) variable. For the
+    # per-hour dispatch table, reconstruct the hourly fade from the semi-empirical
+    # coefficient and the DC-side flows: fade_t = beta(T)_t * (charge_dc_t + discharge_dc_t).
+    beta_cycle = data.get("battery_beta_cycle") if isinstance(data, xr.Dataset) else None
+    if (
+        beta_cycle is not None
+        and isinstance(bch_dc, xr.DataArray)
+        and isinstance(bdis_dc, xr.DataArray)
+    ):
+        bcycle = (beta_cycle * (bch_dc + bdis_dc)).transpose(*bch_dc.dims)
+    else:
+        bcycle = None
     beff = _broadcast_year_state_to_period(_sum_if_has_inv_step(raw_beff), sets)
     _, bat_inv_active = _battery_capacity_tables(sets=sets, data=data, vars=vars, solution=solution)
     bat_inv_active_total = _broadcast_year_state_to_period(bat_inv_active.sum("inv_step"), sets)
@@ -555,8 +557,6 @@ def build_dispatch_timeseries_table_multi_year(
         df["battery_discharge_loss"] = bdis_loss.to_series().values.astype(float)
     if isinstance(bcycle, xr.DataArray):
         df["battery_cycle_fade"] = bcycle.to_series().values.astype(float)
-    if isinstance(bcal, xr.DataArray):
-        df["battery_calendar_fade"] = bcal.to_series().values.astype(float)
     if isinstance(bsoh, xr.DataArray):
         df["battery_soh"] = bsoh.to_series().values.astype(float)
     if isinstance(beff, xr.DataArray):

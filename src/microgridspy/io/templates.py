@@ -55,11 +55,8 @@ class TemplateSettings:
     battery_label: str
     battery_loss_model: str
     battery_cycle_fade_enabled: bool
-    battery_calendar_fade_enabled: bool
     battery_efficiency_curve_csv: str
     battery_cycle_lifetime_to_eol_cycles: float
-    battery_calendar_fade_curve_csv: str
-    battery_calendar_time_increment_per_step: float
     battery_end_of_life_soh: float
     generator_label: str
     generator_efficiency_model: str
@@ -72,9 +69,12 @@ class TemplateSettings:
     #   "off"     -> constant full-load efficiency
     generator_partial_load_commitment: str = "integer"
     generator_min_load_fraction: float = 0.0
-    # Battery "simple" calendar ageing: a flat %/yr capacity fade. Written only when
-    # SOC-dependent calendar fade is off (the two are mutually exclusive time-ageing flavors).
+    # Battery calendar ageing: a single flat %/yr capacity fade (0 = no calendar ageing).
     battery_capacity_degradation_rate_per_year: float = 0.0
+    # Battery electrochemistry, selecting the semi-empirical degradation
+    # curves (alpha/beta). One of {"LFP", "NMC", "lead_acid"}. Only consumed when
+    # endogenous battery degradation is active.
+    battery_chemistry: str = "LFP"
     renewable_vintage_labels_by_step: Mapping[str, Mapping[str, str]] | None = None
     battery_vintage_labels_by_step: Mapping[str, str] | None = None
     generator_vintage_labels_by_step: Mapping[str, str] | None = None
@@ -93,6 +93,12 @@ def write_templates(
     _write_resource_availability_csv(
         paths.inputs_dir / "resource_availability.csv", settings, overwrite=overwrite
     )
+    # Ambient temperature drives the semi-empirical degradation coefficients; only needed
+    # when endogenous battery degradation is active.
+    if _battery_cycle_fade_active(settings):
+        _write_ambient_temperature_csv(
+            paths.inputs_dir / "ambient_temperature.csv", settings, overwrite=overwrite
+        )
     # Write README file with metadata
     _write_inputs_readme(paths.inputs_dir / "README_inputs.md", settings, overwrite=overwrite)
     # Write renewables.yaml configuration
@@ -102,12 +108,6 @@ def write_templates(
     if _safe_battery_loss_model(settings) == "convex_loss_epigraph":
         _write_battery_efficiency_curve_csv(
             paths.inputs_dir / _safe_battery_efficiency_curve_csv(settings),
-            settings=settings,
-            overwrite=overwrite,
-        )
-    if _battery_calendar_fade_active(settings):
-        _write_battery_calendar_fade_curve_csv(
-            paths.inputs_dir / _safe_battery_calendar_fade_curve_csv(settings),
             settings=settings,
             overwrite=overwrite,
         )
@@ -224,11 +224,6 @@ def _safe_battery_efficiency_curve_csv(settings: TemplateSettings) -> str:
     return v or "battery_efficiency_curve.csv"
 
 
-def _safe_battery_calendar_fade_curve_csv(settings: TemplateSettings) -> str:
-    v = str(getattr(settings, "battery_calendar_fade_curve_csv", "") or "").strip()
-    return v or "battery_calendar_fade_curve.csv"
-
-
 def _safe_battery_loss_model(settings: TemplateSettings) -> str:
     value = str(getattr(settings, "battery_loss_model", "") or "").strip().lower()
     if value in {"constant_efficiency", "convex_loss_epigraph"}:
@@ -241,21 +236,18 @@ def _battery_endogenous_degradation_enabled(settings: TemplateSettings) -> bool:
         return False
     if _safe_battery_loss_model(settings) != "convex_loss_epigraph":
         return False
-    return bool(getattr(settings, "battery_cycle_fade_enabled", False)) or bool(
-        getattr(settings, "battery_calendar_fade_enabled", False)
-    )
+    return bool(getattr(settings, "battery_cycle_fade_enabled", False))
 
 
 def _battery_cycle_fade_active(settings: TemplateSettings) -> bool:
-    return _battery_endogenous_degradation_enabled(settings) and bool(
-        getattr(settings, "battery_cycle_fade_enabled", False)
-    )
+    """Semi-empirical cycle fade active in ANY formulation.
 
-
-def _battery_calendar_fade_active(settings: TemplateSettings) -> bool:
-    return _battery_endogenous_degradation_enabled(settings) and bool(
-        getattr(settings, "battery_calendar_fade_enabled", False)
-    )
+    Dynamic multi-year uses it as an endogenous capacity-fade recursion (requires the
+    convex-loss model); steady_state typical-year uses it as a throughput wear cost.
+    Both need the same degradation inputs (chemistry, SoH bounds, cycle life, ambient
+    temperature), so this gate controls writing those inputs.
+    """
+    return bool(getattr(settings, "battery_cycle_fade_enabled", False))
 
 
 def _safe_generator_label(settings: TemplateSettings) -> str:
@@ -456,6 +448,41 @@ def _write_load_demand_csv(path: Path, settings: TemplateSettings, overwrite: bo
     )
 
 
+def _write_ambient_temperature_csv(
+    path: Path, settings: TemplateSettings, overwrite: bool = False
+) -> None:
+    """
+    Create inputs/ambient_temperature.csv with the same 2-row header as
+    load_demand.csv (scenario, year) — one hourly column per (scenario, year).
+
+    Data:
+      - 8760 hourly rows
+      - values are ambient/environment temperature in degrees Celsius
+      - includes meta/hour column as ("meta","hour") with values 0..8759
+      - default cells are 25.0 degC (the reference condition), a physically
+        sensible placeholder consistent with the other input templates.
+    """
+    scenarios = _template_scenarios(settings)
+    years = _template_years(settings)
+
+    cols = [("meta", "hour")]
+    for s in scenarios:
+        for y in years:
+            cols.append((str(s), str(y)))
+
+    columns = pd.MultiIndex.from_tuples(cols, names=["scenario", "year"])
+    value_columns = [(str(s), str(y)) for s in scenarios for y in years]
+    _write_hourly_csv_template(
+        path,
+        settings=settings,
+        columns=columns,
+        hour_column=("meta", "hour"),
+        value_columns=value_columns,
+        overwrite=overwrite,
+        default_value=25.0,
+    )
+
+
 def _write_resource_availability_csv(
     path: Path, settings: TemplateSettings, overwrite: bool = False
 ) -> None:
@@ -531,6 +558,19 @@ def _write_inputs_readme(path: Path, settings: TemplateSettings, overwrite: bool
         f"Scenarios: {', '.join(scenarios)}\n\n",
         f"Years: {', '.join(years)}\n\n",
         f"Resources: {', '.join(_safe_resource_labels(settings))}\n",
+        *(
+            [
+                "\n## ambient_temperature.csv\n",
+                "- Hourly **ambient/environment temperature** template (8760 rows).\n",
+                "- Units: **degrees Celsius**. Default cells are 25 degC (edit to your site).\n",
+                "- Same two-row header as `load_demand.csv` (scenario, year).\n",
+                "- Required when battery degradation (cycle fade) is active: it drives the "
+                "semi-empirical alpha (calendar) and beta (cycle) degradation coefficients "
+                "together with `battery.technical.chemistry` and `depth_of_discharge`.\n",
+            ]
+            if _battery_cycle_fade_active(settings)
+            else []
+        ),
         "\n## renewables.yaml\n",
         "- Renewable techno-economic parameters.\n",
         "- Parameters can vary by resource and, for investment-side data, by investment step.\n\n",
@@ -556,9 +596,9 @@ def _write_inputs_readme(path: Path, settings: TemplateSettings, overwrite: bool
             "- `battery.technical.initial_soc` is interpreted as an absolute fraction of installed/effective capacity, not as a fraction of the usable DoD window. With the current SOC lower bound, choose `initial_soc >= 1 - depth_of_discharge` whenever positive battery capacity may be installed.\n",
         ]
     )
-    if _battery_endogenous_degradation_enabled(settings):
+    if _battery_cycle_fade_active(settings):
         text_parts.append(
-            "- Battery-owned degradation controls are written in `battery.technical` only for the enabled endogenous degradation modes.\n"
+            "- Battery cycle-fade degradation controls (chemistry, SoH bounds, cycle life) are written in `battery.technical` when cycle fade is enabled.\n"
         )
     if battery_curve_enabled:
         text_parts.extend(
@@ -571,18 +611,6 @@ def _write_inputs_readme(path: Path, settings: TemplateSettings, overwrite: bool
                 "  - `relative_power_pu`: relative DC-side battery power in (0,1]\n",
                 "  - `charge_efficiency`: one-way charge efficiency at that power (absolute in (0,1], or a multiplier if the full-load row is `1.0`)\n",
                 "  - `discharge_efficiency`: one-way discharge efficiency at that power (absolute in (0,1], or a multiplier if the full-load row is `1.0`)\n",
-            ]
-        )
-    if _battery_calendar_fade_active(settings):
-        text_parts.extend(
-            [
-                f"\n## {_safe_battery_calendar_fade_curve_csv(settings)}\n",
-                "- Optional yearly-average-SoC-dependent calendar-fade coefficient curve used when calendar fade is enabled.\n",
-                "- Columns:\n",
-                "  - `soc_pu`: yearly average state of charge normalized by the cohort nominal available energy reference used by the LP surrogate\n",
-                "  - `calendar_fade_coefficient_per_year`: non-negative coefficient applied to the configured yearly time increment\n",
-                "- Legacy CSVs using `calendar_fade_coefficient_per_step` are still accepted for backward compatibility.\n",
-                "- In the current multi-year implementation, endogenous degradation directly reduces usable battery energy capacity and the associated power limits remain proportional to that degraded effective capacity. Calendar fade is evaluated yearly from average SoC, while replacement timing still follows calendar lifetime.\n",
             ]
         )
     text_parts.extend(
@@ -889,9 +917,11 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
 
     # Step-invariant technical parameters (shared across cohorts)
     def _default_technical_params() -> dict:
-        endogenous_degradation = _battery_endogenous_degradation_enabled(settings)
+        # Both formulations need SoH bounds when cycle fade is on (multi-year for the
+        # capacity state, typical-year for the wear-cost marginal). Gate on the shared
+        # cycle-fade switch, not the multi-year-only endogenous gate.
+        endogenous_degradation = _battery_cycle_fade_active(settings)
         cycle_fade_active = _battery_cycle_fade_active(settings)
-        calendar_fade_active = _battery_calendar_fade_active(settings)
         max_installable_capacity_kwh = (
             1.0e6 if _battery_requires_lp_soh_capacity_reference(settings) else None
         )
@@ -916,17 +946,14 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
                 getattr(settings, "battery_end_of_life_soh", 0.8) or 0.8
             )
         if cycle_fade_active:
+            # Electrochemistry selects the semi-empirical alpha/beta degradation curves.
+            params["chemistry"] = str(getattr(settings, "battery_chemistry", "LFP") or "LFP")
             params["cycle_lifetime_to_eol_cycles"] = float(
                 getattr(settings, "battery_cycle_lifetime_to_eol_cycles", 6000.0) or 6000.0
             )
-        if calendar_fade_active:
-            params["calendar_fade_curve_csv"] = _safe_battery_calendar_fade_curve_csv(settings)
-            params["calendar_time_increment_per_year"] = float(
-                getattr(settings, "battery_calendar_time_increment_per_step", 1.0) or 1.0
-            )
-        if is_dynamic and not calendar_fade_active:
-            # Simple flat calendar ageing (%/yr). Mutually exclusive with SOC-dependent
-            # calendar fade, which is why it is only written when calendar fade is off.
+        if is_dynamic:
+            # Simple flat calendar ageing: a single %/yr reduction in effective capacity
+            # (0 = no calendar ageing). This is the only calendar-ageing input.
             params["capacity_degradation_rate_per_year"] = float(
                 getattr(settings, "battery_capacity_degradation_rate_per_year", 0.0) or 0.0
             )
@@ -969,32 +996,27 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
                 ),
                 **(
                     {"battery_initial_soh": "share"}
-                    if _battery_endogenous_degradation_enabled(settings)
+                    if _battery_cycle_fade_active(settings)
                     else {}
                 ),
                 **(
                     {"battery_end_of_life_soh": "share"}
-                    if _battery_endogenous_degradation_enabled(settings)
-                    else {}
-                ),
-                **(
-                    {"battery_cycle_lifetime_to_eol_cycles": "cycles"}
                     if _battery_cycle_fade_active(settings)
                     else {}
                 ),
                 **(
                     {
-                        "battery_calendar_fade_curve_csv": "csv_path",
-                        "battery_calendar_time_increment_per_year": "time_increment_per_year",
+                        "battery_chemistry": "-",
+                        "battery_cycle_lifetime_to_eol_cycles": "cycles",
                     }
-                    if _battery_calendar_fade_active(settings)
+                    if _battery_cycle_fade_active(settings)
                     else {}
                 ),
                 **(
                     {
                         "battery_capacity_degradation_rate_per_year": "per_year",
                     }
-                    if is_dynamic and not _battery_calendar_fade_active(settings)
+                    if is_dynamic
                     else {}
                 ),
             },
@@ -1031,11 +1053,12 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
                     **(
                         {
                             "battery_initial_soh": (
-                                "Initial state of health used as the starting point for endogenous battery "
-                                "degradation accounting in the dynamic formulation."
+                                "Initial state of health, the starting point for cycle-fade "
+                                "degradation accounting (a capacity state in the dynamic "
+                                "formulation, a wear-cost reference in the typical-year formulation)."
                             )
                         }
-                        if _battery_endogenous_degradation_enabled(settings)
+                        if _battery_cycle_fade_active(settings)
                         else {}
                     ),
                     **(
@@ -1049,39 +1072,37 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
                     ),
                     **(
                         {
-                            "battery_end_of_life_soh": "End-of-life SoH target used to calibrate cycle-fade inputs and compare simulated degradation against the economic replacement lifetime."
-                        }
-                        if _battery_endogenous_degradation_enabled(settings)
-                        else {}
-                    ),
-                    **(
-                        {
-                            "battery_cycle_lifetime_to_eol_cycles": (
-                                "Cycle life to end of life used together with battery_depth_of_discharge and battery_end_of_life_soh to derive the internal cycle-fade coefficient automatically."
-                            )
+                            "battery_end_of_life_soh": "End-of-life SoH target. Sets the usable-life span (initial_soh - end_of_life_soh) used by the cycle-fade capacity state (dynamic) and the throughput wear-cost marginal (typical-year)."
                         }
                         if _battery_cycle_fade_active(settings)
                         else {}
                     ),
                     **(
                         {
-                            "battery_calendar_fade_curve_csv": (
-                                "CSV file containing the yearly-average-SoC-dependent calendar-fade coefficient curve used by the endogenous degradation surrogate when calendar fade is enabled in formulation.json."
+                            "battery_chemistry": (
+                                "Battery electrochemistry selecting the semi-empirical "
+                                "degradation curves (alpha calendar + beta cycle). One of "
+                                "{LFP, NMC, lead_acid}. Ambient temperature (ambient_temperature.csv) "
+                                "and depth_of_discharge select the temperature and DoD bands of the curves."
                             ),
-                            "battery_calendar_time_increment_per_year": (
-                                "Yearly calendar-ageing increment applied together with the yearly average-SoC calendar-fade surrogate when calendar fade is enabled."
+                            "battery_cycle_lifetime_to_eol_cycles": (
+                                "Rated cycle life to end of life. Scales the cycle coefficient "
+                                "beta by the cycle-life ratio (reference/rated), porting the validated "
+                                "curve shape to the user's battery without re-fitting."
                             ),
                         }
-                        if _battery_calendar_fade_active(settings)
+                        if _battery_cycle_fade_active(settings)
                         else {}
                     ),
                     **(
                         {
                             "battery_capacity_degradation_rate_per_year": (
-                                "Simple (flat %/yr) calendar ageing: a constant yearly reduction in effective battery capacity. It is the mutually exclusive alternative to the SOC-dependent calendar-fade curve, so it is written only when the curve is off."
+                                "Calendar ageing: a single flat %/yr reduction in effective battery "
+                                "capacity, independent of use (0 = no calendar ageing). This is the "
+                                "only calendar-ageing input; it coexists with throughput-based cycle fade."
                             )
                         }
-                        if is_dynamic and not _battery_calendar_fade_active(settings)
+                        if is_dynamic
                         else {}
                     ),
                 },
@@ -1142,30 +1163,6 @@ def _write_battery_efficiency_curve_csv(
             "relative_power_pu": [0.10, 0.20, 0.40, 0.60, 0.80, 1.00],
             "charge_efficiency": [0.9539, 0.9720, 0.9775, 0.9762, 0.9732, 0.9695],
             "discharge_efficiency": [0.9539, 0.9720, 0.9775, 0.9762, 0.9732, 0.9695],
-        }
-    )
-
-    _ensure_parent_dir(path)
-    write_csv_with_format(df, path, csv_format=_csv_format(settings), index=False)
-
-
-def _write_battery_calendar_fade_curve_csv(
-    path: Path, *, settings: TemplateSettings, overwrite: bool = False
-) -> None:
-    """
-    Create inputs/battery_calendar_fade_curve.csv.
-
-    Columns:
-      - soc_pu: yearly average state of charge normalized by the fixed calendar-fade SoC reference
-      - calendar_fade_coefficient_per_year: yearly calendar-fade coefficient
-    """
-    if path.exists() and not overwrite:
-        return
-
-    df = pd.DataFrame(
-        {
-            "soc_pu": [0.0, 0.2, 0.5, 0.8, 1.0],
-            "calendar_fade_coefficient_per_year": [2.0e-4, 3.0e-4, 4.5e-4, 7.0e-4, 1.1e-3],
         }
     )
 
