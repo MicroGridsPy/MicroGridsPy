@@ -2098,8 +2098,8 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
     )
     if battery_degradation_settings.get("cycle_fade_enabled", False):
         # The semi-empirical curves are the single coefficient source. Require the
-        # SoH span and rated cycle life so beta(T) can be scaled and the cycle-fade
-        # wear cost / usable-life feedback are well defined.
+        # SoH span and rated cycle life so beta(T) can be scaled and the binding-life
+        # replacement cost / usable-life feedback are well defined.
         if battery_degradation_settings.get("cycle_lifetime_to_eol_cycles", None) is None:
             raise InputValidationError(
                 "battery.yaml: enable cycle fade only when "
@@ -2109,7 +2109,7 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
         if battery_degradation_settings.get("end_of_life_soh", None) is None:
             raise InputValidationError(
                 "battery.yaml: enable cycle fade only when battery.technical.end_of_life_soh "
-                "is provided (it sets the usable-life span used by the cycle-fade wear cost)."
+                "is provided (it sets the usable-life span used by the binding-life replacement cost)."
             )
 
     # ------------------------------------------------------------------

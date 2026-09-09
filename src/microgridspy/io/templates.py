@@ -243,7 +243,7 @@ def _battery_cycle_fade_active(settings: TemplateSettings) -> bool:
     """Semi-empirical cycle fade active in ANY formulation.
 
     Dynamic multi-year uses it as an endogenous capacity-fade recursion (requires the
-    convex-loss model); steady_state typical-year uses it as a throughput wear cost.
+    convex-loss model); steady_state typical-year uses it as a binding-life CAPEX amortisation.
     Both need the same degradation inputs (chemistry, SoH bounds, cycle life, ambient
     temperature), so this gate controls writing those inputs.
     """

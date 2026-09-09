@@ -171,7 +171,7 @@ def _battery_endogenous_degradation_enabled(cfg: PageConfig) -> bool:
 def _battery_cycle_fade_active(cfg: PageConfig) -> bool:
     # Semi-empirical cycle fade in ANY formulation: dynamic multi-year runs it as an
     # endogenous capacity-fade recursion (needs the convex-loss model), steady_state
-    # typical-year as a throughput wear cost. Both need the same degradation inputs.
+    # typical-year as a binding-life CAPEX amortisation. Both need the same degradation inputs.
     return bool(cfg.battery_cycle_fade_enabled)
 
 
@@ -253,7 +253,7 @@ def init_session_state_defaults() -> None:
 # =============================================================================
 def write_formulation_file(*, project_name: str, project_description: str, cfg: PageConfig) -> None:
     # Cycle fade is supported in both formulations (dynamic: capacity state;
-    # typical-year: throughput wear cost).
+    # typical-year: binding-life CAPEX amortisation).
     degradation_supported = cfg.formulation in ("dynamic", "steady_state")
     battery_cycle_fade_active = _battery_cycle_fade_active(cfg) if degradation_supported else False
     payload = build_formulation_payload(
@@ -1040,7 +1040,7 @@ def render_system_section() -> tuple[
             st.session_state[K["battery_cycle_fade_enabled"]] = False
             st.info(
                 "Select the `Power-dependent (convex loss)` efficiency model above to unlock the multi-year battery cycle-fade capacity-state surrogate. "
-                "(In steady_state typical-year projects, cycle fade is applied as a throughput wear cost and does not require the convex-loss model.)"
+                "(In steady_state typical-year projects, cycle fade is priced as a binding-life CAPEX amortisation and does not require the convex-loss model.)"
             )
         else:
             with main_col:
@@ -1052,7 +1052,7 @@ def render_system_section() -> tuple[
                         help=(
                             "Throughput-based semi-empirical cycle-fade degradation. "
                             "Dynamic multi-year: a degraded usable-capacity state; steady_state "
-                            "typical-year: a throughput wear cost in the objective."
+                            "typical-year: a binding-life CAPEX amortisation in the objective."
                         ),
                         key="gp_battery_cycle_fade_enabled_checkbox",
                     )

@@ -66,8 +66,9 @@ def initialize_constraints(
         ((data.attrs or {}).get("settings", {}).get("battery_model", {}) or {}).get("loss_model"),
         default="constant_efficiency",
     )
-    # Typical-year cycle fade is a throughput WEAR COST applied in the objective; it
-    # adds no capacity-state constraints here (no SoH state, no capacity restriction).
+    # Typical-year cycle fade enters the objective as a battery-replacement cost
+    # amortized over the binding life (a max-of-annuities epigraph); it adds no
+    # capacity-state constraints here (no SoH state, no usable-capacity restriction).
     enforcement = p.constraints_enforcement(default="scenario_wise")
     if enforcement not in ("expected", "scenario_wise"):
         raise InputValidationError(

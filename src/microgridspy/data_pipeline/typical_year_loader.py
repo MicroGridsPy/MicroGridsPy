@@ -324,10 +324,11 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
         inputs_dir=paths.inputs_dir,
     )
     # ------------------------------------------------------------------
-    # Semi-empirical cycle-fade degradation (typical-year: throughput WEAR COST,
-    # no capacity state). When enabled, load ambient temperature and evaluate the
-    # temperature- and DoD-aware cycle coefficient beta(T); the objective charges
-    # a marginal wear cost per unit of throughput. No convex-loss model required.
+    # Semi-empirical cycle-fade degradation (typical-year: BINDING-LIFE CAPEX
+    # amortisation, no capacity state). When enabled, load ambient temperature and
+    # evaluate the temperature- and DoD-aware cycle coefficient beta(T); the objective
+    # amortises the battery energy CAPEX over min(calendar, cycle-limited) life via a
+    # max-of-annuities epigraph. No convex-loss model required.
     # ------------------------------------------------------------------
     battery_model_cfg = formulation.get("battery_model", {}) or {}
     degradation_cfg = battery_model_cfg.get("degradation_model", {}) or {}
@@ -385,7 +386,7 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
             {
                 "chemistry": chemistry,
                 "coefficient_source": "semi_empirical",
-                "cycle_fade_mode": "throughput_wear_cost",
+                "cycle_fade_mode": "binding_life_annuity",
                 "initial_soh": initial_soh,
                 "end_of_life_soh": end_of_life_soh,
                 "cycle_lifetime_to_eol_cycles": user_cycle_life,

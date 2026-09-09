@@ -14,8 +14,9 @@ convex-loss formulation** where AC-side efficiency varies with power. In the **t
 formulation the battery is a single block operated cyclically over a representative year; in
 the **multi-year** formulation, storage investment is **cohort-based**, enabling cohort
 availability and inter-year state propagation. **Semi-empirical degradation** is available in
-both (as a throughput wear cost in the typical-year model and as a capacity-fade state in the
-multi-year model — see [Battery degradation](#battery-degradation)). At hourly resolution
+both — priced through a binding-life CAPEX amortisation in the typical-year model, and additionally
+tracked as a capacity-fade state in the multi-year model (see
+[Battery degradation](#battery-degradation)). At hourly resolution
 $\Delta t = 1\,\text{h}$, so power (kW) and one-hour energy transfers (kWh) are interchangeable
 in the storage balance.
 
@@ -195,22 +196,33 @@ These are driven by two inputs, required only when cycle-fade degradation is ena
 together with `battery.technical.depth_of_discharge` (sets the band), the rated
 `cycle_lifetime_to_eol_cycles`, and the state-of-health span `initial_soh` / `end_of_life_soh`.
 
-### Typical-year: throughput wear cost
+### Typical-year: amortisation over the binding life
 
-The steady-state typical-year model has no multi-year capacity state, so degradation enters purely
-as an **operating cost** proportional to throughput (no new decision variables). Each hour of
-charging/discharging consumes battery life at the temperature- and DoD-aware rate $\beta(T)$, priced
-at the marginal cost of one kWh of capacity fade:
+The steady-state typical-year model has no multi-year capacity state, so degradation is purely an
+**economic** effect. It must stay consistent with the objective's annuity convention: every asset's
+CAPEX is turned into a level annual charge $\text{CRF}(\text{wacc}, L)\cdot\text{CAPEX}$ (cost of
+capital included) and paid every year, which already prices replacement over the *calendar* life —
+so degradation acts on the **effective lifetime**, not as a separate charge. The battery energy
+CAPEX is therefore recovered by the **larger** of a calendar annuity and a cycle annuity (i.e.
+amortised over the shorter of the two lives), via a per-scenario epigraph $Z_\omega$:
 
 \[
-\text{WearCost} = \sum_{\omega} w_\omega \; c^{\text{repl}} \sum_t \beta_{t,\omega}\,
-\big(P^{\text{ch}}_{t,\omega} + P^{\text{dis}}_{t,\omega}\big),
+\begin{aligned}
+Z_\omega &\ge \text{CRF}(\text{wacc}, L^{\text{cal}})\,\text{CAPEX}\; C^{\text{bat}} && \text{(calendar annuity)}\\[3pt]
+Z_\omega &\ge c^{\text{repl}}\,\varphi \sum_t \beta_{t,\omega}\big(P^{\text{ch}}_{t,\omega}+P^{\text{dis}}_{t,\omega}\big) && \text{(cycle annuity)}
+\end{aligned}
 \qquad
-c^{\text{repl}} = \frac{\text{CAPEX}}{\text{SoH}_0 - \text{SoH}_{\text{eol}}}
+c^{\text{repl}} = \frac{\text{CAPEX}}{\text{SoH}_0-\text{SoH}_{\text{eol}}},\;\;
+\varphi = \text{CRF}(\text{wacc}, L^{\text{cal}})\,L^{\text{cal}}
 \]
 
-Hotter operation therefore costs more per cycled kWh. This is a lightweight screening penalty and
-requires neither the convex-loss model nor a capacity state.
+Minimising $\sum_\omega w_\omega Z_\omega$ drives $Z$ to the maximum of the two, so the battery is
+charged **CAPEX ÷ min(calendar, cycle-limited) life**. When cycling is gentle the calendar limit
+binds and degradation adds nothing; when it is hard enough to shorten the life below the calendar
+value the cycle limit binds and the cost rises. Hotter operation raises $\beta(T)$ and so brings the
+crossover forward. This mirrors the multi-year treatment below (same $\varphi$ calibration and the
+same flat-then-rising cost envelope shown in the replacement-cost figure) but needs neither a
+capacity state nor the convex-loss model.
 
 ### Multi-year: capacity-fade state
 
@@ -305,11 +317,11 @@ calendar limit.*
 | Switch | Behaviour |
 |---|---|
 | Efficiency model | constant round-trip efficiency, or power-dependent convex losses (no ageing on its own) |
-| Cycle fade (`cycle_fade_enabled`) | semi-empirical $\beta(T)$: a throughput wear cost (typical-year) or a capacity-fade state + binding-life amortisation (multi-year) |
+| Cycle fade (`cycle_fade_enabled`) | semi-empirical $\beta(T)$: binding-life CAPEX amortisation (both formulations), plus a capacity-fade state in the multi-year model |
 | Calendar fade | in multi-year, the $\alpha(T)$-driven annual rate $r^{\text{cal}}_y$ on the availability factor |
 
 Endogenous cycle fade in the **multi-year** model requires the convex-loss efficiency model
-(throughput is defined on the internal DC-side powers); the typical-year throughput cost does not.
+(throughput is defined on the internal DC-side powers); the typical-year cost does not.
 When cycle fade is enabled, provide `ambient_temperature.csv`, `battery.technical.chemistry`,
 `cycle_lifetime_to_eol_cycles`, and `end_of_life_soh`.
 

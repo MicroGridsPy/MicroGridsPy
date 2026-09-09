@@ -190,13 +190,29 @@ def initialize_objective(
     annual_res_inv_capex = (res_inv_crf * res_inv_capex_eff_kw_ac * cap_res_inv_kw_ac).sum(
         "resource"
     )  # scalar
-    annual_bat_capex = bat_crf * bat_capex_kwh * cap_bat_kwh  # scalar
+    annual_bat_capex = bat_crf * bat_capex_kwh * cap_bat_kwh  # scalar (battery energy, calendar)
     annual_bat_inv_capex = bat_inv_crf * bat_inv_capex_kw * cap_bat_inv_kw  # scalar
     annual_gen_capex = gen_crf * gen_capex_kw * cap_gen_kw  # scalar
+
+    # When cycle-fade degradation is active the battery ENERGY CAPEX is not amortized
+    # over the fixed calendar life alone; it is amortized over the binding (endogenous)
+    # life through a max-of-annuities epigraph (below). It is therefore excluded from the
+    # fixed annualized investment here and re-added, scenario-weighted, as Z. The battery
+    # inverter CAPEX stays calendar-amortized.
+    bat_repl_cost = vars.get("battery_replacement_cost", None)
+    beta_cycle = getattr(p, "battery_beta_cycle", None)
+    soh0 = getattr(p, "battery_initial_soh", None)
+    soh_eol = getattr(p, "battery_end_of_life_soh", None)
+    degradation_on = (
+        bat_repl_cost is not None
+        and beta_cycle is not None
+        and soh0 is not None
+        and soh_eol is not None
+    )
     annualized_investment_cost = (
         annual_res_capex
         + annual_res_inv_capex
-        + annual_bat_capex
+        + (0.0 if degradation_on else annual_bat_capex)
         + annual_bat_inv_capex
         + annual_gen_capex
     )  # scalar
@@ -307,25 +323,34 @@ def initialize_objective(
     )  # scalar
 
     # ------------------------------------------------------------------
-    # Battery cycle-fade wear cost (semi-empirical, throughput-based, no state)
+    # Battery cycle-fade: CAPEX amortized over the binding (endogenous) life
     # ------------------------------------------------------------------
-    # A genuine operating cost: each unit of throughput consumes usable battery
-    # life. The per-hour capacity fade is beta(T) * (charge + discharge), and the
-    # marginal cost of one kWh of capacity fade is the specific battery CAPEX
-    # divided by the usable-life fraction (SoH0 - SoH_eol). beta is temperature-
-    # and DoD-aware, so hot operation is penalised more per kWh cycled.
-    beta_cycle = getattr(p, "battery_beta_cycle", None)
-    soh0 = getattr(p, "battery_initial_soh", None)
-    soh_eol = getattr(p, "battery_end_of_life_soh", None)
-    if beta_cycle is not None and soh0 is not None and soh_eol is not None:
+    # Consistent with the annuity / no-salvage cash-flow convention: the battery energy
+    # CAPEX is recovered by the LARGER of a calendar annuity and a cycle annuity, i.e.
+    # amortization over min(calendar, cycle-limited) life. This replaces the earlier
+    # standalone throughput wear cost, which double-counted the CAPEX already priced by
+    # the calendar annuity.
+    #   Z_w >= calendar annuity = CRF(wacc, L_cal) * CAPEX * capacity
+    #   Z_w >= cycle annuity    = c_repl * phi * sum_t beta(T)*(P_ch + P_dis)
+    # with c_repl = CAPEX/(SoH0 - SoH_eol) and phi = CRF(wacc, L_cal)*L_cal (so the two
+    # bounds coincide exactly at the crossover cycle-life == calendar-life; phi=1 if WACC=0).
+    if degradation_on:
         usable_life_fraction = soh0 - soh_eol
-        marginal_wear_cost = bat_capex_kwh / usable_life_fraction  # currency / kWh fade
-        # AC-side throughput proxy (both directions summed), matching the beta fit
-        # convention of energy exchanged per cycle (2 * DoD per full cycle).
-        bat_wear_fade_s = (beta_cycle * (bat_ch + bat_dis)).sum("period")  # (scenario,)
-        bat_wear_cost = (w_s * bat_wear_fade_s * marginal_wear_cost).sum("scenario")  # scalar
+        c_repl = bat_capex_kwh / usable_life_fraction  # currency / kWh fade
+        phi = bat_crf * bat_life_y
+        model.add_constraints(
+            bat_repl_cost >= annual_bat_capex, name="battery_replacement_cost_calendar"
+        )
+        # AC-side throughput (both directions summed), matching beta's calibration of
+        # 2*DoD energy exchanged per full cycle.
+        bat_cycle_fade_s = (beta_cycle * (bat_ch + bat_dis)).sum("period")  # (scenario,)
+        model.add_constraints(
+            bat_repl_cost >= (c_repl * phi) * bat_cycle_fade_s,
+            name="battery_replacement_cost_cycle",
+        )
+        bat_energy_repl_cost = (w_s * bat_repl_cost).sum("scenario")  # scalar
     else:
-        bat_wear_cost = xr.DataArray(0.0)
+        bat_energy_repl_cost = xr.DataArray(0.0)
 
     # Small anti-circulation penalty for grid import/export loops.
     if on_grid and grid_imp is not None:
@@ -343,7 +368,7 @@ def initialize_objective(
         annualized_investment_cost
         + annual_fixed_om_cost
         + expected_annual_operating_cost
-        + bat_wear_cost
+        + bat_energy_repl_cost
         + bat_reg_cost
         + grid_reg_cost
     )

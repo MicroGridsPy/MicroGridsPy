@@ -79,9 +79,13 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict
         ((data.attrs or {}).get("settings", {}).get("battery_model", {}) or {}).get("loss_model"),
         default="constant_efficiency",
     )
-    # Typical-year cycle fade is a throughput WEAR COST (no capacity state): it adds
-    # no decision variables. It reuses the existing charge/discharge variables and is
-    # applied entirely in the objective, so nothing is created here.
+    # Typical-year cycle fade has no multi-year capacity state; it enters the objective
+    # as a battery-replacement cost amortized over the binding (endogenous) life. That
+    # requires a single epigraph variable per scenario (created below); dispatch reuses
+    # the existing charge/discharge variables.
+    degradation_cost_enabled = _bool_from_attrs(
+        data, ["settings", "battery_model", "degradation_model", "cycle_fade_enabled"], default=False
+    )
     is_integer = _bool_from_attrs(data, ["settings", "unit_commitment"], default=False)
 
     vars: dict[str, lp.Variable] = {}
@@ -104,6 +108,16 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict
         integer=is_integer,
         name="battery_units",
     )
+
+    # Battery energy CAPEX amortized over the binding (calendar vs cycle) life:
+    # a max-of-annuities epigraph, one per scenario (cycle wear is scenario-dependent).
+    if degradation_cost_enabled:
+        vars["battery_replacement_cost"] = model.add_variables(
+            lower=0.0,
+            dims=("scenario",),
+            coords={"scenario": scenario},
+            name="battery_replacement_cost",
+        )
 
     # Battery inverter unit count [dimensionless]. Installed power is
     # battery_inverter_units * battery_inverter_nominal_power_kw.
