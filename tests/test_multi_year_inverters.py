@@ -200,8 +200,6 @@ def _base_data() -> xr.Dataset:
             "battery_depth_of_discharge": xr.DataArray(1.0),
             "battery_max_charge_c_rate": xr.DataArray(1.0),
             "battery_max_discharge_c_rate": xr.DataArray(1.0),
-            "battery_cycle_fade_coefficient_per_kwh_throughput": xr.DataArray(0.0),
-            "battery_calendar_time_increment_per_year": xr.DataArray(1.0),
             "battery_capacity_degradation_rate_per_year": xr.DataArray(0.0),
             "generator_nominal_capacity_kw": xr.DataArray(
                 [1.0], dims=("inv_step",), coords={"inv_step": sets.inv_step}

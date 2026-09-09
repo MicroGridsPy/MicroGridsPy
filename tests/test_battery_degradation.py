@@ -1,69 +1,18 @@
-"""Unit tests for the battery cycle-fade coefficient convention (Stage 1 consistency fixes).
+"""Multi-year battery cycle-fade degradation tests.
 
-Pins the documented ``/initial_soh`` convention: the cycle-fade coefficient measures
-usable-capacity fade per unit of DC throughput relative to the *beginning-of-life* usable
-capacity, so the initial SoH appears in the denominator and only matters when it is below 1.
+The endogenous cycle-fade layer uses the semi-empirical coefficient beta(T) as its
+single source: annual capacity fade = sum_t beta(T)_t * (charge_dc + discharge_dc),
+propagated through the yearly effective-capacity state with cohort resets.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from microgridspy.data_pipeline.battery_degradation_model import (
-    InputValidationError,
-    derive_cycle_fade_coefficient_from_cycle_life,
-)
-
-
-def test_cycle_fade_coefficient_full_initial_soh() -> None:
-    gamma = derive_cycle_fade_coefficient_from_cycle_life(
-        initial_soh=1.0,
-        end_of_life_soh=0.8,
-        cycle_lifetime_to_eol_cycles=4000.0,
-        reference_depth_of_discharge=0.8,
-    )
-    # (1.0 - 0.8) / (4000 * 0.8 * 1.0)
-    assert gamma == pytest.approx(0.2 / 3200.0, rel=1e-12)
-
-
-def test_cycle_fade_coefficient_scales_with_initial_soh_denominator() -> None:
-    # With initial_soh < 1 the coefficient carries the extra 1/initial_soh factor, i.e. it is
-    # the initial_soh == 1 numerator divided by (N * dod) and then by initial_soh.
-    initial_soh = 0.95
-    gamma = derive_cycle_fade_coefficient_from_cycle_life(
-        initial_soh=initial_soh,
-        end_of_life_soh=0.8,
-        cycle_lifetime_to_eol_cycles=4000.0,
-        reference_depth_of_discharge=0.8,
-    )
-    expected = (initial_soh - 0.8) / (4000.0 * 0.8 * initial_soh)
-    assert gamma == pytest.approx(expected, rel=1e-12)
-    # The denominator normalization is genuinely present (result differs from dropping /soh0).
-    without_norm = (initial_soh - 0.8) / (4000.0 * 0.8)
-    assert gamma == pytest.approx(without_norm / initial_soh, rel=1e-12)
-
-
-def test_cycle_fade_coefficient_rejects_invalid_inputs() -> None:
-    with pytest.raises(InputValidationError):
-        derive_cycle_fade_coefficient_from_cycle_life(
-            initial_soh=0.8,
-            end_of_life_soh=0.9,  # eol above initial -> invalid
-            cycle_lifetime_to_eol_cycles=4000.0,
-            reference_depth_of_discharge=0.8,
-        )
-    with pytest.raises(InputValidationError):
-        derive_cycle_fade_coefficient_from_cycle_life(
-            initial_soh=1.0,
-            end_of_life_soh=0.8,
-            cycle_lifetime_to_eol_cycles=0.0,  # non-positive cycle life -> invalid
-            reference_depth_of_discharge=0.8,
-        )
-
-
 # ---------------------------------------------------------------------------
 # Multi-year degradation solve fixture (2 years, 1 cohort, N scenarios) used to
-# check the unified scenario-wise calendar/cycle fade convention (Stage 2) and
-# the effective-capacity tightness guard (Stage 1 reporting truthfulness).
+# check the scenario-wise cycle-fade convention and the effective-capacity
+# tightness guard (reporting truthfulness).
 # ---------------------------------------------------------------------------
 import linopy as lp  # noqa: E402
 import numpy as np  # noqa: E402
@@ -74,14 +23,16 @@ from microgridspy.multi_year_model.objective import initialize_objective  # noqa
 from microgridspy.multi_year_model.variables import initialize_vars  # noqa: E402
 
 
-def _deg_sets(scenarios: list[str]) -> xr.Dataset:
-    years = ["2026", "2027"]
+def _deg_sets(scenarios: list[str], years: tuple[str, ...] = ("2026", "2027")) -> xr.Dataset:
+    years = list(years)
     return xr.Dataset(
         data_vars={
             "inv_step_start_year": xr.DataArray(
-                ["2026"], dims=("inv_step",), coords={"inv_step": ["1"]}
+                [years[0]], dims=("inv_step",), coords={"inv_step": ["1"]}
             ),
-            "year_inv_step": xr.DataArray(["1", "1"], dims=("year",), coords={"year": years}),
+            "year_inv_step": xr.DataArray(
+                ["1"] * len(years), dims=("year",), coords={"year": years}
+            ),
         },
         coords={
             "period": ("period", np.arange(2, dtype=int)),
@@ -94,11 +45,15 @@ def _deg_sets(scenarios: list[str]) -> xr.Dataset:
 
 
 def _deg_data(
-    scenarios: list[str], period1_load: dict[str, float]
+    scenarios: list[str],
+    period1_load: dict[str, float],
+    *,
+    years: tuple[str, ...] = ("2026", "2027"),
+    calendar_lifetime: float = 20.0,
 ) -> tuple[xr.Dataset, xr.Dataset]:
-    sets = _deg_sets(scenarios)
+    sets = _deg_sets(scenarios, years=years)
     yrs, pers, scs, res, inv = sets.year, sets.period, sets.scenario, sets.resource, sets.inv_step
-    ns, ny = len(scenarios), 2
+    ns, ny = len(scenarios), len(years)
 
     # period-major dim order (period, year, scenario), matching the real pipeline.
     load = np.zeros((2, ny, ns))
@@ -162,7 +117,7 @@ def _deg_data(
             "battery_inverter_specific_investment_cost_per_kw": inv1(0.0),
             "battery_inverter_lifetime_years": inv1(20.0),
             "battery_wacc": inv1(0.0),
-            "battery_calendar_lifetime_years": inv1(20.0),
+            "battery_calendar_lifetime_years": inv1(calendar_lifetime),
             "battery_fixed_om_share_per_year": inv1(0.0),
             "battery_inverter_fixed_om_share_per_year": inv1(0.0),
             "battery_embedded_emissions_kgco2e_per_kwh": inv1(0.0),
@@ -174,8 +129,12 @@ def _deg_data(
             "battery_depth_of_discharge": scal(1.0),
             "battery_max_charge_c_rate": scal(1.0),
             "battery_max_discharge_c_rate": scal(1.0),
-            "battery_cycle_fade_coefficient_per_kwh_throughput": scal(0.01),
-            "battery_calendar_time_increment_per_year": scal(1.0),
+            "battery_beta_cycle": xr.DataArray(
+                np.full((2, ny, ns), 0.01),
+                dims=("period", "year", "scenario"),
+                coords={"period": pers, "year": yrs, "scenario": scs},
+            ),
+            "battery_end_of_life_soh": scal(0.8),
             "battery_capacity_degradation_rate_per_year": scal(0.0),
             "generator_nominal_capacity_kw": inv1(1.0),
             "generator_max_installable_capacity_kw": scal(0.0),
@@ -204,16 +163,6 @@ def _deg_data(
         data[nm] = xr.DataArray(
             [0.0], dims=("battery_loss_segment",), coords={"battery_loss_segment": lseg}
         )
-    # calendar-fade curve: linear in average SOC (slope 0.02 per unit soc, zero intercept)
-    cseg = xr.IndexVariable("battery_calendar_segment", [0])
-    data = data.assign_coords({"battery_calendar_segment": cseg})
-    data["battery_calendar_fade_slope"] = xr.DataArray(
-        [0.02], dims=("battery_calendar_segment",), coords={"battery_calendar_segment": cseg}
-    )
-    data["battery_calendar_fade_intercept"] = xr.DataArray(
-        [0.0], dims=("battery_calendar_segment",), coords={"battery_calendar_segment": cseg}
-    )
-
     data.attrs["settings"] = {
         "project_name": "deg_test",
         "social_discount_rate": 0.0,
@@ -221,7 +170,7 @@ def _deg_data(
         "optimization_constraints": {"enforcement": "scenario_wise"},
         "battery_model": {
             "loss_model": "convex_loss_epigraph",
-            "degradation_model": {"cycle_fade_enabled": True, "calendar_fade_enabled": True},
+            "degradation_model": {"cycle_fade_enabled": True},
         },
     }
     data.attrs["conversion_technology_by_resource"] = {"Solar": "Solar PV"}
@@ -250,29 +199,30 @@ def test_degradation_vars_are_scenario_wise() -> None:
     model = lp.Model()
     vars_dict = initialize_vars(sets, data, model)
     for name in (
-        "battery_average_soc",
-        "battery_calendar_fade",
+        "battery_cycle_fade",
         "battery_effective_energy_capacity",
     ):
         assert "scenario" in set(vars_dict[name].dims), f"{name} must be scenario-indexed"
 
 
-def test_calendar_fade_diverges_across_scenarios() -> None:
-    # Two scenarios with different period-1 loads -> different SOC trajectories ->
-    # (now) different per-scenario calendar fade and effective capacity.
+def test_cycle_fade_diverges_across_scenarios() -> None:
+    # Two scenarios with different period-1 loads -> different throughput ->
+    # different per-scenario cycle fade and effective capacity. Start empty so each
+    # scenario must charge-then-discharge its own load (throughput is load-proportional).
     sets, data = _deg_data(["s_low", "s_high"], {"s_low": 0.2, "s_high": 0.8})
+    data["battery_initial_soc"] = xr.DataArray(0.0)
     _, _, sol = _solve_deg(sets, data)
-    cal_y0 = sol["battery_calendar_fade"].sel(year="2026").sum("inv_step")
-    assert "scenario" in cal_y0.dims
-    v_low = float(cal_y0.sel(scenario="s_low"))
-    v_high = float(cal_y0.sel(scenario="s_high"))
-    assert abs(v_high - v_low) > 1e-6  # genuinely different calendar fade per scenario
+    cyc_y0 = sol["battery_cycle_fade"].sel(year="2026").sum("inv_step")
+    assert "scenario" in cyc_y0.dims
+    v_low = float(cyc_y0.sel(scenario="s_low"))
+    v_high = float(cyc_y0.sel(scenario="s_high"))
+    assert abs(v_high - v_low) > 1e-6  # genuinely different cycle fade per scenario
 
 
 def test_reported_effective_capacity_uses_physical_recursion() -> None:
     # Reporting truthfulness: the raw LP effective-capacity state can stay slack-low
     # (its year-link is an inequality nudged tight only by a 1e-9 regularizer), but the
-    # reported capacity must follow the physical fade recursion from the initial SoH.
+    # reported capacity must follow the physical cycle-fade recursion from the initial SoH.
     from microgridspy.export.multi_year_results import (
         build_dispatch_timeseries_table_multi_year,
     )
@@ -281,9 +231,8 @@ def test_reported_effective_capacity_uses_physical_recursion() -> None:
     _, vd, sol = _solve_deg(sets, data)
 
     cyc = float(sol["battery_cycle_fade"].sel(year="2026").sum().item())
-    cal = float(sol["battery_calendar_fade"].sel(year="2026").sum().item())
-    # year 2026: soh0 * nominal = 1.0 * 0.5; year 2027: previous minus one year of fade
-    expected_y1 = 0.5 - cyc - cal
+    # year 2026: soh0 * nominal = 1.0 * 0.5; year 2027: previous minus one year of cycle fade
+    expected_y1 = 0.5 - cyc
 
     df = build_dispatch_timeseries_table_multi_year(sets=sets, data=data, vars=vd, solution=sol)
     reported_y1 = float(
@@ -293,9 +242,125 @@ def test_reported_effective_capacity_uses_physical_recursion() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Template surface (Stage 2): calendar/time ageing is one control with two
-# mutually exclusive flavors. The simple flat %/yr is a first-class, controllable
-# field; the SOC-dependent curve suppresses it (never both in the written YAML).
+# Replacement / capacity-expansion consistency: when a battery cohort is
+# replaced (calendar lifetime reached), degradation must restart from a fresh
+# battery. Both channels reset: the endogenous cycle-fade state (via the
+# commission mask) and the exogenous flat calendar rate (via the repeating
+# degradation factor, whose per-cycle age resets).
+# ---------------------------------------------------------------------------
+def test_battery_replacement_resets_cycle_fade_state() -> None:
+    # 4 years, one cohort, calendar lifetime 2 -> the battery is replaced and a new
+    # cohort commissions at the 3rd year (2028). Cycle fade accumulates within each
+    # 2-year life and must reset to full at the replacement year.
+    years = ("2026", "2027", "2028", "2029")
+    sets, data = _deg_data(["s1"], {"s1": 0.6}, years=years, calendar_lifetime=2.0)
+    data["battery_initial_soc"] = xr.DataArray(0.0)  # force charge-then-discharge each year
+    _, _, sol = _solve_deg(sets, data)
+
+    eff = sol["battery_effective_energy_capacity"].sum("inv_step").sel(scenario="s1")
+    e = {y: float(eff.sel(year=y)) for y in years}
+
+    # Degradation accumulates within the first life...
+    assert e["2027"] < e["2026"] - 1e-9
+    # ...then RESETS to full at the replacement commissioning year...
+    assert e["2028"] > e["2027"] + 1e-9
+    assert e["2028"] == pytest.approx(e["2026"], abs=1e-6)  # fresh cohort == as-installed
+    # ...and degrades again within the second life.
+    assert e["2029"] < e["2028"] - 1e-9
+
+
+def test_flat_calendar_rate_resets_each_replacement_cycle() -> None:
+    # The exogenous flat-rate factor must restart at 1.0 for each new cohort, so a
+    # replaced battery is not carried in pre-degraded. lifetime 2, rate 0.1, 4 years
+    # -> per-cycle age = [1, 2, 1, 2] -> factor (1-rate)^(age-1) = [1, 0.9, 1, 0.9].
+    from microgridspy.multi_year_model.lifecycle import repeating_degradation_factor
+
+    years = ("2026", "2027", "2028", "2029")
+    sets = _deg_sets(["s1"], years=years)
+    rate = xr.DataArray([0.1], dims=("inv_step",), coords={"inv_step": ["1"]})
+    factor = repeating_degradation_factor(sets, xr.DataArray(2.0), rate)
+    vals = factor.sel(inv_step="1").sel(year=list(years)).values.astype(float)
+    assert vals == pytest.approx([1.0, 0.9, 1.0, 0.9], abs=1e-9)
+
+
+def test_physical_effective_capacity_resets_at_replacement_commission() -> None:
+    # The reporting recursion must mirror the model: reset to soh0*nominal in a
+    # commissioning year, decline by cycle fade otherwise.
+    from microgridspy.export.multi_year_results import _physical_effective_capacity
+
+    years = [2026, 2027, 2028, 2029]
+    inv = ["1"]
+
+    def _da(vals):
+        return xr.DataArray(
+            np.array(vals, dtype=float).reshape(len(years), 1, 1),
+            dims=("year", "scenario", "inv_step"),
+            coords={"year": years, "scenario": ["s1"], "inv_step": inv},
+        )
+
+    nominal = _da([1.0, 1.0, 1.0, 1.0])
+    cycle = _da([0.1, 0.1, 0.1, 0.1])  # per-year cycle fade
+    # Replacement commissions at 2026 (install) and 2028 (lifetime 2).
+    commission = xr.DataArray(
+        np.array([1.0, 0.0, 1.0, 0.0]).reshape(len(years), 1),
+        dims=("year", "inv_step"),
+        coords={"year": years, "inv_step": inv},
+    )
+    out = _physical_effective_capacity(
+        nominal_available=nominal, cycle_fade_year=cycle, commission=commission, soh0=1.0
+    )
+    v = {y: float(out.sel(year=y).values.reshape(-1)[0]) for y in years}
+    assert v[2026] == pytest.approx(1.0)  # install
+    assert v[2027] == pytest.approx(0.9)  # 1.0 - cycle(0.1)
+    assert v[2028] == pytest.approx(1.0)  # RESET at replacement
+    assert v[2029] == pytest.approx(0.9)  # 1.0 - cycle(0.1) after reset
+
+
+def test_capacity_expansion_new_cohort_commissions_fresh() -> None:
+    # Capacity expansion: a second cohort is invested at a later step. Each cohort's
+    # degradation is tracked independently and the new cohort commissions fresh at its
+    # own start year, while the first keeps ageing.
+    from microgridspy.multi_year_model.lifecycle import (
+        repeating_degradation_factor,
+        replacement_active_mask,
+        replacement_commission_mask,
+    )
+
+    years = ["2026", "2027", "2028", "2029"]
+    sets = xr.Dataset(
+        data_vars={
+            "inv_step_start_year": xr.DataArray(
+                ["2026", "2028"], dims=("inv_step",), coords={"inv_step": ["1", "2"]}
+            ),
+            "year_inv_step": xr.DataArray(
+                ["1", "1", "2", "2"], dims=("year",), coords={"year": years}
+            ),
+        },
+        coords={"year": ("year", years), "inv_step": ("inv_step", ["1", "2"])},
+    )
+
+    active = replacement_active_mask(sets)
+    # Cohort 1 active for the whole horizon; cohort 2 only from its 2028 start.
+    assert list(active.sel(inv_step="1").sel(year=years).values.astype(float)) == [1, 1, 1, 1]
+    assert list(active.sel(inv_step="2").sel(year=years).values.astype(float)) == [0, 0, 1, 1]
+
+    commission = replacement_commission_mask(sets, xr.DataArray(20.0))
+    # Cohort 1 commissions at install (2026); cohort 2 commissions fresh at 2028.
+    assert list(commission.sel(inv_step="1").sel(year=years).values.astype(float)) == [1, 0, 0, 0]
+    assert list(commission.sel(inv_step="2").sel(year=years).values.astype(float)) == [0, 0, 1, 0]
+
+    # The flat calendar rate is fresh (factor 1.0) in each cohort's commissioning year.
+    rate = xr.DataArray([0.1, 0.1], dims=("inv_step",), coords={"inv_step": ["1", "2"]})
+    factor = repeating_degradation_factor(sets, xr.DataArray(20.0), rate)
+    assert float(factor.sel(inv_step="1").sel(year="2026")) == pytest.approx(1.0)
+    assert float(factor.sel(inv_step="1").sel(year="2028")) == pytest.approx(0.9**2)  # aged 2 yrs
+    assert float(factor.sel(inv_step="2").sel(year="2028")) == pytest.approx(1.0)  # fresh cohort
+    assert float(factor.sel(inv_step="2").sel(year="2029")) == pytest.approx(0.9)
+
+
+# ---------------------------------------------------------------------------
+# Template surface: calendar ageing is a single flat %/yr field (0 = off). It is
+# always written in the dynamic formulation and coexists with cycle fade.
 # ---------------------------------------------------------------------------
 def _battery_template_settings(**overrides):
     from microgridspy.io.templates import TemplateSettings
@@ -318,11 +383,8 @@ def _battery_template_settings(**overrides):
         battery_label="Battery",
         battery_loss_model="constant_efficiency",
         battery_cycle_fade_enabled=False,
-        battery_calendar_fade_enabled=False,
         battery_efficiency_curve_csv="battery_efficiency_curve.csv",
         battery_cycle_lifetime_to_eol_cycles=6000.0,
-        battery_calendar_fade_curve_csv="battery_calendar_fade_curve.csv",
-        battery_calendar_time_increment_per_step=1.0,
         battery_end_of_life_soh=0.8,
         generator_label="Generator",
         generator_efficiency_model="constant_efficiency",
@@ -355,19 +417,22 @@ def test_battery_simple_flat_ageing_is_written(tmp_path) -> None:
     assert tech.get("capacity_degradation_rate_per_year") == pytest.approx(0.02)
 
 
-def test_battery_calendar_curve_suppresses_flat_rate(tmp_path) -> None:
+def test_battery_flat_ageing_defaults_to_zero_and_coexists_with_cycle_fade(tmp_path) -> None:
+    # Flat calendar ageing defaults to 0 (off), is still written, and is independent of
+    # cycle fade (both can be active at once -- no mutual suppression).
     tech = _written_battery_technical(
         tmp_path,
-        "bat_cal",
+        "bat_default",
         _battery_template_settings(
             battery_loss_model="convex_loss_epigraph",
-            battery_calendar_fade_enabled=True,
-            battery_capacity_degradation_rate_per_year=0.02,
+            battery_cycle_fade_enabled=True,
         ),
     )
-    # Mutually exclusive: with SOC-dependent calendar fade, the flat rate is not written.
-    assert "capacity_degradation_rate_per_year" not in tech
-    assert tech.get("calendar_fade_curve_csv")
+    assert tech.get("capacity_degradation_rate_per_year") == pytest.approx(0.0)
+    assert tech.get("cycle_lifetime_to_eol_cycles") == pytest.approx(6000.0)
+    # The SOC-dependent calendar curve was removed entirely.
+    assert "calendar_fade_curve_csv" not in tech
+    assert "calendar_time_increment_per_year" not in tech
 
 
 def test_physical_effective_capacity_handles_integer_year_coord() -> None:
@@ -387,7 +452,6 @@ def test_physical_effective_capacity_handles_integer_year_coord() -> None:
 
     nominal = _da([1.0, 1.0])
     cycle = _da([0.1, 0.0])
-    calendar = _da([0.05, 0.0])
     commission = xr.DataArray(
         np.array([1.0, 0.0]).reshape(2, 1),
         dims=("year", "inv_step"),
@@ -396,10 +460,9 @@ def test_physical_effective_capacity_handles_integer_year_coord() -> None:
     out = _physical_effective_capacity(
         nominal_available=nominal,
         cycle_fade_year=cycle,
-        calendar_fade=calendar,
         commission=commission,
         soh0=1.0,
     )
     assert float(out.sel(year=2026).values.reshape(-1)[0]) == pytest.approx(1.0)
-    # year 2 = prev(1.0) - cycle(0.1) - calendar(0.05) = 0.85
-    assert float(out.sel(year=2027).values.reshape(-1)[0]) == pytest.approx(0.85)
+    # year 2 = prev(1.0) - cycle(0.1) = 0.9
+    assert float(out.sel(year=2027).values.reshape(-1)[0]) == pytest.approx(0.9)
