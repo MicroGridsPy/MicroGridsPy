@@ -37,8 +37,7 @@ REQUIRED_INPUTS: dict[str, str] = {
 
 OPTIONAL_INPUTS: dict[str, str] = {
     "generator_efficiency_curve.csv": "Optional generator partial-load efficiency curve used when generator.yaml points to it. Preferred semantics: normalized multiplier relative to generator nominal full-load efficiency.",
-    "battery_efficiency_curve.csv": "Optional battery one-way efficiency curve used by the advanced convex loss model. Preferred semantics: normalized multipliers relative to the scalar charge/discharge efficiencies in battery.yaml.",
-    "battery_calendar_fade_curve.csv": "Optional battery yearly-average-SoC-dependent calendar-fade coefficient curve used when enabled in formulation.json. The exact filename can be customized in Project Setup.",
+    "battery_efficiency_curve.csv": "Optional battery one-way efficiency curve used by the advanced convex loss model. Accepts absolute efficiencies (peaked default) or normalized multipliers relative to the scalar charge/discharge efficiencies in battery.yaml.",
     "grid.yaml": "Grid connection parameters for on-grid projects.",
     "grid_import_price.csv": "Hourly import tariff for on-grid projects.",
     "grid_export_price.csv": "Hourly export tariff when export is enabled.",
@@ -160,9 +159,15 @@ def _project_specific_optional_inputs(formulation: dict[str, Any], paths) -> dic
     battery_cfg = _battery_curve_config(formulation, paths)
     generator_cfg = _generator_curve_config(paths)
 
+    if _degradation_active(formulation):
+        files["ambient_temperature.csv"] = (
+            "Hourly ambient/environment temperature (degC), one column per scenario/year. "
+            "Required when battery degradation (cycle fade) is active; drives the semi-empirical "
+            "alpha (calendar) and beta (cycle) coefficients."
+        )
+
     for entry in battery_cfg.get("curve_entries", []):
         eff_path = entry.get("efficiency_curve_path")
-        cal_path = entry.get("calendar_curve_path")
         if isinstance(eff_path, Path):
             suffix = (
                 f" (investment step {entry['inv_step']})"
@@ -171,16 +176,6 @@ def _project_specific_optional_inputs(formulation: dict[str, Any], paths) -> dic
             )
             files[eff_path.name] = (
                 "Optional battery one-way efficiency curve used by the advanced convex loss model."
-                f"{suffix}"
-            )
-        if isinstance(cal_path, Path):
-            suffix = (
-                f" (investment step {entry['inv_step']})"
-                if entry.get("inv_step") is not None
-                else ""
-            )
-            files[cal_path.name] = (
-                "Optional battery yearly-average-SoC-dependent calendar-fade coefficient curve used when calendar fade is enabled."
                 f"{suffix}"
             )
 
@@ -212,6 +207,12 @@ def _required_missing_for_configuration(formulation: dict[str, Any], paths) -> l
             and not (paths.inputs_dir / "grid_export_price.csv").exists()
         ):
             missing.append("grid_export_price.csv")
+
+    # Ambient temperature is required when endogenous battery degradation is active.
+    if _degradation_active(formulation) and not (
+        paths.inputs_dir / "ambient_temperature.csv"
+    ).exists():
+        missing.append("ambient_temperature.csv")
 
     return sorted(set(missing))
 
@@ -533,19 +534,11 @@ def _battery_curve_config(formulation: dict[str, Any], paths) -> dict[str, Any]:
             if not isinstance(block, dict):
                 continue
             eff_curve_name = str(block.get("efficiency_curve_csv") or "").strip()
-            cal_curve_name = str(
-                block.get("calendar_fade_curve_csv")
-                or degradation_model.get("battery_calendar_fade_curve_csv")
-                or ""
-            ).strip()
             curve_entries.append(
                 {
                     "inv_step": str(step),
                     "efficiency_curve_path": (paths.inputs_dir / eff_curve_name)
                     if eff_curve_name
-                    else None,
-                    "calendar_curve_path": (paths.inputs_dir / cal_curve_name)
-                    if cal_curve_name
                     else None,
                     "charge_efficiency_base": _safe_yaml_float(
                         block.get("charge_efficiency", 1.0), 1.0
@@ -559,16 +552,10 @@ def _battery_curve_config(formulation: dict[str, Any], paths) -> dict[str, Any]:
         eff_curve_name = str(
             technical.get("efficiency_curve_csv") or "battery_efficiency_curve.csv"
         ).strip()
-        cal_curve_name = str(
-            technical.get("calendar_fade_curve_csv")
-            or degradation_model.get("battery_calendar_fade_curve_csv")
-            or "battery_calendar_fade_curve.csv"
-        ).strip()
         curve_entries.append(
             {
                 "inv_step": None,
                 "efficiency_curve_path": paths.inputs_dir / eff_curve_name,
-                "calendar_curve_path": paths.inputs_dir / cal_curve_name,
                 "charge_efficiency_base": _safe_yaml_float(
                     technical.get("charge_efficiency", 1.0), 1.0
                 ),
@@ -581,8 +568,6 @@ def _battery_curve_config(formulation: dict[str, Any], paths) -> dict[str, Any]:
     return {
         "loss_model": loss_model,
         "battery_efficiency_curve_enabled": loss_model == "convex_loss_epigraph",
-        "calendar_fade_enabled": formulation_mode == "dynamic"
-        and bool(degradation_model.get("calendar_fade_enabled", False)),
         "curve_entries": curve_entries,
     }
 
@@ -686,20 +671,13 @@ def _render_curve_diagnostics(formulation: dict[str, Any], paths) -> None:
         and isinstance(entry.get("efficiency_curve_path"), Path)
         and entry["efficiency_curve_path"].exists()
     ]
-    battery_cal_entries = [
-        entry
-        for entry in battery_cfg["curve_entries"]
-        if battery_cfg["calendar_fade_enabled"]
-        and isinstance(entry.get("calendar_curve_path"), Path)
-        and entry["calendar_curve_path"].exists()
-    ]
     generator_entries = [
         entry
         for entry in generator_cfg["curve_entries"]
         if isinstance(entry.get("curve_path"), Path) and entry["curve_path"].exists()
     ]
 
-    if not any([battery_eff_entries, battery_cal_entries, generator_entries]):
+    if not any([battery_eff_entries, generator_entries]):
         return
 
     st.subheader("Curve Diagnostics")
@@ -758,47 +736,6 @@ def _render_curve_diagnostics(formulation: dict[str, Any], paths) -> None:
                 f"`{entry['efficiency_curve_path'].name}` does not contain the expected columns."
             )
 
-    for entry in battery_cal_entries:
-        title_suffix = (
-            f" - {vintage_display_for_step(labels=vintage_labels, family='battery', step=entry['inv_step'])}"
-            if entry.get("inv_step") is not None
-            else ""
-        )
-        st.markdown(f"**Battery calendar-fade curve{title_suffix}**")
-        cal_df = _read_optional_csv(entry["calendar_curve_path"])
-        if cal_df is None:
-            st.warning(f"Could not read `{entry['calendar_curve_path'].name}`.")
-        elif {"soc_pu", "calendar_fade_coefficient_per_year"}.issubset(cal_df.columns) or {
-            "soc_pu",
-            "calendar_fade_coefficient_per_step",
-        }.issubset(cal_df.columns):
-            y_col = (
-                "calendar_fade_coefficient_per_year"
-                if "calendar_fade_coefficient_per_year" in cal_df.columns
-                else "calendar_fade_coefficient_per_step"
-            )
-            c1, c2 = st.columns([2.0, 1.0])
-            with c1:
-                _render_curve_plot(
-                    cal_df,
-                    x="soc_pu",
-                    y_columns=[y_col],
-                    title=f"Battery yearly calendar-fade coefficient vs average SoC{title_suffix}",
-                    x_label="Average yearly state of charge [p.u.]",
-                    y_label="Calendar fade coefficient [per year]",
-                )
-            with c2:
-                st.caption(f"Source: `{entry['calendar_curve_path'].name}`")
-                if y_col == "calendar_fade_coefficient_per_step":
-                    st.caption(
-                        "Legacy per-step column detected. It is interpreted with yearly semantics in the updated multi-year surrogate."
-                    )
-                st.dataframe(cal_df, width="stretch", hide_index=True)
-        else:
-            st.warning(
-                f"`{entry['calendar_curve_path'].name}` does not contain the expected columns."
-            )
-
     for entry in generator_entries:
         title_suffix = (
             f" - {vintage_display_for_step(labels=vintage_labels, family='generator', step=entry['inv_step'])}"
@@ -827,6 +764,112 @@ def _render_curve_diagnostics(formulation: dict[str, Any], paths) -> None:
                 st.dataframe(plot_df, width="stretch", hide_index=True)
         else:
             st.warning(f"`{gen_curve_path.name}` does not contain the expected columns.")
+
+
+def _degradation_active(formulation: dict[str, Any]) -> bool:
+    battery_model = formulation.get("battery_model", {}) or {}
+    degradation_model = battery_model.get("degradation_model", {}) or {}
+    return bool(degradation_model.get("cycle_fade_enabled", False))
+
+
+def _render_degradation_coefficient_curves(formulation: dict[str, Any], paths) -> None:
+    """
+    Preview the semi-empirical degradation coefficients alpha(T) (calendar)
+    and beta(T) (cycle) for the active battery chemistry / DoD / cycle life. This is
+    the predefined curve *shape* (built into the model, per chemistry and DoD/SoC
+    band) scaled by the user's rated cycle life - analogous to the generator
+    partial-load curve. Rendered only when endogenous battery degradation is active.
+    """
+    if not _degradation_active(formulation):
+        return
+
+    try:
+        from microgridspy.data_pipeline.battery_degradation_coefficients import (
+            InputValidationError as CoeffError,
+        )
+        from microgridspy.data_pipeline.battery_degradation_coefficients import (
+            coefficient_curve_preview,
+            normalize_chemistry,
+            reference_cycle_life,
+        )
+    except Exception as exc:  # pragma: no cover - import guard
+        st.warning(f"Could not import degradation coefficient curves: {exc}")
+        return
+
+    try:
+        battery_yaml = read_yaml(paths.inputs_dir / "battery.yaml")
+    except Exception:
+        battery_yaml = {}
+    technical = ((battery_yaml.get("battery", {}) or {}).get("technical", {}) or {})
+    raw_chemistry = technical.get("chemistry", None)
+    dod = _safe_yaml_float(technical.get("depth_of_discharge", None), 0.8)
+    user_cycle_life = technical.get("cycle_lifetime_to_eol_cycles", None)
+
+    st.subheader("Battery Degradation Coefficients (semi-empirical curves)")
+    st.caption(
+        "Predefined semi-empirical shape selected by chemistry and depth-of-discharge, "
+        "scaled by the rated cycle life. These alpha (calendar) and beta (cycle) "
+        "coefficients drive the endogenous degradation layer; they are evaluated per "
+        "hour from ambient_temperature.csv."
+    )
+
+    if raw_chemistry in (None, ""):
+        st.warning(
+            "`battery.technical.chemistry` is not set. Add one of {LFP, NMC, lead_acid} "
+            "to battery.yaml to enable the semi-empirical degradation curves."
+        )
+        return
+    try:
+        chemistry = normalize_chemistry(raw_chemistry)
+        preview = coefficient_curve_preview(
+            chemistry=chemistry,
+            depth_of_discharge=dod,
+            user_cycle_life=(
+                float(user_cycle_life) if user_cycle_life not in (None, "") else None
+            ),
+        )
+    except CoeffError as exc:
+        st.error(str(exc))
+        return
+
+    n_ref = reference_cycle_life(chemistry)
+    scaling = (n_ref / float(user_cycle_life)) if user_cycle_life not in (None, "") else 1.0
+
+    curve_df = pd.DataFrame(
+        {
+            "Ambient temperature [degC]": preview["temperature_degc"],
+            "alpha (calendar) [1/h]": preview["alpha"],
+            "beta (cycle) [1/kWh exchanged]": preview["beta"],
+        }
+    )
+
+    c1, c2 = st.columns([2.0, 1.0])
+    with c1:
+        _render_curve_plot(
+            curve_df,
+            x="Ambient temperature [degC]",
+            y_columns=["beta (cycle) [1/kWh exchanged]"],
+            title=f"Cycle coefficient beta(T) - {chemistry}, DoD={dod:.2f}",
+            x_label="Ambient temperature [degC]",
+            y_label="beta [fraction of nameplate / kWh exchanged]",
+        )
+        _render_curve_plot(
+            curve_df,
+            x="Ambient temperature [degC]",
+            y_columns=["alpha (calendar) [1/h]"],
+            title=f"Calendar coefficient alpha(T) - {chemistry}",
+            x_label="Ambient temperature [degC]",
+            y_label="alpha [fraction of nameplate / h]",
+        )
+    with c2:
+        st.metric("Chemistry", chemistry)
+        st.metric("DoD band", f"{dod:.2f}")
+        st.metric("Cycle-life scaling (Nref/Nuser)", f"{scaling:.3f}")
+        st.caption(
+            f"Reference cycle life: {n_ref:.0f}. "
+            f"Rated cycle life: {user_cycle_life if user_cycle_life not in (None, '') else 'unset (scaling=1)'}."
+        )
+        st.dataframe(curve_df, width="stretch", hide_index=True)
 
 
 def _render_file_section(project_root: Path, formulation: dict[str, Any], paths) -> bool:
@@ -1026,6 +1069,12 @@ def _selector_index(values: list[Any], preferred: Any) -> int:
 
 def _infer_y_label(variable: str) -> str:
     name = variable.lower()
+    if "ambient_temperature" in name or name.endswith("temperature"):
+        return "Temperature [degC]"
+    if "alpha_calendar" in name:
+        return "alpha [fraction of nameplate / h]"
+    if "beta_cycle" in name:
+        return "beta [fraction of nameplate / kWh exchanged]"
     if "availability" in name:
         return "Value [-]"
     if "load" in name or "generation" in name or "import" in name or "export" in name:
@@ -1601,6 +1650,7 @@ def render_page() -> None:
 
         _render_dataset_section(ds, loader_mode, paths)
         _render_curve_diagnostics(formulation, paths)
+        _render_degradation_coefficient_curves(formulation, paths)
         _render_grid_controls(project_name, formulation, ds, paths)
 
     if ds is not None:

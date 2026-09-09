@@ -443,14 +443,6 @@ def _build_multi_year_diagnostics_table(
                 "Unit": "MWh cap./yr",
             }
         )
-    if "battery_calendar_fade" in frame.columns:
-        rows.append(
-            {
-                "Metric": "Battery calendar fade",
-                "Value": float(frame["battery_calendar_fade"].sum()) / divisor / 1e3,
-                "Unit": "MWh cap./yr",
-            }
-        )
     if initial_soh is not None and final_soh is not None:
         rows.append({"Metric": "Battery initial SoH", "Value": initial_soh, "Unit": "-"})
         rows.append({"Metric": "Battery final SoH", "Value": final_soh, "Unit": "-"})
