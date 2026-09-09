@@ -66,16 +66,8 @@ def initialize_constraints(
         ((data.attrs or {}).get("settings", {}).get("battery_model", {}) or {}).get("loss_model"),
         default="constant_efficiency",
     )
-    battery_model_settings = (data.attrs or {}).get("settings", {}).get("battery_model", {}) or {}
-    degradation_settings = battery_model_settings.get("degradation_model", {}) or {}
-    degradation_state_enabled = bool(degradation_settings.get("cycle_fade_enabled", False)) or bool(
-        degradation_settings.get("calendar_fade_enabled", False)
-    )
-    if degradation_state_enabled:
-        raise InputValidationError(
-            "Battery degradation constraints are not supported in the steady_state typical-year formulation. "
-            "Use the dynamic multi-year formulation for cycle fade, calendar fade, SoH update, and SoH-driven capacity restriction."
-        )
+    # Typical-year cycle fade is a throughput WEAR COST applied in the objective; it
+    # adds no capacity-state constraints here (no SoH state, no capacity restriction).
     enforcement = p.constraints_enforcement(default="scenario_wise")
     if enforcement not in ("expected", "scenario_wise"):
         raise InputValidationError(

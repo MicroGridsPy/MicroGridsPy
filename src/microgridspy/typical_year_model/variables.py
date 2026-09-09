@@ -79,20 +79,9 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict
         ((data.attrs or {}).get("settings", {}).get("battery_model", {}) or {}).get("loss_model"),
         default="constant_efficiency",
     )
-    degradation_state_enabled = _bool_from_attrs(
-        data,
-        ["settings", "battery_model", "degradation_model", "cycle_fade_enabled"],
-        default=False,
-    ) or _bool_from_attrs(
-        data,
-        ["settings", "battery_model", "degradation_model", "calendar_fade_enabled"],
-        default=False,
-    )
-    if degradation_state_enabled:
-        raise InputValidationError(
-            "Battery degradation variables are not available in the steady_state typical-year formulation. "
-            "Use the dynamic multi-year formulation for cycle fade, calendar fade, and SoH tracking."
-        )
+    # Typical-year cycle fade is a throughput WEAR COST (no capacity state): it adds
+    # no decision variables. It reuses the existing charge/discharge variables and is
+    # applied entirely in the objective, so nothing is created here.
     is_integer = _bool_from_attrs(data, ["settings", "unit_commitment"], default=False)
 
     vars: dict[str, lp.Variable] = {}

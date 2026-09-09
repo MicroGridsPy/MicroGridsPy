@@ -306,6 +306,27 @@ def initialize_objective(
         "scenario"
     )  # scalar
 
+    # ------------------------------------------------------------------
+    # Battery cycle-fade wear cost (semi-empirical, throughput-based, no state)
+    # ------------------------------------------------------------------
+    # A genuine operating cost: each unit of throughput consumes usable battery
+    # life. The per-hour capacity fade is beta(T) * (charge + discharge), and the
+    # marginal cost of one kWh of capacity fade is the specific battery CAPEX
+    # divided by the usable-life fraction (SoH0 - SoH_eol). beta is temperature-
+    # and DoD-aware, so hot operation is penalised more per kWh cycled.
+    beta_cycle = getattr(p, "battery_beta_cycle", None)
+    soh0 = getattr(p, "battery_initial_soh", None)
+    soh_eol = getattr(p, "battery_end_of_life_soh", None)
+    if beta_cycle is not None and soh0 is not None and soh_eol is not None:
+        usable_life_fraction = soh0 - soh_eol
+        marginal_wear_cost = bat_capex_kwh / usable_life_fraction  # currency / kWh fade
+        # AC-side throughput proxy (both directions summed), matching the beta fit
+        # convention of energy exchanged per cycle (2 * DoD per full cycle).
+        bat_wear_fade_s = (beta_cycle * (bat_ch + bat_dis)).sum("period")  # (scenario,)
+        bat_wear_cost = (w_s * bat_wear_fade_s * marginal_wear_cost).sum("scenario")  # scalar
+    else:
+        bat_wear_cost = xr.DataArray(0.0)
+
     # Small anti-circulation penalty for grid import/export loops.
     if on_grid and grid_imp is not None:
         grid_throughput_s = grid_imp.sum("period")
@@ -322,6 +343,7 @@ def initialize_objective(
         annualized_investment_cost
         + annual_fixed_om_cost
         + expected_annual_operating_cost
+        + bat_wear_cost
         + bat_reg_cost
         + grid_reg_cost
     )
