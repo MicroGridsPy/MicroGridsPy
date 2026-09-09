@@ -18,7 +18,9 @@ import pytest
 linopy = pytest.importorskip("linopy")
 
 
-def _build_project(root: Path, *, cycle_fade: bool, lost_load_cost: float) -> None:
+def _build_project(
+    root: Path, *, cycle_fade: bool, lost_load_cost: float, cyclelife: float = 2000.0
+) -> None:
     import yaml
 
     from microgridspy.io.templates import TemplateSettings, write_templates
@@ -44,7 +46,7 @@ def _build_project(root: Path, *, cycle_fade: bool, lost_load_cost: float) -> No
         battery_loss_model="constant_efficiency",
         battery_cycle_fade_enabled=cycle_fade,
         battery_efficiency_curve_csv="battery_efficiency_curve.csv",
-        battery_cycle_lifetime_to_eol_cycles=2000.0,
+        battery_cycle_lifetime_to_eol_cycles=cyclelife,
         battery_end_of_life_soh=0.8,
         generator_label="Generator",
         generator_efficiency_model="constant_efficiency",
@@ -155,46 +157,66 @@ def _solve(root: Path, monkeypatch):
     if str(model.termination_condition) not in ("optimal", "TerminationCondition.optimal"):
         pytest.skip(f"toy model not optimal: {model.termination_condition}")
     throughput = float((v["battery_charge"] + v["battery_discharge"]).sum().solution)
-    return ds, float(model.objective.value), throughput
+    return ds, float(model.objective.value), throughput, model, v
 
 
-def test_typical_year_beta_is_loaded_and_charged(tmp_path, monkeypatch) -> None:
+def _crf(r: float, n: float) -> float:
+    return (r * (1 + r) ** n) / ((1 + r) ** n - 1) if r > 0 else 1.0 / n
+
+
+def _annuities(ds, v):
+    """Return (Z, calendar_annuity, cycle_annuity) for scenario_1 at the solution."""
+    z = float(v["battery_replacement_cost"].solution.sel(scenario="scenario_1"))
+    cap = float((v["battery_units"] * ds["battery_nominal_capacity_kwh"]).solution)
+    capex, wacc, cal = 300.0, 0.05, 10.0
+    cal_ann = _crf(wacc, cal) * capex * cap
+    c_repl, phi = capex / (1.0 - 0.8), _crf(wacc, cal) * cal
+    fade = float(
+        (ds["battery_beta_cycle"] * (v["battery_charge"] + v["battery_discharge"]).solution).sum()
+    )
+    return z, cal_ann, c_repl * phi * fade
+
+
+def test_typical_year_replacement_cost_is_max_of_annuities(tmp_path, monkeypatch) -> None:
+    # The battery energy CAPEX is amortized over the binding life via a max-of-annuities
+    # epigraph. With a long rated life (gentle cycling) the CALENDAR limit binds, so the
+    # charged cost equals the calendar annuity and NPC stays flat vs no degradation.
     root_off = tmp_path / "off"
     _build_project(root_off, cycle_fade=False, lost_load_cost=50.0)
-    ds_off, obj_off, thru_off = _solve(root_off, monkeypatch)
+    ds_off, obj_off, _, _, _ = _solve(root_off, monkeypatch)
     assert "battery_beta_cycle" not in ds_off.data_vars
 
     root_on = tmp_path / "on"
-    _build_project(root_on, cycle_fade=True, lost_load_cost=50.0)
-    ds_on, obj_on, thru_on = _solve(root_on, monkeypatch)
+    _build_project(root_on, cycle_fade=True, lost_load_cost=50.0, cyclelife=6000.0)
+    ds_on, obj_on, _, _, v_on = _solve(root_on, monkeypatch)
 
-    # beta attached, no capacity-state variables introduced.
     assert "battery_beta_cycle" in ds_on.data_vars
-    assert set(ds_on["battery_beta_cycle"].dims) == {"period", "scenario"}
+    assert "battery_replacement_cost" in v_on
     deg = ds_on.attrs["settings"]["battery_model"]["degradation_model"]
     assert deg["coefficient_source"] == "semi_empirical"
-    assert deg["cycle_fade_mode"] == "throughput_wear_cost"
+    assert deg["cycle_fade_mode"] == "binding_life_annuity"
 
-    # Wear cost is charged: with dispatch unchanged (lost load far dearer than wear),
-    # the objective rises by beta * throughput * marginal, marginal = capex/(SoH0-SoHeol).
-    assert obj_on > obj_off
-    beta_mean = float(ds_on["battery_beta_cycle"].mean())
-    marginal = 300.0 / (1.0 - 0.8)
-    expected_extra = beta_mean * thru_off * marginal
-    assert obj_on - obj_off == pytest.approx(expected_extra, rel=0.05)
+    z, cal_ann, cyc_ann = _annuities(ds_on, v_on)
+    # epigraph identity: Z == max(calendar, cycle) annuity
+    assert z == pytest.approx(max(cal_ann, cyc_ann), rel=1e-3)
+    # gentle cycling -> calendar limit binds
+    assert cal_ann >= cyc_ann - 1e-6
+    # and NPC is essentially flat vs no degradation (only the convex-loss efficiency diff)
+    assert obj_on == pytest.approx(obj_off, rel=0.05)
 
 
-def test_typical_year_wear_cost_reduces_cycling_when_lost_load_is_cheap(
-    tmp_path, monkeypatch
-) -> None:
-    # With cheap lost load, the endogenous wear cost makes some cycling uneconomic,
-    # so enabling cycle fade reduces battery throughput.
-    root_off = tmp_path / "off"
-    _build_project(root_off, cycle_fade=False, lost_load_cost=0.05)
-    _, _, thru_off = _solve(root_off, monkeypatch)
+def test_typical_year_shorter_cycle_life_is_never_cheaper(tmp_path, monkeypatch) -> None:
+    # For any fixed decision the cycle annuity is higher when the rated life is shorter,
+    # so the optimal NPC is monotonic: a shorter cycle life is never cheaper. When the
+    # cycle limit binds the charged cost is the (larger) cycle annuity.
+    root_long = tmp_path / "long"
+    _build_project(root_long, cycle_fade=True, lost_load_cost=50.0, cyclelife=6000.0)
+    _, obj_long, _, _, _ = _solve(root_long, monkeypatch)
 
-    root_on = tmp_path / "on"
-    _build_project(root_on, cycle_fade=True, lost_load_cost=0.05)
-    _, _, thru_on = _solve(root_on, monkeypatch)
+    root_short = tmp_path / "short"
+    _build_project(root_short, cycle_fade=True, lost_load_cost=50.0, cyclelife=800.0)
+    ds_short, obj_short, _, _, v_short = _solve(root_short, monkeypatch)
 
-    assert thru_on <= thru_off + 1e-6
+    z, cal_ann, cyc_ann = _annuities(ds_short, v_short)
+    assert z == pytest.approx(max(cal_ann, cyc_ann), rel=1e-3)
+    assert obj_short >= obj_long - 1e-6
