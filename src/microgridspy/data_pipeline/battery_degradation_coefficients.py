@@ -43,6 +43,8 @@ The polynomial coefficients are literature-fitted per chemistry and stress band;
 the project documentation for their provenance and references.
 """
 
+import json
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -241,6 +243,99 @@ def evaluate_degradation_coefficients(
         ),
         "beta_dod_band": (None if chem == LEAD_ACID else select_dod_band(chem, depth_of_discharge)),
         "reference_cycle_life": _REFERENCE_CYCLE_LIFE[chem],
+        "cycle_life_scaling": cycle_life_scaling(chem, user_cycle_life),
+    }
+
+
+# ===========================================================================
+# Depth-resolved cycle aging — per-SOC-band marginal costs c_k(T)
+# ---------------------------------------------------------------------------
+# Source: the offline Layer-I physical model
+# (notebooks/battery_layer1_liion_physical_model.ipynb), whose distilled band
+# marginals are shipped alongside this module as layer1_liion_coefficients.json.
+# The physical model computes the depth curve Psi(D,T) directly (no extrapolation),
+# and the band marginals c_k = dPsi/dD are stored as cubics in y = T[degC]/10 over a
+# fine depth grid. Here we (i) evaluate those fine-grid marginals at the ambient
+# temperature, (ii) reconstruct Psi at the grid edges, and (iii) re-bin to the
+# requested number of usable SOC bands over [0, DoD].
+#
+# c_k are used in the MILP as: capacity_fade = sum_bands c_k * discharge_through_band,
+# with c_k = dPsi/d(depth-fraction) [dimensionless] and discharge in kWh -> fade in kWh,
+# so a full-depth cycle reproduces the same per-cycle fade as the single-beta path.
+# Li-ion only (lead-acid depth banding needs the Schiffer model).
+# ===========================================================================
+_BAND_COEFF_PATH = Path(__file__).with_name("layer1_liion_coefficients.json")
+_BAND_COEFF_CACHE: dict[str, Any] | None = None
+
+
+def _load_band_coefficients() -> dict[str, Any]:
+    global _BAND_COEFF_CACHE
+    if _BAND_COEFF_CACHE is None:
+        if not _BAND_COEFF_PATH.exists():
+            raise InputValidationError(
+                f"Missing depth-band coefficient file: {_BAND_COEFF_PATH}. It is produced by the "
+                "Layer-I notebook and shipped with the package."
+            )
+        _BAND_COEFF_CACHE = json.loads(_BAND_COEFF_PATH.read_text(encoding="utf-8"))
+    return _BAND_COEFF_CACHE
+
+
+def _psi_at(edges: np.ndarray, psi_edges: np.ndarray, d: float) -> np.ndarray:
+    """Linear interpolation of the depth curve Psi at depth ``d`` (edges monotonic in [0,1])."""
+    i1 = int(np.clip(np.searchsorted(edges, d, side="right"), 1, len(edges) - 1))
+    i0 = i1 - 1
+    frac = (d - edges[i0]) / (edges[i1] - edges[i0])
+    return psi_edges[i0] + frac * (psi_edges[i1] - psi_edges[i0])
+
+
+def evaluate_band_marginals(
+    *,
+    chemistry: str,
+    depth_of_discharge: float,
+    temperature_degc: np.ndarray,
+    n_bands: int,
+    user_cycle_life: float | None = None,
+) -> dict[str, Any]:
+    """Per-SOC-band marginal cycle-fade costs ``c_k(T)`` for the usable depth window.
+
+    Returns a dict with ``c_k`` of shape ``(n_bands, *temperature_degc.shape)`` (band 0 is the
+    shallowest/top slice, band n_bands-1 the deepest), plus the usable band edges. c_k is scaled
+    by the cycle-life ratio ``N_ref/N_user`` exactly like ``beta`` (§ predefined shape, user
+    magnitude), so the same rated-cycle-life lever applies.
+    """
+    chem = normalize_chemistry(chemistry)
+    if chem == LEAD_ACID:
+        raise InputValidationError(
+            "Depth-resolved marginal bands are Li-ion only; lead-acid needs the Schiffer model."
+        )
+    if int(n_bands) < 1:
+        raise InputValidationError("n_bands must be >= 1.")
+    dod = float(depth_of_discharge)
+    if not (0.0 < dod <= 1.0):
+        raise InputValidationError("depth_of_discharge must be within (0, 1].")
+
+    entry = _load_band_coefficients()["ck_bands"][chem]
+    edges = np.asarray(entry["edges"], dtype=float)  # (M+1,) over [0, 1]
+    polys = entry["poly"]  # M cubics in y = T/10, one per fine depth band
+    temp = np.asarray(temperature_degc, dtype=float)
+    y = temp / 10.0
+    # fine-grid marginals dPsi/dD, clipped non-negative
+    c_fine = np.clip(np.stack([_cubic(tuple(p), y) for p in polys], axis=0), 0.0, None)  # (M,*T)
+    # reconstruct Psi at the fine edges: Psi(0)=0, Psi(e_j)=sum c*ΔD
+    dwidth = np.diff(edges).reshape((-1,) + (1,) * temp.ndim)
+    psi_edges = np.concatenate(
+        [np.zeros((1,) + temp.shape), np.cumsum(c_fine * dwidth, axis=0)], axis=0
+    )  # (M+1,*T)
+    # re-bin to n_bands equal-width usable bands over [0, dod]
+    use_edges = np.linspace(0.0, dod, int(n_bands) + 1)
+    psi_use = np.stack([_psi_at(edges, psi_edges, float(d)) for d in use_edges], axis=0)  # (K+1,*T)
+    width = np.diff(use_edges).reshape((-1,) + (1,) * temp.ndim)
+    c_k = np.diff(psi_use, axis=0) / width  # (K,*T) marginal per unit depth-fraction
+    c_k = c_k * cycle_life_scaling(chem, user_cycle_life)
+    return {
+        "c_k": np.clip(c_k, 0.0, None),
+        "usable_band_edges": use_edges,
+        "chemistry": chem,
         "cycle_life_scaling": cycle_life_scaling(chem, user_cycle_life),
     }
 

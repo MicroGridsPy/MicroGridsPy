@@ -17,6 +17,7 @@ from microgridspy.data_pipeline.battery_degradation_model import (
 )
 from microgridspy.data_pipeline.battery_degradation_coefficients import (
     alpha_hourly,
+    evaluate_band_marginals,
     evaluate_degradation_coefficients,
     normalize_chemistry,
 )
@@ -2174,6 +2175,32 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
         data["battery_beta_cycle"] = beta_da
         data["battery_calendar_rate_per_year"] = calendar_rate_year
         battery_degradation_settings["chemistry"] = chemistry
+
+        # Depth-resolved cycle aging: per-SOC-band marginal costs c_k(T), evaluated at
+        # the same ambient series. Attached only in "marginal_bands" mode; the single-beta
+        # path is untouched. c_k has a leading "soc_band" dim (0 = shallowest/top slice).
+        if battery_degradation_settings.get("cycle_fade_mode") == "marginal_bands":
+            n_bands = int(battery_degradation_settings.get("n_soc_bands", 5))
+            band_res = evaluate_band_marginals(
+                chemistry=chemistry,
+                depth_of_discharge=dod_value,
+                temperature_degc=ambient_temperature.values,
+                n_bands=n_bands,
+                user_cycle_life=user_cycle_life,
+            )
+            ck_da = xr.DataArray(
+                band_res["c_k"],
+                dims=("soc_band",) + ambient_temperature.dims,
+                coords={"soc_band": np.arange(n_bands), **dict(ambient_temperature.coords)},
+                name="battery_ck_bands",
+                attrs={
+                    "units": "fraction_nameplate_per_depth_fraction",
+                    "chemistry": chemistry,
+                    "usable_band_edges": [float(e) for e in band_res["usable_band_edges"]],
+                    "n_bands": n_bands,
+                },
+            )
+            data["battery_ck_bands"] = ck_da
         battery_degradation_settings["coefficient_source"] = "semi_empirical"
         battery_degradation_settings["alpha_soc_band_percent"] = coeffs["alpha_soc_band_percent"]
         battery_degradation_settings["beta_dod_band"] = coeffs["beta_dod_band"]

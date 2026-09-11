@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import linopy as lp
+import numpy as np
 import xarray as xr
 
 from microgridspy.data_pipeline.battery_loss_model import (
@@ -229,6 +230,35 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict
                 coords={"year": year, "scenario": scenario, "inv_step": inv_step},
                 name="battery_replacement_cost",
             )
+
+            # Depth-resolved cycle aging (marginal_bands): a stacked SOC-band reservoir.
+            #   battery_soc_band[b]       usable stored energy in band b (0=top/shallow) [kWh]
+            #   battery_discharge_band[b] DC discharge routed through band b             [kWh]
+            #   battery_charge_band[b]    DC charge routed into band b                   [kWh]
+            # Convex costs c_k (increasing with depth) make the optimiser cycle shallow
+            # bands first, so cycling depth is emergent and the block stays a pure LP.
+            cycle_fade_mode = (
+                str(degradation_settings.get("cycle_fade_mode", "single_beta")).strip().lower()
+            )
+            if cycle_fade_mode == "marginal_bands":
+                n_soc_bands = int(degradation_settings.get("n_soc_bands", 5))
+                band_coord = np.arange(n_soc_bands)
+                band_dims = ("soc_band", "period", "year", "scenario", "inv_step")
+                band_coords = {
+                    "soc_band": band_coord,
+                    "period": period,
+                    "year": year,
+                    "scenario": scenario,
+                    "inv_step": inv_step,
+                }
+                for _nm in (
+                    "battery_soc_band",
+                    "battery_discharge_band",
+                    "battery_charge_band",
+                ):
+                    vars[_nm] = model.add_variables(
+                        lower=0.0, dims=band_dims, coords=band_coords, name=_nm
+                    )
 
     # Lost load [kWh]
     vars["lost_load"] = model.add_variables(

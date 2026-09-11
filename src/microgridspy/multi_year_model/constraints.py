@@ -179,10 +179,15 @@ def initialize_constraints(
     degradation_settings = battery_model_settings.get("degradation_model", {}) or {}
     cycle_fade_enabled = bool(degradation_settings.get("cycle_fade_enabled", False))
     degradation_state_enabled = cycle_fade_enabled
+    cycle_fade_mode = (
+        str(degradation_settings.get("cycle_fade_mode", "single_beta")).strip().lower()
+    )
     # Semi-empirical coefficient fields (temperature- and DoD-aware), attached by the
     # loader when cycle fade is active. beta drives the endogenous cycle-fade recursion
     # (use-based); alpha drives the calendar rate (time-based, static within the solve).
     beta_cycle = data.get("battery_beta_cycle") if isinstance(data, xr.Dataset) else None
+    # Depth-resolved per-SOC-band marginals c_k(T) (marginal_bands mode only).
+    ck_bands = data.get("battery_ck_bands") if isinstance(data, xr.Dataset) else None
     calendar_rate_year = (
         data.get("battery_calendar_rate_per_year") if isinstance(data, xr.Dataset) else None
     )
@@ -280,6 +285,9 @@ def initialize_constraints(
     bat_dis_loss = vars.get("battery_discharge_loss")
     bat_cycle_fade = vars.get("battery_cycle_fade")
     bat_eff_cap = vars.get("battery_effective_energy_capacity")
+    bat_soc_band = vars.get("battery_soc_band")
+    bat_dis_band = vars.get("battery_discharge_band")
+    bat_ch_band = vars.get("battery_charge_band")
     ll = vars["lost_load"]  # (period, year, scenario)
     # Grid interchange is represented at the PCC before transmission
     # efficiency. Delivered imports/exports are obtained in the nodal balance.
@@ -540,15 +548,66 @@ def initialize_constraints(
             # (period, year, scenario) field broadcast over the cohort dimension. Defining
             # the fade as one variable PER YEAR (rather than per hour) removes the
             # 8760x per-period fade constraints while keeping the state recursion exact.
-            if beta_cycle is None:
-                raise InputValidationError(
-                    "Battery cycle fade is active but the semi-empirical beta(T) coefficient "
-                    "field 'battery_beta_cycle' is missing from the dataset."
+            if cycle_fade_mode == "marginal_bands":
+                # -------- depth-resolved cycle aging: stacked SOC-band reservoir --------
+                if ck_bands is None or bat_soc_band is None:
+                    raise InputValidationError(
+                        "marginal_bands cycle fade is active but 'battery_ck_bands' or the band "
+                        "variables are missing from the model/dataset."
+                    )
+                n_soc_bands = int(bat_soc_band.coords["soc_band"].size)
+                band_width = (dod / n_soc_bands) * bat_eff_cap  # (year,scenario,inv_step)
+                # (i) per-band capacity cap: 0 <= s_band <= usable_window / K
+                model.add_constraints(
+                    bat_soc_band <= band_width, name="battery_band_soc_cap"
                 )
-            model.add_constraints(
-                bat_cycle_fade == (beta_cycle * (bat_ch_dc + bat_dis_dc)).sum("period"),
-                name="battery_cycle_fade_definition",
-            )
+                # (ii) flow decomposition: bands sum to the DC charge/discharge
+                model.add_constraints(
+                    bat_dis_band.sum("soc_band") == bat_dis_dc,
+                    name="battery_band_discharge_balance",
+                )
+                model.add_constraints(
+                    bat_ch_band.sum("soc_band") == bat_ch_dc,
+                    name="battery_band_charge_balance",
+                )
+                # (iii) per-band energy conservation within each year (period recursion)
+                if T > 1:
+                    model.add_constraints(
+                        bat_soc_band.isel(period=slice(1, None))
+                        == bat_soc_band.isel(period=slice(0, -1))
+                        + bat_ch_band.isel(period=slice(0, -1))
+                        - bat_dis_band.isel(period=slice(0, -1)),
+                        name="battery_band_soc_balance",
+                    )
+                # (iv) year-start linking: bands sum to the usable stored energy soc - floor.
+                #      (soc already carries the initial/year-link/reset logic; the within-year
+                #      recursion propagates, so only the per-year start needs pinning.)
+                floor_cap = (1.0 - dod) * bat_eff_cap
+                for _yv in year_values:
+                    model.add_constraints(
+                        bat_soc_band.sel(year=_yv).isel(period=0).sum("soc_band")
+                        + floor_cap.sel(year=_yv)
+                        == soc.sel(year=_yv).isel(period=0),
+                        name=f"battery_band_soc_link_{_yv}",
+                    )
+                # (v) annual cycle fade = sum over bands & periods of c_k * discharge-through-band.
+                #     c_k = dPsi/d(depth) (one-directional), so a full-depth cycle reproduces the
+                #     same per-cycle fade as the single-beta path; deeper bands cost more (convex),
+                #     so shallow-first filling — and thus the cycling depth — is emergent.
+                model.add_constraints(
+                    bat_cycle_fade == (ck_bands * bat_dis_band).sum(["period", "soc_band"]),
+                    name="battery_cycle_fade_definition",
+                )
+            else:
+                if beta_cycle is None:
+                    raise InputValidationError(
+                        "Battery cycle fade is active but the semi-empirical beta(T) coefficient "
+                        "field 'battery_beta_cycle' is missing from the dataset."
+                    )
+                model.add_constraints(
+                    bat_cycle_fade == (beta_cycle * (bat_ch_dc + bat_dis_dc)).sum("period"),
+                    name="battery_cycle_fade_definition",
+                )
 
             model.add_constraints(
                 bat_eff_cap.sel(year=first_year)
