@@ -37,8 +37,8 @@ below are not.
 ## Battery — realism upgrades
 
 - **Temperature-dependent performance.** Highest value / lowest risk. Because capacity,
-  loss-curve coefficients and the calendar-fade coefficient are exogenous piecewise
-  inputs, period-indexed temperature multipliers can scale them with **zero loss of
+  loss-curve coefficients and the flat calendar-fade rate are exogenous inputs,
+  period-indexed temperature multipliers can scale them with **zero loss of
   linearity**. Matches the existing `battery.md` "future extensions" note and the
   SSA-relevant high-ambient case.
 
@@ -61,16 +61,21 @@ below are not.
 
 ## Battery — consistency fixes (not new features)
 
-- **[DONE — Stage 2] Mixed stochastic conventions:** calendar fade used the scenario-collapsed
-  *expected* average SOC while cycle fade and effective capacity were *scenario-wise*. Unified
-  to scenario-wise (`battery_average_soc`/`battery_calendar_fade` now carry a `scenario` dim).
+- **[SUPERSEDED — removed] SOC-dependent calendar-fade curve.** The average-SOC calendar-fade
+  surrogate (`battery_average_soc`/`battery_calendar_fade` vars, the `battery_calendar_fade_curve.csv`
+  input, and `calendar_time_increment_per_year`) was removed to simplify the degradation surface.
+  Its effect on the *sizing* decision is third-order, and the shipped default curve was calibrated
+  ~20-50x too low to matter. Calendar ageing is now a single **flat %/yr** rate
+  (`capacity_degradation_rate_per_year`, 0 = off), applied as the exogenous annual degradation
+  factor and coexisting with cycle fade. This also retired the earlier scenario-convention fix
+  below (there is no longer a calendar-fade variable to unify).
 - **[PENDING — Stage 3] Power vs energy derating:** the code bounds charge/discharge **power by
   the inverter** only. `battery.md` was corrected to say so; the optional SoH-coupled power
   derating (bound DC power by `c_rate * eff_cap`, default off) is not yet implemented.
 - **[DONE — Stage 1/2] `eff_cap` reporting truthfulness:** the effective-capacity year-link is an
   inequality nudged tight only by a `1e-9` regularizer, and it *can* stay slack-low in degenerate
   corners (confirmed by tests). Reporting now reconstructs the physical effective capacity from
-  the initial SoH and the reliable cycle/calendar fade solutions, so the reported SoH no longer
+  the initial SoH and the reliable cycle-fade solution, so the reported SoH no longer
   depends on the raw LP state.
 - **[DONE — Stage 1] Doc/code drift:** `battery.md` now describes the loss reference power as the
   explicit inverter design variable + C-rate (was `C_bat/t_ch`).
