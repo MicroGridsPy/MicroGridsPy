@@ -558,9 +558,7 @@ def initialize_constraints(
                 n_soc_bands = int(bat_soc_band.coords["soc_band"].size)
                 band_width = (dod / n_soc_bands) * bat_eff_cap  # (year,scenario,inv_step)
                 # (i) per-band capacity cap: 0 <= s_band <= usable_window / K
-                model.add_constraints(
-                    bat_soc_band <= band_width, name="battery_band_soc_cap"
-                )
+                model.add_constraints(bat_soc_band <= band_width, name="battery_band_soc_cap")
                 # (ii) flow decomposition: bands sum to the DC charge/discharge
                 model.add_constraints(
                     bat_dis_band.sum("soc_band") == bat_dis_dc,

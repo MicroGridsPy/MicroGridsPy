@@ -68,6 +68,7 @@ def build_formulation_payload(
     n_sources: int = 1,
     battery_loss_model: str = "constant_efficiency",
     battery_cycle_fade_enabled: bool = False,
+    battery_n_soc_bands: int = 5,
     generator_efficiency_model: str = "constant_efficiency",
     csv_delimiter: str = ",",
     csv_decimal: str = ".",
@@ -115,6 +116,11 @@ def build_formulation_payload(
             "loss_model": str(battery_loss_model or "constant_efficiency"),
             "degradation_model": {
                 "cycle_fade_enabled": bool(battery_cycle_fade_enabled),
+                # Number of usable SOC bands for the Li-ion depth-resolved cycle-fade
+                # model. The cycle-fade representation itself is selected by chemistry
+                # (Li-ion -> depth-resolved marginal bands; lead-acid -> flat beta(T)),
+                # not by a user option.
+                "n_soc_bands": int(battery_n_soc_bands),
             },
         },
         "generator_model": {

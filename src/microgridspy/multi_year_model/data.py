@@ -9,17 +9,18 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from microgridspy.data_pipeline.battery_degradation_coefficients import (
+    LEAD_ACID,
+    alpha_hourly,
+    evaluate_band_marginals,
+    evaluate_degradation_coefficients,
+    normalize_chemistry,
+)
 from microgridspy.data_pipeline.battery_degradation_model import (
     InputValidationError as BatteryDegradationInputValidationError,
 )
 from microgridspy.data_pipeline.battery_degradation_model import (
     get_battery_degradation_settings,
-)
-from microgridspy.data_pipeline.battery_degradation_coefficients import (
-    alpha_hourly,
-    evaluate_band_marginals,
-    evaluate_degradation_coefficients,
-    normalize_chemistry,
 )
 from microgridspy.data_pipeline.battery_loss_model import (
     CONVEX_LOSS_EPIGRAPH,
@@ -2122,6 +2123,12 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
     # ------------------------------------------------------------------
     if battery_degradation_settings.get("cycle_fade_enabled", False):
         chemistry = normalize_chemistry(bat_params_ds.attrs.get("battery_chemistry", None))
+        # Cycle-fade representation is selected by chemistry, not by a user option:
+        # Li-ion (LFP/NMC) uses the depth-resolved per-SOC-band marginals c_k(T)
+        # ("marginal_bands", the advanced model); lead-acid, which the band model does not
+        # cover, uses the flat semi-empirical beta(T) throughput term ("single_beta").
+        cycle_fade_mode = "single_beta" if chemistry == LEAD_ACID else "marginal_bands"
+        battery_degradation_settings["cycle_fade_mode"] = cycle_fade_mode
         dod_value = float(bat_params_ds["battery_depth_of_discharge"].item())
         user_cycle_life = battery_degradation_settings.get("cycle_lifetime_to_eol_cycles", None)
         ambient_path = paths.inputs_dir / "ambient_temperature.csv"

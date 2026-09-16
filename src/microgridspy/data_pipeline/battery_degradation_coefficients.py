@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 Offline semi-empirical battery-degradation coefficients.
 
@@ -42,6 +40,8 @@ parameter they already provide:
 The polynomial coefficients are literature-fitted per chemistry and stress band; see
 the project documentation for their provenance and references.
 """
+
+from __future__ import annotations
 
 import json
 from pathlib import Path
@@ -250,8 +250,8 @@ def evaluate_degradation_coefficients(
 # ===========================================================================
 # Depth-resolved cycle aging — per-SOC-band marginal costs c_k(T)
 # ---------------------------------------------------------------------------
-# Source: the offline Layer-I physical model
-# (notebooks/battery_layer1_liion_physical_model.ipynb), whose distilled band
+# Source: the offline Layer-I physical model (an external Jupyter notebook,
+# archived separately — see the docs for the DOI/link), whose distilled band
 # marginals are shipped alongside this module as layer1_liion_coefficients.json.
 # The physical model computes the depth curve Psi(D,T) directly (no extrapolation),
 # and the band marginals c_k = dPsi/dD are stored as cubics in y = T[degC]/10 over a

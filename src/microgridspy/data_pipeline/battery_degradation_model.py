@@ -49,16 +49,10 @@ def get_battery_degradation_settings(
         degradation_model.get("cycle_fade_enabled", False), default=False
     )
 
-    # Cycle-fade representation:
-    #   "single_beta"    -> flat-in-depth beta(T,DoD) throughput term (default, current behaviour)
-    #   "marginal_bands" -> depth-resolved convex per-SOC-band marginals c_k(T) (emergent DoD)
-    raw_mode = str(degradation_model.get("cycle_fade_mode", "single_beta")).strip().lower()
-    if raw_mode not in {"single_beta", "marginal_bands"}:
-        raise InputValidationError(
-            "battery_model.degradation_model.cycle_fade_mode must be 'single_beta' or "
-            f"'marginal_bands' (got {raw_mode!r})."
-        )
-    cycle_fade_mode = raw_mode
+    # Cycle fade is represented by the depth-resolved per-SOC-band marginals c_k(T)
+    # (the single supported representation). ``n_soc_bands`` sets the number of usable
+    # SOC bands the convex marginal-cost reservoir is discretised into. Any legacy
+    # ``cycle_fade_mode`` key is ignored.
     n_soc_bands = degradation_model.get("n_soc_bands", 5)
     try:
         n_soc_bands = int(n_soc_bands)
@@ -66,10 +60,12 @@ def get_battery_degradation_settings(
         raise InputValidationError(
             "battery_model.degradation_model.n_soc_bands must be an integer."
         ) from exc
-    if cycle_fade_mode == "marginal_bands" and n_soc_bands < 1:
-        raise InputValidationError("n_soc_bands must be >= 1 for marginal_bands mode.")
+    if cycle_fade_enabled and n_soc_bands < 1:
+        raise InputValidationError("n_soc_bands must be >= 1.")
 
-    initial_soh = _read_optional_float(degradation_model.get("initial_soh", 1.0), "initial_soh", 1.0)
+    initial_soh = _read_optional_float(
+        degradation_model.get("initial_soh", 1.0), "initial_soh", 1.0
+    )
     end_of_life_soh = _read_optional_float(
         degradation_model.get("end_of_life_soh", None), "end_of_life_soh", None
     )
@@ -96,7 +92,6 @@ def get_battery_degradation_settings(
 
     return {
         "cycle_fade_enabled": cycle_fade_enabled,
-        "cycle_fade_mode": cycle_fade_mode,
         "n_soc_bands": n_soc_bands,
         "initial_soh": initial_soh,
         "end_of_life_soh": end_of_life_soh,

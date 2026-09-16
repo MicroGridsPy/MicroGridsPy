@@ -104,7 +104,6 @@ def get_params(ds: xr.Dataset) -> Params:
     def _opt(name: str) -> xr.DataArray | None:
         return ds[name] if name in ds.data_vars else None
 
-
     return Params(
         settings=settings,
         load_demand=_opt("load_demand"),

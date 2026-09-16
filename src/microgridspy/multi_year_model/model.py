@@ -51,7 +51,7 @@ class MultiYearModel:
     ```python
     from microgridspy import MultiYearModel
 
-    model = MultiYearModel("Kalobeyei_1")
+    model = MultiYearModel("demo_multi_year")
     model.solve_single_objective(solver="highs")
     results = model.results()
     ```

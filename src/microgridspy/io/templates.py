@@ -995,9 +995,7 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
                     else {}
                 ),
                 **(
-                    {"battery_initial_soh": "share"}
-                    if _battery_cycle_fade_active(settings)
-                    else {}
+                    {"battery_initial_soh": "share"} if _battery_cycle_fade_active(settings) else {}
                 ),
                 **(
                     {"battery_end_of_life_soh": "share"}

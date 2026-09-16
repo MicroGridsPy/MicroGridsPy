@@ -38,7 +38,7 @@
     "loss_model": "constant_efficiency",
     "degradation_model": {
       "cycle_fade_enabled": false,
-      "calendar_fade_enabled": false
+      "n_soc_bands": 5
     }
   },
   "generator_model": {

@@ -6,7 +6,7 @@ Public API:
 import microgridspy as mgp
 
 # one-liner: solve and get analysis-ready tables
-results = mgp.solve("Kalobeyei_1", solver="highs").results()
+results = mgp.solve("demo_typical_year", solver="highs").results()
 results.kpis                      # pandas DataFrame
 mgp.export_results(results)       # write CSV/Excel to the project folder
 

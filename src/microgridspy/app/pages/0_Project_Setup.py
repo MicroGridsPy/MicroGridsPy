@@ -73,6 +73,7 @@ K = {
     "battery_cycle_lifetime_to_eol_cycles": "gp_battery_cycle_lifetime_to_eol_cycles",  # float
     "battery_capacity_degradation_rate_per_year": "gp_battery_capacity_degradation_rate_per_year",  # float
     "battery_end_of_life_soh": "gp_battery_end_of_life_soh",  # float
+    "battery_n_soc_bands": "gp_battery_n_soc_bands",  # int (Li-ion marginal-bands count)
     "generator_label": "gp_generator_label",  # str
     "generator_efficiency_model": "gp_generator_efficiency_model",  # str
     "generator_efficiency_curve_csv": "gp_generator_efficiency_curve_csv",  # str
@@ -158,6 +159,7 @@ class PageConfig:
     generator_min_load_fraction: float = 0.0
     battery_capacity_degradation_rate_per_year: float = 0.0
     battery_chemistry: str = "LFP"
+    battery_n_soc_bands: int = 5
 
 
 def _battery_endogenous_degradation_enabled(cfg: PageConfig) -> bool:
@@ -229,6 +231,7 @@ def init_session_state_defaults() -> None:
         K["battery_cycle_lifetime_to_eol_cycles"]: 6000.0,
         K["battery_capacity_degradation_rate_per_year"]: 0.0,
         K["battery_end_of_life_soh"]: 0.8,
+        K["battery_n_soc_bands"]: 5,
         K["generator_label"]: "Generator",
         K["generator_efficiency_model"]: "constant_efficiency",
         K["generator_efficiency_curve_csv"]: "generator_efficiency_curve.csv",
@@ -282,6 +285,7 @@ def write_formulation_file(*, project_name: str, project_description: str, cfg: 
         n_sources=cfg.n_res_sources,
         battery_loss_model=cfg.battery_loss_model,
         battery_cycle_fade_enabled=battery_cycle_fade_active,
+        battery_n_soc_bands=cfg.battery_n_soc_bands,
         generator_efficiency_model=cfg.generator_efficiency_model,
         csv_delimiter=normalize_csv_delimiter(cfg.csv_delimiter),
         csv_decimal=normalize_csv_decimal(cfg.csv_decimal),
@@ -1100,28 +1104,63 @@ def render_system_section() -> tuple[
                     )
 
                     # Calendar (time) ageing: a single flat %/yr capacity fade (0 = off).
-                    flat_fade = float(
-                        st.number_input(
-                            "Calendar ageing [fraction/yr]",
-                            min_value=0.0,
-                            max_value=0.2,
-                            step=0.005,
-                            format="%.3f",
-                            value=float(
-                                st.session_state.get(
-                                    K["battery_capacity_degradation_rate_per_year"], 0.0
-                                )
-                                or 0.0
-                            ),
-                            help=(
-                                "Flat yearly loss of usable capacity from time/ageing, independent "
-                                "of use (0 = no calendar ageing; e.g. 0.02 = 2%/yr). It coexists with "
-                                "cycle fade, so total wear = use (cycle fade) + age (this term)."
-                            ),
-                            key="gp_battery_flat_fade_input",
+                    # Only meaningful in the multi-year formulation (the typical-year model
+                    # has no multi-year capacity state), so it is shown for dynamic only.
+                    if _formulation_mode == "dynamic":
+                        flat_fade = float(
+                            st.number_input(
+                                "Calendar ageing [fraction/yr]",
+                                min_value=0.0,
+                                max_value=0.2,
+                                step=0.005,
+                                format="%.3f",
+                                value=float(
+                                    st.session_state.get(
+                                        K["battery_capacity_degradation_rate_per_year"], 0.0
+                                    )
+                                    or 0.0
+                                ),
+                                help=(
+                                    "Flat yearly loss of usable capacity from time/ageing, independent "
+                                    "of use (0 = no calendar ageing; e.g. 0.02 = 2%/yr). It coexists with "
+                                    "cycle fade, so total wear = use (cycle fade) + age (this term)."
+                                ),
+                                key="gp_battery_flat_fade_input",
+                            )
                         )
-                    )
-                    st.session_state[K["battery_capacity_degradation_rate_per_year"]] = flat_fade
+                        st.session_state[K["battery_capacity_degradation_rate_per_year"]] = (
+                            flat_fade
+                        )
+
+                        # Number of usable SOC bands for the Li-ion depth-resolved cycle-fade
+                        # model. The cycle-fade representation is selected by chemistry, not by
+                        # a user option: Li-ion (LFP/NMC) uses this depth-resolved marginal-band
+                        # model; lead-acid uses the flat beta(T) model and ignores this input.
+                        _is_liion = str(battery_chemistry).strip().lower() in ("lfp", "nmc")
+                        n_soc_bands = int(
+                            st.number_input(
+                                "SOC bands (Li-ion depth-resolved cycle fade)",
+                                min_value=1,
+                                max_value=20,
+                                step=1,
+                                value=int(st.session_state.get(K["battery_n_soc_bands"], 5)),
+                                disabled=(not cycle_fade_enabled) or (not _is_liion),
+                                help=(
+                                    "Number of usable state-of-charge bands the Li-ion depth-resolved "
+                                    "cycle-fade model (LFP/NMC) uses to discretise the convex per-band "
+                                    "wear cost. More bands resolve cycling depth more finely."
+                                ),
+                                key="gp_battery_n_soc_bands_input",
+                            )
+                        )
+                        st.session_state[K["battery_n_soc_bands"]] = n_soc_bands
+                        if cycle_fade_enabled and not _is_liion:
+                            st.caption(
+                                "Lead-acid cycle fade uses the flat semi-empirical beta(T) model "
+                                "(the depth-resolved SOC-band model is Li-ion only)."
+                            )
+                    else:
+                        st.session_state[K["battery_capacity_degradation_rate_per_year"]] = 0.0
                 soh_enabled = cycle_fade_enabled
                 st.caption(
                     "Cycle fade (throughput/use) and calendar ageing (a flat %/yr) are independent "
@@ -1463,11 +1502,10 @@ def render_project_setup_page() -> None:
                 battery_loss_model=battery_loss_model,
                 battery_efficiency_curve_csv=battery_efficiency_curve_csv,
                 battery_cycle_fade_enabled=battery_cycle_fade_enabled,
-                battery_chemistry=str(
-                    st.session_state.get(K["battery_chemistry"], "LFP") or "LFP"
-                ),
+                battery_chemistry=str(st.session_state.get(K["battery_chemistry"], "LFP") or "LFP"),
                 battery_cycle_lifetime_to_eol_cycles=battery_cycle_lifetime_to_eol_cycles,
                 battery_end_of_life_soh=battery_end_of_life_soh,
+                battery_n_soc_bands=int(st.session_state.get(K["battery_n_soc_bands"], 5)),
                 battery_capacity_degradation_rate_per_year=float(
                     st.session_state.get(K["battery_capacity_degradation_rate_per_year"], 0.0)
                 ),

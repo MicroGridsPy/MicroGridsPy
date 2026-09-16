@@ -84,7 +84,9 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict
     # requires a single epigraph variable per scenario (created below); dispatch reuses
     # the existing charge/discharge variables.
     degradation_cost_enabled = _bool_from_attrs(
-        data, ["settings", "battery_model", "degradation_model", "cycle_fade_enabled"], default=False
+        data,
+        ["settings", "battery_model", "degradation_model", "cycle_fade_enabled"],
+        default=False,
     )
     is_integer = _bool_from_attrs(data, ["settings", "unit_commitment"], default=False)
 

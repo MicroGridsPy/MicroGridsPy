@@ -401,7 +401,5 @@ def initialize_objective(
     # with a full-CAPEX residual-value convention. (The previously computed
     # `post_horizon_annuity_tail_memo` was unused and has been removed.)
 
-    npwc = (
-        (total_cashflow_y + bat_reg_cost_y + eff_cap_reg_credit_y) * disc_y
-    ).sum("year")
+    npwc = ((total_cashflow_y + bat_reg_cost_y + eff_cap_reg_credit_y) * disc_y).sum("year")
     model.add_objective(npwc, overwrite=True)

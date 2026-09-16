@@ -209,9 +209,10 @@ def _required_missing_for_configuration(formulation: dict[str, Any], paths) -> l
             missing.append("grid_export_price.csv")
 
     # Ambient temperature is required when endogenous battery degradation is active.
-    if _degradation_active(formulation) and not (
-        paths.inputs_dir / "ambient_temperature.csv"
-    ).exists():
+    if (
+        _degradation_active(formulation)
+        and not (paths.inputs_dir / "ambient_temperature.csv").exists()
+    ):
         missing.append("ambient_temperature.csv")
 
     return sorted(set(missing))
@@ -800,7 +801,7 @@ def _render_degradation_coefficient_curves(formulation: dict[str, Any], paths) -
         battery_yaml = read_yaml(paths.inputs_dir / "battery.yaml")
     except Exception:
         battery_yaml = {}
-    technical = ((battery_yaml.get("battery", {}) or {}).get("technical", {}) or {})
+    technical = (battery_yaml.get("battery", {}) or {}).get("technical", {}) or {}
     raw_chemistry = technical.get("chemistry", None)
     dod = _safe_yaml_float(technical.get("depth_of_discharge", None), 0.8)
     user_cycle_life = technical.get("cycle_lifetime_to_eol_cycles", None)
@@ -824,9 +825,7 @@ def _render_degradation_coefficient_curves(formulation: dict[str, Any], paths) -
         preview = coefficient_curve_preview(
             chemistry=chemistry,
             depth_of_discharge=dod,
-            user_cycle_life=(
-                float(user_cycle_life) if user_cycle_life not in (None, "") else None
-            ),
+            user_cycle_life=(float(user_cycle_life) if user_cycle_life not in (None, "") else None),
         )
     except CoeffError as exc:
         st.error(str(exc))

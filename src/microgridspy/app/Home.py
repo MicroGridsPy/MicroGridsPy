@@ -61,8 +61,8 @@ APP_PAGE_LINKS = (
 
 REPOSITORY_REFERENCES = (
     "`README.md`: overall project scope and workflow",
-    "`docs/DATA_CONTRACT.md`: canonical dataset contract",
-    "`projects/`: example projects and input templates",
+    "`docs/data-reference/data-contract.md`: canonical dataset contract",
+    "`projects/`: your project folders and input templates (created here at runtime)",
 )
 
 USEFUL_LINKS = (("Official documentation (coming soon)", DOCS_URL),)
