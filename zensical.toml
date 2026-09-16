@@ -1,7 +1,7 @@
 [project]
 site_name = "MicroGridsPy"
 site_description = "Bottom-up optimization tool for planning mini-grids in remote areas."
-site_url = "https://microgridspy.readthedocs.io/"
+site_url = "https://microgridspy-package-docs.readthedocs.io/"
 repo_url = "https://github.com/MicroGridsPy/MicroGridsPy"
 repo_name = "MicroGridsPy/MicroGridsPy"
 
