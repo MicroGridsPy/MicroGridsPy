@@ -106,7 +106,6 @@ def _build_project(
             "loss_model": "constant_efficiency",
             "degradation_model": {
                 "cycle_fade_enabled": cycle_fade,
-                "calendar_fade_enabled": False,
             },
         },
         "generator_model": {"efficiency_model": "constant_efficiency"},

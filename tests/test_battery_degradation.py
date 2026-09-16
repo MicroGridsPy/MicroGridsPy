@@ -7,8 +7,6 @@ propagated through the yearly effective-capacity state with cohort resets.
 
 from __future__ import annotations
 
-import pytest
-
 # ---------------------------------------------------------------------------
 # Multi-year degradation solve fixture (2 years, 1 cohort, N scenarios) used to
 # check the scenario-wise cycle-fade convention and the effective-capacity
@@ -16,6 +14,7 @@ import pytest
 # ---------------------------------------------------------------------------
 import linopy as lp  # noqa: E402
 import numpy as np  # noqa: E402
+import pytest
 import xarray as xr  # noqa: E402
 
 from microgridspy.multi_year_model.constraints import initialize_constraints  # noqa: E402
@@ -217,6 +216,46 @@ def test_cycle_fade_diverges_across_scenarios() -> None:
     v_low = float(cyc_y0.sel(scenario="s_low"))
     v_high = float(cyc_y0.sel(scenario="s_high"))
     assert abs(v_high - v_low) > 1e-6  # genuinely different cycle fade per scenario
+
+
+def _as_marginal_bands(data: xr.Dataset, *, n_bands: int = 3, ck: float = 0.01) -> xr.Dataset:
+    """Turn a (single-beta) degradation fixture into a Li-ion marginal_bands one: attach
+    constant per-SOC-band marginals c_k and stamp the mode, so the depth-resolved cycle-fade
+    path is exercised. Constant c_k keeps the toy easy to reason about (total fade = c_k *
+    total DC discharge)."""
+    data = data.copy()
+    pers, yrs, scs = data.period, data.year, data.scenario
+    data["battery_ck_bands"] = xr.DataArray(
+        np.full((n_bands, pers.size, yrs.size, scs.size), ck),
+        dims=("soc_band", "period", "year", "scenario"),
+        coords={"soc_band": np.arange(n_bands), "period": pers, "year": yrs, "scenario": scs},
+        name="battery_ck_bands",
+    )
+    settings = dict(data.attrs["settings"])
+    battery_model = dict(settings["battery_model"])
+    degradation = dict(battery_model["degradation_model"])
+    degradation["cycle_fade_mode"] = "marginal_bands"
+    degradation["n_soc_bands"] = n_bands
+    battery_model["degradation_model"] = degradation
+    settings["battery_model"] = battery_model
+    data.attrs["settings"] = settings
+    return data
+
+
+def test_marginal_bands_cycle_fade_definition() -> None:
+    # Li-ion depth-resolved cycle fade (the only Li-ion mode): battery_cycle_fade equals the
+    # sum over bands and periods of c_k * discharge-through-band. Fast 2-period toy.
+    sets, data = _deg_data(["scenario_1"], {"scenario_1": 0.5})
+    data = _as_marginal_bands(data, n_bands=3, ck=0.01)
+    _, vd, sol = _solve_deg(sets, data)
+
+    assert "scenario" in set(vd["battery_discharge_band"].dims)  # band vars are scenario-wise
+    cf = float(sol["battery_cycle_fade"].sum())
+    ck = data["battery_ck_bands"]
+    dis_band = vd["battery_discharge_band"].solution
+    expected = float((ck * dis_band).sum())
+    assert cf > 0.0  # the battery actually cycles
+    assert cf == pytest.approx(expected, rel=1e-6)
 
 
 def test_reported_effective_capacity_uses_physical_recursion() -> None:

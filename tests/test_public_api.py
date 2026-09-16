@@ -8,6 +8,7 @@ public surface (`__init__.__all__`) against packaging and API regressions.
 
 from __future__ import annotations
 
+import math
 import sys
 from pathlib import Path
 
@@ -107,3 +108,36 @@ def test_solve_example_one_liner(tmp_path: Path) -> None:
             pytest.skip(f"HiGHS solver unavailable: {exc}")
         raise
     assert not model.results().kpis.empty
+
+
+def test_solve_multi_year_end_to_end(tmp_path: Path) -> None:
+    # The multi-year (dynamic) formulation is a headline feature; exercise it
+    # end-to-end the same way as the typical-year solve. Structural assertions only
+    # (no hard-coded objective), since the value is not a stable public contract.
+    mgp.set_workspace(tmp_path)
+    mgp.load_example("demo_multi_year", overwrite=True)
+    try:
+        model = mgp.solve("demo_multi_year", solver="highs")
+    except Exception as exc:  # solver may be unavailable in some CI environments
+        if "highs" in str(exc).lower() or "solver" in str(exc).lower():
+            pytest.skip(f"HiGHS solver unavailable: {exc}")
+        raise
+
+    results = model.results()
+    from microgridspy import MultiYearResults
+
+    assert isinstance(results, MultiYearResults)
+
+    # A feasible dynamic solve has a finite objective and populated core tables.
+    objective = results.metadata["objective_value"]
+    assert objective is not None and math.isfinite(float(objective))
+    assert not results.dispatch.empty
+    assert not results.capacity_by_year.empty
+    assert not results.kpis_yearly.empty
+    assert not results.design_by_step.empty
+
+    # The 10-year horizon of demo_multi_year must be represented across the years.
+    assert results.capacity_by_year["year"].nunique() >= 2
+
+    written = mgp.export_results(results, tmp_path / "out")
+    assert len(written) > 0

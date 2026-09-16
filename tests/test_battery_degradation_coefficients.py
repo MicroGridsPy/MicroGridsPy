@@ -109,9 +109,7 @@ def test_ambient_temperature_loader_roundtrip(tmp_path) -> None:
         [("meta", "hour"), ("scenario_1", "2026"), ("scenario_1", "2027")],
         names=["scenario", "year"],
     )
-    df = pd.DataFrame(
-        [[0, 20.0, 30.0], [1, 21.0, 31.0], [2, 22.0, 32.0]], columns=cols
-    )
+    df = pd.DataFrame([[0, 20.0, 30.0], [1, 21.0, 31.0], [2, 22.0, 32.0]], columns=cols)
     path = tmp_path / "ambient_temperature.csv"
     cf.write_csv_with_format(df, path, csv_format={"sep": ",", "decimal": "."}, index=False)
 
@@ -154,7 +152,7 @@ def _write_formulation_json(path, *, start_year="2026", horizon=3) -> None:
         "system_configuration": {"n_sources": 1},
         "battery_model": {
             "loss_model": "convex_loss_epigraph",
-            "degradation_model": {"cycle_fade_enabled": True, "calendar_fade_enabled": False},
+            "degradation_model": {"cycle_fade_enabled": True, "n_soc_bands": 5},
         },
         "generator_model": {"efficiency_model": "constant_efficiency"},
         "csv_format": {"delimiter": ",", "decimal": "."},
@@ -165,10 +163,10 @@ def _write_formulation_json(path, *, start_year="2026", horizon=3) -> None:
 def test_end_to_end_loader_attaches_semiempirical_coefficients(tmp_path, monkeypatch) -> None:
     """The dynamic file loader loads ambient_temperature.csv and attaches the
     temperature- and DoD-aware semi-empirical alpha/beta coefficient fields."""
-    from microgridspy.io.templates import TemplateSettings, write_templates
-    from microgridspy.io.utils import ProjectPaths
     import microgridspy.multi_year_model.data as mdata
     import microgridspy.multi_year_model.sets as msets
+    from microgridspy.io.templates import TemplateSettings, write_templates
+    from microgridspy.io.utils import ProjectPaths
 
     project_root = tmp_path / "projects" / "deg_integ"
     inputs_dir = project_root / "inputs"
@@ -227,24 +225,24 @@ def test_end_to_end_loader_attaches_semiempirical_coefficients(tmp_path, monkeyp
     assert deg["cycle_life_scaling"] == pytest.approx(1.5)
 
 
-def test_multi_year_cycle_fade_uses_semiempirical_beta(tmp_path, monkeypatch) -> None:
-    """The dynamic constraint layer consumes beta(T) (not the flat gamma): at the
-    optimum battery_cycle_fade equals beta * (charge_dc + discharge_dc)."""
+def _build_multi_year_deg_project(tmp_path, monkeypatch, *, chemistry: str, cycle_life: float):
+    """Build + load a tiny multi-year cycle-fade project for the given chemistry.
+
+    Returns ``(sets, ds, solve)`` where ``solve()`` builds and solves the model. The
+    loader selects the cycle-fade representation from chemistry: Li-ion (LFP/NMC) uses
+    the depth-resolved marginal-band model; lead-acid uses the flat beta(T) model.
+    """
     import json
     from types import SimpleNamespace
 
-    import linopy as lp
     import pandas as pd
     import yaml
 
-    from microgridspy.io.templates import TemplateSettings, write_templates
-    from microgridspy.io.utils import ProjectPaths
     import microgridspy.data_pipeline.loader as loader_mod
     import microgridspy.multi_year_model.data as mdata
     import microgridspy.multi_year_model.sets as msets
-    from microgridspy.multi_year_model.constraints import initialize_constraints
-    from microgridspy.multi_year_model.objective import initialize_objective
-    from microgridspy.multi_year_model.variables import initialize_vars
+    from microgridspy.io.templates import TemplateSettings, write_templates
+    from microgridspy.io.utils import ProjectPaths
 
     root = tmp_path / "projects" / "my_deg"
     inp = root / "inputs"
@@ -268,13 +266,13 @@ def test_multi_year_cycle_fade_uses_semiempirical_beta(tmp_path, monkeypatch) ->
         battery_loss_model="convex_loss_epigraph",
         battery_cycle_fade_enabled=True,
         battery_efficiency_curve_csv="battery_efficiency_curve.csv",
-        battery_cycle_lifetime_to_eol_cycles=2000.0,
+        battery_cycle_lifetime_to_eol_cycles=cycle_life,
         battery_end_of_life_soh=0.8,
         generator_label="Generator",
         generator_efficiency_model="constant_efficiency",
         generator_efficiency_curve_csv="generator_efficiency_curve.csv",
         fuel_label="Fuel",
-        battery_chemistry="LFP",
+        battery_chemistry=chemistry,
     )
     write_templates(SimpleNamespace(inputs_dir=inp), settings, overwrite=True)
 
@@ -324,28 +322,36 @@ def test_multi_year_cycle_fade_uses_semiempirical_beta(tmp_path, monkeypatch) ->
     monkeypatch.setattr(msets, "project_paths", lambda name: ProjectPaths(root=root))
     sets = msets.initialize_sets("my_deg")
     ds = loader_mod.load_project_dataset("my_deg", sets, mode="multi_year")
+    return sets, ds
+
+
+def _deg_mode(ds) -> str:
+    return ds.attrs["settings"]["battery_model"]["degradation_model"]["cycle_fade_mode"]
+
+
+def test_multi_year_liion_cycle_fade_uses_marginal_bands(tmp_path, monkeypatch) -> None:
+    """LFP is Li-ion, so the loader selects the depth-resolved marginal-band model:
+    the per-SOC-band marginals c_k(T) are attached and the mode is stamped. The solve-side
+    identity (fade = sum over bands of c_k * discharge-through-band) is covered by the fast
+    fixture test ``test_marginal_bands_cycle_fade_definition`` in test_battery_degradation.py."""
+    _, ds = _build_multi_year_deg_project(tmp_path, monkeypatch, chemistry="LFP", cycle_life=2000.0)
     assert "battery_beta_cycle" in ds.data_vars and "battery_alpha_calendar" in ds.data_vars
+    # Depth-resolved per-SOC-band marginals are attached for Li-ion chemistries.
+    assert "battery_ck_bands" in ds.data_vars
+    assert ds["battery_ck_bands"].sizes["soc_band"] == 5  # default n_soc_bands
+    assert _deg_mode(ds) == "marginal_bands"
 
-    m = lp.Model()
-    v = initialize_vars(sets, ds, m)
-    initialize_constraints(sets, ds, v, m)
-    initialize_objective(sets, ds, v, m)
-    try:
-        m.solve(solver_name="highs")
-    except Exception as exc:  # pragma: no cover
-        if any(t in str(exc).lower() for t in ("highs", "solver", "not available", "executable")):
-            pytest.skip(f"HiGHS unavailable: {exc}")
-        raise
-    if str(m.termination_condition) not in ("optimal", "TerminationCondition.optimal"):
-        pytest.skip(f"toy not optimal: {m.termination_condition}")
 
-    cf = float(v["battery_cycle_fade"].solution.sum())
-    beta = ds["battery_beta_cycle"]
-    ch = v["battery_charge_dc"].solution
-    dis = v["battery_discharge_dc"].solution
-    expected = float((beta * (ch + dis)).sum())
-    assert cf > 0.0  # the battery actually cycles
-    assert cf == pytest.approx(expected, rel=1e-6)
+def test_multi_year_lead_acid_cycle_fade_uses_single_beta(tmp_path, monkeypatch) -> None:
+    """Lead-acid is not covered by the depth-band model, so the loader keeps the flat
+    beta(T) model: no c_k bands are attached and the mode falls back to single_beta."""
+    _, ds = _build_multi_year_deg_project(
+        tmp_path, monkeypatch, chemistry="lead_acid", cycle_life=2000.0
+    )
+    assert "battery_beta_cycle" in ds.data_vars
+    # No depth-resolved bands for lead-acid (the marginal-band model is Li-ion only).
+    assert "battery_ck_bands" not in ds.data_vars
+    assert _deg_mode(ds) == "single_beta"
 
 
 def test_ambient_temperature_loader_missing_file(tmp_path) -> None:

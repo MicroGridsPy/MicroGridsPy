@@ -18,13 +18,12 @@ import pandas as pd
 import pytest
 
 from microgridspy.data_pipeline.battery_loss_model import (
-    InputValidationError,
-    NORMALIZED_CURVE,
     LEGACY_ABSOLUTE_CURVE,
+    NORMALIZED_CURVE,
+    InputValidationError,
     load_battery_loss_curve_dataset,
 )
-from microgridspy.io.templates import _write_battery_efficiency_curve_csv, TemplateSettings
-
+from microgridspy.io.templates import TemplateSettings, _write_battery_efficiency_curve_csv
 
 BASE = 0.975  # one-way baseline -> round-trip ~0.9506
 
