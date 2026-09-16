@@ -40,9 +40,10 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict
       - battery_inverter_units()
       - generator_units()
 
-    In this formulation, the `unit_commitment` setting only makes sizing
+    In this formulation, the `integer_sizing` setting only makes sizing
     variables integer-valued. It does not add chronological on/off commitment
-    binaries, startup logic, or minimum up/down constraints.
+    binaries, startup logic, or minimum up/down constraints (those belong to the
+    generator's separate `partial_load_commitment`).
 
     Operational variables:
       - res_generation(period, scenario, resource)
@@ -88,7 +89,9 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict
         ["settings", "battery_model", "degradation_model", "cycle_fade_enabled"],
         default=False,
     )
-    is_integer = _bool_from_attrs(data, ["settings", "unit_commitment"], default=False)
+    is_integer = _bool_from_attrs(
+        data, ["settings", "integer_sizing"], default=False
+    ) or _bool_from_attrs(data, ["settings", "unit_commitment"], default=False)
 
     vars: dict[str, lp.Variable] = {}
 

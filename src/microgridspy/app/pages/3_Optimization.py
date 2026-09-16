@@ -380,11 +380,13 @@ def _render_variables_debug(data_ds: xr.Dataset | None, vars_dict: Any) -> None:
             return
 
         settings = get_dataset_settings(data_ds)
-        uc_enabled = bool(settings.get("unit_commitment", False))
-        st.caption(f"unit_commitment (from data.attrs['settings']): {uc_enabled}")
+        integer_sizing_enabled = bool(
+            settings.get("integer_sizing", settings.get("unit_commitment", False))
+        )
+        st.caption(f"integer_sizing (from data.attrs['settings']): {integer_sizing_enabled}")
 
         def _expected_vartype(var_name: str) -> str:
-            if not uc_enabled:
+            if not integer_sizing_enabled:
                 return "Continuous"
             if var_name in {"res_units", "battery_units", "generator_units"}:
                 return "Integer"

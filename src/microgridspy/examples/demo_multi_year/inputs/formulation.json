@@ -7,7 +7,7 @@
   "system_type": "off_grid",
   "on_grid": false,
   "grid_allow_export": false,
-  "unit_commitment": false,
+  "integer_sizing": false,
   "start_year_label": "2026",
   "time_horizon_years": 10,
   "social_discount_rate": 0.074,

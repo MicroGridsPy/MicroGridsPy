@@ -1961,7 +1961,10 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
     if formulation_mode != "dynamic":
         raise InputValidationError("This data initializer is for dynamic only.")
 
-    uc_enabled = bool(formulation.get("unit_commitment", False))
+    # Integer (discrete) capacity sizing. `unit_commitment` is the legacy key name.
+    integer_sizing_enabled = bool(
+        formulation.get("integer_sizing", formulation.get("unit_commitment", False))
+    )
     capexp_enabled = bool(formulation.get("capacity_expansion", False))
 
     ms = formulation.get("multi_scenario", {}) or {}
@@ -2375,9 +2378,7 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
         {
             "project_name": project_name,
             "formulation": formulation_mode,
-            "unit_commitment": uc_enabled,
-            "integer_sizing_enabled": uc_enabled,
-            "unit_commitment_semantics": "integer_sizing_only",
+            "integer_sizing": integer_sizing_enabled,
             "start_year_label": formulation.get("start_year_label"),
             "time_horizon_years": int(year_coord.size),
             "social_discount_rate": _as_float(

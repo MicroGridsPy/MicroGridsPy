@@ -72,7 +72,7 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict
     degradation_state_enabled = cycle_fade_enabled
     # In the current multi-year formulation this flag controls integer sizing
     # of investment-unit variables only; it is not chronological unit commitment.
-    is_integer = bool(p.settings.get("unit_commitment", False))
+    is_integer = bool(p.settings.get("integer_sizing", p.settings.get("unit_commitment", False)))
 
     vars: dict[str, lp.Variable] = {}
 

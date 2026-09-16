@@ -49,7 +49,7 @@ def build_formulation_payload(
     system_type: str = "off_grid",
     on_grid: bool = False,
     allow_export: bool = False,
-    unit_commitment: bool = False,
+    integer_sizing: bool = False,
     start_year_label: str | None = "typical_year",
     time_horizon_years: int | None = None,
     social_discount_rate: float | None = None,
@@ -89,7 +89,10 @@ def build_formulation_payload(
         "system_type": system_type,
         "on_grid": on_grid,
         "grid_allow_export": allow_export,
-        "unit_commitment": unit_commitment,
+        # Integer (discrete) capacity sizing: capacity is sized in whole units instead of
+        # continuously. NOTE: this is distinct from the generator's `partial_load_commitment`
+        # (true unit commitment). It was previously (confusingly) named `unit_commitment`.
+        "integer_sizing": integer_sizing,
         "start_year_label": start_year_label,
         "time_horizon_years": time_horizon_years,
         "social_discount_rate": social_discount_rate,

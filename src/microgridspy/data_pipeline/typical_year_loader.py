@@ -230,7 +230,10 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
     if formulation_mode != "steady_state":
         raise InputValidationError("This data initializer is for steady_state only.")
 
-    uc_enabled = bool(formulation.get("unit_commitment", False))
+    # Integer (discrete) capacity sizing. `unit_commitment` is the legacy key name.
+    integer_sizing_enabled = bool(
+        formulation.get("integer_sizing", formulation.get("unit_commitment", False))
+    )
     ms = formulation.get("multi_scenario", {}) or {}
     ms_enabled = bool(ms.get("enabled", False))
 
@@ -417,8 +420,7 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
     data.attrs["settings"] = {
         "project_name": project_name,
         "formulation": formulation_mode,
-        "unit_commitment": uc_enabled,
-        "integer_sizing_enabled": uc_enabled,
+        "integer_sizing": integer_sizing_enabled,
         "multi_scenario": {"enabled": ms_enabled, "n_scenarios": n_scen},
         "resources": {
             "n_resources": int(sets.sizes.get("resource", 0)),
@@ -429,7 +431,7 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
         },
         "optimization_constraints": {"enforcement": enforcement},
         "modeling_notes": {
-            "unit_commitment_semantics": "In typical-year mode, `unit_commitment` enables integer sizing variables only; chronological generator commitment binaries are not part of this formulation.",
+            "integer_sizing_semantics": "In typical-year mode, `integer_sizing` makes the capacity-sizing variables integer-valued only; it does not add chronological generator commitment binaries (that is the generator's separate `partial_load_commitment`).",
             "land_constraint_semantics": "Land availability is enforced only when a finite non-negative `land_availability_m2` value is provided; omitted values leave the constraint inactive.",
             "battery_power_semantics": "Battery inverter power is modeled explicitly; legacy battery max charge/discharge time inputs are retained only as optional upper-bound references for backward compatibility.",
         },

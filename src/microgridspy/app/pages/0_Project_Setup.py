@@ -36,7 +36,7 @@ K = {
     "on_grid": "gp_on_grid",
     "allow_export": "gp_grid_allow_export",
     # sizing / structure
-    "unit_commitment": "gp_unit_commitment",  # bool (discrete units)
+    "integer_sizing": "gp_integer_sizing",  # bool (integer/discrete unit sizing)
     "cap_expansion": "gp_use_capacity_expansion",  # bool
     # dynamic horizon / discounting
     "start_year_label": "gp_start_year_label",  # str
@@ -195,7 +195,7 @@ def init_session_state_defaults() -> None:
         K["on_grid"]: False,
         K["allow_export"]: False,
         # sizing
-        K["unit_commitment"]: False,
+        K["integer_sizing"]: False,
         # dynamic horizon / discounting
         K["cap_expansion"]: False,
         K["start_year_label"]: str(datetime.now().year),
@@ -266,7 +266,7 @@ def write_formulation_file(*, project_name: str, project_description: str, cfg: 
         system_type=cfg.system_type,
         on_grid=cfg.on_grid,
         allow_export=cfg.allow_export,
-        unit_commitment=cfg.discrete_unit_sizing,
+        integer_sizing=cfg.discrete_unit_sizing,
         start_year_label=cfg.start_year_label,
         time_horizon_years=cfg.horizon_years,
         social_discount_rate=cfg.social_discount_rate,
@@ -912,7 +912,7 @@ def render_system_section() -> tuple[
     sizing_mode = st.radio(
         "Sizing approach:",
         options=SIZING_OPTIONS,
-        index=1 if bool(st.session_state[K["unit_commitment"]]) else 0,
+        index=1 if bool(st.session_state[K["integer_sizing"]]) else 0,
         format_func=lambda v: (
             "Continuous sizing" if v == "continuous" else "Discrete unit sizing by nominal capacity"
         ),
@@ -923,7 +923,7 @@ def render_system_section() -> tuple[
         key="gp_sizing_mode_radio",
     )
     discrete_sizing = sizing_mode == "discrete"
-    st.session_state[K["unit_commitment"]] = discrete_sizing
+    st.session_state[K["integer_sizing"]] = discrete_sizing
 
     st.markdown("**Renewable sources**")
     st.caption(

@@ -47,7 +47,7 @@ OPTIONAL_INPUTS: dict[str, str] = {
 REQUIRED_SETTINGS_KEYS = [
     "project_name",
     "formulation",
-    "unit_commitment",
+    "integer_sizing",
     "multi_scenario",
     "resources",
     "optimization_constraints",
@@ -240,7 +240,7 @@ def _build_project_summary(formulation: dict[str, Any]) -> str:
     export_label = "export enabled" if bool(formulation.get("grid_allow_export", False)) else None
     sizing_label = (
         "Discrete sizing"
-        if bool(formulation.get("unit_commitment", False))
+        if bool(formulation.get("integer_sizing", formulation.get("unit_commitment", False)))
         else "Continuous sizing"
     )
     ms = formulation.get("multi_scenario", {}) or {}

@@ -7,7 +7,7 @@
   "system_type": "off_grid",
   "on_grid": false,
   "grid_allow_export": false,
-  "unit_commitment": false,
+  "integer_sizing": false,
   "start_year_label": "typical_year",
   "time_horizon_years": null,
   "social_discount_rate": null,
