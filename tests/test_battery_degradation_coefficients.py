@@ -129,7 +129,7 @@ def _write_formulation_json(path, *, start_year="2026", horizon=3) -> None:
         "system_type": "off_grid",
         "on_grid": False,
         "grid_allow_export": False,
-        "unit_commitment": False,
+        "integer_sizing": False,
         "start_year_label": start_year,
         "time_horizon_years": horizon,
         "social_discount_rate": 0.05,

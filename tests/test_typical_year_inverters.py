@@ -223,7 +223,7 @@ def _base_data(
                 "grid": {"on_grid": False, "allow_export": False},
                 "optimization_constraints": {"enforcement": "scenario_wise"},
                 "battery_model": {"loss_model": loss_model},
-                "unit_commitment": discrete_unit_sizing,
+                "integer_sizing": discrete_unit_sizing,
             },
             "conversion_technology_by_resource": {"Solar": "Solar PV"},
         },

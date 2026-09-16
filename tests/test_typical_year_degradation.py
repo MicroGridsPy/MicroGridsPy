@@ -81,7 +81,7 @@ def _build_project(
         "system_type": "off_grid",
         "on_grid": False,
         "grid_allow_export": False,
-        "unit_commitment": False,
+        "integer_sizing": False,
         "start_year_label": "typical_year",
         "time_horizon_years": None,
         "social_discount_rate": None,
