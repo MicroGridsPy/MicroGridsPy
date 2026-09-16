@@ -50,7 +50,7 @@ microgridspy-gui = "microgridspy.app.launcher:main"
 [project.urls]
 Homepage = "https://github.com/MicroGridsPy/MicroGridsPy"
 Source = "https://github.com/MicroGridsPy/MicroGridsPy"
-Documentation = "https://microgridspy.readthedocs.io/"
+Documentation = "https://microgridspy-package-docs.readthedocs.io/"
 Issues = "https://github.com/MicroGridsPy/MicroGridsPy/issues"
 Changelog = "https://github.com/MicroGridsPy/MicroGridsPy/blob/master/CHANGELOG.md"
 
