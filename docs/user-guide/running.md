@@ -13,9 +13,9 @@ The practical workflow is:
 ```python
 import microgridspy as mgp
 
-mgp.validate_project("my_site")               # step 2
+mgp.validate_project("my_site")  # step 2
 model = mgp.solve("my_site", solver="highs")  # steps 3–4
-results = model.results()                      # step 5
+results = model.results()  # step 5
 ```
 
 `solve()` reads the formulation from `formulation.json`, builds the appropriate model
@@ -28,8 +28,8 @@ returns the **solved model**, from which you obtain a structured results object 
 ```python
 model = mgp.solve(
     "my_site",
-    solver="highs",          # "highs" (open source) or "gurobi" (licensed)
-    formulation=None,        # None → auto-detect; or "steady_state" / "dynamic"
+    solver="highs",  # "highs" (open source) or "gurobi" (licensed)
+    formulation=None,  # None → auto-detect; or "steady_state" / "dynamic"
 )
 ```
 

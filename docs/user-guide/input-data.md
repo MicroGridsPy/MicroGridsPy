@@ -11,6 +11,7 @@ my_site/
 ├── formulation.json              # mode, scenarios, grid flags, global constraints
 ├── load_demand.csv               # hourly demand time series
 ├── resource_availability.csv     # hourly renewable availability by resource
+├── ambient_temperature.csv       # hourly ambient temperature   (battery cycle fade only)
 ├── renewables.yaml               # renewable techno-economic inputs
 ├── battery.yaml                  # battery techno-economic inputs
 ├── generator.yaml                # generator + fuel inputs
@@ -38,6 +39,16 @@ each file is mandatory — is in the [Data Reference](../data-reference/overview
   battery, generators, fuel, and grid.
 - **Optional curves** (CSV) — battery loss and generator part-load efficiency curves that
   activate the advanced formulations described in the [Methodology](../methodology/overview.md).
+- **Battery degradation inputs** (conditional) — when battery cycle fade is enabled
+  (`battery_model.degradation_model.cycle_fade_enabled`), the project also needs
+  `ambient_temperature.csv` (an hourly ambient-temperature series in °C, same scenario/year
+  layout as `load_demand.csv`) together with a few `battery.yaml → technical` fields:
+  `chemistry` (one of `LFP`, `NMC`, `lead_acid`), `cycle_lifetime_to_eol_cycles`, `initial_soh`,
+  and `end_of_life_soh`. The temperature series and depth-of-discharge drive the semi-empirical
+  ageing coefficients. The cycle-fade model is chosen automatically from the chemistry —
+  **Li-ion (LFP/NMC)** uses the depth-resolved per-SOC-band model (its band count is
+  `battery_model.degradation_model.n_soc_bands`, default 5), while **lead-acid** uses the flat
+  $\beta(T)$ model. See [Battery degradation](../methodology/battery.md#battery-degradation).
 
 ## Inspecting inputs before solving
 
@@ -46,7 +57,7 @@ You can assemble and inspect the input dataset without solving:
 ```python
 import microgridspy as mgp
 
-ds = mgp.load_inputs("my_site")          # the canonical xarray.Dataset
+ds = mgp.load_inputs("my_site")  # the canonical xarray.Dataset
 print(mgp.list_input_timeseries("my_site"))
 
 # plot an input series (returns hourly + average-daily matplotlib figures)
@@ -60,7 +71,7 @@ The structure of `ds` is documented in the [Internal Data Contract](../data-refe
 Before solving, validate the project:
 
 ```python
-mgp.validate_project("my_site")   # raises InputValidationError on problems
+mgp.validate_project("my_site")  # raises InputValidationError on problems
 ```
 
 Validation checks that required coordinates and variables exist, that dimensions are

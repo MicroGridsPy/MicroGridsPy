@@ -13,10 +13,10 @@ paths = mgp.create_project(
     "tutorial_typical",
     formulation="steady_state",
     system_type="off_grid",
-    resources=["solar"],     # one renewable source labelled "solar"
-    scenarios=1,             # deterministic (single scenario)
+    resources=["solar"],  # one renewable source labelled "solar"
+    scenarios=1,  # deterministic (single scenario)
 )
-print(paths)                 # where the input templates were written
+print(paths)  # where the input templates were written
 ```
 
 This writes `formulation.json` and input templates into the project folder. The renewable
@@ -42,7 +42,7 @@ fig_hourly, fig_daily = mgp.plot_input_timeseries("tutorial_typical", "load_dema
 ## 3. Validate
 
 ```python
-mgp.validate_project("tutorial_typical")   # raises InputValidationError if incomplete
+mgp.validate_project("tutorial_typical")  # raises InputValidationError if incomplete
 ```
 
 ## 4. Solve
@@ -56,15 +56,15 @@ model = mgp.solve("tutorial_typical", solver="highs")
 ```python
 results = model.results()
 
-print(results.kpis)            # LCOE, renewable share, total cost, ...
+print(results.kpis)  # LCOE, renewable share, total cost, ...
 print(results.design_summary)  # installed capacity by technology
-print(results.dispatch.head()) # hourly dispatch time series
+print(results.dispatch.head())  # hourly dispatch time series
 ```
 
 ## 6. Export
 
 ```python
-mgp.export_results(results)    # CSV/Excel into the project's results/ folder
+mgp.export_results(results)  # CSV/Excel into the project's results/ folder
 ```
 
 ## What the model solved

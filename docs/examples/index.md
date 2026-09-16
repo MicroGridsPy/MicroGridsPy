@@ -96,7 +96,7 @@ To re-solve any scenario:
 ```python
 import microgridspy as mgp
 
-model = mgp.solve("Kalobeyei_1", solver="highs")   # lithium-ion reference
+model = mgp.solve("Kalobeyei_1", solver="highs")  # lithium-ion reference
 results = model.results()
 print(results.kpis)
 ```

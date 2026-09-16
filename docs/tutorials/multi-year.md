@@ -14,11 +14,11 @@ mgp.create_project(
     formulation="dynamic",
     system_type="off_grid",
     resources=["solar", "wind"],
-    horizon_years=20,                  # planning horizon H = 20 years
-    capacity_expansion=True,           # allow staged expansion
+    horizon_years=20,  # planning horizon H = 20 years
+    capacity_expansion=True,  # allow staged expansion
     investment_steps_years=[5, 5, 5, 5],  # four 5-year investment steps
     start_year_label="2026",
-    scenarios=2,                       # two stochastic scenarios
+    scenarios=2,  # two stochastic scenarios
 )
 ```
 
@@ -44,13 +44,13 @@ axes, units, and mandatory conditions.
 ```python
 mgp.validate_project("tutorial_multiyear")
 model = mgp.solve("tutorial_multiyear", solver="highs")
-results = model.results()   # a MultiYearResults object
+results = model.results()  # a MultiYearResults object
 ```
 
 ## 4. Inspect the horizon results
 
 ```python
-print(results.kpis)            # present-value cost, renewable share, ...
+print(results.kpis)  # present-value cost, renewable share, ...
 # per-year installed capacity, dispatch, and cost breakdowns resolved over the horizon
 ```
 

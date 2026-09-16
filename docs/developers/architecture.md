@@ -8,7 +8,7 @@ Project / input data (CSV / YAML / JSON)
         ↓
 Validation and loading        (data_pipeline, io)
         ↓
-Canonical internal dataset    (the DATA_CONTRACT: one xarray.Dataset)
+Canonical internal dataset    (the data contract: one xarray.Dataset)
         ↓
 Formulation-specific model    (typical_year_model / multi_year_model)
         ↓

@@ -237,8 +237,30 @@ with $u_k$ units, activity mask $a_{y,k}$, and a **calendar-fade factor** $g_{y,
 **effective usable capacity** $C^{\text{eff}}_{y,\omega,k}\le \overline{C}^{\text{bat}}_{y,k}$ is
 the energy left after cycle fade; it is constant within a year and evolves across years.
 
-**Cycle fade** is the annual sum of $\beta(T)$ times the DC-side energy exchanged (both directions,
-matching $\beta$'s calibration of $2\,\text{DoD}$ throughput per full cycle):
+**Cycle fade** is accumulated per year from the DC-side energy exchanged. The representation is
+selected by **chemistry**, not by a user switch:
+
+*Li-ion (LFP, NMC) — depth-resolved marginal bands.* The usable SOC window is split into $K$
+equal bands; discharge is routed through a stacked band reservoir and each band $b$ carries a
+**convex marginal wear cost** $c_b(T)$ that increases with depth. Annual fade is
+
+\[
+F^{\text{cyc}}_{y,\omega,k} = \sum_t \sum_{b=1}^{K} c_{b}(T_{t,y})\; P^{\text{dis,dc}}_{b,t,y,\omega,k}
+\]
+
+Because deeper bands cost more, the optimiser fills shallow bands first, so the **cycling depth is
+emergent** — the model discovers how deep to cycle rather than assuming a fixed DoD — while the
+block stays a pure LP. The band marginals $c_b = \partial\Psi/\partial D$ are distilled from an
+offline physics-grade depth curve $\Psi(D,T)$ (archived separately — see the
+[references](#references)), re-binned to $K$ usable bands and scaled by the same
+$N_{\text{ref}}/N_{\text{user}}$ cycle-life ratio as $\beta$. The band count $K$ is set by
+`battery_model.degradation_model.n_soc_bands` (default 5). A full-depth cycle reproduces the same
+per-cycle fade as the flat coefficient, so the two representations agree in the aggregate and
+differ only in how they price partial-depth cycling.
+
+*Lead-acid — flat $\beta(T)$.* The depth-band model is Li-ion only, so lead-acid keeps the single
+semi-empirical coefficient $\beta(T)$ times the DC-side throughput (both directions, matching
+$\beta$'s calibration of $2\,\text{DoD}$ per full cycle):
 
 \[
 F^{\text{cyc}}_{y,\omega,k} = \sum_t \beta_{t,y,\omega}\,
@@ -317,7 +339,7 @@ calendar limit.*
 | Switch | Behaviour |
 |---|---|
 | Efficiency model | constant round-trip efficiency, or power-dependent convex losses (no ageing on its own) |
-| Cycle fade (`cycle_fade_enabled`) | semi-empirical $\beta(T)$: binding-life CAPEX amortisation (both formulations), plus a capacity-fade state in the multi-year model |
+| Cycle fade (`cycle_fade_enabled`) | Semi-empirical throughput wear. Typical-year: binding-life CAPEX amortisation from $\beta(T)$. Multi-year: a capacity-fade state, using **depth-resolved per-SOC-band marginals $c_b(T)$ for Li-ion** (LFP/NMC; `n_soc_bands` bands, default 5) and the flat $\beta(T)$ for lead-acid |
 | Calendar fade | in multi-year, the $\alpha(T)$-driven annual rate $r^{\text{cal}}_y$ on the availability factor |
 
 Endogenous cycle fade in the **multi-year** model requires the convex-loss efficiency model
@@ -338,3 +360,8 @@ The decomposition and the fitted $\alpha$/$\beta$ coefficients follow S. Andrade
 Degradation Modelling for Off-Grid Energy System Sizing: Methodology and Case Study in the African
 Context* (MSc dissertation, Politecnico di Milano / FCUL, 2023), which calibrates the linear
 recursion against a physics-based electro-thermal + semi-empirical reference model.
+
+The Li-ion depth-resolved per-SOC-band marginals $c_b(T)$ are distilled from an offline Layer-I
+physical model (electro-thermal + semi-empirical ageing), which computes the depth curve
+$\Psi(D,T)$ directly. That model and its distilled coefficient file are archived separately;
+see the project's data archive for the DOI. <!-- TODO: insert Zenodo DOI once published. -->

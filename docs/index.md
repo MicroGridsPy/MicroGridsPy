@@ -66,7 +66,7 @@ mgp.validate_project("my_site")
 # 3. Build and solve the optimization; retrieve analysis-ready results
 results = mgp.solve("my_site", solver="highs").results()
 
-print(results.kpis)          # pandas DataFrame of headline indicators
+print(results.kpis)  # pandas DataFrame of headline indicators
 mgp.export_results(results)  # write CSV/Excel into the project's results/ folder
 ```
 

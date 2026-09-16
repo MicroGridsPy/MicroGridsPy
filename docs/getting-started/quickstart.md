@@ -13,20 +13,20 @@ end-to-end in a single call:
 ```python
 import microgridspy as mgp
 
-print(mgp.list_examples())      # ['demo_multi_year', 'demo_typical_year']
+print(mgp.list_examples())  # ['demo_multi_year', 'demo_typical_year']
 
 model = mgp.solve_example("demo_typical_year", solver="highs")
 results = model.results()
 
-print(results.kpis)             # headline KPIs (LCOE, renewable share, total cost, …)
-print(results.design_summary)   # installed capacity by technology
+print(results.kpis)  # headline KPIs (LCOE, renewable share, total cost, …)
+print(results.design_summary)  # installed capacity by technology
 ```
 
 `solve_example` copies the example into the active workspace (`./projects/<name>/`) and solves
 it. If you prefer the two steps explicitly:
 
 ```python
-mgp.load_example("demo_typical_year")            # -> ./projects/demo_typical_year
+mgp.load_example("demo_typical_year")  # -> ./projects/demo_typical_year
 model = mgp.solve("demo_typical_year", solver="highs")
 ```
 
@@ -63,10 +63,10 @@ import microgridspy as mgp
 # 1. Create a project folder and generate input templates
 mgp.create_project(
     "my_site",
-    formulation="steady_state",   # or "dynamic" for multi-year planning
-    system_type="off_grid",       # or "on_grid"
+    formulation="steady_state",  # or "dynamic" for multi-year planning
+    system_type="off_grid",  # or "on_grid"
     resources=["solar", "wind"],  # one renewable source per label
-    scenarios=1,                  # number of stochastic scenarios
+    scenarios=1,  # number of stochastic scenarios
 )
 
 # 2. Edit the generated input files (CSV / YAML / JSON) with your case-study data,
@@ -77,9 +77,9 @@ mgp.validate_project("my_site")
 model = mgp.solve("my_site", solver="highs")
 
 # 4. Retrieve analysis-ready results
-results = model.results()     # a TypicalYearResults object (pandas DataFrames)
-print(results.kpis)           # headline KPIs
-print(results.design_summary) # installed capacity by technology
+results = model.results()  # a TypicalYearResults object (pandas DataFrames)
+print(results.kpis)  # headline KPIs
+print(results.design_summary)  # installed capacity by technology
 
 # 5. Persist results to the project's results/ folder as CSV/Excel
 mgp.export_results(results)

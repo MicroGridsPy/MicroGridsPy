@@ -22,9 +22,8 @@ the loading and formulation layers to evolve independently — and what makes fu
 interoperability with other Python energy-access tools tractable.
 
 !!! note "Source of truth"
-    This page mirrors [`docs/DATA_CONTRACT.md`](https://github.com/MicroGridsPy/MicroGridsPy/blob/microgridspy-packaging/docs/DATA_CONTRACT.md)
-    in the repository. When the internal dataset changes, update the contract first, then the
-    loaders and the formulation `params.py` aliases.
+    This page is the authoritative data contract. When the internal dataset changes, update
+    this contract first, then the loaders and the formulation `params.py` aliases.
 
 ## 1. Canonical dataset `ds`
 

@@ -10,7 +10,7 @@ analysis-ready `pandas` DataFrames.
 import microgridspy as mgp
 
 model = mgp.solve("my_site", solver="highs")
-results = model.results()          # structured results (DataFrames)
+results = model.results()  # structured results (DataFrames)
 
 # or reload a previously saved run without re-solving:
 results = mgp.load_results("my_site")
@@ -48,7 +48,7 @@ dispatch and balance tables.
 ## Exporting
 
 ```python
-paths = mgp.export_results(results)   # writes CSV/Excel to the project's results/ folder
+paths = mgp.export_results(results)  # writes CSV/Excel to the project's results/ folder
 ```
 
 `export_results` returns a mapping of output name → written file path. Pass `out_dir=` to
