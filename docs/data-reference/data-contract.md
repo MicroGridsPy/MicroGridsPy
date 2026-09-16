@@ -58,7 +58,7 @@ The loader returns one canonical `xarray.Dataset` (`ds`) for both formulations.
 
 - `project_name`: `str`
 - `formulation`: `"steady_state"` or `"dynamic"`
-- `unit_commitment`: `bool`
+- `integer_sizing`: `bool` — integer/discrete capacity sizing (distinct from the generator's `partial_load_commitment`)
 - `multi_scenario`: `{ enabled: bool, n_scenarios: int }`
 - `optimization_constraints`: `{ enforcement: "scenario_wise" | "expected" }`
 - `resources`: `{ n_resources: int, resource_labels: list[str] }`
