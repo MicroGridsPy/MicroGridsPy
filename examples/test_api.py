@@ -1,51 +1,35 @@
 """Example: use MicroGridsPy as a Python library.
 
-Creates a NEW project from scratch with create_project(), reuses the input data
-from the bundled ``demo_typical_year`` example, then validates, solves (HiGHS), and
-reads the structured results.
+Loads the bundled ``demo_typical_year`` example into an isolated workspace, then
+validates, solves (HiGHS), reads the structured results, and exports them. This is
+the intended public quick-start path — it works straight after ``pip install`` with
+no repository clone and no manual input files.
 
 Run from anywhere:  python examples/test_api.py
-Creates <repo>/projects/smoke_test/ (a throwaway you can delete afterwards).
 """
 
-import shutil
+import tempfile
 from pathlib import Path
 
 import microgridspy as mgp
 
-# Resolve the repo root from this file, so the example works from any directory.
-REPO_ROOT = Path(__file__).resolve().parent.parent
-mgp.set_workspace(REPO_ROOT)  # projects/ lives under the repo root
-src_inputs = REPO_ROOT / "projects" / "demo_typical_year" / "inputs"
+# Use a throwaway workspace so the example never touches an existing projects/ folder.
+workspace = Path(tempfile.mkdtemp(prefix="microgridspy_example_"))
+mgp.set_workspace(workspace)
+print("workspace:", workspace)
 
-# 1) create a NEW project from scratch, matching demo_typical_year's config.
-#    NB: demo_typical_year uses European CSV format -> delimiter ';', decimal ','.
-paths = mgp.create_project(
-    "smoke_test",
-    formulation="steady_state",
-    system_type="off_grid",
-    resources=["solar"],  # 1 source -> matches n_sources
-    csv_delimiter=";",
-    csv_decimal=",",
-    overwrite=True,
-)
-print("created:", paths.root)
+# 1) copy the packaged example project into the workspace.
+project = mgp.load_example("demo_typical_year", overwrite=True)
+print("loaded example:", project)
 
-# 2) reuse demo_typical_year's REAL data, keeping create_project's formulation.json.
-for f in [
-    "load_demand.csv",
-    "resource_availability.csv",
-    "renewables.yaml",
-    "battery.yaml",
-    "generator.yaml",
-]:
-    shutil.copy(src_inputs / f, paths.inputs_dir / f)
-print("copied real inputs from demo_typical_year")
-
-# 3) validate -> solve -> results.
-mgp.validate_project("smoke_test")
-model = mgp.solve("smoke_test", solver="highs")
+# 2) validate -> solve -> results.
+mgp.validate_project(project)
+model = mgp.solve(project, solver="highs")
 r = model.results()
 print("status   :", r.metadata["status"])
 print("objective:", round(r.metadata["objective_value"], 2))  # -> 226704.91
 print("kpis:\n", r.kpis)
+
+# 3) persist the result tables (CSV/Excel) to the project's results/ folder.
+written = mgp.export_results(r)
+print(f"wrote {len(written)} result files under {workspace / 'projects' / project / 'results'}")
