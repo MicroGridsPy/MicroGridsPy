@@ -6,18 +6,6 @@ You can use it two ways:
 - **As a Python library** — call the optimization from your own scripts and notebooks (`import microgridspy`).
 - **As a guided app** — define a project, generate input templates, audit data, solve, and explore results in a Streamlit workspace (`microgridspy-gui`).
 
-> [!NOTE]
-> **Work in progress.** Recent development work has strengthened inverter modeling and results reliability across both planning modes, but this area is still being actively refined.
->
-> - Typical-Year renewable inverter sizing is now physically consistent across constraints, objective accounting, exports, and the Results page.
-> - Typical-Year battery inverter sizing now follows the same component-based philosophy as the other core assets:
->   `battery inverter installed power = battery_inverter_units x battery_inverter_nominal_power_kw`
->   Discrete sizing therefore applies naturally to battery inverter components as integer unit counts.
-> - Typical-Year reporting now exposes structured inverter outputs directly, including renewable inverter design, battery inverter design, and inverter metrics.
-> - Typical-Year results are packaged through a cleaner canonical solved-results object, improving robustness when reloading or rendering saved outputs.
-> - Multi-Year now includes a first inverter pass with renewable inverter/converter treatment per renewable technology/resource, explicit battery inverter sizing by investment step, and inverter-aware objective accounting and structured exports.
-> - Multi-Year results have also been refactored toward a cleaner canonical pipeline so that solve, export, live rendering, and file-backed rendering are better aligned.
-
 The reference energy system can include:
 - Renewable generation
 - Battery storage
@@ -41,10 +29,19 @@ Each project is stored in its own folder with CSV, YAML, and JSON files, so stud
 
 ## Installation
 
-MicroGridsPy is published on PyPI. Install it into a Python 3.10+ environment:
+MicroGridsPy targets **Python 3.10+**. Install it with `pip`, adding the optional Streamlit
+GUI and the open-source HiGHS solver:
 
 ```bash
 pip install "microgridspy[gui,highs]"
+```
+
+To work on the code, or before the package is available on PyPI, install from a clone instead:
+
+```bash
+git clone https://github.com/MicroGridsPy/MicroGridsPy.git
+cd MicroGridsPy
+pip install -e ".[gui,highs]"
 ```
 
 Extras let you install only what you need:
