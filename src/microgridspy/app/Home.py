@@ -15,8 +15,8 @@ REPOSITORY_URL = "https://github.com/AleOnori98/microgridspy-planning"
 RAMP_URL = "https://github.com/AleOnori98/RAMP-Streamlit"
 PVGIS_URL = "https://github.com/AleOnori98/PVGIS-Streamlit-App"
 LV_TOPOLOGY_URL = "https://github.com/AleOnori98/LV-Distribution-Topology-Streamlit"
-# Placeholder for the official documentation site (Docusaurus, coming soon).
-DOCS_URL = "https://microgridspy.github.io/MicroGridsPy"
+# Official documentation site (Read the Docs).
+DOCS_URL = "https://microgridspy-package-docs.readthedocs.io/en/latest/"
 
 ECOSYSTEM_TOOL_ROWS = (
     (
@@ -65,7 +65,7 @@ REPOSITORY_REFERENCES = (
     "`projects/`: your project folders and input templates (created here at runtime)",
 )
 
-USEFUL_LINKS = (("Official documentation (coming soon)", DOCS_URL),)
+USEFUL_LINKS = (("Official documentation", DOCS_URL),)
 
 
 def _asset(name: str) -> str:
@@ -222,10 +222,7 @@ def _render_resources() -> None:
 
     st.write("")
     st.markdown("**Documentation**")
-    st.info(
-        f"Full documentation is moving to a dedicated site — [{DOCS_URL}]({DOCS_URL}) "
-        "_(coming soon)_."
-    )
+    st.info(f"Full documentation is available at [{DOCS_URL}]({DOCS_URL}).")
 
     st.write("")
     _render_useful_links()
