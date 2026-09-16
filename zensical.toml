@@ -43,6 +43,7 @@ nav = [
     { "Renewable Technologies" = "methodology/renewable.md" },
     { "Battery" = "methodology/battery.md" },
     { "Generators" = "methodology/generator.md" },
+    { "Inverters" = "methodology/inverters.md" },
     { "Grid Connection" = "methodology/grid.md" },
     { "System Constraints" = "methodology/constraints.md" },
   ] },
