@@ -1,23 +1,33 @@
-Active Developer:
-Alessandro Onori, Politecnico di Milano <alessandro.onori@polimi.it>
+# Authors
 
-Scientific Advisory:
-Nicolò Stevanato, Politecnico di Milano <nicolo.stevanato@polimi.it>
-Riccardo Mereu, Politecnico di Milano <riccardo.mereu@polimi.it>
-Emanuela Colombo, Politecnico di Milano <emanuela.colombo@polimi.it>
+MicroGridsPy is developed and maintained by the following people. This file records
+contributors and their roles; ORCID identifiers are listed where available (fill in
+the placeholders as they are confirmed). The author list and affiliations for the
+JOSS paper are derived from this file.
 
-Past contributors:
-Gianluca Pellecchia, Politecnico di Milano <gianluca.pellecchia@polimi.it>
-Ivan Sangiorgio, Politecnico di Milano <ivan.sangiorgio@polimi.it>
-Francesco Lombardi, TU Delft <f.lombardi@tudelft.nl>
-Giulia Guidicini, Politecnico di Milano <giulia.guidicini@polimi.it>
-Lorenzo Rinaldi, Politecnico di Milano <lorenzo.rinaldi@polimi.it>
+## Maintainer / lead developer
 
-Based on the original model by:
-Sergio Balderrama, Université de Liège <slbalderrama@doct.ulg.ac.be>
-Sylvain Quoilin, Université de Liège <squoilin@uliege.be>
+- Alessandro Onori, Politecnico di Milano
+  <alessandro.onori@polimi.it> — ORCID: 0000-0000-0000-0000  <!-- TODO: add ORCID -->
 
+## Scientific advisory
 
+- Nicolò Stevanato, Politecnico di Milano
+  <nicolo.stevanato@polimi.it> — ORCID: 0000-0000-0000-0000  <!-- TODO -->
+- Riccardo Mereu, Politecnico di Milano
+  <riccardo.mereu@polimi.it> — ORCID: 0000-0000-0000-0000  <!-- TODO -->
+- Emanuela Colombo, Politecnico di Milano
+  <emanuela.colombo@polimi.it> — ORCID: 0000-0000-0000-0000  <!-- TODO -->
 
+## Past contributors
 
+- Gianluca Pellecchia, Politecnico di Milano <gianluca.pellecchia@polimi.it>
+- Ivan Sangiorgio, Politecnico di Milano <ivan.sangiorgio@polimi.it>
+- Francesco Lombardi, TU Delft <f.lombardi@tudelft.nl>
+- Giulia Guidicini, Politecnico di Milano <giulia.guidicini@polimi.it>
+- Lorenzo Rinaldi, Politecnico di Milano <lorenzo.rinaldi@polimi.it>
 
+## Based on the original model by
+
+- Sergio Balderrama, Université de Liège <slbalderrama@doct.ulg.ac.be>
+- Sylvain Quoilin, Université de Liège <squoilin@uliege.be>

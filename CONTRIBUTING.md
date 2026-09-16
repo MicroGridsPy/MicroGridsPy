@@ -1,10 +1,9 @@
 # Contributing to MicroGridsPy
 
 Thanks for your interest in improving MicroGridsPy! Contributions of all kinds are
-welcome — bug reports, feature requests, documentation, and code.
-
-> This is a minimal starting guide and will be expanded. For documentation-specific
-> conventions see [`docs/developers/contributing.md`](docs/developers/contributing.md).
+welcome — bug reports, feature requests, documentation, and code. For
+documentation-specific conventions, see
+[`docs/developers/contributing.md`](docs/developers/contributing.md).
 
 ## Reporting issues
 
