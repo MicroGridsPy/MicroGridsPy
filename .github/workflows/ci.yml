@@ -27,5 +27,7 @@ jobs:
         run: |
           ruff check .
           ruff format --check .
-      - name: Test
-        run: pytest -q
+      - name: Test (with coverage)
+        run: |
+          coverage run -m pytest -q
+          coverage report
