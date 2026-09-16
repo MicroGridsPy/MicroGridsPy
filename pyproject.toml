@@ -16,7 +16,7 @@ keywords = ["energy", "mini-grid", "optimization", "linopy", "rural electrificat
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved",
+    "License :: OSI Approved :: European Union Public Licence 1.2 (EUPL 1.2)",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -39,7 +39,7 @@ dependencies = [
 gui    = ["streamlit>=1.36"]
 highs  = ["highspy>=1.7"]                   # open-source solver
 gurobi = ["gurobipy>=11"]                   # commercial solver (license required)
-dev    = ["pytest>=8", "ruff>=0.4", "pre-commit", "coverage[toml]", "build"]
+dev    = ["pytest>=8", "ruff==0.16.7", "pre-commit", "coverage[toml]", "build"]
 docs   = ["zensical", "mkdocstrings-python"]  # site generator + API extraction
 all    = ["microgridspy[gui,highs,dev,docs]"]
 
@@ -50,6 +50,9 @@ microgridspy-gui = "microgridspy.app.launcher:main"
 [project.urls]
 Homepage = "https://github.com/MicroGridsPy/MicroGridsPy"
 Source = "https://github.com/MicroGridsPy/MicroGridsPy"
+Documentation = "https://microgridspy.readthedocs.io/"
+Issues = "https://github.com/MicroGridsPy/MicroGridsPy/issues"
+Changelog = "https://github.com/MicroGridsPy/MicroGridsPy/blob/master/CHANGELOG.md"
 
 [tool.hatch.version]
 source = "vcs"                              # derive version from git tag vX.Y.Z
@@ -74,3 +77,19 @@ ignore = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["microgridspy"]
+branch = true
+# The Streamlit GUI is exercised interactively, not in the headless test suite.
+omit = ["src/microgridspy/app/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
