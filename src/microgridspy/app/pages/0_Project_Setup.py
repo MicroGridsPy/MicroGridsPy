@@ -1,0 +1,1589 @@
+# generation_planning/pages/project_setup.py
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Literal
+
+import pandas as pd
+import streamlit as st
+
+from microgridspy.data_pipeline.utils import normalize_weights
+from microgridspy.io.csv_format import (
+    CSV_DECIMAL_OPTIONS,
+    CSV_DELIMITER_OPTIONS,
+    normalize_csv_decimal,
+    normalize_csv_delimiter,
+)
+from microgridspy.io.jsonio import write_json
+from microgridspy.io.project_setup import build_formulation_payload
+from microgridspy.io.templates import TemplateSettings, write_templates
+from microgridspy.io.utils import (
+    ensure_project_structure,
+    project_exists,
+    project_paths,
+    sanitize_project_name,
+)
+
+# =============================================================================
+# Session keys and UI constants
+# =============================================================================
+K = {
+    "formulation": "gp_formulation",
+    "is_dynamic": "gp_is_dynamic",
+    "system_type": "gp_system_type",
+    "on_grid": "gp_on_grid",
+    "allow_export": "gp_grid_allow_export",
+    # sizing / structure
+    "integer_sizing": "gp_integer_sizing",  # bool (integer/discrete unit sizing)
+    "cap_expansion": "gp_use_capacity_expansion",  # bool
+    # dynamic horizon / discounting
+    "start_year_label": "gp_start_year_label",  # str
+    "horizon_years": "gp_horizon_years",  # int
+    "discount_pct": "gp_social_discount_pct",  # float (%)
+    # capacity expansion step table (variable step durations)
+    "investment_steps": "gp_investment_steps_df",  # pd.DataFrame (step_idx, duration_years)
+    "investment_steps_n": "gp_investment_steps_n",  # int
+    # uncertainty modelling
+    "uncertainty_mode": "gp_uncertainty_mode",  # "single" | "multi"
+    "use_multiscenario": "gp_use_multiscenario",  # derived
+    "n_scenarios": "gp_n_scenarios",  # int
+    "scenario_labels": "gp_scenario_labels",  # list[str]
+    "scenario_weights": "gp_scenario_weights",  # list[float]
+    # constraints
+    "constraints_enforcement": "gp_constraints_enforcement",  # str
+    "min_res_penetration_pct": "gp_min_res_penetration_pct",  # float (%)
+    "max_lost_load_fraction_pct": "gp_max_lost_load_fraction_pct",  # float (%)
+    "lost_load_cost_per_kwh": "gp_lost_load_cost_per_kWh",  # float
+    "land_availability_m2": "gp_land_availability_m2",  # float | None
+    "land_limit_enabled": "gp_land_limit_enabled",  # bool
+    "emission_cost_per_kgco2e": "gp_emission_cost_per_kgco2e",  # float
+    "include_carbon_cost": "gp_include_carbon_cost",  # bool
+    # renewables naming
+    "n_res_sources": "gp_n_res_sources",  # int
+    "res_conversion_labels": "gp_res_conversion_labels",  # list[str]
+    "res_resource_labels": "gp_res_resource_labels",  # list[str]
+    # component labels
+    "battery_label": "gp_battery_label",  # str
+    "battery_loss_model": "gp_battery_loss_model",  # str
+    "battery_efficiency_curve_csv": "gp_battery_efficiency_curve_csv",  # str
+    "battery_cycle_fade_enabled": "gp_battery_cycle_fade_enabled",  # bool
+    "battery_chemistry": "gp_battery_chemistry",  # str
+    "battery_cycle_lifetime_to_eol_cycles": "gp_battery_cycle_lifetime_to_eol_cycles",  # float
+    "battery_capacity_degradation_rate_per_year": "gp_battery_capacity_degradation_rate_per_year",  # float
+    "battery_end_of_life_soh": "gp_battery_end_of_life_soh",  # float
+    "battery_n_soc_bands": "gp_battery_n_soc_bands",  # int (Li-ion marginal-bands count)
+    "generator_label": "gp_generator_label",  # str
+    "generator_efficiency_model": "gp_generator_efficiency_model",  # str
+    "generator_efficiency_curve_csv": "gp_generator_efficiency_curve_csv",  # str
+    "generator_partial_load_commitment": "gp_generator_partial_load_commitment",  # str
+    "generator_min_load_fraction": "gp_generator_min_load_fraction",  # float
+    "fuel_label": "gp_fuel_label",  # str
+    "csv_delimiter": "gp_csv_delimiter",  # str
+    "csv_decimal": "gp_csv_decimal",  # str
+    "csv_format_project_hint": "gp_csv_format_project_hint",  # str
+    # metadata
+    "project_name": "gp_project_name",
+    "project_desc": "gp_project_description",
+    # cross-page
+    "active_project": "active_project",
+}
+
+FORMULATION_OPTIONS = ["steady_state", "dynamic"]
+SYSTEM_OPTIONS = ["off_grid", "on_grid"]
+UNCERTAINTY_OPTIONS = ["single", "multi"]
+SIZING_OPTIONS = ["continuous", "discrete"]
+CONSTRAINT_ENFORCEMENT_OPTIONS = ["expected", "scenario_wise"]
+
+ProjectAction = Literal["create", "load"]
+
+
+# =============================================================================
+# Page-level configuration container (manifest snapshot)
+# =============================================================================
+@dataclass(frozen=True)
+class PageConfig:
+    formulation: str
+    system_type: str
+    on_grid: bool
+    allow_export: bool
+
+    # sizing / structure
+    discrete_unit_sizing: bool
+
+    # dynamic horizon / discounting
+    start_year_label: str | None
+    horizon_years: int | None
+    social_discount_rate: float | None  # decimal (e.g. 0.05)
+    capacity_expansion: bool
+    investment_steps: list[int] | None  # list of step durations (years)
+
+    # uncertainty
+    multi_scenario: bool
+    n_scenarios: int
+    scenario_labels: list[str]
+    scenario_weights: list[float]
+
+    # constraints
+    constraints_enforcement: str
+    min_res_penetration: float
+    max_lost_load_fraction: float
+    lost_load_cost_per_kwh: float
+    land_availability_m2: float | None
+    emission_cost_per_kgco2e: float | None
+
+    # renewables naming
+    n_res_sources: int
+    res_conversion_labels: list[str]
+    res_resource_labels: list[str]
+
+    # component labels
+    battery_label: str
+    battery_loss_model: str
+    battery_efficiency_curve_csv: str
+    battery_cycle_fade_enabled: bool
+    battery_cycle_lifetime_to_eol_cycles: float
+    battery_end_of_life_soh: float
+    generator_label: str
+    generator_efficiency_model: str
+    generator_efficiency_curve_csv: str
+    fuel_label: str
+    csv_delimiter: str
+    csv_decimal: str
+    renewable_vintage_labels_by_step: dict[str, dict[str, str]]
+    battery_vintage_labels_by_step: dict[str, str]
+    generator_vintage_labels_by_step: dict[str, str]
+    fuel_vintage_labels_by_step: dict[str, str]
+    generator_partial_load_commitment: str = "integer"
+    generator_min_load_fraction: float = 0.0
+    battery_capacity_degradation_rate_per_year: float = 0.0
+    battery_chemistry: str = "LFP"
+    battery_n_soc_bands: int = 5
+
+
+def _battery_endogenous_degradation_enabled(cfg: PageConfig) -> bool:
+    return (
+        str(cfg.formulation or "").strip().lower() == "dynamic"
+        and str(cfg.battery_loss_model or "").strip().lower() == "convex_loss_epigraph"
+        and bool(cfg.battery_cycle_fade_enabled)
+    )
+
+
+def _battery_cycle_fade_active(cfg: PageConfig) -> bool:
+    # Semi-empirical cycle fade in ANY formulation: dynamic multi-year runs it as an
+    # endogenous capacity-fade recursion (needs the convex-loss model), steady_state
+    # typical-year as a binding-life CAPEX amortisation. Both need the same degradation inputs.
+    return bool(cfg.battery_cycle_fade_enabled)
+
+
+# =============================================================================
+# Defaults
+# =============================================================================
+def _default_investment_steps_df(n_steps: int = 4, default_duration: int = 5) -> pd.DataFrame:
+    return pd.DataFrame(
+        {"Step": list(range(1, n_steps + 1)), "Duration [years]": [default_duration] * n_steps}
+    )
+
+
+def init_session_state_defaults() -> None:
+    defaults: dict[str, object] = {
+        # core
+        K["formulation"]: "steady_state",
+        K["is_dynamic"]: False,
+        K["system_type"]: "off_grid",
+        K["on_grid"]: False,
+        K["allow_export"]: False,
+        # sizing
+        K["integer_sizing"]: False,
+        # dynamic horizon / discounting
+        K["cap_expansion"]: False,
+        K["start_year_label"]: str(datetime.now().year),
+        K["horizon_years"]: 20,
+        K["discount_pct"]: 5.0,
+        # capacity expansion table
+        K["investment_steps_n"]: 4,
+        # uncertainty
+        K["uncertainty_mode"]: "single",
+        K["use_multiscenario"]: False,
+        K["n_scenarios"]: 2,
+        K["scenario_labels"]: ["scenario_1", "scenario_2"],
+        K["scenario_weights"]: [0.5, 0.5],
+        # constraints
+        K["constraints_enforcement"]: "expected",
+        K["min_res_penetration_pct"]: 0.0,
+        K["max_lost_load_fraction_pct"]: 0.0,
+        K["lost_load_cost_per_kwh"]: 0.0,
+        K["land_availability_m2"]: None,
+        K["land_limit_enabled"]: False,
+        K["emission_cost_per_kgco2e"]: 0.0,
+        K["include_carbon_cost"]: False,
+        # renewables naming
+        K["n_res_sources"]: 1,
+        K["res_conversion_labels"]: ["Technology_1"],
+        K["res_resource_labels"]: ["Resource_1"],
+        # component labels
+        K["battery_label"]: "Battery",
+        K["battery_loss_model"]: "constant_efficiency",
+        K["battery_efficiency_curve_csv"]: "battery_efficiency_curve.csv",
+        K["battery_cycle_fade_enabled"]: False,
+        K["battery_chemistry"]: "LFP",
+        K["battery_cycle_lifetime_to_eol_cycles"]: 6000.0,
+        K["battery_capacity_degradation_rate_per_year"]: 0.0,
+        K["battery_end_of_life_soh"]: 0.8,
+        K["battery_n_soc_bands"]: 5,
+        K["generator_label"]: "Generator",
+        K["generator_efficiency_model"]: "constant_efficiency",
+        K["generator_efficiency_curve_csv"]: "generator_efficiency_curve.csv",
+        K["generator_partial_load_commitment"]: "integer",
+        K["generator_min_load_fraction"]: 0.0,
+        K["fuel_label"]: "Fuel",
+        K["csv_delimiter"]: ",",
+        K["csv_decimal"]: ".",
+        K["csv_format_project_hint"]: "",
+        # metadata
+        K["project_name"]: "",
+        K["project_desc"]: "",
+    }
+
+    for key, value in defaults.items():
+        if key not in st.session_state or st.session_state[key] is None:
+            st.session_state[key] = value
+
+
+# =============================================================================
+# Persistence
+# =============================================================================
+def write_formulation_file(*, project_name: str, project_description: str, cfg: PageConfig) -> None:
+    # Cycle fade is supported in both formulations (dynamic: capacity state;
+    # typical-year: binding-life CAPEX amortisation).
+    degradation_supported = cfg.formulation in ("dynamic", "steady_state")
+    battery_cycle_fade_active = _battery_cycle_fade_active(cfg) if degradation_supported else False
+    payload = build_formulation_payload(
+        project_name=project_name,
+        description=project_description,
+        formulation=cfg.formulation,
+        system_type=cfg.system_type,
+        on_grid=cfg.on_grid,
+        allow_export=cfg.allow_export,
+        integer_sizing=cfg.discrete_unit_sizing,
+        start_year_label=cfg.start_year_label,
+        time_horizon_years=cfg.horizon_years,
+        social_discount_rate=cfg.social_discount_rate,
+        capacity_expansion=cfg.capacity_expansion,
+        investment_steps_years=cfg.investment_steps,
+        multi_scenario_enabled=cfg.multi_scenario,
+        n_scenarios=cfg.n_scenarios,
+        scenario_labels=cfg.scenario_labels,
+        scenario_weights=cfg.scenario_weights,
+        constraints_enforcement=cfg.constraints_enforcement,
+        min_renewable_penetration=cfg.min_res_penetration,
+        max_lost_load_fraction=cfg.max_lost_load_fraction,
+        lost_load_cost_per_kwh=cfg.lost_load_cost_per_kwh,
+        land_availability_m2=cfg.land_availability_m2,
+        emission_cost_per_kgco2e=cfg.emission_cost_per_kgco2e,
+        n_sources=cfg.n_res_sources,
+        battery_loss_model=cfg.battery_loss_model,
+        battery_cycle_fade_enabled=battery_cycle_fade_active,
+        battery_n_soc_bands=cfg.battery_n_soc_bands,
+        generator_efficiency_model=cfg.generator_efficiency_model,
+        csv_delimiter=normalize_csv_delimiter(cfg.csv_delimiter),
+        csv_decimal=normalize_csv_decimal(cfg.csv_decimal),
+    )
+
+    paths = project_paths(project_name)
+    try:
+        write_json(paths.formulation_json, payload)
+    except Exception as exc:
+        st.warning(
+            f"Project initialized, but failed to write `{paths.formulation_json.name}`: {exc}"
+        )
+
+
+def _activate_project(project_name: str):
+    """Store the selected project in session state and return its resolved paths."""
+    st.session_state[K["active_project"]] = project_name
+    paths = project_paths(project_name)
+    st.session_state["project_path"] = str(paths.root)
+    return paths
+
+
+def create_or_overwrite_project(
+    *, project_name: str, project_description: str, cfg: PageConfig
+) -> None:
+    """
+    Always generates/overwrites templates based on cfg.
+    - If project does not exist: create it.
+    - If project exists: overwrite templates (WARNING should be shown in UI).
+    """
+    if not project_name:
+        st.error("Please provide a project name before continuing.")
+        return
+
+    ensure_project_structure(project_name)
+    paths = _activate_project(project_name)
+
+    # Always rewrite formulation.json to match current UI config
+    write_formulation_file(
+        project_name=project_name, project_description=project_description, cfg=cfg
+    )
+
+    tpl_settings = TemplateSettings(
+        formulation=cfg.formulation,
+        system_type=cfg.system_type,
+        allow_export=cfg.allow_export,
+        multi_scenario=cfg.multi_scenario,
+        n_scenarios=cfg.n_scenarios if cfg.multi_scenario else 1,
+        scenario_labels=cfg.scenario_labels if cfg.multi_scenario else ["scenario_1"],
+        scenario_weights=cfg.scenario_weights if cfg.multi_scenario else [1.0],
+        start_year_label=cfg.start_year_label or "typical_year",
+        horizon_years=cfg.horizon_years,
+        capacity_expansion=cfg.capacity_expansion,
+        investment_steps_years=cfg.investment_steps,
+        n_res_sources=cfg.n_res_sources,
+        conversion_labels=cfg.res_conversion_labels,
+        resource_labels=cfg.res_resource_labels,
+        battery_label=cfg.battery_label,
+        battery_loss_model=cfg.battery_loss_model,
+        battery_cycle_fade_enabled=cfg.battery_cycle_fade_enabled,
+        battery_chemistry=getattr(cfg, "battery_chemistry", "LFP"),
+        battery_efficiency_curve_csv=cfg.battery_efficiency_curve_csv,
+        battery_cycle_lifetime_to_eol_cycles=cfg.battery_cycle_lifetime_to_eol_cycles,
+        battery_end_of_life_soh=cfg.battery_end_of_life_soh,
+        battery_capacity_degradation_rate_per_year=cfg.battery_capacity_degradation_rate_per_year,
+        generator_label=cfg.generator_label,
+        generator_efficiency_model=cfg.generator_efficiency_model,
+        generator_efficiency_curve_csv=cfg.generator_efficiency_curve_csv,
+        generator_partial_load_commitment=cfg.generator_partial_load_commitment,
+        generator_min_load_fraction=cfg.generator_min_load_fraction,
+        fuel_label=cfg.fuel_label,
+        csv_delimiter=normalize_csv_delimiter(cfg.csv_delimiter),
+        csv_decimal=normalize_csv_decimal(cfg.csv_decimal),
+        renewable_vintage_labels_by_step=cfg.renewable_vintage_labels_by_step,
+        battery_vintage_labels_by_step=cfg.battery_vintage_labels_by_step,
+        generator_vintage_labels_by_step=cfg.generator_vintage_labels_by_step,
+        fuel_vintage_labels_by_step=cfg.fuel_vintage_labels_by_step,
+    )
+
+    # IMPORTANT: in this simplified UX, "create" overwrites if exists
+    write_templates(paths, tpl_settings, overwrite=True)
+
+    st.success(f"Project initialized at: {paths.root}")
+    st.success("Input templates are ready (and were overwritten if the project already existed).")
+
+
+def load_project(*, project_name: str, csv_delimiter: str, csv_decimal: str) -> None:
+    if not project_name:
+        st.error("Select a project to load.")
+        return
+    if not project_exists(project_name):
+        st.error("Selected project does not exist.")
+        return
+
+    paths = _activate_project(project_name)
+    try:
+        payload = {}
+        if paths.formulation_json.exists():
+            payload = json.loads(paths.formulation_json.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            payload = {}
+        payload["csv_format"] = {
+            "delimiter": normalize_csv_delimiter(csv_delimiter),
+            "decimal": normalize_csv_decimal(csv_decimal),
+        }
+        write_json(paths.formulation_json, payload)
+    except Exception as exc:
+        st.warning(
+            f"Project loaded, but failed to update `{paths.formulation_json.name}` with CSV format: {exc}"
+        )
+    st.success(f"Project loaded: {paths.root}")
+    st.info(
+        "No templates were modified. The selected CSV format was saved for subsequent input loading."
+    )
+
+
+# =============================================================================
+# UI helpers
+# =============================================================================
+def _ensure_res_label_lists_length(n: int) -> None:
+    conv = st.session_state.get(K["res_conversion_labels"])
+    res = st.session_state.get(K["res_resource_labels"])
+    if not isinstance(conv, list):
+        conv = []
+    if not isinstance(res, list):
+        res = []
+
+    if len(conv) < n:
+        conv += [f"Technology_{i + 1}" for i in range(len(conv), n)]
+    if len(res) < n:
+        res += [f"Resource_{i + 1}" for i in range(len(res), n)]
+    if len(conv) > n:
+        conv = conv[:n]
+    if len(res) > n:
+        res = res[:n]
+
+    st.session_state[K["res_conversion_labels"]] = conv
+    st.session_state[K["res_resource_labels"]] = res
+
+
+def _ensure_scenario_labels_length(n: int) -> None:
+    labels = st.session_state.get(K["scenario_labels"])
+    if not isinstance(labels, list):
+        labels = []
+    if len(labels) < n:
+        labels = labels + [f"scenario_{i + 1}" for i in range(len(labels), n)]
+    if len(labels) > n:
+        labels = labels[:n]
+    st.session_state[K["scenario_labels"]] = labels
+
+
+def _scenario_weight_rounding_tolerance(n_scenarios: int, *, step: float) -> float:
+    """Allow small rounding leftovers from UI granularity, then normalize on save."""
+    return max(1e-6, 0.5 * float(step) * max(1, int(n_scenarios)))
+
+
+def _normalize_csv_filename(raw: str, default: str) -> str:
+    value = str(raw or "").strip()
+    if not value:
+        value = default
+    if not value.lower().endswith(".csv"):
+        value = f"{value}.csv"
+    return value
+
+
+def _coerce_investment_df(df: pd.DataFrame, n_steps: int) -> pd.DataFrame:
+    if df is None or not isinstance(df, pd.DataFrame) or df.empty:
+        return _default_investment_steps_df(n_steps=n_steps)
+
+    cols = list(df.columns)
+    if "Step" not in cols or "Duration [years]" not in cols:
+        df = _default_investment_steps_df(n_steps=n_steps)
+
+    df = df[["Step", "Duration [years]"]].copy()
+    df["Step"] = range(1, len(df) + 1)
+
+    if len(df) < n_steps:
+        last = int(df["Duration [years]"].iloc[-1] if len(df) else 5)
+        add = _default_investment_steps_df(n_steps=n_steps - len(df), default_duration=last)
+        add["Step"] = range(len(df) + 1, n_steps + 1)
+        df = pd.concat([df, add], ignore_index=True)
+    elif len(df) > n_steps:
+        df = df.iloc[:n_steps].copy()
+        df["Step"] = range(1, n_steps + 1)
+
+    return df
+
+
+def _list_existing_projects() -> list[str]:
+    try:
+        probe = project_paths("___probe___").root
+        projects_dir = probe.parent
+        if not projects_dir.exists():
+            return []
+        names = [p.name for p in projects_dir.iterdir() if p.is_dir()]
+        names.sort()
+        return names
+    except Exception:
+        return []
+
+
+def render_csv_format_section(section_key: str) -> tuple[str, str]:
+    st.caption(
+        "Choose the CSV delimiter and decimal separator to match how you edit time-series files, for example in Excel."
+    )
+    col_delimiter, col_decimal = st.columns(2)
+
+    delimiter_values = list(CSV_DELIMITER_OPTIONS.values())
+    delimiter_labels = {value: label for label, value in CSV_DELIMITER_OPTIONS.items()}
+    decimal_values = list(CSV_DECIMAL_OPTIONS.values())
+    decimal_labels = {value: label for label, value in CSV_DECIMAL_OPTIONS.items()}
+
+    current_delimiter = normalize_csv_delimiter(st.session_state.get(K["csv_delimiter"], ","))
+    current_decimal = normalize_csv_decimal(st.session_state.get(K["csv_decimal"], "."))
+
+    with col_delimiter:
+        delimiter = st.selectbox(
+            "Delimiter",
+            options=delimiter_values,
+            index=delimiter_values.index(current_delimiter),
+            format_func=lambda value: delimiter_labels[value],
+            key=f"gp_csv_delimiter_select_{section_key}",
+        )
+
+    with col_decimal:
+        decimal = st.selectbox(
+            "Decimal",
+            options=decimal_values,
+            index=decimal_values.index(current_decimal),
+            format_func=lambda value: decimal_labels[value],
+            key=f"gp_csv_decimal_select_{section_key}",
+        )
+
+    st.session_state[K["csv_delimiter"]] = delimiter
+    st.session_state[K["csv_decimal"]] = decimal
+    return delimiter, decimal
+
+
+def _load_csv_format_from_project(project_name: str) -> tuple[str, str]:
+    try:
+        formulation_path = project_paths(project_name).formulation_json
+        if not formulation_path.exists():
+            return ",", "."
+        payload = json.loads(formulation_path.read_text(encoding="utf-8"))
+        csv_format = payload.get("csv_format", {}) if isinstance(payload, dict) else {}
+        if not isinstance(csv_format, dict):
+            csv_format = {}
+        return (
+            normalize_csv_delimiter(csv_format.get("delimiter")),
+            normalize_csv_decimal(csv_format.get("decimal")),
+        )
+    except Exception:
+        return ",", "."
+
+
+# =============================================================================
+# Configuration sections (kept as in your script)
+# =============================================================================
+def render_formulation_section() -> tuple[
+    str, bool, str | None, int | None, float | None, bool, list[int] | None
+]:
+    st.subheader("Model formulation")
+
+    formulation = st.radio(
+        "Planning mode:",
+        options=FORMULATION_OPTIONS,
+        index=(0 if st.session_state[K["formulation"]] == "steady_state" else 1),
+        format_func=lambda v: (
+            "Typical-year formulation" if v == "steady_state" else "Multi-year formulation"
+        ),
+        help=(
+            "Typical-year: one representative year (faster), steady-state interpretation.\n"
+            "Multi-year: explicit intertemporal horizon, discounting, and optional capacity expansion."
+        ),
+        key="gp_formulation_radio",
+    )
+    st.session_state[K["formulation"]] = formulation
+    is_dynamic = formulation == "dynamic"
+    st.session_state[K["is_dynamic"]] = is_dynamic
+
+    if not is_dynamic:
+        st.info(
+            "Typical-year formulation enabled. A single representative year is used for sizing and operation."
+        )
+        st.session_state[K["cap_expansion"]] = False
+        return formulation, False, "typical_year", None, None, False, None
+
+    st.info(
+        "Multi-year formulation enabled. Configure the planning horizon and the discount rate "
+        "used to compute discounted costs over time."
+    )
+
+    st.markdown("**Time horizon & discounting**")
+    col1, col2 = st.columns(2)
+    with col1:
+        start_year_default = st.session_state.get(K["start_year_label"], str(datetime.now().year))
+        try:
+            start_year_default_int = int(str(start_year_default).strip())
+        except Exception:
+            start_year_default_int = int(datetime.now().year)
+        start_year = int(
+            st.number_input(
+                "Project start year",
+                min_value=1,
+                step=1,
+                value=start_year_default_int,
+                help=(
+                    "First modeled calendar year. Multi-year projects currently require integer year labels; "
+                    "this value is used directly in the year coordinate and in generated time-series headers."
+                ),
+                key="gp_start_year_label_input",
+            )
+        )
+        st.session_state[K["start_year_label"]] = str(start_year)
+
+    with col2:
+        horizon_years = int(
+            st.number_input(
+                "Project time horizon [years]",
+                min_value=1,
+                step=1,
+                value=int(st.session_state[K["horizon_years"]]),
+                help="Length of the intertemporal planning horizon used for discounting and (optionally) capacity expansion.",
+                key="gp_horizon_years_input",
+            )
+        )
+        st.session_state[K["horizon_years"]] = horizon_years
+
+    discount_pct = float(
+        st.number_input(
+            "Social discount rate [%]",
+            min_value=0.0,
+            max_value=100.0,
+            step=0.1,
+            format="%.2f",
+            value=float(st.session_state[K["discount_pct"]]),
+            help="Used to discount future costs in the objective (e.g., NPC).",
+            key="gp_discount_pct_input",
+        )
+    )
+    st.session_state[K["discount_pct"]] = discount_pct
+    discount_rate_dec = discount_pct / 100.0
+
+    cap_expansion = st.checkbox(
+        "Allow capacity expansion over time",
+        value=bool(st.session_state[K["cap_expansion"]]),
+        help="If enabled, the model can invest at multiple steps. This increases model size and solve time.",
+        key="gp_cap_expansion_checkbox",
+    )
+    st.session_state[K["cap_expansion"]] = bool(cap_expansion)
+
+    if not cap_expansion:
+        return formulation, True, str(start_year), horizon_years, discount_rate_dec, False, None
+
+    st.info(
+        "Shared-technology capacity expansion is used: future expansion can add more capacity over time, but the "
+        "technology family remains the same and technical parameters stay shared across investment steps."
+    )
+
+    st.markdown("**Investment steps**")
+    st.caption(
+        "Define the duration of each investment step. Steps do not need to be equal. "
+        "The model will use these steps for investment timing and discounting."
+    )
+
+    n_steps = int(
+        st.number_input(
+            "Number of investment steps",
+            min_value=1,
+            max_value=50,
+            step=1,
+            value=int(st.session_state.get(K["investment_steps_n"], 4)),
+            help="More steps increase flexibility but also increase problem size.",
+            key="gp_investment_steps_n_input",
+        )
+    )
+    st.session_state[K["investment_steps_n"]] = n_steps
+
+    df_prev = st.session_state.get(K["investment_steps"])
+    df = _coerce_investment_df(df_prev, n_steps=n_steps)
+
+    edited = st.data_editor(
+        df,
+        hide_index=True,
+        disabled=["Step"],
+        column_config={
+            "Duration [years]": st.column_config.NumberColumn(
+                "Duration [years]",
+                min_value=1,
+                step=1,
+                help="Length of each investment step (years).",
+            )
+        },
+        key="gp_investment_steps_editor",
+    )
+
+    edited["Duration [years]"] = edited["Duration [years]"].fillna(1).astype(int).clip(lower=1)
+    edited["Step"] = range(1, len(edited) + 1)
+    st.session_state[K["investment_steps"]] = edited
+
+    step_years_list = edited["Duration [years]"].astype(int).tolist()
+    total_years = int(sum(step_years_list))
+
+    if total_years != horizon_years:
+        st.warning(
+            f"The sum of investment step durations must match the project horizon.\n\n"
+            f"- Horizon: **{horizon_years}** years\n"
+            f"- Sum of step durations: **{total_years}** years\n\n"
+            "Adjust the table so that the total matches the horizon."
+        )
+        st.stop()
+
+    st.caption(f"Total duration: **{total_years}** years across **{n_steps}** steps.")
+    return (
+        formulation,
+        True,
+        str(start_year),
+        horizon_years,
+        discount_rate_dec,
+        True,
+        step_years_list,
+    )
+
+
+def render_externalities_section() -> float | None:
+    include_carbon_cost = st.checkbox(
+        "Include carbon emission cost within the objective function",
+        value=bool(st.session_state.get(K["include_carbon_cost"], False)),
+        help=(
+            "If enabled, the cost of carbon emissions (per kg CO₂e) will be included "
+            "in the objective function when computing discounted costs over time."
+        ),
+        key="gp_include_carbon_checkbox",
+    )
+    st.session_state[K["include_carbon_cost"]] = bool(include_carbon_cost)
+    if include_carbon_cost:
+        carbon_cost_per_kgco2e = float(
+            st.number_input(
+                "Carbon emission cost (per kgCO₂e)",
+                min_value=0.0,
+                step=0.01,
+                value=float(st.session_state.get(K["emission_cost_per_kgco2e"], 0.0)),
+                key="gp_carbon_cost_input",
+            )
+        )
+        st.session_state[K["emission_cost_per_kgco2e"]] = carbon_cost_per_kgco2e
+        st.info(
+            "Carbon emission cost will be included in the objective function and affect sizing decisions."
+        )
+        return carbon_cost_per_kgco2e
+
+    st.session_state[K["emission_cost_per_kgco2e"]] = 0.0
+    return None
+
+
+def render_uncertainty_section() -> tuple[bool, int, list[str], list[float]]:
+    st.subheader("Uncertainty modelling")
+
+    mode = st.radio(
+        "Modelling uncertainties:",
+        options=UNCERTAINTY_OPTIONS,
+        index=0 if st.session_state[K["uncertainty_mode"]] == "single" else 1,
+        format_func=lambda v: (
+            "Single scenario (deterministic time series)"
+            if v == "single"
+            else "Multi-scenarios (expected cost across scenarios)"
+        ),
+        help=(
+            "Single scenario uses one set of time series.\n"
+            "Multi-scenarios replicates operation per scenario and minimizes expected total cost."
+        ),
+        key="gp_uncertainty_mode_radio",
+    )
+    st.session_state[K["uncertainty_mode"]] = mode
+
+    multi = mode == "multi"
+    st.session_state[K["use_multiscenario"]] = multi
+
+    if not multi:
+        st.info("Single scenario selected. Templates will include scenario_1 with weight 1.0.")
+        st.session_state[K["n_scenarios"]] = 1
+        st.session_state[K["scenario_weights"]] = [1.0]
+        st.session_state[K["scenario_labels"]] = ["scenario_1"]
+        return False, 1, ["scenario_1"], [1.0]
+
+    st.info(
+        "Multi-scenarios selected. Define each scenario label and weight (weights must sum to 1.0)."
+    )
+
+    prev_n_scen = int(st.session_state.get(K["n_scenarios"], 2))
+    n_scen = int(
+        st.number_input(
+            "Number of scenarios",
+            min_value=2,
+            max_value=24,
+            step=1,
+            value=max(2, int(st.session_state.get(K["n_scenarios"], 2))),
+            help="Operational variables and time series inputs will be replicated per scenario.",
+            key="gp_n_scenarios_input",
+        )
+    )
+    st.session_state[K["n_scenarios"]] = n_scen
+
+    _ensure_scenario_labels_length(n_scen)
+
+    current_w = st.session_state.get(K["scenario_weights"])
+    if (not isinstance(current_w, list)) or (len(current_w) != n_scen) or (prev_n_scen != n_scen):
+        current_w = normalize_weights([], n_scen)
+
+    labels = st.session_state[K["scenario_labels"]]
+    weight_step = 0.001
+
+    st.markdown("**Scenarios** (labels + weights; weights must sum to 1.0)")
+
+    tmp_labels: list[str] = []
+    tmp_weights: list[float] = []
+
+    for i in range(n_scen):
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            lab = st.text_input(
+                f"Scenario {i + 1} label",
+                value=str(labels[i]),
+                help="Used for file naming, plots and results tables.",
+                key=f"gp_scen_label_{i}",
+            )
+        with c2:
+            w = st.number_input(
+                "Weight",
+                min_value=0.0,
+                max_value=1.0,
+                value=float(current_w[i]),
+                step=weight_step,
+                format="%.3f",
+                key=f"gp_scen_weight_{i}",
+                help="Scenario probability (must sum to 1.0 across all scenarios).",
+            )
+
+        lab = lab.strip() if lab.strip() else f"scenario_{i + 1}"
+        tmp_labels.append(lab)
+        tmp_weights.append(float(w))
+
+    total_w = sum(tmp_weights)
+    rounding_tol = _scenario_weight_rounding_tolerance(n_scen, step=weight_step)
+    if abs(total_w - 1.0) > rounding_tol:
+        st.warning(f"Scenario weights must sum to 1.0 (current sum = {total_w:.3f}).")
+        st.stop()
+
+    normalized_weights = normalize_weights(tmp_weights, n_scen)
+    normalized_total = sum(normalized_weights)
+
+    duplicate_labels = sorted({label for label in tmp_labels if tmp_labels.count(label) > 1})
+    if duplicate_labels:
+        st.warning(
+            "Scenario labels must be unique. Duplicate labels found: " + ", ".join(duplicate_labels)
+        )
+        st.stop()
+
+    st.session_state[K["scenario_labels"]] = tmp_labels
+    st.session_state[K["scenario_weights"]] = normalized_weights
+    if abs(total_w - 1.0) > 1e-6:
+        st.caption(
+            f"Entered weight sum: {total_w:.3f}. Saved weights are normalized to sum exactly to {normalized_total:.3f}."
+        )
+    else:
+        st.caption(f"Sum of weights: {normalized_total:.3f}")
+
+    return True, n_scen, tmp_labels, normalized_weights
+
+
+def render_system_section() -> tuple[
+    str,
+    bool,
+    bool,
+    bool,
+    int,
+    list[str],
+    list[str],
+    str,
+    str,
+    str,
+    bool,
+    float,
+    bool,
+    str,
+    float,
+    float,
+    str,
+    str,
+    str,
+    str,
+]:
+    st.subheader("System configuration")
+
+    system_type = st.radio(
+        "System type:",
+        options=SYSTEM_OPTIONS,
+        index=(0 if st.session_state[K["system_type"]] == "off_grid" else 1),
+        format_func=lambda v: (
+            "Off-grid (isolated)" if v == "off_grid" else "On-grid (weakly-connected)"
+        ),
+        help=(
+            "Off-grid: demand must be met entirely with local resources.\n"
+            "On-grid: grid imports (and optional exports) can be used subject to constraints/outages."
+        ),
+        key="gp_system_type_radio",
+    )
+    st.session_state[K["system_type"]] = system_type
+    on_grid = system_type == "on_grid"
+    st.session_state[K["on_grid"]] = on_grid
+
+    allow_export = False
+    if on_grid:
+        allow_export = st.checkbox(
+            "Allow export to grid",
+            value=bool(st.session_state[K["allow_export"]]),
+            help="If enabled, surplus electricity may be exported to the grid (revenue may apply).",
+            key="gp_allow_export_checkbox",
+        )
+        st.session_state[K["allow_export"]] = bool(allow_export)
+    else:
+        st.session_state[K["allow_export"]] = False
+
+    sizing_mode = st.radio(
+        "Sizing approach:",
+        options=SIZING_OPTIONS,
+        index=1 if bool(st.session_state[K["integer_sizing"]]) else 0,
+        format_func=lambda v: (
+            "Continuous sizing" if v == "continuous" else "Discrete unit sizing by nominal capacity"
+        ),
+        help=(
+            "Continuous sizing treats capacity as a continuous decision variable.\n"
+            "Discrete units sizes capacity in integer multiples of a nominal unit."
+        ),
+        key="gp_sizing_mode_radio",
+    )
+    discrete_sizing = sizing_mode == "discrete"
+    st.session_state[K["integer_sizing"]] = discrete_sizing
+
+    st.markdown("**Renewable sources**")
+    st.caption(
+        "Define the renewable source/resource names and the associated conversion technology labels."
+    )
+
+    n_res = int(
+        st.number_input(
+            "Number of renewable sources",
+            min_value=1,
+            max_value=20,
+            step=1,
+            value=int(st.session_state.get(K["n_res_sources"], 1)),
+            key="gp_n_res_sources_input",
+        )
+    )
+    st.session_state[K["n_res_sources"]] = n_res
+    _ensure_res_label_lists_length(n_res)
+    current_conv = list(st.session_state.get(K["res_conversion_labels"], []))
+    current_res = list(st.session_state.get(K["res_resource_labels"], []))
+    updated_conv: list[str] = []
+    updated_res: list[str] = []
+    for i in range(n_res):
+        col1, col2 = st.columns(2)
+        with col1:
+            res_name = st.text_input(
+                f"Source {i + 1} resource label",
+                value=str(current_res[i]),
+                key=f"gp_res_resource_label_{i}",
+            ).strip()
+        with col2:
+            conv_name = st.text_input(
+                f"Source {i + 1} technology label",
+                value=str(current_conv[i]),
+                key=f"gp_res_conversion_label_{i}",
+            ).strip()
+        updated_res.append(res_name or f"Resource_{i + 1}")
+        updated_conv.append(conv_name or f"Technology_{i + 1}")
+    st.session_state[K["res_conversion_labels"]] = updated_conv
+    st.session_state[K["res_resource_labels"]] = updated_res
+
+    duplicate_resources = sorted({label for label in updated_res if updated_res.count(label) > 1})
+    if duplicate_resources:
+        st.warning(
+            "Renewable resource labels must be unique. Duplicate labels found: "
+            + ", ".join(duplicate_resources)
+        )
+        st.stop()
+
+    st.markdown("**Storage and backup components**")
+    battery_label = (
+        st.text_input(
+            "Storage component label",
+            value=str(st.session_state.get(K["battery_label"], "Battery")),
+            key="gp_battery_label_input",
+        ).strip()
+        or "Battery"
+    )
+    st.session_state[K["battery_label"]] = battery_label
+    battery_efficiency_curve_csv = _normalize_csv_filename(
+        str(
+            st.session_state.get(K["battery_efficiency_curve_csv"], "battery_efficiency_curve.csv")
+        ),
+        "battery_efficiency_curve.csv",
+    )
+    cycle_fade_enabled = bool(st.session_state.get(K["battery_cycle_fade_enabled"], False))
+    cycle_lifetime_to_eol_cycles = float(
+        st.session_state.get(K["battery_cycle_lifetime_to_eol_cycles"], 6000.0)
+    )
+    battery_end_of_life_soh = float(st.session_state.get(K["battery_end_of_life_soh"], 0.8))
+    battery_loss_model = str(st.session_state.get(K["battery_loss_model"], "constant_efficiency"))
+    _formulation_mode = str(st.session_state.get(K["formulation"], "steady_state"))
+    degradation_supported = _formulation_mode in ("dynamic", "steady_state")
+
+    with st.expander("Storage system modeling and degradation", expanded=False):
+        main_col, _ = st.columns([1.35, 0.65])
+        with main_col:
+            battery_loss_model = st.radio(
+                "Battery efficiency model",
+                options=["constant_efficiency", "convex_loss_epigraph"],
+                index=0 if battery_loss_model == "constant_efficiency" else 1,
+                format_func=lambda v: (
+                    "Constant efficiency"
+                    if v == "constant_efficiency"
+                    else "Power-dependent (convex loss)"
+                ),
+                help=(
+                    "Constant efficiency uses one round-trip efficiency for all operating points. "
+                    "Power-dependent activates the advanced AC/DC loss curve, so efficiency drops "
+                    "at high charge/discharge power; it requires a battery efficiency-curve CSV. The "
+                    "scalar efficiencies in battery.yaml stay the constant-mode baseline; the CSV "
+                    "provides the peaked power-dependent shape. Cycle fade also requires this model."
+                ),
+                horizontal=True,
+                key="gp_battery_loss_model_radio",
+            )
+            st.session_state[K["battery_loss_model"]] = battery_loss_model
+            if battery_loss_model == "convex_loss_epigraph":
+                eff_col1, eff_col2 = st.columns([0.9, 1.05])
+                with eff_col1:
+                    battery_efficiency_curve_csv = _normalize_csv_filename(
+                        st.text_input(
+                            "Battery efficiency curve CSV",
+                            value=battery_efficiency_curve_csv,
+                            help="Template/example file generated under the project inputs folder. Preferred semantics: normalized multipliers around the battery.yaml full-load efficiencies.",
+                            key="gp_battery_eff_curve_csv_input",
+                        ),
+                        "battery_efficiency_curve.csv",
+                    )
+                    st.session_state[K["battery_efficiency_curve_csv"]] = (
+                        battery_efficiency_curve_csv
+                    )
+
+        if _formulation_mode == "dynamic" and battery_loss_model != "convex_loss_epigraph":
+            # Multi-year cycle fade tracks a degraded usable-capacity state defined on
+            # the internal DC-side powers, so it requires the convex-loss model.
+            cycle_fade_enabled = False
+            st.session_state[K["battery_cycle_fade_enabled"]] = False
+            st.info(
+                "Select the `Power-dependent (convex loss)` efficiency model above to unlock the multi-year battery cycle-fade capacity-state surrogate. "
+                "(In steady_state typical-year projects, cycle fade is priced as a binding-life CAPEX amortisation and does not require the convex-loss model.)"
+            )
+        else:
+            with main_col:
+                col1, col2 = st.columns([0.9, 1.05])
+                with col1:
+                    cycle_fade_enabled = st.checkbox(
+                        "Enable cycle fade",
+                        value=bool(st.session_state.get(K["battery_cycle_fade_enabled"], False)),
+                        help=(
+                            "Throughput-based semi-empirical cycle-fade degradation. "
+                            "Dynamic multi-year: a degraded usable-capacity state; steady_state "
+                            "typical-year: a binding-life CAPEX amortisation in the objective."
+                        ),
+                        key="gp_battery_cycle_fade_enabled_checkbox",
+                    )
+                    st.session_state[K["battery_cycle_fade_enabled"]] = cycle_fade_enabled
+                    _chem_options = ["LFP", "NMC", "lead_acid"]
+                    _chem_current = str(
+                        st.session_state.get(K["battery_chemistry"], "LFP") or "LFP"
+                    )
+                    battery_chemistry = st.selectbox(
+                        "Battery chemistry",
+                        options=_chem_options,
+                        index=(
+                            _chem_options.index(_chem_current)
+                            if _chem_current in _chem_options
+                            else 0
+                        ),
+                        disabled=not cycle_fade_enabled,
+                        help=(
+                            "Selects the semi-empirical degradation curves "
+                            "(alpha calendar + beta cycle). Ambient temperature "
+                            "(ambient_temperature.csv) and depth_of_discharge select the "
+                            "temperature and DoD bands of the curves."
+                        ),
+                        key="gp_battery_chemistry_selectbox",
+                    )
+                    st.session_state[K["battery_chemistry"]] = battery_chemistry
+                    cycle_lifetime_to_eol_cycles = float(
+                        st.number_input(
+                            "Cycle lifetime to end of life [cycles]",
+                            min_value=1.0,
+                            step=100.0,
+                            format="%.0f",
+                            value=float(
+                                st.session_state.get(
+                                    K["battery_cycle_lifetime_to_eol_cycles"], 6000.0
+                                )
+                            ),
+                            disabled=not cycle_fade_enabled,
+                            help="Full-equivalent cycle life used together with battery.yaml depth_of_discharge and the end-of-life SoH target to derive the internal cycle-fade coefficient automatically.",
+                            key="gp_battery_cycle_lifetime_to_eol_cycles_input",
+                        )
+                    )
+                    st.session_state[K["battery_cycle_lifetime_to_eol_cycles"]] = (
+                        cycle_lifetime_to_eol_cycles
+                    )
+
+                    # Calendar (time) ageing: a single flat %/yr capacity fade (0 = off).
+                    # Only meaningful in the multi-year formulation (the typical-year model
+                    # has no multi-year capacity state), so it is shown for dynamic only.
+                    if _formulation_mode == "dynamic":
+                        flat_fade = float(
+                            st.number_input(
+                                "Calendar ageing [fraction/yr]",
+                                min_value=0.0,
+                                max_value=0.2,
+                                step=0.005,
+                                format="%.3f",
+                                value=float(
+                                    st.session_state.get(
+                                        K["battery_capacity_degradation_rate_per_year"], 0.0
+                                    )
+                                    or 0.0
+                                ),
+                                help=(
+                                    "Flat yearly loss of usable capacity from time/ageing, independent "
+                                    "of use (0 = no calendar ageing; e.g. 0.02 = 2%/yr). It coexists with "
+                                    "cycle fade, so total wear = use (cycle fade) + age (this term)."
+                                ),
+                                key="gp_battery_flat_fade_input",
+                            )
+                        )
+                        st.session_state[K["battery_capacity_degradation_rate_per_year"]] = (
+                            flat_fade
+                        )
+
+                        # Number of usable SOC bands for the Li-ion depth-resolved cycle-fade
+                        # model. The cycle-fade representation is selected by chemistry, not by
+                        # a user option: Li-ion (LFP/NMC) uses this depth-resolved marginal-band
+                        # model; lead-acid uses the flat beta(T) model and ignores this input.
+                        _is_liion = str(battery_chemistry).strip().lower() in ("lfp", "nmc")
+                        n_soc_bands = int(
+                            st.number_input(
+                                "SOC bands (Li-ion depth-resolved cycle fade)",
+                                min_value=1,
+                                max_value=20,
+                                step=1,
+                                value=int(st.session_state.get(K["battery_n_soc_bands"], 5)),
+                                disabled=(not cycle_fade_enabled) or (not _is_liion),
+                                help=(
+                                    "Number of usable state-of-charge bands the Li-ion depth-resolved "
+                                    "cycle-fade model (LFP/NMC) uses to discretise the convex per-band "
+                                    "wear cost. More bands resolve cycling depth more finely."
+                                ),
+                                key="gp_battery_n_soc_bands_input",
+                            )
+                        )
+                        st.session_state[K["battery_n_soc_bands"]] = n_soc_bands
+                        if cycle_fade_enabled and not _is_liion:
+                            st.caption(
+                                "Lead-acid cycle fade uses the flat semi-empirical beta(T) model "
+                                "(the depth-resolved SOC-band model is Li-ion only)."
+                            )
+                    else:
+                        st.session_state[K["battery_capacity_degradation_rate_per_year"]] = 0.0
+                soh_enabled = cycle_fade_enabled
+                st.caption(
+                    "Cycle fade (throughput/use) and calendar ageing (a flat %/yr) are independent "
+                    "— set either or both."
+                )
+                battery_end_of_life_soh = float(
+                    st.number_input(
+                        "Battery end-of-life SoH [-]",
+                        min_value=0.01,
+                        max_value=1.0,
+                        step=0.01,
+                        format="%.2f",
+                        value=float(st.session_state.get(K["battery_end_of_life_soh"], 0.8)),
+                        disabled=not soh_enabled,
+                        help="Health threshold used to calibrate the degradation inputs and compare simulated ageing against calendar_lifetime_years in Results.",
+                        key="gp_battery_end_of_life_soh_input",
+                    )
+                )
+                st.session_state[K["battery_end_of_life_soh"]] = battery_end_of_life_soh
+
+    generator_label = (
+        st.text_input(
+            "Backup component label",
+            value=str(st.session_state.get(K["generator_label"], "Generator")),
+            key="gp_generator_label_input",
+        ).strip()
+        or "Generator"
+    )
+    st.session_state[K["generator_label"]] = generator_label
+    with st.expander("Backup system efficiency modeling", expanded=False):
+        generator_efficiency_model = str(
+            st.session_state.get(K["generator_efficiency_model"], "constant_efficiency")
+        )
+        generator_efficiency_curve_csv = _normalize_csv_filename(
+            str(
+                st.session_state.get(
+                    K["generator_efficiency_curve_csv"], "generator_efficiency_curve.csv"
+                )
+            ),
+            "generator_efficiency_curve.csv",
+        )
+        generator_efficiency_model = st.radio(
+            "Generator fuel model",
+            options=["constant_efficiency", "efficiency_curve"],
+            index=0 if generator_efficiency_model == "constant_efficiency" else 1,
+            format_func=lambda v: (
+                "Constant efficiency"
+                if v == "constant_efficiency"
+                else "Part-load (unit commitment)"
+            ),
+            help=(
+                "Constant efficiency keeps the generator at nominal full-load efficiency for all operating points. "
+                "Part-load activates the efficiency curve with clustered unit commitment: whole online units carry "
+                "no-load fuel and low-load running is genuinely penalized. The scalar nominal full-load efficiency in "
+                "generator.yaml stays the baseline; the CSV provides the normalized part-load shape. The minimum "
+                "stable load is set below."
+            ),
+            horizontal=True,
+            key="gp_generator_efficiency_model_radio",
+        )
+        st.session_state[K["generator_efficiency_model"]] = generator_efficiency_model
+        if generator_efficiency_model == "efficiency_curve":
+            generator_efficiency_curve_csv = _normalize_csv_filename(
+                st.text_input(
+                    "Generator efficiency curve CSV",
+                    value=generator_efficiency_curve_csv,
+                    help="Template/example file generated under the project inputs folder. Preferred semantics: normalized multipliers around the generator.yaml nominal full-load efficiency.",
+                    key="gp_generator_eff_curve_csv_input",
+                ),
+                "generator_efficiency_curve.csv",
+            )
+            st.session_state[K["generator_efficiency_curve_csv"]] = generator_efficiency_curve_csv
+            st.caption("Generated example file")
+            st.caption(f"`inputs/{generator_efficiency_curve_csv}`")
+            min_load_fraction = st.number_input(
+                "Minimum stable load (fraction of unit capacity)",
+                min_value=0.0,
+                max_value=0.95,
+                step=0.05,
+                value=float(st.session_state.get(K["generator_min_load_fraction"], 0.0)),
+                help=(
+                    "Below this fraction of a committed unit's capacity the generator cannot run. "
+                    "Only binds in unit-commitment mode."
+                ),
+                key="gp_generator_min_load_input",
+            )
+            st.session_state[K["generator_min_load_fraction"]] = float(min_load_fraction)
+            # Part-load always uses the exact integer unit commitment.
+            st.session_state[K["generator_partial_load_commitment"]] = "integer"
+        else:
+            # Constant-efficiency mode: commitment is inert (no curve is written).
+            st.session_state[K["generator_partial_load_commitment"]] = "off"
+
+    generator_efficiency_model = str(
+        st.session_state.get(K["generator_efficiency_model"], "constant_efficiency")
+    )
+    generator_efficiency_curve_csv = _normalize_csv_filename(
+        str(
+            st.session_state.get(
+                K["generator_efficiency_curve_csv"], "generator_efficiency_curve.csv"
+            )
+        ),
+        "generator_efficiency_curve.csv",
+    )
+
+    fuel_label = (
+        st.text_input(
+            "Fuel label",
+            value=str(st.session_state.get(K["fuel_label"], "Fuel")),
+            key="gp_fuel_label_input",
+        ).strip()
+        or "Fuel"
+    )
+    st.session_state[K["fuel_label"]] = fuel_label
+
+    return (
+        system_type,
+        on_grid,
+        bool(st.session_state[K["allow_export"]]),
+        discrete_sizing,
+        n_res,
+        updated_conv,
+        updated_res,
+        battery_label,
+        battery_loss_model,
+        battery_efficiency_curve_csv,
+        cycle_fade_enabled,
+        cycle_lifetime_to_eol_cycles,
+        battery_end_of_life_soh,
+        generator_label,
+        generator_efficiency_model,
+        generator_efficiency_curve_csv,
+        fuel_label,
+    )
+
+
+def render_constraints_section() -> tuple[str, float, float, float, float | None]:
+    st.markdown("**Optimization constraints**")
+    with st.expander("⚙️ System constraints", expanded=True):
+        land_limit_enabled = st.checkbox(
+            "Enforce land limit for renewables",
+            value=bool(st.session_state.get(K["land_limit_enabled"], False)),
+            help="If disabled, land availability is left unconstrained.",
+            key="gp_land_limit_enabled_checkbox",
+        )
+        st.session_state[K["land_limit_enabled"]] = bool(land_limit_enabled)
+
+        if land_limit_enabled:
+            land = float(
+                st.number_input(
+                    "Maximum land availability for renewables [m²]",
+                    min_value=0.0,
+                    step=10.0,
+                    value=float(st.session_state.get(K["land_availability_m2"], 0.0) or 0.0),
+                    key="gp_land_input",
+                )
+            )
+            st.session_state[K["land_availability_m2"]] = land
+        else:
+            land = None
+            st.session_state[K["land_availability_m2"]] = None
+        use_multiscenario = bool(st.session_state.get(K["use_multiscenario"], False))
+        if use_multiscenario:
+            enforcement = st.selectbox(
+                "Constraint enforcement across scenarios",
+                options=CONSTRAINT_ENFORCEMENT_OPTIONS,
+                index=0
+                if st.session_state.get(K["constraints_enforcement"], "expected") == "expected"
+                else 1,
+                key="gp_constraints_enforcement_select",
+            )
+        else:
+            enforcement = "scenario_wise"
+        st.session_state[K["constraints_enforcement"]] = enforcement
+
+        min_res_pct = float(
+            st.number_input(
+                "Minimum renewable penetration over project [%]",
+                min_value=0.0,
+                max_value=100.0,
+                step=1.0,
+                value=float(st.session_state[K["min_res_penetration_pct"]]),
+                key="gp_min_res_pct_input",
+            )
+        )
+        st.session_state[K["min_res_penetration_pct"]] = min_res_pct
+        min_res = min_res_pct / 100.0
+
+        max_ll_pct = float(
+            st.number_input(
+                "Maximum lost load fraction over project [%]",
+                min_value=0.0,
+                max_value=100.0,
+                step=0.5,
+                value=float(st.session_state[K["max_lost_load_fraction_pct"]]),
+                key="gp_max_ll_pct_input",
+            )
+        )
+        st.session_state[K["max_lost_load_fraction_pct"]] = max_ll_pct
+        max_ll = max_ll_pct / 100.0
+
+        if max_ll_pct > 0.0:
+            lolc = float(
+                st.number_input(
+                    "Social cost of lost load (per kWh unmet)",
+                    min_value=0.0,
+                    step=0.01,
+                    value=float(st.session_state[K["lost_load_cost_per_kwh"]]),
+                    key="gp_lolc_input",
+                )
+            )
+            st.session_state[K["lost_load_cost_per_kwh"]] = lolc
+        else:
+            lolc = 0.0
+            st.session_state[K["lost_load_cost_per_kwh"]] = 0.0
+
+    return enforcement, min_res, max_ll, lolc, land
+
+
+# =============================================================================
+# Page entrypoint
+# =============================================================================
+def render_project_setup_page() -> None:
+    init_session_state_defaults()
+
+    st.title("Project Setup")
+    st.markdown(
+        "Configure your planning model, generate a project folder with input templates, "
+        "then fill the files externally and come back to validate/run the model."
+    )
+
+    st.subheader("Project")
+    tab_create, tab_load = st.tabs(["Create", "Load"])
+
+    with tab_create:
+        st.caption(
+            "Create a project folder and generate input templates from the current settings shown on this page."
+        )
+
+        # Project name
+        project_name = st.text_input(
+            "Project name",
+            value=str(st.session_state.get(K["project_name"], "")),
+            placeholder="e.g. project_1",
+            key="gp_create_project_name",
+        )
+        project_name = sanitize_project_name(project_name)
+        st.session_state[K["project_name"]] = project_name
+
+        if project_name and project_exists(project_name):
+            st.warning(
+                "This project **already exists**. Continuing will **overwrite** the generated files in "
+                "`inputs/` using the current settings shown on this page."
+            )
+
+        # Project description
+        desc = st.text_area(
+            "Short description",
+            value=str(st.session_state.get(K["project_desc"], "")),
+            placeholder="Brief context and objective of this project.",
+            key="gp_project_desc_text",
+        )
+        st.session_state[K["project_desc"]] = desc.strip()
+        render_csv_format_section("create")
+
+        # Configuration sections appear only after a project name is provided
+        if not project_name:
+            st.info("Please provide a project name to configure the model and generate templates.")
+        else:
+            st.markdown("---")
+            (
+                formulation,
+                is_dynamic,
+                start_year,
+                horizon_years,
+                dr_dec,
+                cap_exp,
+                investment_steps,
+            ) = render_formulation_section()
+            em_cost = render_externalities_section()
+
+            st.markdown("---")
+            (
+                system_type,
+                on_grid,
+                allow_export,
+                discrete_sizing,
+                n_res,
+                conv_labels,
+                resource_labels,
+                battery_label,
+                battery_loss_model,
+                battery_efficiency_curve_csv,
+                battery_cycle_fade_enabled,
+                battery_cycle_lifetime_to_eol_cycles,
+                battery_end_of_life_soh,
+                generator_label,
+                generator_efficiency_model,
+                generator_efficiency_curve_csv,
+                fuel_label,
+            ) = render_system_section()
+
+            st.markdown("---")
+            multi, n_scen, scen_labels, weights = render_uncertainty_section()
+
+            st.markdown("---")
+            enforcement, min_res, max_ll, lolc, land = render_constraints_section()
+
+            renewable_vintage_labels_by_step: dict[str, dict[str, str]] = {}
+            battery_vintage_labels_by_step: dict[str, str] = {}
+            generator_vintage_labels_by_step: dict[str, str] = {}
+            fuel_vintage_labels_by_step: dict[str, str] = {}
+
+            cfg = PageConfig(
+                formulation=formulation,
+                system_type=system_type,
+                on_grid=on_grid,
+                allow_export=allow_export,
+                discrete_unit_sizing=discrete_sizing,
+                start_year_label=start_year,
+                horizon_years=horizon_years,
+                social_discount_rate=dr_dec,
+                capacity_expansion=cap_exp,
+                investment_steps=investment_steps,
+                multi_scenario=multi,
+                n_scenarios=n_scen,
+                scenario_labels=scen_labels,
+                scenario_weights=weights,
+                constraints_enforcement=enforcement,
+                min_res_penetration=min_res,
+                max_lost_load_fraction=max_ll,
+                lost_load_cost_per_kwh=lolc,
+                land_availability_m2=land,
+                emission_cost_per_kgco2e=em_cost,
+                n_res_sources=n_res,
+                res_conversion_labels=conv_labels,
+                res_resource_labels=resource_labels,
+                battery_label=battery_label,
+                battery_loss_model=battery_loss_model,
+                battery_efficiency_curve_csv=battery_efficiency_curve_csv,
+                battery_cycle_fade_enabled=battery_cycle_fade_enabled,
+                battery_chemistry=str(st.session_state.get(K["battery_chemistry"], "LFP") or "LFP"),
+                battery_cycle_lifetime_to_eol_cycles=battery_cycle_lifetime_to_eol_cycles,
+                battery_end_of_life_soh=battery_end_of_life_soh,
+                battery_n_soc_bands=int(st.session_state.get(K["battery_n_soc_bands"], 5)),
+                battery_capacity_degradation_rate_per_year=float(
+                    st.session_state.get(K["battery_capacity_degradation_rate_per_year"], 0.0)
+                ),
+                generator_label=generator_label,
+                generator_efficiency_model=generator_efficiency_model,
+                generator_efficiency_curve_csv=generator_efficiency_curve_csv,
+                generator_partial_load_commitment=str(
+                    st.session_state.get(K["generator_partial_load_commitment"], "integer")
+                ),
+                generator_min_load_fraction=float(
+                    st.session_state.get(K["generator_min_load_fraction"], 0.0)
+                ),
+                fuel_label=fuel_label,
+                csv_delimiter=normalize_csv_delimiter(
+                    st.session_state.get(K["csv_delimiter"], ",")
+                ),
+                csv_decimal=normalize_csv_decimal(st.session_state.get(K["csv_decimal"], ".")),
+                renewable_vintage_labels_by_step=renewable_vintage_labels_by_step,
+                battery_vintage_labels_by_step=battery_vintage_labels_by_step,
+                generator_vintage_labels_by_step=generator_vintage_labels_by_step,
+                fuel_vintage_labels_by_step=fuel_vintage_labels_by_step,
+            )
+
+            st.markdown("---")
+            # Optional UX: change label if overwriting an existing project
+            btn_label = (
+                "Overwrite templates"
+                if project_exists(project_name)
+                else "Initialize project and generate templates"
+            )
+
+            if st.button(btn_label, type="primary", key="gp_create_confirm"):
+                create_or_overwrite_project(
+                    project_name=project_name,
+                    project_description=st.session_state[K["project_desc"]],
+                    cfg=cfg,
+                )
+
+    with tab_load:
+        st.caption(
+            "Set an existing project as active without modifying any files. This action does not "
+            "repopulate the form from the project's saved inputs."
+        )
+        existing = _list_existing_projects()
+
+        if not existing:
+            st.warning("No existing projects found. Create a new project using the form above.")
+            st.info(
+                "The selected project will be set as **active**. No templates will be overwritten."
+            )
+            st.button("Load project", type="primary", key="gp_load_confirm", disabled=True)
+        else:
+            pick = st.selectbox(
+                "Select an existing project",
+                options=existing,
+                index=0,
+                key="gp_load_project_select",
+            )
+            pick = sanitize_project_name(pick)
+            st.session_state[K["project_name"]] = pick
+            if st.session_state.get(K["csv_format_project_hint"], "") != pick:
+                saved_delimiter, saved_decimal = _load_csv_format_from_project(pick)
+                st.session_state[K["csv_delimiter"]] = saved_delimiter
+                st.session_state[K["csv_decimal"]] = saved_decimal
+                st.session_state[K["csv_format_project_hint"]] = pick
+            render_csv_format_section("load")
+
+            st.info(
+                "The selected project will be set as **active**. No templates will be overwritten, "
+                "and the CSV format choice below will be saved for future input loading."
+            )
+
+            if st.button("Load project", type="primary", key="gp_load_confirm"):
+                load_project(
+                    project_name=pick,
+                    csv_delimiter=st.session_state.get(K["csv_delimiter"], ","),
+                    csv_decimal=st.session_state.get(K["csv_decimal"], "."),
+                )
+
+
+render_project_setup_page()

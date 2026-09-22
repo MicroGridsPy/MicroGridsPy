@@ -1,0 +1,100 @@
+# Citation metadata for MicroGridsPy.
+#
+# Author order follows AUTHORS: the maintainer of the current redevelopment first,
+# then current contributors and scientific advisory, then contributors to earlier
+# versions, then the original authors of the model at the Universite de Liege.
+#
+# When the JOSS paper is published, add a `preferred-citation:` block here pointing
+# to it; GitHub and citation tools will then offer the paper instead of the software.
+cff-version: 1.2.0
+message: "If you use MicroGridsPy in your research, please cite it as below."
+title: "MicroGridsPy: bottom-up optimization of mini-grids for rural electrification"
+abstract: >-
+  MicroGridsPy is an open-source Python package for the techno-economic planning of
+  mini-grid energy systems in remote and underserved areas. It sizes and dispatches
+  renewable generation, battery storage, backup generators and optional grid connection
+  by linear and mixed-integer optimization, supporting typical-year and multi-year
+  capacity-expansion formulations, single- and multi-scenario studies, and both
+  continuous and discrete sizing. It is built on Linopy and ships with a command-line
+  interface, a documented Python API and an optional Streamlit graphical interface.
+type: software
+version: "0.2.0"
+date-released: "2026-08-24"
+license: EUPL-1.2
+repository-code: "https://github.com/MicroGridsPy/MicroGridsPy"
+url: "https://microgridspy-package-docs.readthedocs.io/"
+keywords:
+  - energy
+  - mini-grid
+  - rural electrification
+  - energy access
+  - optimization
+  - linopy
+  - capacity expansion
+authors:
+  # Main developer and maintainer of the current version.
+  - family-names: Onori
+    given-names: Alessandro
+    affiliation: "Politecnico di Milano"
+    email: alessandro.onori@polimi.it
+    orcid: "https://orcid.org/0009-0009-1195-2078"
+  # Current contributors and scientific advisory.
+  - family-names: Stevanato
+    given-names: "Nicolo"
+    affiliation: "Politecnico di Milano"
+    email: nicolo.stevanato@polimi.it
+    orcid: "https://orcid.org/0000-0002-3419-0389"
+  - family-names: Mereu
+    given-names: Riccardo
+    affiliation: "Politecnico di Milano"
+    email: riccardo.mereu@polimi.it
+    orcid: "https://orcid.org/0000-0003-0544-595X"
+  - family-names: Colombo
+    given-names: Emanuela
+    affiliation: "Politecnico di Milano"
+    email: emanuela.colombo@polimi.it
+    orcid: "https://orcid.org/0000-0002-9747-5699"
+  # Contributors to earlier versions.
+  - family-names: Lombardi
+    given-names: Francesco
+    affiliation: "Delft University of Technology"
+    email: f.lombardi@tudelft.nl
+  - family-names: Guidicini
+    given-names: Giulia
+    affiliation: "Politecnico di Milano"
+    email: giulia.guidicini@polimi.it
+  - family-names: Rinaldi
+    given-names: Lorenzo
+    affiliation: "Politecnico di Milano"
+    email: lorenzo.rinaldi@polimi.it
+  - family-names: Pellecchia
+    given-names: Gianluca
+    affiliation: "Politecnico di Milano"
+    email: gianluca.pellecchia@polimi.it
+  - family-names: Sangiorgio
+    given-names: Ivan
+    affiliation: "Politecnico di Milano"
+    email: ivan.sangiorgio@polimi.it
+  # Original authors of the model (Universite de Liege, first release 2019).
+  - family-names: Balderrama
+    given-names: Sergio
+    affiliation: "Universidad Mayor de San Simon / Universite de Liege"
+    email: slbalderrama@doct.ulg.ac.be
+    orcid: "https://orcid.org/0000-0003-0656-3544"
+  - family-names: Quoilin
+    given-names: Sylvain
+    affiliation: "KU Leuven"
+    email: squoilin@uliege.be
+    orcid: "https://orcid.org/0000-0002-2064-209X"
+references:
+  - type: software
+    title: "MicroGridsPy-Pyomo: archived Pyomo implementation of the MicroGridsPy mini-grid planning model"
+    doi: 10.5281/zenodo.22900498
+    version: "2.1"
+    year: 2026
+    notes: "The archived Pyomo implementation superseded by this package."
+    authors:
+      - family-names: Balderrama
+        given-names: Sergio
+      - family-names: Quoilin
+        given-names: Sylvain

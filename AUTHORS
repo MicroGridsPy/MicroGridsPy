@@ -1,23 +1,68 @@
-Contributors of the current version:
-Nicolò Stevanato, Politecnico di Milano <nicolo.stevanato@polimi.it>
-Alessandro Onori, Politecnico di Milano <alessandro.onori@polimi.it>
-Riccardo Mereu, Politecnico di Milano <riccardo.mereu@polimi.it>
-Emanuela Colombo, Politecnico di Milano <emanuela.colombo@polimi.it>
+# Authors
 
+MicroGridsPy is an open-source mini-grid sizing and dispatch model originally developed by
+Sergio Balderrama and Sylvain Quoilin at the Université de Liège. It was subsequently extended 
+through research projects and publications involving the SESAM group at Politecnico di Milano and other collaborators.
 
-Past contributors:
-Gianluca Pellecchia, Politecnico di Milano <gianluca.pellecchia@polimi.it>
-Ivan Sangiorgio, Politecnico di Milano <ivan.sangiorgio@polimi.it>
-Francesco Lombardi, TU Delft <f.lombardi@tudelft.nl>
-Giulia Guidicini, Politecnico di Milano <giulia.guidicini@polimi.it>
-Lorenzo Rinaldi, Politecnico di Milano <lorenzo.rinaldi@polimi.it>
+The current version is a **major redevelopment** of the original model: it has been restructured 
+as an installable Python package based on Linopy, with a stable API and fully integrated GUI, and includes new consistent economic, 
+battery degradation, inverter sizing, expanded stochastic optimisation and multi-year capacity-expansion features.
 
+## Main developer and maintainer
 
-Based on the original model by:
-Sergio Balderrama, Université de Liège <slbalderrama@doct.ulg.ac.be>
-Sylvain Quoilin, Université de Liège <squoilin@uliege.be>
+- Alessandro Onori, Politecnico di Milano
+  <alessandro.onori@polimi.it> — ORCID: 0009-0009-1195-2078
 
+## Current contributors and Scientific advisory
 
+- Nicolò Stevanato, Politecnico di Milano
+  <nicolo.stevanato@polimi.it> — ORCID: 0000-0002-3419-0389
+- Riccardo Mereu, Politecnico di Milano
+  <riccardo.mereu@polimi.it> — ORCID: 0000-0003-0544-595X
+- Emanuela Colombo, Politecnico di Milano
+  <emanuela.colombo@polimi.it> — ORCID: 0000-0002-9747-5699
 
+## Past contributors
 
+The following contributors worked on **earlier versions** of MicroGridsPy, **up to the 2023 release line**:
 
+- Francesco Lombardi, TU Delft <f.lombardi@tudelft.nl>
+  — El Espino (2019), PowerTech (2019), MYCE (2020)
+- Giulia Guidicini, Politecnico di Milano <giulia.guidicini@polimi.it>
+  — MYCE (2020)
+- Lorenzo Rinaldi, Politecnico di Milano <lorenzo.rinaldi@polimi.it>
+  — MYCE (2020)
+- Gianluca Pellecchia, Politecnico di Milano <gianluca.pellecchia@polimi.it>
+  — Third-generation minigrids (2023)
+- Ivan Sangiorgio, Politecnico di Milano <ivan.sangiorgio@polimi.it>
+  — Third-generation minigrids (2023)
+
+The original MicroGridsPy framework and **first open-source release (2019)** were developed at the Université de Liège:
+
+- Sergio Balderrama, Université de Liège <slbalderrama@doct.ulg.ac.be>
+- Sylvain Quoilin, Université de Liège <squoilin@uliege.be>
+
+## Development history
+
+Key publications documenting the development of the model include:
+
+- **El Espino (2019)** — S. Balderrama, F. Lombardi, F. Riva, W. Canedo, E. Colombo,
+  S. Quoilin. "A two-stage linear programming optimization framework for isolated hybrid
+  microgrids in a rural context: the case study of the 'El Espino' community." *Energy* 188
+  (2019) 116073. https://doi.org/10.1016/j.energy.2019.116073
+- **PowerTech (2019)** — N. Stevanato, F. Lombardi, E. Colombo, S. Balderrama, S. Quoilin.
+  "Two-stage stochastic sizing of a rural micro-grid based on stochastic load generation."
+  *2019 IEEE Milan PowerTech*, pp. 1–6. https://doi.org/10.1109/PTC.2019.8810571
+- **MYCE (2020)** — N. Stevanato, F. Lombardi, G. Guidicini, L. Rinaldi, S. L. Balderrama,
+  M. Pavičević, S. Quoilin, E. Colombo. "Long-term sizing of rural microgrids: accounting
+  for load evolution through multi-step investment plan and stochastic optimization."
+  *Energy for Sustainable Development* 58 (2020) 16–29.
+  https://doi.org/10.1016/j.esd.2020.07.002
+- **Third-generation minigrids (2023)** — N. Stevanato, G. Pellecchia, I. Sangiorgio,
+  D. Shendrikova, C. A. Soares, R. Mereu, E. Colombo. "Planning third generation minigrids:
+  multi-objective optimization and brownfield investment approaches in modelling
+  village-scale on-grid and off-grid energy systems." *Renewable and Sustainable Energy
+  Transition* 3 (2023) 100053. https://doi.org/10.1016/j.rset.2023.100053
+- **Financing schemes, ECOS (2023)** — G. Crevani, C. Soares, E. Colombo. "Modelling
+  financing schemes for energy system planning: a mini-grid case study." *Proceedings of
+  ECOS 2023*, pp. 1958–1969.

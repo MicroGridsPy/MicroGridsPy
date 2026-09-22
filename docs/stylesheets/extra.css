@@ -1,0 +1,25 @@
+/* Wide display equations (e.g. the NPWC / EAC objectives and the salvage-value
+   cases block) can be wider than the content column. Zensical does not make
+   MathJax display blocks scrollable by default, so they clip. Let them scroll
+   horizontally within their own box instead — essential on narrow screens. */
+mjx-container[display="true"] {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  padding: 0.35rem 0;
+}
+
+/* Figures: keep images responsive and give captions a lighter, smaller look.
+   Captions are written as an emphasized paragraph immediately after the image. */
+.md-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.md-content p > img + em,
+.md-content p > em:only-child {
+  display: inline-block;
+  font-size: 0.85em;
+  line-height: 1.4;
+  color: var(--md-default-fg-color--light, #666);
+}

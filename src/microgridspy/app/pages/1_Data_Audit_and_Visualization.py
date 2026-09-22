@@ -1,0 +1,1676 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import streamlit as st
+import xarray as xr
+
+from microgridspy.app.page_helpers import read_json_file, resolve_active_project_from_session
+from microgridspy.data_pipeline.loader import load_project_dataset
+from microgridspy.data_pipeline.typical_year_loader import regenerate_grid_availability_typical_year
+from microgridspy.export.yaml_reader import read_yaml
+from microgridspy.io.csv_format import read_csv_with_format
+from microgridspy.io.utils import project_paths
+from microgridspy.io.vintage_labels import load_multi_year_vintage_labels, vintage_display_for_step
+from microgridspy.multi_year_model.data import regenerate_grid_availability_dynamic
+from microgridspy.multi_year_model.sets import initialize_sets as initialize_multi_year_sets
+from microgridspy.typical_year_model.sets import initialize_sets as initialize_typical_year_sets
+from microgridspy.visualization.input_plots import (
+    build_timeseries_figures,
+    compute_series_stats,
+    list_timeseries_options,
+    slice_timeseries,
+)
+
+REQUIRED_INPUTS: dict[str, str] = {
+    "formulation.json": "Project formulation and workflow settings.",
+    "load_demand.csv": "Hourly demand time series template.",
+    "resource_availability.csv": "Hourly renewable resource availability time series.",
+    "renewables.yaml": "Renewable technology techno-economic parameters.",
+    "battery.yaml": "Battery techno-economic parameters.",
+    "generator.yaml": "Generator and fuel techno-economic parameters.",
+}
+
+OPTIONAL_INPUTS: dict[str, str] = {
+    "generator_efficiency_curve.csv": "Optional generator partial-load efficiency curve used when generator.yaml points to it. Preferred semantics: normalized multiplier relative to generator nominal full-load efficiency.",
+    "battery_efficiency_curve.csv": "Optional battery one-way efficiency curve used by the advanced convex loss model. Accepts absolute efficiencies (peaked default) or normalized multipliers relative to the scalar charge/discharge efficiencies in battery.yaml.",
+    "grid.yaml": "Grid connection parameters for on-grid projects.",
+    "grid_import_price.csv": "Hourly import tariff for on-grid projects.",
+    "grid_export_price.csv": "Hourly export tariff when export is enabled.",
+    "grid_availability.csv": "Backend-generated grid availability matrix.",
+}
+
+REQUIRED_SETTINGS_KEYS = [
+    "project_name",
+    "formulation",
+    "integer_sizing",
+    "multi_scenario",
+    "resources",
+    "optimization_constraints",
+    "inputs_loaded",
+    "generator",
+    "fuel",
+    "grid",
+]
+
+STATIC_PARAMETER_METADATA: dict[str, dict[str, str]] = {
+    "scenario_weight": {
+        "unit": "share",
+        "description": "Probability weight assigned to each scenario.",
+        "source": "formulation.json",
+    },
+    "min_renewable_penetration": {
+        "unit": "share",
+        "description": "Minimum renewable penetration target enforced by the optimization model.",
+        "source": "formulation.json",
+    },
+    "max_lost_load_fraction": {
+        "unit": "share",
+        "description": "Maximum allowed fraction of unmet demand.",
+        "source": "formulation.json",
+    },
+    "lost_load_cost_per_kwh": {
+        "unit": "currency_per_kWh",
+        "description": "Penalty or social cost assigned to unserved energy.",
+        "source": "formulation.json",
+    },
+    "land_availability_m2": {
+        "unit": "m2",
+        "description": "Land availability limit used for renewable siting constraints.",
+        "source": "formulation.json",
+    },
+    "emission_cost_per_kgco2e": {
+        "unit": "currency_per_kgCO2e",
+        "description": "Cost applied to scope 1, scope 2, and scope 3 emissions when enabled.",
+        "source": "formulation.json",
+    },
+    "load_demand": {
+        "unit": "kWh_per_hour",
+        "description": "Hourly electricity demand time series.",
+        "source": "load_demand.csv",
+    },
+    "resource_availability": {
+        "unit": "capacity_factor",
+        "description": "Hourly renewable resource availability time series.",
+        "source": "resource_availability.csv",
+    },
+    "grid_import_price": {
+        "unit": "currency_per_kWh",
+        "description": "Hourly electricity import tariff from the grid.",
+        "source": "grid_import_price.csv",
+    },
+    "grid_export_price": {
+        "unit": "currency_per_kWh",
+        "description": "Hourly electricity export tariff to the grid.",
+        "source": "grid_export_price.csv",
+    },
+    "grid_availability": {
+        "unit": "binary",
+        "description": "Hourly grid availability matrix generated from outage inputs.",
+        "source": "grid.yaml",
+    },
+    "grid_renewable_share": {
+        "unit": "share",
+        "description": "Share of delivered imported electricity counted as renewable in policy metrics.",
+        "source": "grid.yaml",
+    },
+    "grid_emissions_factor_kgco2e_per_kwh": {
+        "unit": "kgCO2e_per_kWh",
+        "description": "Scope 2 emissions factor applied to delivered imported electricity.",
+        "source": "grid.yaml",
+    },
+    "curve_relative_power_output": {
+        "unit": "share",
+        "description": "Generator efficiency-curve support points in relative output terms.",
+        "source": "generator_efficiency_curve.csv",
+    },
+    "curve_efficiency": {
+        "unit": "-",
+        "description": "Generator efficiency-curve values corresponding to relative power output points.",
+        "source": "generator_efficiency_curve.csv",
+    },
+    "curve_relative_fuel_use": {
+        "unit": "-",
+        "description": "Generator relative fuel-use proxy phi(r)=r/eta(r) derived internally from the partial-load curve and used by the LP formulation.",
+        "source": "generator_efficiency_curve.csv",
+    },
+}
+
+
+def _build_file_table(paths, files: dict[str, str]) -> pd.DataFrame:
+    rows = []
+    for name, description in files.items():
+        rows.append(
+            {
+                "file": name,
+                "status": "found" if (paths.inputs_dir / name).exists() else "missing",
+                "description": description,
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _project_specific_optional_inputs(formulation: dict[str, Any], paths) -> dict[str, str]:
+    files = dict(OPTIONAL_INPUTS)
+    battery_cfg = _battery_curve_config(formulation, paths)
+    generator_cfg = _generator_curve_config(paths)
+
+    if _degradation_active(formulation):
+        files["ambient_temperature.csv"] = (
+            "Hourly ambient/environment temperature (degC), one column per scenario/year. "
+            "Required when battery degradation (cycle fade) is active; drives the semi-empirical "
+            "alpha (calendar) and beta (cycle) coefficients."
+        )
+
+    for entry in battery_cfg.get("curve_entries", []):
+        eff_path = entry.get("efficiency_curve_path")
+        if isinstance(eff_path, Path):
+            suffix = (
+                f" (investment step {entry['inv_step']})"
+                if entry.get("inv_step") is not None
+                else ""
+            )
+            files[eff_path.name] = (
+                "Optional battery one-way efficiency curve used by the advanced convex loss model."
+                f"{suffix}"
+            )
+
+    for entry in generator_cfg.get("curve_entries", []):
+        curve_path = entry.get("curve_path")
+        if isinstance(curve_path, Path):
+            suffix = (
+                f" (investment step {entry['inv_step']})"
+                if entry.get("inv_step") is not None
+                else ""
+            )
+            files[curve_path.name] = (
+                "Optional generator partial-load efficiency curve used when generator.yaml points to it."
+                f"{suffix}"
+            )
+
+    return files
+
+
+def _required_missing_for_configuration(formulation: dict[str, Any], paths) -> list[str]:
+    missing = [name for name in REQUIRED_INPUTS if not (paths.inputs_dir / name).exists()]
+
+    if bool(formulation.get("on_grid", False)):
+        for name in ("grid.yaml", "grid_import_price.csv"):
+            if not (paths.inputs_dir / name).exists():
+                missing.append(name)
+        if (
+            bool(formulation.get("grid_allow_export", False))
+            and not (paths.inputs_dir / "grid_export_price.csv").exists()
+        ):
+            missing.append("grid_export_price.csv")
+
+    # Ambient temperature is required when endogenous battery degradation is active.
+    if (
+        _degradation_active(formulation)
+        and not (paths.inputs_dir / "ambient_temperature.csv").exists()
+    ):
+        missing.append("ambient_temperature.csv")
+
+    return sorted(set(missing))
+
+
+def _load_sets_and_dataset(
+    project_name: str, formulation: dict[str, Any]
+) -> tuple[xr.Dataset, xr.Dataset, str]:
+    formulation_mode = str(formulation.get("core_formulation", "steady_state")).strip()
+    loader_mode = "multi_year" if formulation_mode == "dynamic" else "typical_year"
+
+    if loader_mode == "multi_year":
+        sets = initialize_multi_year_sets(project_name)
+    else:
+        sets = initialize_typical_year_sets(project_name)
+
+    ds = load_project_dataset(project_name, sets, mode=loader_mode)
+    return sets, ds, loader_mode
+
+
+def _build_project_summary(formulation: dict[str, Any]) -> str:
+    formulation_mode = str(formulation.get("core_formulation", "steady_state")).strip()
+    mode_label = "Typical-year" if formulation_mode == "steady_state" else "Multi-year"
+    system_label = "On-grid" if bool(formulation.get("on_grid", False)) else "Off-grid"
+    export_label = "export enabled" if bool(formulation.get("grid_allow_export", False)) else None
+    sizing_label = (
+        "Discrete sizing"
+        if bool(formulation.get("integer_sizing", formulation.get("unit_commitment", False)))
+        else "Continuous sizing"
+    )
+    ms = formulation.get("multi_scenario", {}) or {}
+    n_scen = int(ms.get("n_scenarios", 1) or 1)
+    scenario_label = (
+        f"Multi-scenario ({n_scen})" if bool(ms.get("enabled", False)) else "Single scenario"
+    )
+    parts = [mode_label, system_label]
+    if export_label:
+        parts.append(export_label)
+    parts.extend([sizing_label, scenario_label])
+
+    if formulation_mode == "dynamic":
+        horizon = formulation.get("time_horizon_years")
+        if horizon:
+            parts.append(f"{int(horizon)}-year horizon")
+        if bool(formulation.get("capacity_expansion", False)):
+            parts.append("capacity expansion")
+
+    enforcement = (
+        (formulation.get("optimization_constraints", {}) or {}).get("enforcement") or ""
+    ).strip()
+    if enforcement:
+        parts.append(f"{enforcement} constraints")
+
+    return " | ".join(parts)
+
+
+def _load_yaml_parameter_metadata(paths) -> dict[str, dict[str, str]]:
+    metadata: dict[str, dict[str, str]] = {}
+    yaml_files = ("renewables.yaml", "battery.yaml", "generator.yaml", "grid.yaml")
+    for name in yaml_files:
+        path = paths.inputs_dir / name
+        if not path.exists():
+            continue
+        try:
+            payload = read_yaml(path)
+        except Exception:
+            continue
+        if not isinstance(payload, dict):
+            continue
+        meta = payload.get("meta", {}) or {}
+        units = meta.get("units", {}) or {}
+        description_block = meta.get("description", {}) or {}
+        parameters = (
+            description_block.get("parameters", {}) if isinstance(description_block, dict) else {}
+        )
+        for key in set(units.keys()) | set(parameters.keys()):
+            metadata[key] = {
+                "unit": str(units.get(key, "")) if units.get(key) is not None else "",
+                "description": str(parameters.get(key, ""))
+                if parameters.get(key) is not None
+                else "",
+                "source": name,
+            }
+    return metadata
+
+
+def _parameter_summary(ds: xr.Dataset, paths) -> pd.DataFrame:
+    yaml_metadata = _load_yaml_parameter_metadata(paths)
+    rows = []
+    for name, da in ds.data_vars.items():
+        meta = yaml_metadata.get(name, STATIC_PARAMETER_METADATA.get(name, {}))
+        rows.append(
+            {
+                "parameter": name,
+                "dims": ", ".join(da.dims) if da.dims else "(scalar)",
+                "dtype": str(da.dtype),
+                "unit": meta.get("unit", ""),
+                "value": _format_parameter_value(da),
+                "source": meta.get("source", "dataset"),
+            }
+        )
+    return pd.DataFrame(rows).sort_values("parameter").reset_index(drop=True)
+
+
+def _coordinates_summary(ds: xr.Dataset) -> pd.DataFrame:
+    rows = []
+    for name, coord in ds.coords.items():
+        preview = ", ".join(map(str, coord.values[:5]))
+        if coord.size > 5:
+            preview += " ..."
+        rows.append(
+            {
+                "coordinate": name,
+                "size": int(coord.size),
+                "dims": ", ".join(coord.dims) if coord.dims else "(scalar)",
+                "preview": preview,
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _format_scalar_value(value: Any) -> str:
+    if value is None:
+        return "null"
+    if isinstance(value, (np.floating, float)):
+        return f"{float(value):.6g}"
+    if isinstance(value, (np.integer, int)):
+        return str(int(value))
+    if isinstance(value, (np.bool_, bool)):
+        return "true" if bool(value) else "false"
+    return str(value)
+
+
+def _format_parameter_value(da: xr.DataArray) -> str:
+    if da.ndim == 0:
+        try:
+            return _format_scalar_value(da.values.item())
+        except Exception:
+            return _format_scalar_value(da.values)
+
+    values = np.asarray(da.values)
+    flat = values.reshape(-1)
+    preview = ", ".join(_format_scalar_value(v) for v in flat[:6])
+    if flat.size > 6:
+        preview += ", ..."
+
+    if da.ndim == 1 and da.sizes[da.dims[0]] <= 6:
+        dim = da.dims[0]
+        labels = [str(v) for v in da.coords[dim].values.tolist()]
+        labelled = ", ".join(
+            f"{label}={_format_scalar_value(value)}" for label, value in zip(labels, flat.tolist())
+        )
+        return f"[{labelled}]"
+
+    return f"array{tuple(int(v) for v in da.shape)} [{preview}]"
+
+
+def _optimization_constraints_summary(ds: xr.Dataset) -> pd.DataFrame:
+    settings = (ds.attrs or {}).get("settings", {}) or {}
+    constraints = settings.get("optimization_constraints", {}) or {}
+    if not isinstance(constraints, dict):
+        constraints = {}
+
+    descriptions = {
+        "enforcement": "Constraint enforcement mode across scenarios.",
+        "min_renewable_penetration": "Minimum renewable penetration target.",
+        "max_lost_load_fraction": "Maximum allowed unmet demand share.",
+        "lost_load_cost_per_kwh": "Penalty applied to unserved energy.",
+        "land_availability_m2": "Maximum land available for renewable siting.",
+        "emission_cost_per_kgco2e": "Carbon cost included in the objective function.",
+    }
+    units = {
+        "enforcement": "",
+        "min_renewable_penetration": "share",
+        "max_lost_load_fraction": "share",
+        "lost_load_cost_per_kwh": "currency_per_kWh",
+        "land_availability_m2": "m2",
+        "emission_cost_per_kgco2e": "currency_per_kgCO2e",
+    }
+    constraint_keys = [
+        "enforcement",
+        "min_renewable_penetration",
+        "max_lost_load_fraction",
+        "lost_load_cost_per_kwh",
+        "land_availability_m2",
+        "emission_cost_per_kgco2e",
+    ]
+
+    rows = []
+    for key in constraint_keys:
+        if key in ds.data_vars:
+            value = _format_parameter_value(ds[key])
+        else:
+            value = constraints.get(key)
+        if value is None:
+            continue
+        rows.append(
+            {
+                "constraint": key,
+                "value": value if isinstance(value, str) else _format_scalar_value(value),
+                "unit": units.get(key, ""),
+                "description": descriptions.get(key, ""),
+            }
+        )
+
+    if not rows:
+        return pd.DataFrame()
+
+    return pd.DataFrame(rows)
+
+
+def _soft_checks(ds: xr.Dataset) -> list[tuple[str, str]]:
+    checks: list[tuple[str, str]] = []
+
+    if "scenario_weight" in ds:
+        wsum = float(np.sum(ds["scenario_weight"].values.astype(float)))
+        if np.isclose(wsum, 1.0, atol=1e-8):
+            checks.append(("success", f"`scenario_weight` sums to 1.0 (sum={wsum:.8f})."))
+        else:
+            checks.append(("warning", f"`scenario_weight` does not sum to 1.0 (sum={wsum:.8f})."))
+    else:
+        checks.append(("error", "`scenario_weight` variable is missing."))
+
+    if "load_demand" in ds:
+        load = np.asarray(ds["load_demand"].values, dtype=float)
+        if np.nanmin(load) < 0:
+            checks.append(
+                ("warning", f"`load_demand` contains negative values (min={np.nanmin(load):.6g}).")
+            )
+        else:
+            checks.append(("success", "`load_demand` is non-negative."))
+
+    if "resource_availability" in ds:
+        res = np.asarray(ds["resource_availability"].values, dtype=float)
+        mn = float(np.nanmin(res))
+        mx = float(np.nanmax(res))
+        if mn < 0 or mx > 1:
+            checks.append(
+                (
+                    "warning",
+                    f"`resource_availability` falls outside [0, 1] (min={mn:.6g}, max={mx:.6g}).",
+                )
+            )
+        else:
+            checks.append(("success", "`resource_availability` is within [0, 1]."))
+
+    settings = (ds.attrs or {}).get("settings", {})
+    missing_settings = [key for key in REQUIRED_SETTINGS_KEYS if key not in settings]
+    if missing_settings:
+        checks.append(
+            ("warning", f"Missing recommended settings keys: {', '.join(missing_settings)}.")
+        )
+    else:
+        checks.append(("success", "Required settings keys are present."))
+
+    return checks
+
+
+def _render_soft_check_warnings(ds: xr.Dataset) -> None:
+    for level, message in _soft_checks(ds):
+        if level == "warning":
+            st.warning(message)
+        elif level == "error":
+            st.error(message)
+
+
+def _read_optional_csv(path: Path) -> pd.DataFrame | None:
+    if not path.exists():
+        return None
+    try:
+        return read_csv_with_format(path)
+    except Exception:
+        return None
+
+
+def _safe_yaml_float(value: Any, default: float) -> float:
+    try:
+        out = float(value)
+        if np.isfinite(out):
+            return out
+    except Exception:
+        pass
+    return float(default)
+
+
+def _battery_curve_config(formulation: dict[str, Any], paths) -> dict[str, Any]:
+    battery_model = formulation.get("battery_model", {}) or {}
+    degradation_model = battery_model.get("degradation_model", {}) or {}
+    loss_model = str(
+        battery_model.get("loss_model", "constant_efficiency") or "constant_efficiency"
+    ).strip()
+    formulation_mode = str(
+        formulation.get("core_formulation", "steady_state") or "steady_state"
+    ).strip()
+
+    battery_yaml = {}
+    try:
+        battery_yaml = read_yaml(paths.inputs_dir / "battery.yaml")
+    except Exception:
+        battery_yaml = {}
+
+    battery_block = battery_yaml.get("battery", {}) or {}
+    technical = battery_block.get("technical", {}) or {}
+    top_level_by_step = battery_block.get("by_step", {}) if isinstance(battery_block, dict) else {}
+    if not isinstance(top_level_by_step, dict):
+        top_level_by_step = {}
+    technical_by_step = technical.get("by_step", {}) if isinstance(technical, dict) else {}
+    if not isinstance(technical_by_step, dict):
+        technical_by_step = {}
+    if not technical_by_step and top_level_by_step:
+        technical_by_step = {
+            str(step): ((block.get("technical", {}) or {}) if isinstance(block, dict) else {})
+            for step, block in top_level_by_step.items()
+            if isinstance(block, dict)
+        }
+
+    curve_entries: list[dict[str, Any]] = []
+    if technical_by_step:
+        for step, block in technical_by_step.items():
+            if not isinstance(block, dict):
+                continue
+            eff_curve_name = str(block.get("efficiency_curve_csv") or "").strip()
+            curve_entries.append(
+                {
+                    "inv_step": str(step),
+                    "efficiency_curve_path": (paths.inputs_dir / eff_curve_name)
+                    if eff_curve_name
+                    else None,
+                    "charge_efficiency_base": _safe_yaml_float(
+                        block.get("charge_efficiency", 1.0), 1.0
+                    ),
+                    "discharge_efficiency_base": _safe_yaml_float(
+                        block.get("discharge_efficiency", 1.0), 1.0
+                    ),
+                }
+            )
+    else:
+        eff_curve_name = str(
+            technical.get("efficiency_curve_csv") or "battery_efficiency_curve.csv"
+        ).strip()
+        curve_entries.append(
+            {
+                "inv_step": None,
+                "efficiency_curve_path": paths.inputs_dir / eff_curve_name,
+                "charge_efficiency_base": _safe_yaml_float(
+                    technical.get("charge_efficiency", 1.0), 1.0
+                ),
+                "discharge_efficiency_base": _safe_yaml_float(
+                    technical.get("discharge_efficiency", 1.0), 1.0
+                ),
+            }
+        )
+
+    return {
+        "loss_model": loss_model,
+        "battery_efficiency_curve_enabled": loss_model == "convex_loss_epigraph",
+        "curve_entries": curve_entries,
+    }
+
+
+def _generator_curve_config(paths) -> dict[str, Any]:
+    generator_yaml = {}
+    try:
+        generator_yaml = read_yaml(paths.inputs_dir / "generator.yaml")
+    except Exception:
+        generator_yaml = {}
+
+    technical = (generator_yaml.get("generator", {}) or {}).get("technical", {}) or {}
+    generator_block = generator_yaml.get("generator", {}) or {}
+    top_level_by_step = (
+        generator_block.get("by_step", {}) if isinstance(generator_block, dict) else {}
+    )
+    if not isinstance(top_level_by_step, dict):
+        top_level_by_step = {}
+    technical_by_step = technical.get("by_step", {}) if isinstance(technical, dict) else {}
+    if not isinstance(technical_by_step, dict):
+        technical_by_step = {}
+    if not technical_by_step and top_level_by_step:
+        technical_by_step = {
+            str(step): ((block.get("technical", {}) or {}) if isinstance(block, dict) else {})
+            for step, block in top_level_by_step.items()
+            if isinstance(block, dict)
+        }
+
+    curve_entries: list[dict[str, Any]] = []
+    if technical_by_step:
+        for step, block in technical_by_step.items():
+            if not isinstance(block, dict):
+                continue
+            curve_name = str(block.get("efficiency_curve_csv") or "").strip()
+            curve_entries.append(
+                {
+                    "inv_step": str(step),
+                    "curve_path": (paths.inputs_dir / curve_name) if curve_name else None,
+                    "nominal_efficiency_full_load": _safe_yaml_float(
+                        block.get("nominal_efficiency_full_load", 1.0),
+                        1.0,
+                    ),
+                }
+            )
+    else:
+        curve_name = str(technical.get("efficiency_curve_csv") or "").strip()
+        curve_entries.append(
+            {
+                "inv_step": None,
+                "curve_path": (paths.inputs_dir / curve_name) if curve_name else None,
+                "nominal_efficiency_full_load": _safe_yaml_float(
+                    technical.get("nominal_efficiency_full_load", 1.0),
+                    1.0,
+                ),
+            }
+        )
+
+    return {
+        "enabled": any(entry.get("curve_path") for entry in curve_entries),
+        "curve_entries": curve_entries,
+    }
+
+
+def _render_curve_plot(
+    df: pd.DataFrame,
+    *,
+    x: str,
+    y_columns: list[str],
+    title: str,
+    x_label: str,
+    y_label: str,
+) -> None:
+    fig, ax = plt.subplots(figsize=(7.5, 4.0))
+    for col in y_columns:
+        ax.plot(
+            df[x].to_numpy(dtype=float),
+            df[col].to_numpy(dtype=float),
+            marker="o",
+            linewidth=1.8,
+            label=col,
+        )
+    ax.set_title(title)
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    ax.grid(True, alpha=0.25, linestyle=":")
+    if len(y_columns) > 1:
+        ax.legend()
+    fig.tight_layout()
+    st.pyplot(fig, width="stretch")
+
+
+def _render_curve_diagnostics(formulation: dict[str, Any], paths) -> None:
+    battery_cfg = _battery_curve_config(formulation, paths)
+    generator_cfg = _generator_curve_config(paths)
+    vintage_labels = load_multi_year_vintage_labels(paths.root.name)
+
+    battery_eff_entries = [
+        entry
+        for entry in battery_cfg["curve_entries"]
+        if battery_cfg["battery_efficiency_curve_enabled"]
+        and isinstance(entry.get("efficiency_curve_path"), Path)
+        and entry["efficiency_curve_path"].exists()
+    ]
+    generator_entries = [
+        entry
+        for entry in generator_cfg["curve_entries"]
+        if isinstance(entry.get("curve_path"), Path) and entry["curve_path"].exists()
+    ]
+
+    if not any([battery_eff_entries, generator_entries]):
+        return
+
+    st.subheader("Curve Diagnostics")
+    st.caption(
+        "Plot optional efficiency and degradation curves only when they are enabled in the active project configuration."
+    )
+
+    for entry in battery_eff_entries:
+        title_suffix = (
+            f" - {vintage_display_for_step(labels=vintage_labels, family='battery', step=entry['inv_step'])}"
+            if entry.get("inv_step") is not None
+            else ""
+        )
+        st.markdown(f"**Battery efficiency curve{title_suffix}**")
+        eff_df = _read_optional_csv(entry["efficiency_curve_path"])
+        if eff_df is None:
+            st.warning(f"Could not read `{entry['efficiency_curve_path'].name}`.")
+        elif {"relative_power_pu", "charge_efficiency", "discharge_efficiency"}.issubset(
+            eff_df.columns
+        ):
+            plot_df = eff_df.copy()
+            normalized_curve = bool(
+                np.isclose(float(plot_df["charge_efficiency"].iloc[-1]), 1.0, atol=1e-9)
+            )
+            if normalized_curve:
+                plot_df["actual_charge_efficiency"] = plot_df["charge_efficiency"] * float(
+                    entry["charge_efficiency_base"]
+                )
+                plot_df["actual_discharge_efficiency"] = plot_df["discharge_efficiency"] * float(
+                    entry["discharge_efficiency_base"]
+                )
+            c1, c2 = st.columns([2.0, 1.0])
+            with c1:
+                _render_curve_plot(
+                    plot_df,
+                    x="relative_power_pu",
+                    y_columns=["actual_charge_efficiency", "actual_discharge_efficiency"]
+                    if normalized_curve
+                    else ["charge_efficiency", "discharge_efficiency"],
+                    title=f"Battery one-way efficiency vs relative DC power{title_suffix}",
+                    x_label="Relative DC-side power [p.u.]",
+                    y_label="Efficiency [-]",
+                )
+            with c2:
+                st.caption(f"Source: `{entry['efficiency_curve_path'].name}`")
+                if normalized_curve:
+                    st.caption(
+                        "Normalized curve detected. The plot shows actual efficiencies after applying "
+                        f"battery.yaml baselines {entry['charge_efficiency_base']:.3f} / {entry['discharge_efficiency_base']:.3f}."
+                    )
+                else:
+                    st.caption("Legacy absolute-efficiency curve detected.")
+                st.dataframe(plot_df, width="stretch", hide_index=True)
+        else:
+            st.warning(
+                f"`{entry['efficiency_curve_path'].name}` does not contain the expected columns."
+            )
+
+    for entry in generator_entries:
+        title_suffix = (
+            f" - {vintage_display_for_step(labels=vintage_labels, family='generator', step=entry['inv_step'])}"
+            if entry.get("inv_step") is not None
+            else ""
+        )
+        st.markdown(f"**Generator partial-load curve{title_suffix}**")
+        gen_curve_path = entry["curve_path"]
+        gen_df = _read_optional_csv(gen_curve_path)
+        expected_cols = {"Relative Power Output [-]", "Efficiency [-]"}
+        if gen_df is None:
+            st.warning(f"Could not read `{gen_curve_path.name}`.")
+        elif expected_cols.issubset(gen_df.columns):
+            plot_df = gen_df.copy()
+            c1, c2 = st.columns([2.0, 1.0])
+            with c1:
+                _render_curve_plot(
+                    plot_df,
+                    x="Relative Power Output [-]",
+                    y_columns=["Efficiency [-]"],
+                    title=f"Generator efficiency vs relative power output{title_suffix}",
+                    x_label="Relative power output [p.u.]",
+                    y_label="Efficiency [-]",
+                )
+            with c2:
+                st.dataframe(plot_df, width="stretch", hide_index=True)
+        else:
+            st.warning(f"`{gen_curve_path.name}` does not contain the expected columns.")
+
+
+def _degradation_active(formulation: dict[str, Any]) -> bool:
+    battery_model = formulation.get("battery_model", {}) or {}
+    degradation_model = battery_model.get("degradation_model", {}) or {}
+    return bool(degradation_model.get("cycle_fade_enabled", False))
+
+
+def _render_degradation_coefficient_curves(formulation: dict[str, Any], paths) -> None:
+    """
+    Preview the semi-empirical degradation coefficients alpha(T) (calendar)
+    and beta(T) (cycle) for the active battery chemistry / DoD / cycle life. This is
+    the predefined curve *shape* (built into the model, per chemistry and DoD/SoC
+    band) scaled by the user's rated cycle life - analogous to the generator
+    partial-load curve. Rendered only when endogenous battery degradation is active.
+    """
+    if not _degradation_active(formulation):
+        return
+
+    try:
+        from microgridspy.data_pipeline.battery_degradation_coefficients import (
+            InputValidationError as CoeffError,
+        )
+        from microgridspy.data_pipeline.battery_degradation_coefficients import (
+            coefficient_curve_preview,
+            normalize_chemistry,
+            reference_cycle_life,
+        )
+    except Exception as exc:  # pragma: no cover - import guard
+        st.warning(f"Could not import degradation coefficient curves: {exc}")
+        return
+
+    try:
+        battery_yaml = read_yaml(paths.inputs_dir / "battery.yaml")
+    except Exception:
+        battery_yaml = {}
+    technical = (battery_yaml.get("battery", {}) or {}).get("technical", {}) or {}
+    raw_chemistry = technical.get("chemistry", None)
+    dod = _safe_yaml_float(technical.get("depth_of_discharge", None), 0.8)
+    user_cycle_life = technical.get("cycle_lifetime_to_eol_cycles", None)
+
+    st.subheader("Battery Degradation Coefficients (semi-empirical curves)")
+    st.caption(
+        "Predefined semi-empirical shape selected by chemistry and depth-of-discharge, "
+        "scaled by the rated cycle life. These alpha (calendar) and beta (cycle) "
+        "coefficients drive the endogenous degradation layer; they are evaluated per "
+        "hour from ambient_temperature.csv."
+    )
+
+    if raw_chemistry in (None, ""):
+        st.warning(
+            "`battery.technical.chemistry` is not set. Add one of {LFP, NMC, lead_acid} "
+            "to battery.yaml to enable the semi-empirical degradation curves."
+        )
+        return
+    try:
+        chemistry = normalize_chemistry(raw_chemistry)
+        preview = coefficient_curve_preview(
+            chemistry=chemistry,
+            depth_of_discharge=dod,
+            user_cycle_life=(float(user_cycle_life) if user_cycle_life not in (None, "") else None),
+        )
+    except CoeffError as exc:
+        st.error(str(exc))
+        return
+
+    n_ref = reference_cycle_life(chemistry)
+    scaling = (n_ref / float(user_cycle_life)) if user_cycle_life not in (None, "") else 1.0
+
+    curve_df = pd.DataFrame(
+        {
+            "Ambient temperature [degC]": preview["temperature_degc"],
+            "alpha (calendar) [1/h]": preview["alpha"],
+            "beta (cycle) [1/kWh exchanged]": preview["beta"],
+        }
+    )
+
+    c1, c2 = st.columns([2.0, 1.0])
+    with c1:
+        _render_curve_plot(
+            curve_df,
+            x="Ambient temperature [degC]",
+            y_columns=["beta (cycle) [1/kWh exchanged]"],
+            title=f"Cycle coefficient beta(T) - {chemistry}, DoD={dod:.2f}",
+            x_label="Ambient temperature [degC]",
+            y_label="beta [fraction of nameplate / kWh exchanged]",
+        )
+        _render_curve_plot(
+            curve_df,
+            x="Ambient temperature [degC]",
+            y_columns=["alpha (calendar) [1/h]"],
+            title=f"Calendar coefficient alpha(T) - {chemistry}",
+            x_label="Ambient temperature [degC]",
+            y_label="alpha [fraction of nameplate / h]",
+        )
+    with c2:
+        st.metric("Chemistry", chemistry)
+        st.metric("DoD band", f"{dod:.2f}")
+        st.metric("Cycle-life scaling (Nref/Nuser)", f"{scaling:.3f}")
+        st.caption(
+            f"Reference cycle life: {n_ref:.0f}. "
+            f"Rated cycle life: {user_cycle_life if user_cycle_life not in (None, '') else 'unset (scaling=1)'}."
+        )
+        st.dataframe(curve_df, width="stretch", hide_index=True)
+
+
+def _render_file_section(project_root: Path, formulation: dict[str, Any], paths) -> bool:
+    st.subheader("Required Input Files")
+    st.caption(
+        f"Check that the active project contains the inputs required to construct the canonical dataset. Project path: `{project_root}`"
+    )
+
+    required_df = _build_file_table(paths, REQUIRED_INPUTS)
+    optional_df = _build_file_table(paths, _project_specific_optional_inputs(formulation, paths))
+    missing = _required_missing_for_configuration(formulation, paths)
+
+    present_required = int((required_df["status"] == "found").sum())
+    st.metric("Required files present", f"{present_required}/{len(REQUIRED_INPUTS)}")
+
+    st.markdown("**Required files**")
+    st.dataframe(required_df, width="stretch", hide_index=True)
+
+    st.markdown("**Optional files**")
+    st.dataframe(optional_df, width="stretch", hide_index=True)
+
+    if missing:
+        st.error(
+            f"Dataset cannot be constructed yet. Missing configuration-dependent inputs: {', '.join(missing)}"
+        )
+        return False
+
+    st.success("All configuration-dependent inputs required for dataset construction are present.")
+    return True
+
+
+def _render_dataset_section(ds: xr.Dataset, loader_mode: str, paths) -> None:
+    st.subheader("Dataset Summary")
+    st.caption(
+        "Load the canonical dataset through the shared pipeline and inspect its structure before optimization."
+    )
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Loader mode", loader_mode)
+    c2.metric("Dimensions", len(ds.sizes))
+    c3.metric("Parameters", len(ds.data_vars))
+
+    settings = (ds.attrs or {}).get("settings", {})
+    if loader_mode == "multi_year" and isinstance(settings, dict):
+        st.markdown("**Multi-Year Settings**")
+        horizon_years = ds.sizes.get("year", 0)
+        raw_discount = settings.get("social_discount_rate", None)
+        try:
+            discount_pct = f"{100.0 * float(raw_discount):.2f}%"
+        except Exception:
+            discount_pct = "n/a"
+
+        inv_steps = settings.get("investment_steps", None)
+        if isinstance(inv_steps, list):
+            n_steps = len(inv_steps)
+        else:
+            n_steps = int(ds.sizes.get("inv_step", 0))
+
+        c4, c5, c6 = st.columns(3)
+        c4.metric("Time horizon", f"{int(horizon_years)} years")
+        c5.metric("Investment steps", str(int(n_steps)))
+        c6.metric("Social discount rate", discount_pct)
+
+    st.markdown("**Coordinates**")
+    st.dataframe(_coordinates_summary(ds), width="stretch", hide_index=True)
+
+    st.markdown("**Parameters**")
+    st.dataframe(_parameter_summary(ds, paths), width="stretch", hide_index=True)
+
+    constraints_df = _optimization_constraints_summary(ds)
+    if not constraints_df.empty:
+        st.markdown("**Optimization System Constraints**")
+        st.caption(
+            "Project-level optimization constraints loaded from `formulation.json` and attached to the canonical dataset metadata."
+        )
+        st.dataframe(constraints_df, width="stretch", hide_index=True)
+
+    with st.expander("Dataset metadata", expanded=False):
+        st.json(dict(ds.attrs or {}))
+
+    _render_soft_check_warnings(ds)
+
+
+def _render_grid_controls(
+    project_name: str, formulation: dict[str, Any], ds: xr.Dataset, paths
+) -> None:
+    formulation_mode = str(formulation.get("core_formulation", "steady_state")).strip()
+    if formulation_mode not in {"steady_state", "dynamic"}:
+        return
+    if not bool(formulation.get("on_grid", False)):
+        return
+
+    st.subheader("Grid Availability")
+    st.caption(
+        "`grid_availability.csv` is a derived artifact generated from `grid.yaml` during dataset loading. "
+        "Edit outage parameters below, then regenerate to refresh the matrix."
+    )
+
+    grid_yaml_path = paths.inputs_dir / "grid.yaml"
+    grid_csv_path = paths.inputs_dir / "grid_availability.csv"
+    try:
+        grid_payload = read_yaml(grid_yaml_path)
+    except Exception as exc:
+        st.error(f"Could not read grid configuration: {exc}")
+        return
+
+    by_scenario = (grid_payload.get("grid", {}) or {}).get("by_scenario", {}) or {}
+    rows = []
+    for scenario, block in by_scenario.items():
+        line = block.get("line", {}) or {}
+        outages = block.get("outages", {}) or {}
+        row = {
+            "scenario": scenario,
+            "line_capacity_kw": line.get("capacity_kw"),
+            "transmission_efficiency": line.get("transmission_efficiency"),
+            "renewable_share": line.get("renewable_share", 0.0),
+            "emissions_factor_kgco2e_per_kwh": line.get("emissions_factor_kgco2e_per_kwh", 0.0),
+            "avg_outages_per_year": outages.get("average_outages_per_year"),
+            "avg_outage_duration_minutes": outages.get("average_outage_duration_minutes"),
+            "outage_scale_od_hours": outages.get("outage_scale_od_hours"),
+            "outage_shape_od": outages.get("outage_shape_od"),
+            "outage_seed": outages.get("outage_seed", 0),
+        }
+        if formulation_mode == "dynamic":
+            row["first_year_connection"] = block.get("first_year_connection")
+        rows.append(row)
+
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+
+    st.caption(f"Derived file: `{grid_csv_path.name}`")
+    if grid_csv_path.exists():
+        st.caption(f"Last updated: {pd.Timestamp(grid_csv_path.stat().st_mtime, unit='s')}")
+    if st.button(
+        "Regenerate grid availability from grid.yaml",
+        key=f"regen_grid_{formulation_mode}",
+        type="primary",
+    ):
+        try:
+            if formulation_mode == "dynamic":
+                sets = initialize_multi_year_sets(project_name)
+                regenerate_grid_availability_dynamic(project_name=project_name, sets=sets)
+            else:
+                sets = initialize_typical_year_sets(project_name)
+                regenerate_grid_availability_typical_year(project_name=project_name, sets=sets)
+            st.success("grid_availability.csv regenerated from grid.yaml.")
+            st.rerun()
+        except Exception as exc:
+            st.error(f"Regeneration failed: {exc}")
+
+    if "grid_availability" in ds:
+        availability = ds["grid_availability"]
+        availability_values = np.asarray(availability.values, dtype=float)
+        unavailable_hours = int(np.sum(availability_values < 0.5))
+        if "year" in availability.dims:
+            preview_rows = []
+            for scenario in availability.coords["scenario"].values.tolist():
+                for year in availability.coords["year"].values.tolist():
+                    series = availability.sel(scenario=scenario, year=year)
+                    connected = int(np.sum(np.asarray(series.values, dtype=float) > 0.0))
+                    unavailable = int(np.sum(np.asarray(series.values, dtype=float) < 0.5))
+                    share = (unavailable / connected) if connected > 0 else float("nan")
+                    preview_rows.append(
+                        {
+                            "scenario": str(scenario),
+                            "year": str(year),
+                            "connected_hours": connected,
+                            "unavailable_hours": unavailable,
+                            "share_unavailable": share,
+                        }
+                    )
+            with st.expander("Scenario-year availability summary", expanded=False):
+                st.dataframe(
+                    pd.DataFrame(preview_rows).style.format({"share_unavailable": "{:.2%}"}),
+                    width="stretch",
+                    hide_index=True,
+                )
+        else:
+            total_hours = int(availability_values.size)
+            unavailable_share = (
+                (unavailable_hours / total_hours) if total_hours > 0 else float("nan")
+            )
+            c21, c22 = st.columns(2)
+            c21.metric("Share of year unavailable", f"{100.0 * unavailable_share:.2f}%")
+            c22.metric("Unavailable hours", str(unavailable_hours))
+
+
+def _format_selector_label(option) -> str:
+    return option.label
+
+
+def _selector_index(values: list[Any], preferred: Any) -> int:
+    try:
+        return values.index(preferred)
+    except ValueError:
+        return 0
+
+
+def _infer_y_label(variable: str) -> str:
+    name = variable.lower()
+    if "ambient_temperature" in name or name.endswith("temperature"):
+        return "Temperature [degC]"
+    if "alpha_calendar" in name:
+        return "alpha [fraction of nameplate / h]"
+    if "beta_cycle" in name:
+        return "beta [fraction of nameplate / kWh exchanged]"
+    if "availability" in name:
+        return "Value [-]"
+    if "load" in name or "generation" in name or "import" in name or "export" in name:
+        return "Value [kWh/h]"
+    if "price" in name or "cost" in name:
+        return "Value [currency]"
+    return "Value"
+
+
+def _render_timeseries_section(ds: xr.Dataset) -> None:
+    st.subheader("Time-Series Visualization")
+    st.caption("Explore canonical time-series variables directly from the loaded dataset.")
+
+    options = list_timeseries_options(ds)
+    if not options:
+        st.info("No time-series variables with a `period` dimension were found in the dataset.")
+        return
+
+    scenario = None
+    if "scenario" in ds.coords:
+        scenarios = [str(v) for v in ds.coords["scenario"].values.tolist()]
+        scenario = st.selectbox("Scenario", options=scenarios, index=0, key="audit_ts_scenario")
+
+    year = None
+    if "year" in ds.coords:
+        years = ds.coords["year"].values.tolist()
+        year = st.selectbox("Year", options=years, index=0, key="audit_ts_year")
+
+    variable = st.selectbox(
+        "Variable",
+        options=options,
+        format_func=_format_selector_label,
+        index=0,
+        key="audit_ts_variable",
+    )
+
+    selectors: dict[str, Any] = {}
+    for dim in variable.extra_dims:
+        values = (
+            ds.coords[dim].values.tolist()
+            if dim in ds.coords
+            else ds[variable.variable].coords[dim].values.tolist()
+        )
+        selectors[dim] = st.selectbox(
+            dim.replace("_", " ").title(),
+            options=values,
+            index=_selector_index(values, values[0]),
+            key=f"audit_ts_{variable.variable}_{dim}",
+        )
+
+    series = slice_timeseries(
+        ds,
+        variable=variable.variable,
+        scenario=scenario,
+        year=year,
+        selectors=selectors,
+    )
+
+    title_parts = [variable.variable]
+    if scenario is not None and "scenario" in ds[variable.variable].dims:
+        title_parts.append(f"scenario={scenario}")
+    if year is not None and "year" in ds[variable.variable].dims:
+        title_parts.append(f"year={year}")
+    for dim, value in selectors.items():
+        title_parts.append(f"{dim}={value}")
+
+    fig_hourly, fig_daily = build_timeseries_figures(
+        series,
+        title_prefix=_format_plot_title(", ".join(title_parts)),
+        y_label=_infer_y_label(variable.variable),
+    )
+
+    c1, c2 = st.columns([1.8, 1.0])
+    with c1:
+        st.pyplot(fig_hourly, width="stretch")
+    with c2:
+        st.pyplot(fig_daily, width="stretch")
+
+    stats = compute_series_stats(series)
+    s1, s2, s3, s4 = st.columns(4)
+    s1.metric("Min", f"{stats['min']:.4g}" if stats["min"] is not None else "n/a")
+    s2.metric("Max", f"{stats['max']:.4g}" if stats["max"] is not None else "n/a")
+    s3.metric("Mean", f"{stats['mean']:.4g}" if stats["mean"] is not None else "n/a")
+    s4.metric("Missing values", str(stats["missing_values"]))
+
+    with st.expander("Series diagnostics", expanded=False):
+        annual_total_label = (
+            "Total annual energy" if "availability" not in variable.variable else "Total annual sum"
+        )
+        st.write(
+            {
+                "variable": variable.variable,
+                "dims": list(series.dims),
+                "shape": tuple(int(v) for v in series.shape),
+                "n": stats["n"],
+                "min": stats["min"],
+                "max": stats["max"],
+                "mean": stats["mean"],
+                "missing_values": stats["missing_values"],
+                annual_total_label: stats["sum"],
+            }
+        )
+
+
+def _format_plot_title(text: str) -> str:
+    return text.replace("_", " ")
+
+
+def _comparison_options(ds: xr.Dataset) -> list[Any]:
+    options = []
+    for option in list_timeseries_options(ds):
+        da = ds[option.variable]
+        if "year" not in da.dims:
+            continue
+        if option.variable in {
+            "load_demand",
+            "resource_availability",
+            "grid_import_price",
+            "grid_export_price",
+            "grid_availability",
+        }:
+            options.append(option)
+    return options
+
+
+def _daily_profile_frame(series: xr.DataArray) -> pd.DataFrame:
+    values = np.asarray(series.values, dtype=float).reshape(-1)
+    frame = pd.DataFrame(
+        {
+            "hour_of_day": (np.arange(values.size) % 24) + 1,
+            "value": values,
+        }
+    )
+    return frame.groupby("hour_of_day", as_index=False)["value"].mean()
+
+
+def _style_bar_axis(ax: plt.Axes, labels: list[str]) -> None:
+    if not labels:
+        return
+
+    tick_step = max(1, int(np.ceil(len(labels) / 10)))
+    if len(labels) > 10:
+        tick_positions = np.arange(0, len(labels), tick_step)
+        ax.set_xticks(tick_positions, [labels[idx] for idx in tick_positions])
+        rotation = 45
+    else:
+        ax.set_xticks(np.arange(len(labels)), labels)
+        rotation = 0 if len(labels) <= 6 else 30
+
+    ax.tick_params(axis="x", labelrotation=rotation, labelsize=9, pad=6)
+    for tick in ax.get_xticklabels():
+        tick.set_horizontalalignment("right" if rotation else "center")
+
+
+def _render_bar_plot(
+    df: pd.DataFrame, *, x: str, y: str, hue: str | None, title: str, y_label: str
+) -> None:
+    x_labels = df[x].astype(str).unique().tolist()
+    width_scale = max(10, min(14, len(x_labels) * 0.6))
+    fig, ax = plt.subplots(figsize=(width_scale, 4.2))
+    if hue is None:
+        positions = np.arange(len(x_labels))
+        values = df.set_index(df[x].astype(str)).reindex(x_labels)[y].to_numpy(dtype=float)
+        ax.bar(positions, values, color="#1f7a8c", alpha=0.85)
+        _style_bar_axis(ax, x_labels)
+    else:
+        hue_values = df[hue].astype(str).unique().tolist()
+        x_values = x_labels
+        width = 0.8 / max(len(hue_values), 1)
+        positions = np.arange(len(x_values))
+        for idx, hue_value in enumerate(hue_values):
+            subset = df[df[hue].astype(str) == hue_value].copy()
+            subset = (
+                subset.set_index(subset[x].astype(str)).reindex(x_values).reset_index(drop=True)
+            )
+            ax.bar(
+                positions + (idx - (len(hue_values) - 1) / 2.0) * width,
+                subset[y].to_numpy(dtype=float),
+                width=width,
+                label=hue_value,
+                alpha=0.85,
+            )
+        _style_bar_axis(ax, x_values)
+        ax.legend(ncols=3, fontsize=9)
+    ax.set_title(title)
+    ax.set_xlabel(x.replace("_", " ").title())
+    ax.set_ylabel(y_label)
+    ax.grid(True, axis="y", alpha=0.25, linestyle=":")
+    fig.tight_layout()
+    st.pyplot(fig, width="stretch")
+
+
+def _comparison_metric_specs(ds: xr.Dataset) -> dict[str, dict[str, Any]]:
+    specs: dict[str, dict[str, Any]] = {}
+    if "load_demand" in ds:
+        specs["Load demand"] = {
+            "variable": "load_demand",
+            "aggregation": "sum",
+            "summary_y_label": "Total demand [kWh/year]",
+            "series_y_label": "Load [kWh/h]",
+            "selector_dim": None,
+        }
+    if "resource_availability" in ds:
+        specs["Renewable capacity factor"] = {
+            "variable": "resource_availability",
+            "aggregation": "mean",
+            "summary_y_label": "Average capacity factor [-]",
+            "series_y_label": "Capacity factor [-]",
+            "selector_dim": "resource",
+        }
+    if "grid_import_price" in ds:
+        specs["Grid import price"] = {
+            "variable": "grid_import_price",
+            "aggregation": "mean",
+            "summary_y_label": "Average price [currency/kWh]",
+            "series_y_label": "Import price [currency/kWh]",
+            "selector_dim": None,
+        }
+    if "grid_export_price" in ds and bool(
+        ((ds.attrs.get("settings", {}) or {}).get("grid", {}) or {}).get("allow_export", False)
+    ):
+        specs["Grid export price"] = {
+            "variable": "grid_export_price",
+            "aggregation": "mean",
+            "summary_y_label": "Average price [currency/kWh]",
+            "series_y_label": "Export price [currency/kWh]",
+            "selector_dim": None,
+        }
+    if "grid_availability" in ds:
+        specs["Grid availability"] = {
+            "variable": "grid_availability",
+            "aggregation": "available_hours",
+            "summary_y_label": "Available hours [h/year]",
+            "series_y_label": "Availability [-]",
+            "selector_dim": None,
+        }
+    return specs
+
+
+def _aggregate_series_for_comparison(series: xr.DataArray, aggregation: str) -> float:
+    values = np.asarray(series.values, dtype=float).reshape(-1)
+    if aggregation == "sum":
+        return float(np.nansum(values))
+    if aggregation == "mean":
+        return float(np.nanmean(values))
+    if aggregation == "available_hours":
+        return float(np.sum(values > 0.5))
+    raise ValueError(f"Unsupported aggregation: {aggregation}")
+
+
+def _comparison_series(
+    ds: xr.Dataset,
+    *,
+    metric_spec: dict[str, Any],
+    scenario: str,
+    year: Any | None,
+    selector_value: Any | None,
+) -> xr.DataArray:
+    selectors = {}
+    selector_dim = metric_spec.get("selector_dim")
+    if selector_dim and selector_value is not None:
+        selectors[selector_dim] = selector_value
+    return slice_timeseries(
+        ds,
+        variable=str(metric_spec["variable"]),
+        scenario=scenario,
+        year=year,
+        selectors=selectors,
+    )
+
+
+def _plot_daily_profile_comparison(
+    series_map: dict[str, xr.DataArray],
+    *,
+    title: str,
+    y_label: str,
+) -> plt.Figure:
+    fig, ax = plt.subplots(figsize=(6.4, 3.4))
+    for label, series in series_map.items():
+        profile = _daily_profile_frame(series)
+        ax.plot(
+            profile["hour_of_day"].to_numpy(dtype=float),
+            profile["value"].to_numpy(dtype=float),
+            linewidth=1.8,
+            label=str(label),
+        )
+    ax.set_title(title)
+    ax.set_xlabel("Hour of day")
+    ax.set_ylabel(y_label)
+    ax.set_xticks(np.arange(1, 25, 1))
+    ax.grid(True, alpha=0.25)
+    ax.legend(fontsize=9, ncols=3)
+    fig.tight_layout()
+    return fig
+
+
+def _render_scenario_input_comparison(
+    ds: xr.Dataset,
+    *,
+    year: Any | None,
+    key_prefix: str,
+) -> None:
+    if "scenario" not in ds.coords or int(ds.sizes.get("scenario", 0)) <= 1:
+        return
+
+    metric_specs = _comparison_metric_specs(ds)
+    if not metric_specs:
+        st.info("No supported scenario-comparison metrics are available in the loaded dataset.")
+        return
+
+    metric = st.selectbox(
+        "Metric for scenario comparison",
+        options=list(metric_specs.keys()),
+        index=0,
+        key=f"{key_prefix}_metric",
+    )
+    metric_spec = metric_specs[metric]
+
+    selector_dim = metric_spec.get("selector_dim")
+    selector_value = None
+    if selector_dim is not None and selector_dim in ds.coords:
+        selector_value = st.selectbox(
+            selector_dim.replace("_", " ").title(),
+            options=ds.coords[selector_dim].values.tolist(),
+            index=0,
+            key=f"{key_prefix}_{selector_dim}",
+        )
+
+    scenario_labels = [str(s) for s in ds.coords["scenario"].values.tolist()]
+    series_map: dict[str, xr.DataArray] = {}
+    rows: list[dict[str, Any]] = []
+    for scenario_label in scenario_labels:
+        series = _comparison_series(
+            ds,
+            metric_spec=metric_spec,
+            scenario=scenario_label,
+            year=year,
+            selector_value=selector_value,
+        )
+        series_map[scenario_label] = series
+        stats = compute_series_stats(series)
+        rows.append(
+            {
+                "scenario": scenario_label,
+                "summary_value": _aggregate_series_for_comparison(
+                    series, str(metric_spec["aggregation"])
+                ),
+                "min": stats["min"],
+                "max": stats["max"],
+                "mean": stats["mean"],
+                "missing_values": stats["missing_values"],
+                "sum": stats["sum"],
+            }
+        )
+
+    summary_df = pd.DataFrame(rows)
+    title_suffix = f" - {year}" if year is not None else ""
+    if selector_dim is not None and selector_value is not None:
+        title_suffix += f" - {selector_value}"
+
+    daily_profile_fig = _plot_daily_profile_comparison(
+        series_map,
+        title=f"{metric} daily profile comparison{title_suffix}",
+        y_label=str(metric_spec["series_y_label"]),
+    )
+
+    c1, c2 = st.columns(2)
+    with c1:
+        _render_bar_plot(
+            summary_df,
+            x="scenario",
+            y="summary_value",
+            hue=None,
+            title=f"{metric} across scenarios{title_suffix}",
+            y_label=str(metric_spec["summary_y_label"]),
+        )
+    with c2:
+        st.pyplot(daily_profile_fig, width="stretch")
+
+    with st.expander("Scenario comparison diagnostics", expanded=False):
+        st.dataframe(
+            summary_df.style.format(
+                {
+                    "summary_value": "{:.4g}",
+                    "min": "{:.4g}",
+                    "max": "{:.4g}",
+                    "mean": "{:.4g}",
+                    "sum": "{:.4g}",
+                }
+            ),
+            width="stretch",
+            hide_index=True,
+        )
+
+
+def _render_multi_year_input_comparison(ds: xr.Dataset) -> None:
+    if "year" not in ds.coords:
+        return
+
+    metric_specs = _comparison_metric_specs(ds)
+    scenario = None
+    if "scenario" in ds.coords:
+        scenarios = [str(v) for v in ds.coords["scenario"].values.tolist()]
+        scenario = st.selectbox(
+            "Scenario for year comparison",
+            options=scenarios,
+            index=0,
+            key="audit_compare_year_scenario",
+        )
+
+    years = ds.coords["year"].values.tolist()
+
+    if "Load demand" in metric_specs:
+        load_rows = []
+        for year in years:
+            series = _comparison_series(
+                ds,
+                metric_spec=metric_specs["Load demand"],
+                scenario=scenario,
+                year=year,
+                selector_value=None,
+            )
+            load_rows.append({"year": str(year), "value": float(np.nansum(series.values))})
+        _render_bar_plot(
+            pd.DataFrame(load_rows),
+            x="year",
+            y="value",
+            hue=None,
+            title="Yearly load demand",
+            y_label="Total demand [kWh/year]",
+        )
+
+    if "Renewable capacity factor" in metric_specs:
+        res_rows = []
+        resource_values = ds.coords["resource"].values.tolist() if "resource" in ds.coords else []
+        for year in years:
+            for resource in resource_values:
+                series = _comparison_series(
+                    ds,
+                    metric_spec=metric_specs["Renewable capacity factor"],
+                    scenario=scenario,
+                    year=year,
+                    selector_value=resource,
+                )
+                res_rows.append(
+                    {
+                        "year": str(year),
+                        "resource": str(resource),
+                        "value": float(np.nanmean(series.values)),
+                    }
+                )
+        if res_rows:
+            _render_bar_plot(
+                pd.DataFrame(res_rows),
+                x="year",
+                y="value",
+                hue="resource",
+                title="Average renewable capacity factor by year",
+                y_label="Average capacity factor [-]",
+            )
+
+    if "Grid import price" in metric_specs:
+        price_rows = []
+        for year in years:
+            series = _comparison_series(
+                ds,
+                metric_spec=metric_specs["Grid import price"],
+                scenario=scenario,
+                year=year,
+                selector_value=None,
+            )
+            price_rows.append({"year": str(year), "value": float(np.nanmean(series.values))})
+        _render_bar_plot(
+            pd.DataFrame(price_rows),
+            x="year",
+            y="value",
+            hue=None,
+            title="Average yearly grid import price",
+            y_label="Average price [currency/kWh]",
+        )
+
+    if "Grid export price" in metric_specs:
+        export_rows = []
+        for year in years:
+            series = _comparison_series(
+                ds,
+                metric_spec=metric_specs["Grid export price"],
+                scenario=scenario,
+                year=year,
+                selector_value=None,
+            )
+            export_rows.append({"year": str(year), "value": float(np.nanmean(series.values))})
+        _render_bar_plot(
+            pd.DataFrame(export_rows),
+            x="year",
+            y="value",
+            hue=None,
+            title="Average yearly grid export price",
+            y_label="Average price [currency/kWh]",
+        )
+
+    if "Grid availability" in metric_specs:
+        availability_rows = []
+        for year in years:
+            series = _comparison_series(
+                ds,
+                metric_spec=metric_specs["Grid availability"],
+                scenario=scenario,
+                year=year,
+                selector_value=None,
+            )
+            availability_rows.append(
+                {
+                    "year": str(year),
+                    "value": int(np.sum(np.asarray(series.values, dtype=float) > 0.5)),
+                }
+            )
+        _render_bar_plot(
+            pd.DataFrame(availability_rows),
+            x="year",
+            y="value",
+            hue=None,
+            title="Available grid hours by year",
+            y_label="Available hours [h/year]",
+        )
+
+    if "scenario" in ds.coords and int(ds.sizes.get("scenario", 0)) > 1:
+        st.markdown("**Scenario comparison for selected year**")
+        st.caption(
+            "Compare scenario-level yearly summaries and time-series profiles for one selected model year."
+        )
+
+        selected_year = st.selectbox(
+            "Year for scenario comparison",
+            options=ds.coords["year"].values.tolist(),
+            index=0,
+            key="audit_compare_scenario_year",
+        )
+        _render_scenario_input_comparison(
+            ds, year=selected_year, key_prefix="audit_compare_scenario"
+        )
+
+
+def render_page() -> None:
+    st.title("Data Audit and Visualization")
+    st.caption(
+        "Validate project inputs, load the canonical dataset, and inspect time-series data before optimization."
+    )
+
+    project_name, project_root = resolve_active_project_from_session()
+    paths = project_paths(project_name)
+
+    try:
+        formulation = read_json_file(paths.formulation_json)
+    except Exception as exc:
+        st.error(f"Cannot read `formulation.json`: {exc}")
+        st.stop()
+
+    st.info(f"Active project: `{project_name}`")
+    st.caption(_build_project_summary(formulation))
+
+    can_load = _render_file_section(project_root, formulation, paths)
+
+    ds = None
+    loader_mode = None
+    if can_load:
+        try:
+            _, ds, loader_mode = _load_sets_and_dataset(project_name, formulation)
+        except Exception as exc:
+            st.subheader("Dataset Loading + Summary")
+            st.error(f"Dataset loading failed: {exc}")
+            st.stop()
+
+        _render_dataset_section(ds, loader_mode, paths)
+        _render_curve_diagnostics(formulation, paths)
+        _render_degradation_coefficient_curves(formulation, paths)
+        _render_grid_controls(project_name, formulation, ds, paths)
+
+    if ds is not None:
+        st.markdown("---")
+        _render_timeseries_section(ds)
+        if loader_mode == "multi_year":
+            st.markdown("---")
+            st.subheader("Multi-Year Input Comparison")
+            st.caption(
+                "Compare compact yearly summaries of demand, renewable availability, and grid-related inputs."
+            )
+            _render_multi_year_input_comparison(ds)
+        elif "scenario" in ds.coords and int(ds.sizes.get("scenario", 0)) > 1:
+            st.markdown("---")
+            st.subheader("Scenario Input Comparison")
+            st.caption(
+                "Compare scenario-level summaries and time-series profiles for typical-year inputs."
+            )
+            _render_scenario_input_comparison(
+                ds, year=None, key_prefix="audit_typical_scenario_compare"
+            )
+
+
+render_page()
