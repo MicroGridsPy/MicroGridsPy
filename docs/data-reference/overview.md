@@ -105,7 +105,7 @@ Time-series CSVs use a small header block to label value axes, followed by 8760 
 ## Machine-readable tables
 
 The tables above are maintained as CSV files under
-[`docs/tables/`](https://github.com/MicroGridsPy/MicroGridsPy/tree/microgridspy-packaging/docs/tables):
+[`docs/tables/`](https://github.com/MicroGridsPy/MicroGridsPy/tree/master/docs/tables):
 `typical_year_input_reference.csv`, `typical_year_timeseries_reference.csv`,
 `multi_year_input_reference.csv`, and `multi_year_timeseries_reference.csv`. They can be
 consumed programmatically while this page presents the same information for humans.
