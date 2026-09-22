@@ -1,0 +1,39 @@
+# Canonical contributor identities.
+#
+# Git records whatever name/email was configured on the machine that made each
+# commit, so one person can appear several times. This file maps those variants
+# onto a single canonical identity; `git shortlog`, `git log` and most analysis
+# tools honour it. No history is rewritten - only the display is corrected.
+#
+# Syntax:  Canonical Name <canonical@email> Recorded Name <recorded@email>
+# Canonical names/emails follow AUTHORS where the person is listed there.
+
+# --- Universite de Liege: original authors ---
+Sergio Balderrama <slbalderrama@doct.ulg.ac.be> Sergio Balderrama <sergiob44_47@hotmail.com>
+Sergio Balderrama <slbalderrama@doct.ulg.ac.be> Sergio Balderra <sergiob44_47@hotmail.com>
+Sergio Balderrama <slbalderrama@doct.ulg.ac.be> Slbalderrama <sergiob44_47@hotmail.com>
+Sergio Balderrama <slbalderrama@doct.ulg.ac.be> slbalderrama <sergiob44_47@hotmail.com>
+Sylvain Quoilin <squoilin@uliege.be> Sylvain Quoilin <squoilin@ulg.ac.be>
+Sylvain Quoilin <squoilin@uliege.be> Sylvain Quoilin <sylvain.quoilin@ec.europa.eu>
+
+# --- Politecnico di Milano ---
+Alessandro Onori <alessandro.onori@polimi.it> AleOnori98 <onorialessandro1998@gmail.com>
+Alessandro Onori <alessandro.onori@polimi.it> AleOnori98 <63561931+AleOnori98@users.noreply.github.com>
+Alessandro Onori <alessandro.onori@polimi.it> Alessandro Onori <63561931+AleOnori98@users.noreply.github.com>
+Nicolò Stevanato <nicolo.stevanato@polimi.it> Nicolò Stevanato <nicolo.stevanato@mail.polimi.it>
+Gianluca Pellecchia <gianluca.pellecchia@polimi.it> Gianluca Pellecchia <gianluca.pellecchia@mail.polimi.it>
+Gianluca Pellecchia <gianluca.pellecchia@polimi.it> gianlucapellecchia <gianluca.pellecchia@mail.polimi.it>
+Lorenzo Rinaldi <lorenzo.rinaldi@polimi.it> LorenzoRinaldi <lorenzo.rinaldi1@gmail.com>
+Lorenzo Rinaldi <lorenzo.rinaldi@polimi.it> LorenzoRinaldi <43796440+LorenzoRinaldi@users.noreply.github.com>
+Giulia Guidicini <giulia.guidicini@polimi.it> Giulia Guidicini <43995656+gguidicini@users.noreply.github.com>
+Ivan Sangiorgio <ivan.sangiorgio@polimi.it> Ivan Sangiorgio <73618037+ivansangiorgio@users.noreply.github.com>
+
+# --- TU Delft ---
+Francesco Lombardi <f.lombardi@tudelft.nl> Francesco Lombardi <francesco.lombardi@polimi.it>
+Francesco Lombardi <f.lombardi@tudelft.nl> Francesco Lombardi <f.lombardi@outlook.com>
+Francesco Lombardi <f.lombardi@tudelft.nl> FLomb <francesco.lombardi@polimi.it>
+Francesco Lombardi <f.lombardi@tudelft.nl> FLomb <f.lombardi@outlook.com>
+
+# --- Display-name normalisation only (canonical email not confirmed) ---
+Giacomo Crevani <giacomo.crevani@mail.polimi.it> GiacomoCrevani <giacomo.crevani@mail.polimi.it>
+Costanza Summaria <83756734+costisum@users.noreply.github.com> costanzasummaria <83756734+costisum@users.noreply.github.com>
