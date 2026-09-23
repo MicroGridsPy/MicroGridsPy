@@ -1,6 +1,15 @@
 ## List of publications
 This is an up-to-date list of publications featuring MicroGridsPy.
 
+*Cyril Onyilokwu Agbo, Alessandro Onori, Nicolò Stevanato, Riccardo Mereu, Cosmas U. Ogbuka, Mkpamdi N. Eke, Chika O. Ujah,
+Planning off-grid rural electrification with MicroGridsPy: The case of Dugub, Nigeria,
+Energy Strategy Reviews (2025), 60, 101775, https://doi.org/10.1016/j.esr.2025.101775*
+
+*Nicolò Stevanato, Gianluca Pellecchia, Ivan Sangiorgio, Diana Shendrikova, Claudia Soares, Riccardo Mereu, Emanuela Colombo,
+Planning third generation minigrids: Multi-objective optimization and brownfield investment approaches in modelling
+village-scale on-grid and off-grid energy systems,
+Renewable and Sustainable Energy Transition (2023), 3, 100053, https://doi.org/10.1016/j.rset.2023.100053*
+
 *Nicolò Stevanato, Silvia Corigliano, Marina Petrelli, Francesco Tonini, Marco Merlo, Emanuela Colombo,
 Rural areas electrification strategies through shadow costs analysis - Bolivian Highlands case study,
 Energy for Sustainable Development (2021), 65, pp. 162-174, https://doi.org/10.1016/j.esd.2021.10.009*
