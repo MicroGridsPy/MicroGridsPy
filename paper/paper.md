@@ -124,8 +124,19 @@ and the University of Cape Town (2026); and the European Union--African Union LE
 
 # Acknowledgements
 
-<!-- TODO: add funding sources, grant numbers, and any acknowledged contributors. -->
-`MicroGridsPy` builds on earlier open mini-grid modelling work by the original authors of
-the model. We thank the contributors listed in the repository's `AUTHORS` file.
+<!-- TODO: confirm whether CCG / FCDO support for the Energy Modelling Platform for
+     Africa schools also requires acknowledgement, and add any Politecnico di Milano or
+     other funding. Verify the exact EU wording against the grant agreement. -->
+
+Part of the development of `MicroGridsPy` was carried out as research within the LEAP-RE
+project, which has received funding from the European Union's Horizon 2020 research and
+innovation programme under grant agreement No 963530. The content of this publication
+reflects only the authors' view; the European Commission is not responsible for any use
+that may be made of the information it contains.
+
+`MicroGridsPy` originates from the mini-grid optimization model developed by Sergio
+Balderrama and Sylvain Quoilin at the Universite de Liege [@balderrama2019espino], whose
+formulation underpins the present redevelopment. We thank them, and all contributors
+listed in the repository's `AUTHORS` file.
 
 # References
