@@ -9,7 +9,6 @@ tags:
   - linear programming
   - capacity expansion
 authors:
-  # TODO: confirm the final author list, order, ORCIDs, and corresponding author with all contributors.
   - name: Alessandro Onori
     orcid: 0009-0009-1195-2078
     corresponding: true
@@ -26,7 +25,7 @@ authors:
 affiliations:
   - name: Department of Energy, Politecnico di Milano, Milan, Italy
     index: 1
-date: XXXXX
+date: 23 September 2026
 bibliography: paper.bib
 ---
 
@@ -44,7 +43,7 @@ a two-stage stochastic formulation with scenario-dependent recourse, in which un
 can be represented through arbitrary user-defined operating parameters and time-series inputs
 while investment decisions are separated from scenario-specific operational responses.
 
-The model is formulated with the `Linopy` [@linopy] optimization framework and hands the problem 
+The model is formulated with the `Linopy` [@Hofmann2023] optimization framework and hands the problem 
 to open-source (`HiGHS`) or commercial (`Gurobi`) solvers. `MicroGridsPy` can be used either as a 
 library - a small, stable Python API takes a project from input templates to solved, analysis-ready 
 tables - or through an optional guided `Streamlit` graphical interface that scaffolds inputs,
@@ -60,41 +59,43 @@ reproducible and inspectable.
 Planning electricity access in remote areas is a distinctive optimization problem:
 demand is uncertain and evolving, capital is expensive and lumpy, resources are highly
 variable, and the least-cost system typically mixes renewables, storage, and fuel-based
-backup under reliability and policy constraints. General-purpose energy-system frameworks
-such as `Calliope` [@calliope], `PyPSA` [@pypsa], and `OSeMOSYS` [@osemosys] are powerful
-but are aimed primarily at regional and national power systems; capturing the features
+backup under reliability and policy constraints. General-purpose energy-system
+frameworks such as `Calliope` [@calliope], `PyPSA` [@pypsa], and `OSeMOSYS`
+[@osemosys] are aimed primarily at regional and national power systems, so the features
 that dominate mini-grid economics — battery ageing, generator part-load behaviour,
 staged investment under demand growth, lost-load pricing, and scenario-weighted
-uncertainty — requires substantial custom modelling. Widely used practitioner tools for
-off-grid sizing, such as `HOMER Pro` [@homerpro], are often commercial, which limits transparency 
-and reproducibility in research, while open-source tools such as `Offgridplanner` [@offgridplanner] 
-and `CLOVER` [@clover] can provide valuable simulation, system-design, and sizing capabilities for
-off-grid applications, including spatial distribution-grid planning, but the key distinction
-lies in MicroGridsPy **core planning logic**; capacity expansion is formulated explicitly as a
-multi-year planning problem, with a consistent economic formulation linking long-term
-investment decisions to high-resolution technical operation and a stochastic
-formulation for uncertain operating parameters. This allows technical realism, long-term planning 
-and uncertainty treatment to be handled within the same optimization framework rather than as separate analyses.
-`MicroGridsPy` targets this gap: a transparent, modular, bottom-up model built
-specifically for energy-access planning, packaged so that it is straightforward to install,
+uncertainty — require substantial custom modelling.
+
+Tools built specifically for off-grid sizing are closer to the problem. `HOMER`
+[@lambert2006homer] is the practitioner standard, but it is commercial, which limits
+transparency and reproducibility in research. `Offgridplanner` [@offgridplanner] and
+`CLOVER` [@Sandwell2023] are open source and offer valuable simulation, system-design
+and sizing capabilities, including spatial distribution-grid planning.
+
+`MicroGridsPy` differs in its core planning logic. Capacity expansion is formulated
+explicitly as a multi-year problem; a single economic formulation links long-term
+investment decisions to high-resolution technical operation; and uncertain operating
+parameters are treated stochastically within the same optimization problem rather than
+through separate analyses. The result is a transparent, modular, bottom-up model built
+for energy-access planning and packaged so that it is straightforward to install,
 script, and extend.
 
 `MicroGridsPy` continues a line of open mini-grid modelling work [@balderrama2019espino]
-but represents a substantial redevelopment rather than an incremental release. The present
-version contributes: (i) a re-architected, installable Python package with a documented,
-stable API and an optional GUI, replacing an earlier script-based workflow; (ii) an
-**annuity-based, dual-rate economic formulation** that annualizes investment through a
-capital-recovery factor at each technology's weighted average cost of capital while
-discounting system cash flows at a social discount rate; (iii) **explicit power-electronic
-inverter sizing** for both renewable and battery assets; (iv) a **semi-empirical battery
-degradation** model with temperature- and depth-resolved cycle ageing (a depth-resolved
-per-state-of-charge-band marginal-cost formulation for Li-ion, kept linear); and (v) a
-**consistent treatment of stochasticity and of multi-year capacity expansion**, including
-representative typical-year and explicit multi-year formulations that share the same
-economic logic. Together these let researchers and practitioners study technology choice,
-staged investment under evolving demand, reliability–cost trade-offs, and policy levers
-such as carbon pricing and renewable-penetration targets, reproducibly and with an
-inspectable model. `MicroGridsPy` has been applied in peer-reviewed studies of rural electrification,
+but is a substantial redevelopment rather than an incremental release. It contributes
+(i) a re-architected, installable Python package with a documented API and an optional
+GUI, replacing an earlier script-based workflow; (ii) an **annuity-based, dual-rate
+economic formulation**, annualizing investment through a capital-recovery factor at each
+technology's weighted average cost of capital while discounting cash flows at a social
+discount rate; (iii) **explicit power-electronic inverter sizing** for renewable and
+battery assets; (iv) a **semi-empirical battery degradation** model with temperature-
+and depth-resolved cycle ageing, kept linear through a per-state-of-charge-band
+marginal-cost formulation; and (v) **consistent treatment of stochasticity and
+multi-year capacity expansion**, with typical-year and explicit multi-year formulations
+sharing one economic core. Together these support studies of technology choice, staged
+investment under evolving demand, reliability–cost trade-offs, and policy levers such as
+carbon pricing and renewable-penetration targets. 
+
+`MicroGridsPy` has been applied in peer-reviewed studies of rural electrification,
 including multi-year sizing under evolving demand [@stevanato2020myce], coupling with
 spatial electrification planning [@penabalderrama2020onsset], multi-objective and
 brownfield mini-grid design [@stevanato2023thirdgen], and off-grid planning for a rural
@@ -124,10 +125,6 @@ and the University of Cape Town (2026); and the European Union--African Union LE
 
 # Acknowledgements
 
-<!-- TODO: confirm whether CCG / FCDO support for the Energy Modelling Platform for
-     Africa schools also requires acknowledgement, and add any Politecnico di Milano or
-     other funding. Verify the exact EU wording against the grant agreement. -->
-
 Part of the development of `MicroGridsPy` was carried out as research within the LEAP-RE
 project, which has received funding from the European Union's Horizon 2020 research and
 innovation programme under grant agreement No 963530. The content of this publication
@@ -135,8 +132,26 @@ reflects only the authors' view; the European Commission is not responsible for 
 that may be made of the information it contains.
 
 `MicroGridsPy` originates from the mini-grid optimization model developed by Sergio
-Balderrama and Sylvain Quoilin at the Universite de Liege [@balderrama2019espino], whose
+Balderrama and Sylvain Quoilin at the Université de Liège [@balderrama2019espino], whose
 formulation underpins the present redevelopment. We thank them, and all contributors
 listed in the repository's `AUTHORS` file.
+
+# AI usage disclosure
+
+Generative AI tools were used during the development of `MicroGridsPy` and in the
+preparation of this paper. Claude (Anthropic, Opus and Sonnet model families) and ChatGPT 
+(OpenAI, GPT-4o and GPT-5 families) were used for: code generation, refactoring
+and test scaffolding during the migration of the codebase from Pyomo to `Linopy` and
+its packaging; drafting and copy-editing of the documentation; repository and
+continuous-integration configuration; and drafting and copy-editing of parts of this
+manuscript.
+
+The scientific content of the software was specified by the human authors: the
+optimization formulation, the economic model, the battery-degradation representation,
+the multi-year and stochastic formulations, and the validation of model results are
+the authors' own work. All AI-assisted outputs — code, tests, documentation and text —
+were reviewed, edited and validated by the human authors, who made all core design
+decisions and take full responsibility for the content of the software and of this
+paper.
 
 # References
