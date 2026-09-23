@@ -1,4 +1,3 @@
-# generation_planning/modeling/data.py
 from __future__ import annotations
 
 from functools import partial

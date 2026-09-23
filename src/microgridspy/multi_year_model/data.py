@@ -1,4 +1,3 @@
-# generation_planning/modeling/data.py
 from __future__ import annotations
 
 from functools import partial
@@ -689,7 +688,6 @@ def _load_renewables_yaml(
             f"{path.name}: expected a non-empty list under key 'renewables'."
         )
 
-    scenario_labels = [str(s) for s in scenario_coord.values.tolist()]
     resource_labels = [str(r) for r in resource_coord.values.tolist()]
     step_labels = [str(st) for st in inv_step_coord.values.tolist()]
 
@@ -1645,7 +1643,6 @@ def _load_grid_yaml_dynamic(
         raise InputValidationError(f"{path.name}: missing/invalid grid.by_scenario mapping.")
 
     scenario_labels = [str(s) for s in scenario_coord.values.tolist()]
-    year_labels = [str(y) for y in year_coord.values.tolist()]
 
     # (section, key, output_name)
     PARAMS = [

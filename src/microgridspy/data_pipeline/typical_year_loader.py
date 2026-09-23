@@ -218,7 +218,6 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
     _validate_sets(sets)
 
     scenario_coord = sets.coords["scenario"]
-    period_coord = sets.coords["period"]
     n_scen = int(scenario_coord.size)
 
     paths = project_paths(project_name)

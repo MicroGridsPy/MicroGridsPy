@@ -1,4 +1,3 @@
-# generation_planning/modeling/sets.py
 from __future__ import annotations
 
 import json

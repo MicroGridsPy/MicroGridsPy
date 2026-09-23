@@ -878,7 +878,6 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
     if path.exists() and not overwrite:
         return
 
-    scenarios = _template_scenarios(settings)
     step_keys = _safe_step_keys(
         settings
     )  # Dynamic templates use canonical step labels ["1","2",...]

@@ -1,4 +1,3 @@
-# generation_planning/modeling/objective.py
 from __future__ import annotations
 
 import linopy as lp
@@ -75,8 +74,6 @@ def initialize_objective(
             raise InputValidationError(f"initialize_objective: missing coord '{c}' in sets.")
 
     scenario = sets.coords["scenario"]
-    resource = sets.coords["resource"]
-    period = sets.coords["period"]
 
     p = get_params(data)
     w_s = p.scenario_weight  # (scenario,)
