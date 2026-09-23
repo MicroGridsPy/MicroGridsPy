@@ -94,8 +94,18 @@ representative typical-year and explicit multi-year formulations that share the 
 economic logic. Together these let researchers and practitioners study technology choice,
 staged investment under evolving demand, reliability–cost trade-offs, and policy levers
 such as carbon pricing and renewable-penetration targets, reproducibly and with an
-inspectable model. `MicroGridsPy` is developed openly and has supported teaching and
-research in energy-access planning.
+inspectable model. `MicroGridsPy` has been applied in peer-reviewed studies of rural electrification,
+including multi-year sizing under evolving demand [@stevanato2020myce], coupling with
+spatial electrification planning [@penabalderrama2020onsset], multi-objective and
+brownfield mini-grid design [@stevanato2023thirdgen], and off-grid planning for a rural
+community in Nigeria [@agbo2025dugub]; the repository's `pubs_list.md` records the full
+publication history. It is also used in teaching at Politecnico di Milano, in the courses
+*Engineering and Cooperation for Development* and *Innovative Technologies for Energy*,
+and in international capacity-building programmes: the Climate Compatible Growth *Energy
+Modelling Platform for Africa*, hosted by the Ghana Institute of Management and Public
+Administration (Accra, 2024), the UN Economic Commission for Africa (Addis Ababa, 2025)
+and the University of Cape Town (2026); and the European Union--African Union LEAP-RE
+*RESchools* (Pretoria, 2022; Kigali, 2023; Milan, 2024) [@leapre_d45].
 
 # Key features
 
