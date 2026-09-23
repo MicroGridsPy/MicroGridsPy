@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from textwrap import dedent
 
@@ -68,17 +69,21 @@ def _base_sets(periods: int = 2) -> xr.Dataset:
     )
 
 
-def _base_data() -> xr.Dataset:
-    sets = _base_sets()
+def _base_data(
+    periods: int = 2,
+    demand: Sequence[float] = (0.0, 1.0),
+    availability: Sequence[float] = (1.0, 0.0),
+) -> xr.Dataset:
+    sets = _base_sets(periods)
     data = xr.Dataset(
         data_vars={
             "load_demand": xr.DataArray(
-                [[[0.0], [1.0]]],
+                np.asarray(demand, dtype=float).reshape(1, periods, 1),
                 dims=("year", "period", "scenario"),
                 coords={"year": sets.year, "period": sets.period, "scenario": sets.scenario},
             ),
             "resource_availability": xr.DataArray(
-                [[[[1.0]], [[0.0]]]],
+                np.asarray(availability, dtype=float).reshape(1, periods, 1, 1),
                 dims=("year", "period", "scenario", "resource"),
                 coords={
                     "year": sets.year,
@@ -331,16 +336,16 @@ def test_multi_year_parsers_read_inverter_fields_and_conversion_metadata(tmp_pat
     assert float(bat_ds["battery_max_discharge_c_rate"]) == pytest.approx(0.4)
 
 
-@pytest.mark.xfail(
-    reason="The tiny test model builds zero renewable capacity, so the renewable "
-    "inverter row is (correctly) absent from the investment summary. The assertion "
-    "needs input data that forces renewable investment; flagged for the multi-year "
-    "inverter-reporting feature work.",
-    strict=False,
-)
 def test_multi_year_inverter_outputs_are_consistent(tmp_path: Path) -> None:
-    sets = _base_sets()
-    data = _base_data()
+    # The default fixture never builds renewable capacity, so the PV rows this test
+    # asserts on would be absent. Solar here is available only in the first period
+    # while demand persists into the second, so meeting the load requires *both* PV
+    # (to generate) and storage (to shift the energy) — which is what makes every
+    # renewable- and battery-inverter assertion below meaningful. The trailing
+    # zero-demand period keeps the solution independent of how dispatch in the final
+    # period of the final year is bounded.
+    sets = _base_sets(periods=3)
+    data = _base_data(periods=3, demand=(1.0, 1.0, 0.0), availability=(1.0, 0.0, 0.0))
     model = lp.Model()
     vars_dict = initialize_vars(sets, data, model)
     initialize_constraints(sets, data, vars_dict, model)
