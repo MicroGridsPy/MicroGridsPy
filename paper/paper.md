@@ -79,7 +79,7 @@ and uncertainty treatment to be handled within the same optimization framework r
 specifically for energy-access planning, packaged so that it is straightforward to install,
 script, and extend.
 
-`MicroGridsPy` continues a line of open mini-grid modelling work [@microgridspy_original]
+`MicroGridsPy` continues a line of open mini-grid modelling work [@balderrama2019espino]
 but represents a substantial redevelopment rather than an incremental release. The present
 version contributes: (i) a re-architected, installable Python package with a documented,
 stable API and an optional GUI, replacing an earlier script-based workflow; (ii) an
