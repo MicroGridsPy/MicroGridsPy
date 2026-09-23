@@ -5,7 +5,7 @@ validates, solves (HiGHS), reads the structured results, and exports them. This 
 the intended public quick-start path — it works straight after ``pip install`` with
 no repository clone and no manual input files.
 
-Run from anywhere:  python examples/test_api.py
+Run from anywhere:  python examples/run_demo_typical_year.py
 """
 
 import tempfile
