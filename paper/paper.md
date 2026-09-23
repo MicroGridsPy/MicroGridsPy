@@ -62,9 +62,9 @@ variable, and the least-cost system typically mixes renewables, storage, and fue
 backup under reliability and policy constraints. General-purpose energy-system
 frameworks such as `Calliope` [@calliope], `PyPSA` [@pypsa], and `OSeMOSYS`
 [@osemosys] are aimed primarily at regional and national power systems, so the features
-that dominate mini-grid economics — battery ageing, generator part-load behaviour,
+that dominate mini-grid economics - battery ageing, generator part-load behaviour,
 staged investment under demand growth, lost-load pricing, and scenario-weighted
-uncertainty — require substantial custom modelling.
+uncertainty - require substantial custom modelling.
 
 Tools built specifically for off-grid sizing are closer to the problem. `HOMER`
 [@lambert2006homer] is the practitioner standard, but it is commercial, which limits
@@ -149,7 +149,7 @@ manuscript.
 The scientific content of the software was specified by the human authors: the
 optimization formulation, the economic model, the battery-degradation representation,
 the multi-year and stochastic formulations, and the validation of model results are
-the authors' own work. All AI-assisted outputs — code, tests, documentation and text —
+the authors' own work. All AI-assisted outputs - code, tests, documentation and text -
 were reviewed, edited and validated by the human authors, who made all core design
 decisions and take full responsibility for the content of the software and of this
 paper.
