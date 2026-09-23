@@ -55,8 +55,8 @@ ECOSYSTEM_TOOL_ROWS = (
 APP_PAGE_LINKS = (
     ("pages/0_Project_Setup.py", "1. Project Setup"),
     ("pages/1_Data_Audit_and_Visualization.py", "2. Data Audit and Visualization"),
-    ("pages/3_Optimization.py", "3. Optimization"),
-    ("pages/4_Results.py", "4. Results"),
+    ("pages/2_Optimization.py", "3. Optimization"),
+    ("pages/3_Results.py", "4. Results"),
 )
 
 REPOSITORY_REFERENCES = (

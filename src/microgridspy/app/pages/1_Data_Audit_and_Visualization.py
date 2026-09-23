@@ -500,12 +500,8 @@ def _safe_yaml_float(value: Any, default: float) -> float:
 
 def _battery_curve_config(formulation: dict[str, Any], paths) -> dict[str, Any]:
     battery_model = formulation.get("battery_model", {}) or {}
-    degradation_model = battery_model.get("degradation_model", {}) or {}
     loss_model = str(
         battery_model.get("loss_model", "constant_efficiency") or "constant_efficiency"
-    ).strip()
-    formulation_mode = str(
-        formulation.get("core_formulation", "steady_state") or "steady_state"
     ).strip()
 
     battery_yaml = {}

@@ -1,4 +1,3 @@
-# generation_planning/pages/optimization.py
 from __future__ import annotations
 
 import json

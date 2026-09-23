@@ -1,4 +1,3 @@
-# generation_planning/pages/project_setup.py
 from __future__ import annotations
 
 import json
@@ -996,7 +995,6 @@ def render_system_section() -> tuple[
     battery_end_of_life_soh = float(st.session_state.get(K["battery_end_of_life_soh"], 0.8))
     battery_loss_model = str(st.session_state.get(K["battery_loss_model"], "constant_efficiency"))
     _formulation_mode = str(st.session_state.get(K["formulation"], "steady_state"))
-    degradation_supported = _formulation_mode in ("dynamic", "steady_state")
 
     with st.expander("Storage system modeling and degradation", expanded=False):
         main_col, _ = st.columns([1.35, 0.65])
