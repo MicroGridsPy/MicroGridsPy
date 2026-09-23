@@ -71,8 +71,6 @@ ignore = [
     "B904",  # raise ... from: exception chaining not enforced yet (stylistic)
     "B905",  # zip() strict=: not enforced yet (stylistic)
     "B007",  # unused loop control variable: deferred
-    "F841",  # unused locals in the optimization internals: flagged for a dedicated
-             # review rather than auto-deleted (may indicate incomplete logic)
 ]
 
 [tool.pytest.ini_options]
