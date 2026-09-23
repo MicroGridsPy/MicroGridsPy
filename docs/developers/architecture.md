@@ -29,7 +29,7 @@ The package lives under `src/microgridspy/`:
 | `typical_year_model/` | steady-state sets, params, variables, constraints, objective, and `SteadyStateModel` |
 | `multi_year_model/` | dynamic formulation with investment-step lifecycle logic and `MultiYearModel` |
 | `export/` | structured results objects and CSV/Excel export |
-| `visualization/` | input and result plotting |
+| `visualization/` | input time-series plotting (result plotting lives in `export/`) |
 | `app/` | optional Streamlit GUI (installed only with the `[gui]` extra) |
 | `cli.py` | the `microgridspy` command-line interface |
 
