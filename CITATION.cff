@@ -18,8 +18,8 @@ abstract: >-
   continuous and discrete sizing. It is built on Linopy and ships with a command-line
   interface, a documented Python API and an optional Streamlit graphical interface.
 type: software
-version: "0.2.0"
-date-released: "2026-08-24"
+version: "0.4.0"
+date-released: "2026-09-25"
 license: EUPL-1.2
 repository-code: "https://github.com/MicroGridsPy/MicroGridsPy"
 url: "https://microgridspy-package-docs.readthedocs.io/"

@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-25
+
 ### Fixed
 - **Multi-year battery energy balance closes at the end of the horizon.** `soc_balance`
   linked `soc[t] -> soc[t+1]` only up to the second-to-last period, and `soc_year_link_*`
