@@ -39,7 +39,7 @@ dependencies = [
 gui    = ["streamlit>=1.36"]
 highs  = ["highspy>=1.7"]                   # open-source solver
 gurobi = ["gurobipy>=11"]                   # commercial solver (license required)
-dev    = ["pytest>=8", "ruff==0.16.7", "pre-commit", "coverage[toml]", "build"]
+dev    = ["pytest>=8", "ruff==0.16.7", "coverage[toml]", "build"]
 docs   = ["zensical", "mkdocstrings-python"]  # site generator + API extraction
 all    = ["microgridspy[gui,highs,dev,docs]"]
 
