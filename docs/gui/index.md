@@ -151,8 +151,8 @@ files are generated:
 
 | UI choice | Effect |
 |---|---|
-| **Formulation: Multi-Year** | writes `core_formulation = "dynamic"` |
-| **Formulation: Typical-Year** | writes `core_formulation = "steady_state"` |
+| **Formulation: Multi-Year** | writes `core_formulation = "multi_year"` |
+| **Formulation: Typical-Year** | writes `core_formulation = "typical_year"` |
 | **Start year & horizon** | set the multi-year `year` coordinate and CSV year headers |
 | **Capacity expansion enabled** | generates multiple `investment.by_step` blocks (multi-year) |
 | **On-grid mode** | generates `grid.yaml` and `grid_import_price.csv` |

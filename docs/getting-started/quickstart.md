@@ -63,7 +63,7 @@ import microgridspy as mgp
 # 1. Create a project folder and generate input templates
 mgp.create_project(
     "my_site",
-    formulation="steady_state",  # or "dynamic" for multi-year planning
+    formulation="typical_year",  # or "multi_year" for multi-year planning
     system_type="off_grid",  # or "on_grid"
     resources=["solar", "wind"],  # one renewable source per label
     scenarios=1,  # number of stochastic scenarios
@@ -105,9 +105,9 @@ mgp.export_results(results)
 The convenience functions above wrap the model classes. You can also use them directly:
 
 ```python
-from microgridspy import SteadyStateModel
+from microgridspy import TypicalYearModel
 
-model = SteadyStateModel("my_site")
+model = TypicalYearModel("my_site")
 model.solve_single_objective(solver="highs")
 results = model.results()
 ```

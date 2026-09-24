@@ -4,7 +4,7 @@ MicroGridsPy supports two complementary modelling modes, addressing different le
 temporal complexity and data availability:
 
 - **Multi-year planning mode** (dynamic);
-- **Typical-year planning mode** (steady-state).
+- **Typical-year planning mode**.
 
 Both are **investment-oriented** and rely on an **annuity-based cost formulation**, making
 them suitable for long-term, multi-scenario techno-economic planning. In both cases the model
@@ -102,7 +102,7 @@ end of life. The objective is the **expected equivalent annual cost (EAC)** — 
 
 | | Typical-year | Multi-year |
 |---|---|---|
-| Formulation | steady-state | dynamic |
+| Formulation | `typical_year` | `multi_year` |
 | Time representation | one representative year | explicit horizon $y=1,\dots,H$ |
 | Objective | expected annual cost (EAC) | discounted expected cost (NPWC) |
 | Capacity expansion | — | phased investment steps, non-decreasing |
@@ -111,4 +111,4 @@ end of life. The objective is the **expected equivalent annual cost (EAC)** — 
 | Typical use | screening, steady-state, tractability | long-term planning, phased investment |
 
 Both modes rely on the same bottom-up [cost structure](cost-accounting.md), so the typical-year
-model is the steady-state limit of the dynamic one under time-invariant conditions.
+model is the steady-state limit of the multi-year one under time-invariant conditions.

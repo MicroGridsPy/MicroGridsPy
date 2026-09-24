@@ -198,7 +198,7 @@ together with `battery.technical.depth_of_discharge` (sets the band), the rated
 
 ### Typical-year: amortisation over the binding life
 
-The steady-state typical-year model has no multi-year capacity state, so degradation is purely an
+The typical-year model has no multi-year capacity state, so degradation is purely an
 **economic** effect. It must stay consistent with the objective's annuity convention: every asset's
 CAPEX is turned into a level annual charge $\text{CRF}(\text{wacc}, L)\cdot\text{CAPEX}$ (cost of
 capital included) and paid every year, which already prices replacement over the *calendar* life —

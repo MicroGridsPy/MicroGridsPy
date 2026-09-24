@@ -1,6 +1,6 @@
 # Typical-Year Tutorial
 
-This tutorial runs a complete **typical-year** (steady-state) study from project creation to
+This tutorial runs a complete **typical-year** study from project creation to
 results, using the open-source HiGHS solver. It assumes MicroGridsPy is installed with the
 `highs` extra — see [Installation](../getting-started/installation.md).
 
@@ -11,7 +11,7 @@ import microgridspy as mgp
 
 paths = mgp.create_project(
     "tutorial_typical",
-    formulation="steady_state",
+    formulation="typical_year",
     system_type="off_grid",
     resources=["solar"],  # one renewable source labelled "solar"
     scenarios=1,  # deterministic (single scenario)

@@ -11,7 +11,7 @@ import microgridspy as mgp
 
 mgp.create_project(
     "tutorial_multiyear",
-    formulation="dynamic",
+    formulation="multi_year",
     system_type="off_grid",
     resources=["solar", "wind"],
     horizon_years=20,  # planning horizon H = 20 years

@@ -1,7 +1,7 @@
 # Results
 
 Solving a project yields a **structured results object** — `TypicalYearResults` for the
-steady-state formulation, `MultiYearResults` for the dynamic one. Each is a collection of
+typical-year formulation, `MultiYearResults` for the multi-year one. Each is a collection of
 analysis-ready `pandas` DataFrames.
 
 ## Obtaining results

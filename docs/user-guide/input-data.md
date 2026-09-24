@@ -31,7 +31,7 @@ each file is mandatory — is in the [Data Reference](../data-reference/overview
 ## Categories of input
 
 - **Formulation & settings** (`formulation.json`) — selects the planning mode
-  (steady-state vs. dynamic), the number of scenarios, grid flags, and global constraints
+  (typical-year vs. multi-year), the number of scenarios, grid flags, and global constraints
   (minimum renewable penetration, maximum lost-load share, land availability, carbon cost).
 - **Time series** (CSV) — hourly demand, renewable availability, and optional grid tariffs
   and availability. One representative year of 8760 hourly rows.

@@ -56,7 +56,7 @@ import microgridspy as mgp
 # 1. Create a project folder and its input templates
 mgp.create_project(
     "my_site",
-    formulation="steady_state",
+    formulation="typical_year",
     resources=["solar", "wind"],
 )
 

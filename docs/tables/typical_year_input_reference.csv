@@ -1,5 +1,5 @@
 file_name,purpose,format,mandatory,depends_on,edited_by_user,used_for
-formulation.json,Project-level formulation flags and constraints,JSON,yes,always,no,selects steady_state mode scenarios grid flags and global constraints
+formulation.json,Project-level formulation flags and constraints,JSON,yes,always,no,selects typical_year mode scenarios grid flags and global constraints
 load_demand.csv,Hourly electrical demand,CSV,yes,always,yes,load balance and unmet-load calculations
 resource_availability.csv,Hourly renewable availability by resource,CSV,yes,always,yes,renewable generation availability
 renewables.yaml,Renewable techno-economic inputs,YAML,yes,always,yes,renewable sizing annuity land and subsidy parameters

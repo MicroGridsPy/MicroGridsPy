@@ -25,7 +25,7 @@ hand · **no** = reference only.
 
     | File | Format | Required | Condition | Edited by user | Purpose |
     |---|---|---|---|---|---|
-    | `formulation.json` | JSON | yes | always | no | steady-state mode, scenarios, grid flags, global constraints |
+    | `formulation.json` | JSON | yes | always | no | formulation mode, scenarios, grid flags, global constraints |
     | `load_demand.csv` | CSV | yes | always | yes | hourly electrical demand → load balance and unmet-load |
     | `resource_availability.csv` | CSV | yes | always | yes | hourly renewable availability by resource |
     | `renewables.yaml` | YAML | yes | always | yes | renewable sizing, annuity, land and subsidy parameters |

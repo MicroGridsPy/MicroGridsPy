@@ -57,7 +57,8 @@ The loader returns one canonical `xarray.Dataset` (`ds`) for both formulations.
 `ds.attrs["settings"]` must exist and be a dictionary. Minimum required keys:
 
 - `project_name`: `str`
-- `formulation`: `"steady_state"` or `"dynamic"`
+- `formulation`: `"typical_year"` or `"multi_year"` (renamed in 0.4 — see
+  [Planning Modes](../user-guide/planning-modes.md))
 - `integer_sizing`: `bool` — integer/discrete capacity sizing (distinct from the generator's `partial_load_commitment`)
 - `multi_scenario`: `{ enabled: bool, n_scenarios: int }`
 - `optimization_constraints`: `{ enforcement: "scenario_wise" | "expected" }`

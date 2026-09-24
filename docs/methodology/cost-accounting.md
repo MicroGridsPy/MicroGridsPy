@@ -137,4 +137,4 @@ discounted together with the other annual system costs.
     Both modes rely on the same bottom-up cost structure. In the typical-year formulation costs
     are annualized into horizon-independent equivalents; in the multi-year formulation they are
     resolved year by year and discounted to present value. The typical-year model is the
-    steady-state limit of the dynamic one.
+    steady-state limit of the multi-year one.

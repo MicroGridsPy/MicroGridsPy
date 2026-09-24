@@ -19,7 +19,7 @@ results = model.results()  # step 5
 ```
 
 `solve()` reads the formulation from `formulation.json`, builds the appropriate model
-(`SteadyStateModel` or `MultiYearModel`), and solves it with the requested solver. It
+(`TypicalYearModel` or `MultiYearModel`), and solves it with the requested solver. It
 returns the **solved model**, from which you obtain a structured results object with
 `model.results()` or an `xarray` summary with `model.results_summary()`.
 
@@ -29,7 +29,7 @@ returns the **solved model**, from which you obtain a structured results object 
 model = mgp.solve(
     "my_site",
     solver="highs",  # "highs" (open source) or "gurobi" (licensed)
-    formulation=None,  # None → auto-detect; or "steady_state" / "dynamic"
+    formulation=None,  # None → auto-detect; or "typical_year" / "multi_year"
 )
 ```
 
@@ -40,9 +40,9 @@ Extra keyword arguments are forwarded to the model's `solve_single_objective(...
 ## Driving the model class directly
 
 ```python
-from microgridspy import SteadyStateModel
+from microgridspy import TypicalYearModel
 
-model = SteadyStateModel("my_site")
+model = TypicalYearModel("my_site")
 model.solve_single_objective(solver="highs")
 results = model.results()
 ```

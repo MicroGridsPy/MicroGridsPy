@@ -7,11 +7,11 @@ constructed from a project name and expose `solve_single_objective(...)`, `resul
 The detailed mathematical description of each formulation belongs in the
 [Methodology](../methodology/overview.md) section rather than in the generated API.
 
-## `SteadyStateModel`
+## `TypicalYearModel`
 
-The typical-year (steady-state) formulation.
+The typical-year formulation.
 
-::: microgridspy.SteadyStateModel
+::: microgridspy.TypicalYearModel
 
 ## `MultiYearModel`
 

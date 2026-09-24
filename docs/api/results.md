@@ -16,7 +16,7 @@ page.
 ## `TypicalYearResults`
 
 The structured results object returned by the typical-year formulation
-(`SteadyStateModel.results()`).
+(`TypicalYearModel.results()`).
 
 ::: microgridspy.TypicalYearResults
     options:

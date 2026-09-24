@@ -31,13 +31,13 @@ The reference is split into logical groups:
 | Page | Public objects |
 |---|---|
 | [Project Management](project.md) | `create_project`, `validate_project`, `copy_project`, `rename_project`, `delete_project`, `TemplateSettings` |
-| [Models](models.md) | `SteadyStateModel`, `MultiYearModel`, `InputValidationError` |
+| [Models](models.md) | `TypicalYearModel`, `MultiYearModel`, `InputValidationError` |
 | [Optimization](optimization.md) | `solve`, `load_inputs` |
 | [Results](results.md) | `load_results`, `export_results`, `TypicalYearResults`, `MultiYearResults`, input time-series helpers |
 
 ## Stability
 
-`SteadyStateModel`, `MultiYearModel` and `InputValidationError` form the **stable core**.
+`TypicalYearModel`, `MultiYearModel` and `InputValidationError` form the **stable core**.
 The results dataclasses (`TypicalYearResults`, `MultiYearResults`) are **provisional** —
 their tables may grow — until the 1.0 release.
 

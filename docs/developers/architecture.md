@@ -26,8 +26,8 @@ The package lives under `src/microgridspy/`:
 | `api.py` | high-level convenience API (`solve`, `load_results`, `export_results`, `load_inputs`, …) re-exported at the top level |
 | `io/` | project scaffolding, templates, paths, workspace helpers, JSON/CSV formats |
 | `data_pipeline/` | input loaders and preprocessing models (battery loss/fade surrogates, generator Willans part-load fit) that assemble the canonical dataset |
-| `typical_year_model/` | steady-state sets, params, variables, constraints, objective, and `SteadyStateModel` |
-| `multi_year_model/` | dynamic formulation with investment-step lifecycle logic and `MultiYearModel` |
+| `typical_year_model/` | typical-year sets, params, variables, constraints, objective, and `TypicalYearModel` |
+| `multi_year_model/` | multi-year formulation with investment-step lifecycle logic and `MultiYearModel` |
 | `export/` | structured results objects and CSV/Excel export |
 | `visualization/` | input time-series plotting (result plotting lives in `export/`) |
 | `app/` | optional Streamlit GUI (installed only with the `[gui]` extra) |
@@ -49,5 +49,5 @@ interfaces rather than bespoke coupling.
 
 The typical-year and multi-year models share the bottom-up
 [cost-accounting](../methodology/cost-accounting.md) structure. The typical-year model is,
-economically, the steady-state limit of the dynamic one — a property that guides how new
+economically, the steady-state limit of the multi-year one — a property that guides how new
 features should be added to both consistently.
