@@ -270,13 +270,25 @@ def test_reported_effective_capacity_uses_physical_recursion() -> None:
     _, vd, sol = _solve_deg(sets, data)
 
     cyc = float(sol["battery_cycle_fade"].sel(year="2026").sum().item())
-    # year 2026: soh0 * nominal = 1.0 * 0.5; year 2027: previous minus one year of cycle fade
-    expected_y1 = 0.5 - cyc
+    # Year 2026 starts at soh0 * installed capacity; 2027 is that minus one year of cycle
+    # fade. Derive the year-0 capacity from the inputs and the solved sizing rather than
+    # hard-coding it: how much storage this fixture installs depends on the dispatch, and
+    # what is under test is the recursion between the two years, not the sizing itself.
+    units = float(sol["battery_units"].sum().item())
+    nominal = float(data["battery_nominal_capacity_kwh"].isel(inv_step=0).item())
+    soh0 = float(data["battery_initial_soh"].item())
+    expected_y0 = soh0 * units * nominal
+    expected_y1 = expected_y0 - cyc
 
     df = build_dispatch_timeseries_table_multi_year(sets=sets, data=data, vars=vd, solution=sol)
+    reported_y0 = float(
+        df.loc[df["year"].astype(str) == "2026", "battery_effective_energy_capacity"].iloc[0]
+    )
     reported_y1 = float(
         df.loc[df["year"].astype(str) == "2027", "battery_effective_energy_capacity"].iloc[0]
     )
+    assert cyc > 0.0  # the battery actually cycles, so the recursion is exercised
+    assert reported_y0 == pytest.approx(expected_y0, abs=1e-6)
     assert reported_y1 == pytest.approx(expected_y1, abs=1e-6)
 
 
@@ -405,7 +417,7 @@ def _battery_template_settings(**overrides):
     from microgridspy.io.templates import TemplateSettings
 
     base = dict(
-        formulation="dynamic",
+        formulation="multi_year",
         system_type="off_grid",
         allow_export=False,
         multi_scenario=False,
@@ -441,7 +453,7 @@ def _written_battery_technical(tmp_path, name, settings):
 
     mgp.set_workspace(tmp_path)
     mgp.create_project(
-        name, formulation="dynamic", horizon_years=10, settings=settings, overwrite=True
+        name, formulation="multi_year", horizon_years=10, settings=settings, overwrite=True
     )
     text = next(tmp_path.rglob("battery.yaml")).read_text(encoding="utf-8")
     return yaml.safe_load(text)["battery"]["technical"]

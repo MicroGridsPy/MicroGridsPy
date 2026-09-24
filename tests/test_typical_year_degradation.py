@@ -1,4 +1,4 @@
-"""Typical-year (steady_state) battery cycle-fade as a throughput WEAR COST (no state).
+"""Typical-year battery cycle-fade as a throughput WEAR COST (no state).
 
 The semi-empirical cycle coefficient beta(T) is loaded from ambient_temperature.csv
 and charged in the objective as a marginal wear cost per unit of throughput. There is
@@ -28,7 +28,7 @@ def _build_project(
     inp = root / "inputs"
     inp.mkdir(parents=True, exist_ok=True)
     settings = TemplateSettings(
-        formulation="steady_state",
+        formulation="typical_year",
         system_type="off_grid",
         allow_export=False,
         multi_scenario=False,
@@ -77,7 +77,7 @@ def _build_project(
 
     formulation = {
         "project_name": "ty_deg",
-        "core_formulation": "steady_state",
+        "core_formulation": "typical_year",
         "system_type": "off_grid",
         "on_grid": False,
         "grid_allow_export": False,

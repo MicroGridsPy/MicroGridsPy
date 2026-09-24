@@ -683,7 +683,7 @@ def _willans_q(eta_full: float) -> tuple[float, float]:
 
     rel = np.array([0.0, 0.20, 0.40, 0.60, 0.80, 1.00])
     multiplier = np.array([0.0, 0.75, 0.82, 0.89, 0.95, 1.00])
-    return fit_generator_willans_from_curve(rel, eta_full * multiplier, error_cls=ValueError)
+    return fit_generator_willans_from_curve(rel, eta_full * multiplier)
 
 
 def _integer_commitment_generator_data(*, load: list[float], min_load: float) -> xr.Dataset:

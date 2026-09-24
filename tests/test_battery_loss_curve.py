@@ -32,7 +32,7 @@ def _write_default_curve(tmp_path: Path) -> Path:
     """Write the shipped default battery efficiency curve via the template writer."""
     path = tmp_path / "battery_efficiency_curve.csv"
     settings = TemplateSettings(
-        formulation="dynamic",
+        formulation="multi_year",
         system_type="off_grid",
         allow_export=False,
         multi_scenario=False,

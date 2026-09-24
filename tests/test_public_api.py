@@ -36,7 +36,7 @@ def test_import_is_streamlit_free() -> None:
 def test_create_validate_and_inspect(tmp_path: Path) -> None:
     mgp.set_workspace(tmp_path)
     paths = mgp.create_project(
-        "unit_demo", formulation="steady_state", resources=["solar"], overwrite=True
+        "unit_demo", formulation="typical_year", resources=["solar"], overwrite=True
     )
     assert paths.formulation_json.exists()
     assert "unit_demo" in mgp.list_projects()

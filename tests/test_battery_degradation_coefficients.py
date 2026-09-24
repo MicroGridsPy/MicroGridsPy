@@ -125,7 +125,7 @@ def _write_formulation_json(path, *, start_year="2026", horizon=3) -> None:
 
     payload = {
         "project_name": "deg_integ",
-        "core_formulation": "dynamic",
+        "core_formulation": "multi_year",
         "system_type": "off_grid",
         "on_grid": False,
         "grid_allow_export": False,
@@ -173,7 +173,7 @@ def test_end_to_end_loader_attaches_semiempirical_coefficients(tmp_path, monkeyp
     inputs_dir.mkdir(parents=True, exist_ok=True)
 
     settings = TemplateSettings(
-        formulation="dynamic",
+        formulation="multi_year",
         system_type="off_grid",
         allow_export=False,
         multi_scenario=False,
@@ -248,7 +248,7 @@ def _build_multi_year_deg_project(tmp_path, monkeypatch, *, chemistry: str, cycl
     inp = root / "inputs"
     inp.mkdir(parents=True, exist_ok=True)
     settings = TemplateSettings(
-        formulation="dynamic",
+        formulation="multi_year",
         system_type="off_grid",
         allow_export=False,
         multi_scenario=False,

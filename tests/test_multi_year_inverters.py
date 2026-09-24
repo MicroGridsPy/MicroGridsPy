@@ -522,7 +522,7 @@ def test_multi_year_file_loader_reads_dedicated_inverter_csvs(
     inputs_dir.mkdir(parents=True, exist_ok=True)
     results_dir.mkdir(parents=True, exist_ok=True)
     (inputs_dir / "formulation.json").write_text(
-        '{"core_formulation": "dynamic"}', encoding="utf-8"
+        '{"core_formulation": "multi_year"}', encoding="utf-8"
     )
 
     export_multi_year_results(
@@ -680,5 +680,42 @@ def test_multi_year_integer_commitment_penalizes_part_load() -> None:
 
     effective_eff = gen / (fuel * lhv)
     assert effective_eff < eta_full - 0.005
-    q0, q1 = fit_generator_willans_from_curve(rel, eta_full * multiplier, error_cls=ValueError)
+    q0, q1 = fit_generator_willans_from_curve(rel, eta_full * multiplier)
     assert fuel == pytest.approx((q1 * 0.7 + q0 * 1.0) / lhv, rel=1e-4)
+
+
+def test_multi_year_battery_cannot_discharge_energy_it_never_stored() -> None:
+    """The horizon must close: no phantom discharge in the final period.
+
+    `soc_balance` links soc[t] -> soc[t+1] only for t = 0 .. T-2, so the state implied
+    after the *final* period of the *final* year is not a `soc` variable and is not
+    reached by `soc_upper`/`soc_lower`. Without `soc_terminal_*` the battery could meet
+    demand in that last step from energy it never stored. This fixture is built to make
+    that the cheapest option if the bound is ever removed: no renewable resource at all,
+    and demand only in the last period.
+    """
+    periods = 2
+    sets = _base_sets(periods)
+    data = _base_data(periods, demand=(0.0, 1.0), availability=(0.0, 0.0))
+
+    model = lp.Model()
+    vars_dict = initialize_vars(sets, data, model)
+    initialize_constraints(sets, data, vars_dict, model)
+    initialize_objective(sets, data, vars_dict, model)
+
+    assert "soc_terminal_upper" in model.constraints
+    assert "soc_terminal_lower" in model.constraints
+
+    solution = _solve_with_highs_or_skip(model)
+    soc = np.asarray(solution["battery_soc"].values, dtype=float).reshape(-1)
+    charge = np.asarray(solution["battery_charge"].values, dtype=float).reshape(-1)
+    discharge = np.asarray(solution["battery_discharge"].values, dtype=float).reshape(-1)
+    eta_c = float(data["battery_charge_efficiency"])
+    eta_d = float(data["battery_discharge_efficiency"])
+
+    # The state implied after the last period must still be a valid state of charge.
+    terminal_soc = soc[-1] + eta_c * charge[-1] - discharge[-1] / eta_d
+    assert terminal_soc >= -1e-7
+
+    # Conservation over the whole horizon: nothing comes out that did not go in.
+    assert discharge.sum() / eta_d <= eta_c * charge.sum() + 1e-7
