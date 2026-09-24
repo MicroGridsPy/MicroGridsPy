@@ -16,20 +16,22 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import xarray as xr
 
+from microgridspy.errors import InputValidationError
 from microgridspy.export.multi_year_results import MultiYearResults
 from microgridspy.export.typical_year_results import TypicalYearResults
+from microgridspy.io.formulation import MULTI_YEAR, TYPICAL_YEAR, VALID_FORMULATIONS
 from microgridspy.multi_year_model.model import MultiYearModel
-from microgridspy.typical_year_model.model import InputValidationError, SteadyStateModel
+from microgridspy.typical_year_model.model import TypicalYearModel
 
-AnyModel = SteadyStateModel | MultiYearModel
+if TYPE_CHECKING:
+    from matplotlib.figure import Figure
+
+AnyModel = TypicalYearModel | MultiYearModel
 AnyResults = TypicalYearResults | MultiYearResults
-
-_STEADY = {"steady_state", "typical_year"}
-_DYNAMIC = {"dynamic", "multi_year"}
 
 
 def _detect_formulation(project_name: str) -> str:
@@ -40,22 +42,22 @@ def _detect_formulation(project_name: str) -> str:
     if not fpath.exists():
         raise InputValidationError(
             f"Cannot detect formulation: {fpath} not found. "
-            "Pass formulation='steady_state' or 'dynamic' explicitly."
+            f"Pass formulation='{TYPICAL_YEAR}' or '{MULTI_YEAR}' explicitly."
         )
     try:
         raw = json.loads(fpath.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise InputValidationError(f"Cannot parse {fpath}: {exc}") from exc
-    return str(raw.get("core_formulation", "steady_state"))
+    return str(raw.get("core_formulation", TYPICAL_YEAR))
 
 
 def _model_for(project_name: str, formulation: str) -> AnyModel:
-    if formulation in _STEADY:
-        return SteadyStateModel(project_name)
-    if formulation in _DYNAMIC:
+    if formulation == TYPICAL_YEAR:
+        return TypicalYearModel(project_name)
+    if formulation == MULTI_YEAR:
         return MultiYearModel(project_name)
     raise InputValidationError(
-        f"Unknown formulation '{formulation}' (expected one of {sorted(_STEADY | _DYNAMIC)})."
+        f"Unknown formulation {formulation!r}. Expected one of {', '.join(VALID_FORMULATIONS)}."
     )
 
 
@@ -70,11 +72,11 @@ def solve(
 
     Args:
         project_name: the project folder in the active workspace.
-        formulation: ``"steady_state"`` or ``"dynamic"``; if ``None`` it is read
+        formulation: ``"typical_year"`` or ``"multi_year"``; if ``None`` it is read
             from the project's ``formulation.json``.
         solver: ``"highs"`` (open source) or ``"gurobi"`` (licensed).
         **solver_kwargs: forwarded to
-            `SteadyStateModel.solve_single_objective()` (e.g. ``solver_params``,
+            `TypicalYearModel.solve_single_objective()` (e.g. ``solver_params``,
             ``problem_fn``, ``log_file_path``).
 
     Returns:
@@ -129,7 +131,7 @@ def load_results(
 
     Args:
         project_name: the project to read.
-        formulation: ``"steady_state"`` or ``"dynamic"``; auto-detected from
+        formulation: ``"typical_year"`` or ``"multi_year"``; auto-detected from
             ``formulation.json`` when ``None``.
 
     Returns:
@@ -142,7 +144,7 @@ def load_results(
 
     if formulation is None:
         formulation = _detect_formulation(project_name)
-    if formulation in _DYNAMIC:
+    if formulation == MULTI_YEAR:
         return load_multi_year_results_from_files(project_name)
     return load_typical_year_results_from_files(project_name)
 
@@ -179,7 +181,7 @@ def load_inputs(project_name: str, *, formulation: str | None = None) -> xr.Data
 
     Args:
         project_name: the project to read.
-        formulation: ``"steady_state"`` or ``"dynamic"``; auto-detected when None.
+        formulation: ``"typical_year"`` or ``"multi_year"``; auto-detected when None.
 
     Returns:
         xr.Dataset: the assembled input dataset.
@@ -207,7 +209,7 @@ def plot_input_timeseries(
     scenario: str | None = None,
     year: str | int | None = None,
     **selectors: Any,
-):
+) -> tuple[Figure, Figure]:
     """Plot an input time series as ``(hourly, daily)`` matplotlib figures.
 
     Args:

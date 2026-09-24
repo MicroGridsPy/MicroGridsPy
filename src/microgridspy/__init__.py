@@ -11,16 +11,20 @@ results.kpis                      # pandas DataFrame
 mgp.export_results(results)       # write CSV/Excel to the project folder
 
 # or drive the models directly
-from microgridspy import SteadyStateModel
-model = SteadyStateModel("demo_typical_year")
+from microgridspy import TypicalYearModel
+model = TypicalYearModel("demo_typical_year")
 model.solve_single_objective(solver="highs")
 summary = model.results_summary()
 ```
 
+The two formulations are named ``typical_year`` and ``multi_year`` everywhere —
+in ``formulation.json``, in ``create_project(formulation=...)`` and in the model
+class names.
+
 The Streamlit GUI lives in `microgridspy.app` and is installed only with
 the ``[gui]`` extra; importing this package never imports Streamlit.
 
-Stability: ``SteadyStateModel``, ``MultiYearModel`` and ``InputValidationError``
+Stability: ``TypicalYearModel``, ``MultiYearModel`` and ``InputValidationError``
 are the stable core. The results dataclasses are provisional (their tables may
 grow) until the 1.0 release.
 """
@@ -40,6 +44,9 @@ from microgridspy.api import (
     solve,
     solve_example,
 )
+
+# --- Workspace helpers ------------------------------------------------------
+from microgridspy.errors import InputValidationError
 from microgridspy.export.multi_year_results import MultiYearResults
 
 # --- Structured results (provisional) ---------------------------------------
@@ -55,16 +62,14 @@ from microgridspy.io.project_setup import (
     validate_project,
 )
 from microgridspy.io.templates import TemplateSettings
-
-# --- Workspace helpers ------------------------------------------------------
 from microgridspy.io.utils import list_projects, project_exists, project_paths, set_workspace
 from microgridspy.multi_year_model.model import MultiYearModel
 
 # --- Models (stable core) ---------------------------------------------------
-from microgridspy.typical_year_model.model import InputValidationError, SteadyStateModel
+from microgridspy.typical_year_model.model import TypicalYearModel
 
 __all__ = [
-    "SteadyStateModel",
+    "TypicalYearModel",
     "MultiYearModel",
     "solve",
     "solve_example",
