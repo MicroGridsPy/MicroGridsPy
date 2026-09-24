@@ -3,7 +3,7 @@
   "description": "",
   "module": "generation_planning",
   "created_at": "2026-04-14T09:52:29.327619Z",
-  "core_formulation": "steady_state",
+  "core_formulation": "typical_year",
   "system_type": "off_grid",
   "on_grid": false,
   "grid_allow_export": false,
