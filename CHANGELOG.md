@@ -6,6 +6,47 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+- **Multi-year battery energy balance closes at the end of the horizon.** `soc_balance`
+  linked `soc[t] -> soc[t+1]` only up to the second-to-last period, and `soc_year_link_*`
+  only carried state *between* years, so the state implied after the final period of the
+  final year was unbounded: the battery could discharge energy it had never stored in that
+  last step. New `soc_terminal_upper` / `soc_terminal_lower` constraints apply the same
+  bounds to that state. The typical-year formulation was never affected — its `soc_cyclic`
+  constraint already closed the loop.
+  The leak only bound when the battery would otherwise be empty at the horizon end, so
+  long hourly runs are unlikely to change: on `demo_multi_year` the final-hour discharge
+  (18.9 kWh) was already covered by stored energy (664.2 kWh). Short or reduced-resolution
+  horizons could be affected materially.
+
+### Changed
+- **BREAKING — the two formulations are now named `typical_year` and `multi_year`
+  everywhere**: in `formulation.json`, in `create_project(formulation=...)`, in the CLI
+  `--formulation` choices and in the model class names. Previously the same two concepts
+  were spelled three ways (`steady_state`/`dynamic` in data and the API, `typical_year`/
+  `multi_year` in module names and docs, `SteadyStateModel`/`MultiYearModel` in code).
+  Projects created by earlier releases must set `core_formulation` to the new name; the
+  old spellings now raise `InputValidationError` instead of being translated.
+- **BREAKING — `SteadyStateModel` was removed.** Use `TypicalYearModel`.
+- **One exception type.** `InputValidationError` was defined separately in 20 modules, so
+  `except microgridspy.InputValidationError` did not catch errors raised by most of the
+  package. It now lives in `microgridspy.errors` and every layer raises that one class.
+- **One capital-recovery factor.** `_crf` was implemented five times, with three different
+  zero-rate tolerances and three different answers for a non-positive lifetime, so the
+  annuity used in the objective could differ from the annuity shown in the results. It now
+  lives in `microgridspy.finance.crf`. For a non-positive lifetime it returns `nan`
+  (previously `0.0`, `nan` or `inf` depending on which copy ran).
+
+### Removed
+- Dead code: `export/csv_reader.py`, `export/manifest.py`, `export/yaml_reader.py`,
+  `app/typical_year_file_results_page.py` and 17 unreferenced functions.
+- The `error_cls` parameter threaded through the IO and coercion helpers, which existed
+  only to select between the duplicate exception classes.
+- The duplicated session state on the Optimization page: a solved run was stored four ways
+  (`gp_sets`/`gp_data`/`gp_vars`, the results bundle and the two typed results objects).
+  Only the bundle and the typed results remain.
+- `pre-commit` from the `dev` extra — the project has no pre-commit configuration.
+
 ## [0.2.0] - 2026-08-24
 
 ### Added
