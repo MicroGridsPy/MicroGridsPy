@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import numpy as np
 
+from microgridspy.errors import InputValidationError
+
 
 def fit_generator_willans_from_curve(
     rel: np.ndarray,
     eff: np.ndarray,
-    *,
-    error_cls: type[Exception] = RuntimeError,
 ) -> tuple[float, float]:
     """
     Fit an affine Willans relative fuel-use line to a generator efficiency curve.
@@ -37,19 +37,25 @@ def fit_generator_willans_from_curve(
     rel = np.asarray(rel, dtype=float)
     eff = np.asarray(eff, dtype=float)
     if rel.shape != eff.shape:
-        raise error_cls("Generator efficiency curve rel/eff arrays must have the same shape.")
+        raise InputValidationError(
+            "Generator efficiency curve rel/eff arrays must have the same shape."
+        )
 
     mask = rel > 0.0
     r = rel[mask]
     e = eff[mask]
     if r.size == 0:
-        raise error_cls("Generator efficiency curve must contain at least one positive-load point.")
+        raise InputValidationError(
+            "Generator efficiency curve must contain at least one positive-load point."
+        )
     if np.any(~np.isfinite(r)) or np.any(~np.isfinite(e)) or np.any(e <= 0.0):
-        raise error_cls(
+        raise InputValidationError(
             "Generator efficiency values must be finite and strictly positive at positive load."
         )
     if not np.isclose(r[-1], 1.0, atol=1e-9):
-        raise error_cls("Generator efficiency curve must include the full-load point r=1.0.")
+        raise InputValidationError(
+            "Generator efficiency curve must include the full-load point r=1.0."
+        )
 
     phi = r / e  # relative fuel use phi(r) = r / eta(r)
     phi_full = float(phi[-1])  # = 1 / eta_full
@@ -67,7 +73,7 @@ def fit_generator_willans_from_curve(
     q0 = phi_full - q1
 
     if q1 <= 0.0:
-        raise error_cls(
+        raise InputValidationError(
             "Implied generator fuel-use curve is non-increasing in output, which is not physical."
         )
     if q0 < 0.0:

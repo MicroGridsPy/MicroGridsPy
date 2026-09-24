@@ -17,31 +17,24 @@ from microgridspy.data_pipeline.utils import (
     coord_labels,
     normalize_weights,
     read_csv_or_raise,
-    read_json_or_raise,
-    read_yaml_or_raise,
     validate_hour_column,
 )
+from microgridspy.errors import InputValidationError
 from microgridspy.io.csv_format import read_csv_with_format, write_csv_with_format
-
-
-class InputValidationError(RuntimeError):
-    pass
-
+from microgridspy.io.jsonio import read_yaml
 
 # -----------------------------------------------------------------------------
 # helpers
 # -----------------------------------------------------------------------------
-_read_json = partial(read_json_or_raise, error_cls=InputValidationError)
-_read_yaml = partial(read_yaml_or_raise, error_cls=InputValidationError)
-_as_float = partial(as_float, error_cls=InputValidationError)
-_as_float_or_nan = partial(as_float_or_nan, error_cls=InputValidationError)
-_as_str = partial(as_str, error_cls=InputValidationError)
+_as_float = partial(as_float)
+_as_float_or_nan = partial(as_float_or_nan)
+_as_str = partial(as_str)
 _normalize_weights = normalize_weights
 _broadcast_to_scenario = broadcast_to_scenario
 
 
 def _load_csv(path: Path, *, header: int | list[int]) -> pd.DataFrame:
-    return read_csv_or_raise(path, header=header, error_cls=InputValidationError)
+    return read_csv_or_raise(path, header=header)
 
 
 def _scenario_labels(coord: xr.DataArray) -> list[str]:
@@ -72,7 +65,7 @@ def _select_typical_year_step_block(
         return step_items[0][0], step_items[0][1]
 
     raise InputValidationError(
-        f"{path.name}: {context} must contain a single step block for the steady_state typical-year formulation. "
+        f"{path.name}: {context} must contain a single step block for the typical-year formulation. "
         "Use `base`, or keep exactly one step entry."
     )
 
@@ -91,7 +84,6 @@ def _validate_meta_hour_2level(
         df[("meta", "hour")],
         path=path,
         period_coord=period_coord,
-        error_cls=InputValidationError,
     )
 
 
@@ -111,7 +103,6 @@ def _validate_meta_hour_3level(
         df[first_col],
         path=path,
         period_coord=period_coord,
-        error_cls=InputValidationError,
     )
 
 
@@ -319,7 +310,7 @@ def _load_renewables_yaml(
     resource_coord: xr.DataArray,
 ) -> xr.Dataset:
     """
-    Load steady_state renewable techno-economic parameters from inputs/renewables.yaml.
+    Load typical-year renewable techno-economic parameters from inputs/renewables.yaml.
 
     Output dims:
       - resource                 (scenario-invariant params, including fixed O&M)
@@ -344,7 +335,7 @@ def _load_renewables_yaml(
     if not path.exists():
         raise InputValidationError(f"Missing required file: {path}")
 
-    payload = _read_yaml(path)
+    payload = read_yaml(path)
 
     ren_list = payload.get("renewables", None)
     if not isinstance(ren_list, list) or len(ren_list) == 0:
@@ -478,7 +469,7 @@ def _load_renewables_yaml(
         if item.get("operation", None) is not None:
             raise InputValidationError(
                 f"{path.name}: resource '{res_label}' uses the legacy `operation` block, which is no longer supported "
-                "in the steady_state typical-year schema. Move fixed O&M and production subsidy into "
+                "in the typical-year schema. Move fixed O&M and production subsidy into "
                 "`investment.by_step.<step>`."
             )
 
@@ -576,7 +567,7 @@ def _load_battery_yaml(
     scenario_coord: xr.DataArray,
 ) -> xr.Dataset:
     """
-    Load steady_state battery parameters from inputs/battery.yaml (NEW SCHEMA).
+    Load typical-year battery parameters from inputs/battery.yaml (NEW SCHEMA).
 
     Expected YAML structure:
       battery:
@@ -589,12 +580,12 @@ def _load_battery_yaml(
           {technical params}
 
     Notes:
-      - steady_state uses a single investment block. `investment.by_step.base` is preferred, but a single
+      - typical-year uses a single investment block. `investment.by_step.base` is preferred, but a single
         non-`base` step is also accepted.
       - Fixed O&M must be provided in `investment.by_step`.
-      - Multi-year-only degradation keys are not part of the steady_state schema.
+      - Multi-year-only degradation keys are not part of the typical-year schema.
     """
-    payload = _read_yaml(path)
+    payload = read_yaml(path)
 
     bat = payload.get("battery", None)
     if not isinstance(bat, dict):
@@ -714,7 +705,7 @@ def _load_battery_yaml(
     fom_value = float(inv_vals["fixed_om_share_per_year"])
     if bat.get("operation", None) is not None:
         raise InputValidationError(
-            f"{path.name}: the legacy `battery.operation` block is no longer supported in the steady_state "
+            f"{path.name}: the legacy `battery.operation` block is no longer supported in the typical-year "
             "typical-year schema. Move fixed O&M into `battery.investment.by_step.<step>`."
         )
 
@@ -786,7 +777,7 @@ def _load_battery_yaml(
         ds.attrs["ignored_legacy_technical_keys"] = legacy_time_fields
     ds.attrs["settings"] = {
         "inputs_loaded": {"battery_yaml": str(path)},
-        "formulation": "steady_state",
+        "formulation": "typical_year",
     }
     return ds
 
@@ -797,7 +788,7 @@ def _load_generator_and_fuel_yaml(
     inputs_dir: Path,
     scenario_coord: xr.DataArray,
 ) -> tuple[xr.Dataset, xr.Dataset, xr.Dataset | None, dict]:
-    payload = _read_yaml(path)
+    payload = read_yaml(path)
 
     gen = payload.get("generator", None)
     fuel = payload.get("fuel", None)
@@ -889,13 +880,13 @@ def _load_generator_and_fuel_yaml(
     fom_value = float(inv_vals["fixed_om_share_per_year"])
     if gen.get("operation", None) is not None:
         raise InputValidationError(
-            f"{path.name}: the legacy `generator.operation` block is no longer supported in the steady_state "
+            f"{path.name}: the legacy `generator.operation` block is no longer supported in the typical-year "
             "typical-year schema. Use `generator.technical.efficiency_curve_csv` for the shared curve file and "
             "keep fixed O&M in `generator.investment.by_step.<step>`."
         )
 
     # -------------------------
-    # fuel.by_scenario (steady_state)
+    # fuel.by_scenario (typical-year)
     # -------------------------
     fuel_by_scenario = fuel.get("by_scenario", None)
     if not isinstance(fuel_by_scenario, dict):
@@ -1154,7 +1145,7 @@ def _load_grid_yaml(
     scenario_coord: xr.DataArray,
 ) -> xr.Dataset:
     """
-    Load steady_state grid parameters from inputs/grid.yaml.
+    Load typical-year grid parameters from inputs/grid.yaml.
 
     Output dims:
       - scenario
@@ -1172,7 +1163,7 @@ def _load_grid_yaml(
               outage_scale_od_hours: ...
               outage_shape_od: ...
     """
-    payload = _read_yaml(path)
+    payload = read_yaml(path)
 
     grid = payload.get("grid", None)
     if not isinstance(grid, dict):
@@ -1184,7 +1175,7 @@ def _load_grid_yaml(
 
     scenario_labels = _scenario_labels(scenario_coord)
 
-    # keys (steady_state only)
+    # keys (typical-year only)
     PARAMS = [
         ("line", "capacity_kw", "grid_line_capacity_kw"),
         ("line", "transmission_efficiency", "grid_transmission_efficiency"),

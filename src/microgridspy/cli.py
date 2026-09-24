@@ -19,6 +19,8 @@ import argparse
 import sys
 from collections.abc import Sequence
 
+from microgridspy.io.formulation import MULTI_YEAR, TYPICAL_YEAR
+
 
 def _add_workspace_arg(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
@@ -56,7 +58,9 @@ def _build_parser(version: str) -> argparse.ArgumentParser:
     p_create = sub.add_parser("create", help="create a new project and its input templates")
     p_create.add_argument("name")
     p_create.add_argument(
-        "--formulation", choices=["steady_state", "dynamic"], default="steady_state"
+        "--formulation",
+        choices=[TYPICAL_YEAR, MULTI_YEAR],
+        default=TYPICAL_YEAR,
     )
     p_create.add_argument("--system-type", choices=["off_grid", "on_grid"], default="off_grid")
     p_create.add_argument("--resources", nargs="+", default=["solar"])

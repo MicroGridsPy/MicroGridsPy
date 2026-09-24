@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from microgridspy.errors import InputValidationError
 from microgridspy.io.csv_format import read_csv_with_format
 
 CONSTANT_EFFICIENCY = "constant_efficiency"
@@ -18,10 +19,6 @@ EFFICIENCY_TOL = 1e-9
 
 NORMALIZED_CURVE = "normalized_multiplier"
 LEGACY_ABSOLUTE_CURVE = "absolute_efficiency_legacy"
-
-
-class InputValidationError(RuntimeError):
-    pass
 
 
 def normalize_battery_loss_model(raw: Any, *, default: str = CONSTANT_EFFICIENCY) -> str:

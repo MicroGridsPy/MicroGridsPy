@@ -13,15 +13,17 @@ from microgridspy.app.multi_year_results_page import (
     render_multi_year_results_from_files,
 )
 from microgridspy.app.page_helpers import get_dataset_settings, get_nested_flag
-from microgridspy.app.page_helpers import safe_float as _safe_float
+from microgridspy.app.session_results import (
+    get_multi_year_results_from_session,
+    get_results_bundle_from_session,
+    get_typical_year_results_from_session,
+)
 from microgridspy.app.typical_year_results_page import render_typical_year_results
+from microgridspy.export.common import safe_float as _safe_float
 from microgridspy.export.results_bundle import ResultsBundle
 from microgridspy.export.results_page_helpers import (
     build_energy_balance_dataframe,
     export_results_from_bundle,
-    get_multi_year_results_from_session,
-    get_results_bundle_from_session,
-    get_typical_year_results_from_session,
     load_multi_year_results_from_files,
     load_typical_year_results_from_files,
 )
@@ -38,14 +40,9 @@ from microgridspy.export.typical_year_results import (
     build_design_summary_table,
     build_dispatch_timeseries_table,
 )
+from microgridspy.io.formulation import MULTI_YEAR, TYPICAL_YEAR
 
-# Keep aligned with your Optimization page
-KEYS = {
-    "solution": "gp_solution",
-    "data": "gp_data",
-    "vars": "gp_vars",
-    "active_project": "active_project",
-}
+ACTIVE_PROJECT_KEY = "active_project"  # set by the Project Setup page
 
 
 # -----------------------------------------------------------------------------
@@ -385,7 +382,7 @@ def render_generation_planning_results_page() -> None:
         "Explore the latest solved results from session state or, if available, saved results loaded from project files."
     )
 
-    project_name = st.session_state.get(KEYS["active_project"])
+    project_name = st.session_state.get(ACTIVE_PROJECT_KEY)
     if project_name:
         st.success(f"Active project: {project_name}")
 
@@ -428,8 +425,8 @@ def render_generation_planning_results_page() -> None:
     sol_ds: xr.Dataset | None = bundle.solution if isinstance(bundle.solution, xr.Dataset) else None
 
     settings = get_dataset_settings(data)
-    formulation = str(settings.get("formulation", "steady_state"))
-    if formulation == "dynamic":
+    formulation = str(settings.get("formulation", TYPICAL_YEAR))
+    if formulation == MULTI_YEAR:
         multi_year_results = get_multi_year_results_from_session(
             st.session_state, active_project=project_name
         )

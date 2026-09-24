@@ -15,6 +15,7 @@ from microgridspy.io.csv_format import (
     normalize_csv_decimal,
     normalize_csv_delimiter,
 )
+from microgridspy.io.formulation import MULTI_YEAR, TYPICAL_YEAR
 from microgridspy.io.jsonio import write_json
 from microgridspy.io.project_setup import build_formulation_payload
 from microgridspy.io.templates import TemplateSettings, write_templates
@@ -30,7 +31,6 @@ from microgridspy.io.utils import (
 # =============================================================================
 K = {
     "formulation": "gp_formulation",
-    "is_dynamic": "gp_is_dynamic",
     "system_type": "gp_system_type",
     "on_grid": "gp_on_grid",
     "allow_export": "gp_grid_allow_export",
@@ -89,7 +89,7 @@ K = {
     "active_project": "active_project",
 }
 
-FORMULATION_OPTIONS = ["steady_state", "dynamic"]
+FORMULATION_OPTIONS = [TYPICAL_YEAR, MULTI_YEAR]
 SYSTEM_OPTIONS = ["off_grid", "on_grid"]
 UNCERTAINTY_OPTIONS = ["single", "multi"]
 SIZING_OPTIONS = ["continuous", "discrete"]
@@ -163,16 +163,16 @@ class PageConfig:
 
 def _battery_endogenous_degradation_enabled(cfg: PageConfig) -> bool:
     return (
-        str(cfg.formulation or "").strip().lower() == "dynamic"
+        str(cfg.formulation or "").strip().lower() == MULTI_YEAR
         and str(cfg.battery_loss_model or "").strip().lower() == "convex_loss_epigraph"
         and bool(cfg.battery_cycle_fade_enabled)
     )
 
 
 def _battery_cycle_fade_active(cfg: PageConfig) -> bool:
-    # Semi-empirical cycle fade in ANY formulation: dynamic multi-year runs it as an
-    # endogenous capacity-fade recursion (needs the convex-loss model), steady_state
-    # typical-year as a binding-life CAPEX amortisation. Both need the same degradation inputs.
+    # Semi-empirical cycle fade in ANY formulation: multi-year runs it as an endogenous
+    # capacity-fade recursion (needs the convex-loss model), typical-year as a
+    # binding-life CAPEX amortisation. Both need the same degradation inputs.
     return bool(cfg.battery_cycle_fade_enabled)
 
 
@@ -188,8 +188,7 @@ def _default_investment_steps_df(n_steps: int = 4, default_duration: int = 5) ->
 def init_session_state_defaults() -> None:
     defaults: dict[str, object] = {
         # core
-        K["formulation"]: "steady_state",
-        K["is_dynamic"]: False,
+        K["formulation"]: TYPICAL_YEAR,
         K["system_type"]: "off_grid",
         K["on_grid"]: False,
         K["allow_export"]: False,
@@ -256,7 +255,7 @@ def init_session_state_defaults() -> None:
 def write_formulation_file(*, project_name: str, project_description: str, cfg: PageConfig) -> None:
     # Cycle fade is supported in both formulations (dynamic: capacity state;
     # typical-year: binding-life CAPEX amortisation).
-    degradation_supported = cfg.formulation in ("dynamic", "steady_state")
+    degradation_supported = cfg.formulation in (MULTI_YEAR, TYPICAL_YEAR)
     battery_cycle_fade_active = _battery_cycle_fade_active(cfg) if degradation_supported else False
     payload = build_formulation_payload(
         project_name=project_name,
@@ -551,9 +550,9 @@ def render_formulation_section() -> tuple[
     formulation = st.radio(
         "Planning mode:",
         options=FORMULATION_OPTIONS,
-        index=(0 if st.session_state[K["formulation"]] == "steady_state" else 1),
+        index=(0 if st.session_state[K["formulation"]] == TYPICAL_YEAR else 1),
         format_func=lambda v: (
-            "Typical-year formulation" if v == "steady_state" else "Multi-year formulation"
+            "Typical-year formulation" if v == TYPICAL_YEAR else "Multi-year formulation"
         ),
         help=(
             "Typical-year: one representative year (faster), steady-state interpretation.\n"
@@ -562,10 +561,9 @@ def render_formulation_section() -> tuple[
         key="gp_formulation_radio",
     )
     st.session_state[K["formulation"]] = formulation
-    is_dynamic = formulation == "dynamic"
-    st.session_state[K["is_dynamic"]] = is_dynamic
+    is_multi_year = formulation == MULTI_YEAR
 
-    if not is_dynamic:
+    if not is_multi_year:
         st.info(
             "Typical-year formulation enabled. A single representative year is used for sizing and operation."
         )
@@ -994,7 +992,7 @@ def render_system_section() -> tuple[
     )
     battery_end_of_life_soh = float(st.session_state.get(K["battery_end_of_life_soh"], 0.8))
     battery_loss_model = str(st.session_state.get(K["battery_loss_model"], "constant_efficiency"))
-    _formulation_mode = str(st.session_state.get(K["formulation"], "steady_state"))
+    _formulation_mode = str(st.session_state.get(K["formulation"], TYPICAL_YEAR))
 
     with st.expander("Storage system modeling and degradation", expanded=False):
         main_col, _ = st.columns([1.35, 0.65])
@@ -1035,14 +1033,14 @@ def render_system_section() -> tuple[
                         battery_efficiency_curve_csv
                     )
 
-        if _formulation_mode == "dynamic" and battery_loss_model != "convex_loss_epigraph":
+        if _formulation_mode == MULTI_YEAR and battery_loss_model != "convex_loss_epigraph":
             # Multi-year cycle fade tracks a degraded usable-capacity state defined on
             # the internal DC-side powers, so it requires the convex-loss model.
             cycle_fade_enabled = False
             st.session_state[K["battery_cycle_fade_enabled"]] = False
             st.info(
                 "Select the `Power-dependent (convex loss)` efficiency model above to unlock the multi-year battery cycle-fade capacity-state surrogate. "
-                "(In steady_state typical-year projects, cycle fade is priced as a binding-life CAPEX amortisation and does not require the convex-loss model.)"
+                "(In typical-year projects, cycle fade is priced as a binding-life CAPEX amortisation and does not require the convex-loss model.)"
             )
         else:
             with main_col:
@@ -1053,7 +1051,7 @@ def render_system_section() -> tuple[
                         value=bool(st.session_state.get(K["battery_cycle_fade_enabled"], False)),
                         help=(
                             "Throughput-based semi-empirical cycle-fade degradation. "
-                            "Dynamic multi-year: a degraded usable-capacity state; steady_state "
+                            "Dynamic multi-year: a degraded usable-capacity state; typical-year "
                             "typical-year: a binding-life CAPEX amortisation in the objective."
                         ),
                         key="gp_battery_cycle_fade_enabled_checkbox",
@@ -1104,7 +1102,7 @@ def render_system_section() -> tuple[
                     # Calendar (time) ageing: a single flat %/yr capacity fade (0 = off).
                     # Only meaningful in the multi-year formulation (the typical-year model
                     # has no multi-year capacity state), so it is shown for dynamic only.
-                    if _formulation_mode == "dynamic":
+                    if _formulation_mode == MULTI_YEAR:
                         flat_fade = float(
                             st.number_input(
                                 "Calendar ageing [fraction/yr]",
@@ -1431,7 +1429,7 @@ def render_project_setup_page() -> None:
             st.markdown("---")
             (
                 formulation,
-                is_dynamic,
+                is_multi_year,
                 start_year,
                 horizon_years,
                 dr_dec,

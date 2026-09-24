@@ -9,11 +9,12 @@ import pandas as pd
 import streamlit as st
 import xarray as xr
 
-from microgridspy.app.page_helpers import read_json_file, resolve_active_project_from_session
+from microgridspy.app.page_helpers import resolve_active_project_from_session
 from microgridspy.data_pipeline.loader import load_project_dataset
 from microgridspy.data_pipeline.typical_year_loader import regenerate_grid_availability_typical_year
-from microgridspy.export.yaml_reader import read_yaml
 from microgridspy.io.csv_format import read_csv_with_format
+from microgridspy.io.formulation import MULTI_YEAR, TYPICAL_YEAR
+from microgridspy.io.jsonio import read_json, read_yaml
 from microgridspy.io.utils import project_paths
 from microgridspy.io.vintage_labels import load_multi_year_vintage_labels, vintage_display_for_step
 from microgridspy.multi_year_model.data import regenerate_grid_availability_dynamic
@@ -221,8 +222,8 @@ def _required_missing_for_configuration(formulation: dict[str, Any], paths) -> l
 def _load_sets_and_dataset(
     project_name: str, formulation: dict[str, Any]
 ) -> tuple[xr.Dataset, xr.Dataset, str]:
-    formulation_mode = str(formulation.get("core_formulation", "steady_state")).strip()
-    loader_mode = "multi_year" if formulation_mode == "dynamic" else "typical_year"
+    formulation_mode = str(formulation.get("core_formulation", TYPICAL_YEAR)).strip()
+    loader_mode = "multi_year" if formulation_mode == MULTI_YEAR else "typical_year"
 
     if loader_mode == "multi_year":
         sets = initialize_multi_year_sets(project_name)
@@ -234,8 +235,8 @@ def _load_sets_and_dataset(
 
 
 def _build_project_summary(formulation: dict[str, Any]) -> str:
-    formulation_mode = str(formulation.get("core_formulation", "steady_state")).strip()
-    mode_label = "Typical-year" if formulation_mode == "steady_state" else "Multi-year"
+    formulation_mode = str(formulation.get("core_formulation", TYPICAL_YEAR)).strip()
+    mode_label = "Typical-year" if formulation_mode == TYPICAL_YEAR else "Multi-year"
     system_label = "On-grid" if bool(formulation.get("on_grid", False)) else "Off-grid"
     export_label = "export enabled" if bool(formulation.get("grid_allow_export", False)) else None
     sizing_label = (
@@ -253,7 +254,7 @@ def _build_project_summary(formulation: dict[str, Any]) -> str:
         parts.append(export_label)
     parts.extend([sizing_label, scenario_label])
 
-    if formulation_mode == "dynamic":
+    if formulation_mode == MULTI_YEAR:
         horizon = formulation.get("time_horizon_years")
         if horizon:
             parts.append(f"{int(horizon)}-year horizon")
@@ -782,9 +783,7 @@ def _render_degradation_coefficient_curves(formulation: dict[str, Any], paths) -
 
     try:
         from microgridspy.data_pipeline.battery_degradation_coefficients import (
-            InputValidationError as CoeffError,
-        )
-        from microgridspy.data_pipeline.battery_degradation_coefficients import (
+            InputValidationError,
             coefficient_curve_preview,
             normalize_chemistry,
             reference_cycle_life,
@@ -823,7 +822,7 @@ def _render_degradation_coefficient_curves(formulation: dict[str, Any], paths) -
             depth_of_discharge=dod,
             user_cycle_life=(float(user_cycle_life) if user_cycle_life not in (None, "") else None),
         )
-    except CoeffError as exc:
+    except InputValidationError as exc:
         st.error(str(exc))
         return
 
@@ -951,8 +950,8 @@ def _render_dataset_section(ds: xr.Dataset, loader_mode: str, paths) -> None:
 def _render_grid_controls(
     project_name: str, formulation: dict[str, Any], ds: xr.Dataset, paths
 ) -> None:
-    formulation_mode = str(formulation.get("core_formulation", "steady_state")).strip()
-    if formulation_mode not in {"steady_state", "dynamic"}:
+    formulation_mode = str(formulation.get("core_formulation", TYPICAL_YEAR)).strip()
+    if formulation_mode not in {TYPICAL_YEAR, MULTI_YEAR}:
         return
     if not bool(formulation.get("on_grid", False)):
         return
@@ -988,7 +987,7 @@ def _render_grid_controls(
             "outage_shape_od": outages.get("outage_shape_od"),
             "outage_seed": outages.get("outage_seed", 0),
         }
-        if formulation_mode == "dynamic":
+        if formulation_mode == MULTI_YEAR:
             row["first_year_connection"] = block.get("first_year_connection")
         rows.append(row)
 
@@ -1003,7 +1002,7 @@ def _render_grid_controls(
         type="primary",
     ):
         try:
-            if formulation_mode == "dynamic":
+            if formulation_mode == MULTI_YEAR:
                 sets = initialize_multi_year_sets(project_name)
                 regenerate_grid_availability_dynamic(project_name=project_name, sets=sets)
             else:
@@ -1176,23 +1175,6 @@ def _render_timeseries_section(ds: xr.Dataset) -> None:
 
 def _format_plot_title(text: str) -> str:
     return text.replace("_", " ")
-
-
-def _comparison_options(ds: xr.Dataset) -> list[Any]:
-    options = []
-    for option in list_timeseries_options(ds):
-        da = ds[option.variable]
-        if "year" not in da.dims:
-            continue
-        if option.variable in {
-            "load_demand",
-            "resource_availability",
-            "grid_import_price",
-            "grid_export_price",
-            "grid_availability",
-        }:
-            options.append(option)
-    return options
 
 
 def _daily_profile_frame(series: xr.DataArray) -> pd.DataFrame:
@@ -1623,7 +1605,7 @@ def render_page() -> None:
     paths = project_paths(project_name)
 
     try:
-        formulation = read_json_file(paths.formulation_json)
+        formulation = read_json(paths.formulation_json)
     except Exception as exc:
         st.error(f"Cannot read `formulation.json`: {exc}")
         st.stop()

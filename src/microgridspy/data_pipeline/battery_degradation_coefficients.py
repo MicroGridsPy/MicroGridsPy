@@ -49,14 +49,12 @@ from typing import Any
 
 import numpy as np
 
+from microgridspy.errors import InputValidationError
+
 LFP = "LFP"
 NMC = "NMC"
 LEAD_ACID = "lead_acid"
 VALID_CHEMISTRIES = (LFP, NMC, LEAD_ACID)
-
-
-class InputValidationError(RuntimeError):
-    pass
 
 
 # ---------------------------------------------------------------------------

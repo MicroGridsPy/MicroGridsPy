@@ -3,10 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from microgridspy.data_pipeline.battery_loss_model import CONVEX_LOSS_EPIGRAPH
-
-
-class InputValidationError(RuntimeError):
-    pass
+from microgridspy.errors import InputValidationError
 
 
 def _coerce_bool(raw: Any, *, default: bool = False) -> bool:

@@ -10,18 +10,16 @@ import pandas as pd
 import streamlit as st
 import xarray as xr
 
-from microgridspy.app.page_helpers import get_dataset_settings, read_json_file
+from microgridspy.app.page_helpers import get_dataset_settings
+from microgridspy.errors import InputValidationError
 from microgridspy.export.multi_year_results import build_multi_year_results
 from microgridspy.export.results_bundle import build_results_bundle
 from microgridspy.export.typical_year_results import build_typical_year_results
-from microgridspy.io.jsonio import write_json
+from microgridspy.io.formulation import MULTI_YEAR, TYPICAL_YEAR
+from microgridspy.io.jsonio import read_json, write_json
 from microgridspy.io.utils import project_paths
 from microgridspy.multi_year_model.model import MultiYearModel
-from microgridspy.typical_year_model.model import SteadyStateModel
-
-
-class InputValidationError(RuntimeError):
-    pass
+from microgridspy.typical_year_model.model import TypicalYearModel
 
 
 def _as_str(x: Any, *, name: str, default: str = "") -> str:
@@ -56,9 +54,6 @@ KEYS = {
     "optimization_settings_project_hint": "gp_optimization_settings_project_hint",
     # outputs
     "solution": "gp_solution",
-    "sets": "gp_sets",
-    "data": "gp_data",
-    "vars": "gp_vars",
     "solution_summary": "gp_solution_summary",
     "model_obj": "gp_model_obj",
     "log_path": "gp_log_path",
@@ -70,9 +65,6 @@ KEYS = {
 RESULT_STATE_KEYS = (
     KEYS["solution"],
     KEYS["solution_summary"],
-    KEYS["sets"],
-    KEYS["data"],
-    KEYS["vars"],
     KEYS["model_obj"],
     KEYS["log_path"],
     KEYS["results_bundle"],
@@ -435,7 +427,7 @@ def _render_variables_debug(data_ds: xr.Dataset | None, vars_dict: Any) -> None:
 
 def _render_constraints_debug(model_obj: Any) -> None:
     """
-    Debug viewer for linopy constraints (works with SteadyStateModel or a raw lp.Model).
+    Debug viewer for linopy constraints (works with TypicalYearModel or a raw lp.Model).
     """
     st.markdown("### Constraints")
 
@@ -765,25 +757,22 @@ def _format_unsolved_message(
     return f"Optimization completed, but no feasible solution is available. {detail}"
 
 
-def _build_model(project_name: str, formulation_mode: str) -> SteadyStateModel | MultiYearModel:
-    if formulation_mode == "steady_state":
-        return SteadyStateModel(project_name=project_name)
-    if formulation_mode == "dynamic":
+def _build_model(project_name: str, formulation_mode: str) -> TypicalYearModel | MultiYearModel:
+    if formulation_mode == TYPICAL_YEAR:
+        return TypicalYearModel(project_name=project_name)
+    if formulation_mode == MULTI_YEAR:
         return MultiYearModel(project_name=project_name)
     raise InputValidationError(f"Unknown formulation '{formulation_mode}' in formulation.json")
 
 
 def _store_solve_outputs(
     *,
-    model: SteadyStateModel | MultiYearModel,
+    model: TypicalYearModel | MultiYearModel,
     solution: Any,
     solver: str,
     fallback_log_path: Path,
 ) -> None:
     st.session_state[KEYS["solution"]] = solution
-    st.session_state[KEYS["sets"]] = model.sets
-    st.session_state[KEYS["data"]] = model.data
-    st.session_state[KEYS["vars"]] = model.vars
     st.session_state[KEYS["model_obj"]] = model
     st.session_state[KEYS["log_path"]] = (
         str(model._last_log_path) if model._last_log_path else str(fallback_log_path)
@@ -812,9 +801,9 @@ def _store_solve_outputs(
         return
 
     formulation = str(
-        ((model.data.attrs or {}).get("settings", {}) or {}).get("formulation", "steady_state")
+        ((model.data.attrs or {}).get("settings", {}) or {}).get("formulation", TYPICAL_YEAR)
     )
-    if formulation == "steady_state":
+    if formulation == TYPICAL_YEAR:
         live_solution = getattr(model.model, "solution", None) if model.model is not None else None
         st.session_state[KEYS["typical_year_results"]] = build_typical_year_results(
             project_name=str(
@@ -872,13 +861,9 @@ def render_generation_planning_optimization_page() -> None:
 
     # Retrieve project-specific formulation.json settings
     paths = project_paths(project_name)
-    formulation_json = read_json_file(
-        paths.formulation_json,
-        error_cls=InputValidationError,
-        parse_prefix="Cannot parse JSON",
-    )
+    formulation_json = read_json(paths.formulation_json)
     formulation_mode = _as_str(
-        formulation_json.get("core_formulation", "steady_state"), name="core_formulation"
+        formulation_json.get("core_formulation", TYPICAL_YEAR), name="core_formulation"
     )
 
     st.subheader("Solve Run")
@@ -1046,16 +1031,8 @@ def render_generation_planning_optimization_page() -> None:
     # -------------------------
     with st.expander("Quick inspection", expanded=False):
         bundle = st.session_state.get(KEYS["results_bundle"])
-        data_ds = (
-            getattr(bundle, "data", None)
-            if bundle is not None
-            else st.session_state.get(KEYS["data"])
-        )
-        vars_dict = (
-            getattr(bundle, "vars", None)
-            if bundle is not None
-            else st.session_state.get(KEYS["vars"])
-        )
+        data_ds = getattr(bundle, "data", None)
+        vars_dict = getattr(bundle, "vars", None)
         model_obj = st.session_state.get(KEYS["model_obj"])
 
         _show_xr_dataset_debug(data_ds, "Data")

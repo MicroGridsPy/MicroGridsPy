@@ -5,17 +5,13 @@ import warnings
 import xarray as xr
 
 from microgridspy.data_pipeline.utils import validate_required_coords
-
-
-class InputValidationError(RuntimeError):
-    pass
+from microgridspy.errors import InputValidationError
 
 
 def _validate_sets(sets: xr.Dataset) -> None:
     validate_required_coords(
         sets,
         required=("period", "scenario", "year", "inv_step", "resource"),
-        error_cls=InputValidationError,
         context="initialize_data_dynamic",
     )
 

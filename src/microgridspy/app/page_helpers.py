@@ -1,27 +1,10 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 import streamlit as st
 import xarray as xr
-
-
-def read_json_file(
-    path: Path,
-    *,
-    error_cls: type[Exception] = RuntimeError,
-    missing_prefix: str = "Missing required file",
-    parse_prefix: str = "Cannot parse JSON file",
-) -> dict[str, Any]:
-    """Read a JSON file and raise a caller-selected exception on failure."""
-    if not path.exists():
-        raise error_cls(f"{missing_prefix}: {path}")
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        raise error_cls(f"{parse_prefix}: {path}\nerror: {exc}") from exc
 
 
 def resolve_active_project_from_session() -> tuple[str, Path]:
@@ -56,15 +39,3 @@ def get_nested_flag(settings: dict[str, Any], path: tuple[str, ...], default: bo
             return default
         current = current[key]
     return bool(current)
-
-
-def safe_float(value: Any) -> float:
-    """Best-effort float conversion that tolerates numpy/xarray scalars."""
-    try:
-        if value is None:
-            return float("nan")
-        if hasattr(value, "item"):
-            return float(value.item())
-        return float(value)
-    except Exception:
-        return float("nan")

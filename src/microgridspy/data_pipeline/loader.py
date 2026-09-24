@@ -9,10 +9,7 @@ from microgridspy.data_pipeline.typical_year_loader import (
     load_typical_year_dataset,
 )
 from microgridspy.data_pipeline.utils import as_str, validate_required_coords
-
-
-class InputValidationError(RuntimeError):
-    pass
+from microgridspy.errors import InputValidationError
 
 
 def _coerce_sets(sets: dict | xr.Dataset) -> xr.Dataset:
@@ -48,7 +45,6 @@ def _validate_sets_for_mode(sets: xr.Dataset, mode: str) -> None:
     validate_required_coords(
         sets,
         required=required,
-        error_cls=InputValidationError,
         context="initialize_data_dynamic" if mode == "multi_year" else "initialize_data",
     )
 
@@ -65,7 +61,7 @@ def load_project_dataset(
     - typical_year: delegates to the current typical-year loader for strict parity.
     - multi_year: delegates to the current multi-year shared loader.
     """
-    mode_s = as_str(mode, name="mode", default="", error_cls=ValueError)
+    mode_s = as_str(mode, name="mode", default="")
 
     sets_ds = _coerce_sets(sets)
 

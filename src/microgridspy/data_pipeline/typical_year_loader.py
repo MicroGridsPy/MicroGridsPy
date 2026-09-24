@@ -15,14 +15,13 @@ from microgridspy.data_pipeline.battery_loss_model import (
     get_battery_loss_model_from_formulation,
     load_battery_loss_curve_dataset,
 )
-from microgridspy.data_pipeline.battery_loss_model import (
-    InputValidationError as BatteryLossInputValidationError,
-)
 from microgridspy.data_pipeline.utils import (
     coord_labels,
     merge_optional_datasets,
     validate_required_coords,
 )
+from microgridspy.io.formulation import TYPICAL_YEAR
+from microgridspy.io.jsonio import read_json
 from microgridspy.io.utils import project_paths, simulate_grid_availability_typical_year
 
 InputValidationError = p.InputValidationError
@@ -65,7 +64,7 @@ def _load_battery_loss_curve_if_needed(
             charge_efficiency_base=charge_efficiency_base,
             discharge_efficiency_base=discharge_efficiency_base,
         )
-    except BatteryLossInputValidationError as exc:
+    except InputValidationError as exc:
         raise InputValidationError(str(exc)) from exc
 
     return loss_model, curve_ds, str(curve_path)
@@ -75,7 +74,6 @@ def _validate_sets(sets: xr.Dataset) -> None:
     validate_required_coords(
         sets,
         required=("scenario", "period"),
-        error_cls=InputValidationError,
         context="initialize_data",
     )
 
@@ -221,13 +219,13 @@ def load_typical_year_dataset(project_name: str, sets: xr.Dataset) -> xr.Dataset
     n_scen = int(scenario_coord.size)
 
     paths = project_paths(project_name)
-    formulation = p._read_json(paths.formulation_json)
+    formulation = read_json(paths.formulation_json)
 
     formulation_mode = p._as_str(
-        formulation.get("core_formulation", "steady_state"), name="core_formulation"
+        formulation.get("core_formulation", TYPICAL_YEAR), name="core_formulation"
     )
-    if formulation_mode != "steady_state":
-        raise InputValidationError("This data initializer is for steady_state only.")
+    if formulation_mode != TYPICAL_YEAR:
+        raise InputValidationError(f"This data initializer is for {TYPICAL_YEAR} projects only.")
 
     # Integer (discrete) capacity sizing. `unit_commitment` is the legacy key name.
     integer_sizing_enabled = bool(
