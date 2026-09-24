@@ -73,7 +73,7 @@ The package exposes a small, stable API:
 import microgridspy as mgp
 
 # create a new project and scaffold its input templates
-mgp.create_project("my_site", formulation="steady_state", resources=["solar", "wind"])
+mgp.create_project("my_site", formulation="typical_year", resources=["solar", "wind"])
 # ...fill in projects/my_site/inputs (load demand, resource availability, *.yaml)...
 
 mgp.validate_project("my_site")  # pre-flight input check
@@ -83,7 +83,7 @@ print(results.kpis)
 mgp.export_results(results)  # write CSV/Excel to the project folder
 ```
 
-Key entry points: `solve`, `create_project`, `validate_project`, `load_results`, `export_results`, `list_projects`, `set_workspace`, and the model classes `SteadyStateModel` / `MultiYearModel`. See the `examples/` folder for a runnable script.
+Key entry points: `solve`, `create_project`, `validate_project`, `load_results`, `export_results`, `list_projects`, `set_workspace`, and the model classes `TypicalYearModel` / `MultiYearModel`. See [`examples/run_demo_typical_year.py`](examples/run_demo_typical_year.py) for a runnable end-to-end script.
 
 ---
 
