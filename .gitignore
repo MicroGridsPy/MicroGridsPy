@@ -34,6 +34,8 @@ env/
 .DS_Store
 Thumbs.db
 
-# User run outputs (keep example inputs, ignore generated results/logs)
-projects/**/results/
-projects/**/logs/
+# The local workspace. `projects/` is created at runtime by create_project()/the GUI
+# and holds whatever the user is working on, so none of it belongs in the repository.
+# The two demo projects ship inside the package (src/microgridspy/examples/), and the
+# Kalobeyei case studies are published as a separate archive - see docs/examples/.
+projects/

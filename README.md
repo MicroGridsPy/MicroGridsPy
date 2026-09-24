@@ -83,7 +83,7 @@ print(results.kpis)
 mgp.export_results(results)  # write CSV/Excel to the project folder
 ```
 
-Key entry points: `solve`, `create_project`, `validate_project`, `load_results`, `export_results`, `list_projects`, `set_workspace`, and the model classes `TypicalYearModel` / `MultiYearModel`. See [`examples/run_demo_typical_year.py`](examples/run_demo_typical_year.py) for a runnable end-to-end script.
+Key entry points: `solve`, `create_project`, `validate_project`, `load_results`, `export_results`, `list_projects`, `set_workspace`, and the model classes `TypicalYearModel` / `MultiYearModel`. For runnable end-to-end scripts see [`examples/run_demo_typical_year.py`](examples/run_demo_typical_year.py) (seconds to solve) and [`examples/run_demo_multi_year.py`](examples/run_demo_multi_year.py) (an explicit 10-year horizon; expect ~20 minutes).
 
 ---
 
