@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
-
-import yaml
-
+from microgridspy.io.jsonio import read_yaml_optional
 from microgridspy.io.utils import project_paths
 
 FAMILY_FALLBACK_PREFIX = {
@@ -15,17 +11,13 @@ FAMILY_FALLBACK_PREFIX = {
 }
 
 
-def _read_yaml_optional(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    try:
-        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-    return payload if isinstance(payload, dict) else {}
+def normalize_step_key(step: object) -> str:
+    """Normalize a YAML investment-step key to match the ``inv_step`` coordinate labels.
 
-
-def _normalize_step_key(step: object) -> str:
+    Accepts ``"1"``/``1`` (canonical), ``"step_1"``, ``"step1"`` and ``"Step 1"``,
+    all of which map to ``"1"``. Anything else is returned stripped but unchanged,
+    so single-step keys such as ``"base"`` pass through untouched.
+    """
     text = str(step).strip()
     lower = text.lower().replace(" ", "")
     if lower.startswith("step_"):
@@ -42,7 +34,7 @@ def _sanitize_label_map(raw: object) -> dict[str, str]:
     for key, value in raw.items():
         label = str(value or "").strip()
         if label:
-            out[_normalize_step_key(key)] = label
+            out[normalize_step_key(key)] = label
     return out
 
 
@@ -53,7 +45,7 @@ def _sanitize_nested_step_map(raw: object) -> dict[str, dict[str, str]]:
     for step, value in raw.items():
         if not isinstance(value, dict):
             continue
-        step_key = _normalize_step_key(step)
+        step_key = normalize_step_key(step)
         step_map: dict[str, str] = {}
         for subkey, label in value.items():
             text = str(label or "").strip()
@@ -66,11 +58,9 @@ def _sanitize_nested_step_map(raw: object) -> dict[str, dict[str, str]]:
 
 def load_multi_year_vintage_labels(project_name: str) -> dict[str, dict[str, str]]:
     paths = project_paths(project_name)
-    renewables_meta = (
-        _read_yaml_optional(paths.inputs_dir / "renewables.yaml").get("meta", {}) or {}
-    )
-    battery_meta = _read_yaml_optional(paths.inputs_dir / "battery.yaml").get("meta", {}) or {}
-    generator_meta = _read_yaml_optional(paths.inputs_dir / "generator.yaml").get("meta", {}) or {}
+    renewables_meta = read_yaml_optional(paths.inputs_dir / "renewables.yaml").get("meta", {}) or {}
+    battery_meta = read_yaml_optional(paths.inputs_dir / "battery.yaml").get("meta", {}) or {}
+    generator_meta = read_yaml_optional(paths.inputs_dir / "generator.yaml").get("meta", {}) or {}
 
     renewables_labels = renewables_meta.get("labels", {}) or {}
     battery_labels = battery_meta.get("labels", {}) or {}
@@ -86,7 +76,7 @@ def load_multi_year_vintage_labels(project_name: str) -> dict[str, dict[str, str
 
 def fallback_vintage_label(family: str, step: object) -> str:
     prefix = FAMILY_FALLBACK_PREFIX.get(str(family), "Vintage")
-    step_text = _normalize_step_key(step)
+    step_text = normalize_step_key(step)
     return f"{prefix} {step_text}"
 
 
@@ -98,7 +88,7 @@ def vintage_label_for_step(
     resource: object | None = None,
 ) -> str:
     family_map = labels.get(str(family), {}) if isinstance(labels, dict) else {}
-    normalized = _normalize_step_key(step)
+    normalized = normalize_step_key(step)
     if family == "renewable" and isinstance(family_map, dict):
         step_map = family_map.get(normalized, {})
         if isinstance(step_map, dict) and resource is not None:
@@ -121,4 +111,4 @@ def vintage_display_for_step(
     step: object,
     resource: object | None = None,
 ) -> str:
-    return f"{vintage_label_for_step(labels=labels, family=family, step=step, resource=resource)} (step {_normalize_step_key(step)})"
+    return f"{vintage_label_for_step(labels=labels, family=family, step=step, resource=resource)} (step {normalize_step_key(step)})"

@@ -20,6 +20,8 @@ import shutil
 from collections.abc import Sequence
 from datetime import datetime
 
+from microgridspy.errors import InputValidationError
+from microgridspy.io.formulation import MULTI_YEAR, TYPICAL_YEAR, VALID_FORMULATIONS
 from microgridspy.io.jsonio import write_json
 from microgridspy.io.paths import ProjectPaths
 from microgridspy.io.templates import TemplateSettings, write_templates
@@ -30,8 +32,6 @@ from microgridspy.io.utils import (
     sanitize_project_name,
 )
 
-_STEADY = "steady_state"
-_DYNAMIC = "dynamic"
 _REQUIRED_INPUT_FILES = (
     "load_demand.csv",
     "resource_availability.csv",
@@ -45,7 +45,7 @@ def build_formulation_payload(
     *,
     project_name: str,
     description: str = "",
-    formulation: str = _STEADY,
+    formulation: str = TYPICAL_YEAR,
     system_type: str = "off_grid",
     on_grid: bool = False,
     allow_export: bool = False,
@@ -78,7 +78,7 @@ def build_formulation_payload(
     This is the single source of truth for the formulation document; both the
     GUI and `create_project()` call it so the two stay in lock-step. All
     arguments have GUI-matching defaults, so a bare call yields a valid
-    off-grid, steady-state, single-scenario configuration.
+    off-grid, typical-year, single-scenario configuration.
     """
     return {
         "project_name": project_name,
@@ -155,7 +155,7 @@ def _normalize_scenarios(
 def create_project(
     project_name: str,
     *,
-    formulation: str = _STEADY,
+    formulation: str = TYPICAL_YEAR,
     system_type: str = "off_grid",
     allow_export: bool = False,
     resources: Sequence[str] = ("Resource_1",),
@@ -177,7 +177,7 @@ def create_project(
 
     Args:
         project_name: name of the project (sanitized to a filesystem-safe form).
-        formulation: ``"steady_state"`` or ``"dynamic"``.
+        formulation: ``"typical_year"`` or ``"multi_year"``.
         system_type: ``"off_grid"`` or ``"on_grid"``.
         allow_export: whether grid export is permitted (on-grid only).
         resources: renewable resource labels, e.g. ``["solar", "wind"]``. Their
@@ -186,11 +186,11 @@ def create_project(
             ``["Technology_1", ...]`` matching ``resources``.
         scenarios: number of stochastic scenarios, or an explicit list of labels.
             A single scenario disables the multi-scenario machinery.
-        horizon_years: planning horizon (dynamic formulation only).
-        capacity_expansion: enable staged capacity expansion (dynamic only).
+        horizon_years: planning horizon (multi-year formulation only).
+        capacity_expansion: enable staged capacity expansion (multi-year only).
         investment_steps_years: step durations, e.g. ``[5, 5, 5, 5]``.
         start_year_label: header for the first year; defaults to
-            ``"typical_year"`` (steady-state) or ``"2026"`` (dynamic).
+            ``"typical_year"`` for the typical-year formulation, ``"2026"`` for multi-year.
         battery_label: battery component display name.
         generator_label: generator component display name.
         fuel_label: fuel display name.
@@ -214,8 +214,12 @@ def create_project(
             f"Project '{name}' already exists. Pass overwrite=True to regenerate its templates."
         )
 
-    is_dynamic = formulation == _DYNAMIC
-    resolved_start = start_year_label or ("2026" if is_dynamic else "typical_year")
+    if formulation not in VALID_FORMULATIONS:
+        raise InputValidationError(
+            f"Unknown formulation {formulation!r}. Expected one of {', '.join(VALID_FORMULATIONS)}."
+        )
+    is_multi_year = formulation == MULTI_YEAR
+    resolved_start = start_year_label or ("2026" if is_multi_year else "typical_year")
     multi, n_scen, labels, weights = _normalize_scenarios(scenarios)
     res_labels = list(resources)
     conv_labels = (
@@ -233,9 +237,9 @@ def create_project(
         on_grid=(system_type == "on_grid"),
         allow_export=allow_export,
         start_year_label=resolved_start,
-        time_horizon_years=horizon_years if is_dynamic else None,
-        capacity_expansion=capacity_expansion if is_dynamic else False,
-        investment_steps_years=investment_steps_years if is_dynamic else None,
+        time_horizon_years=horizon_years if is_multi_year else None,
+        capacity_expansion=capacity_expansion if is_multi_year else False,
+        investment_steps_years=investment_steps_years if is_multi_year else None,
         multi_scenario_enabled=multi,
         n_scenarios=n_scen,
         scenario_labels=labels,
@@ -255,9 +259,9 @@ def create_project(
         scenario_labels=labels,
         scenario_weights=weights,
         start_year_label=resolved_start,
-        horizon_years=horizon_years if is_dynamic else None,
-        capacity_expansion=capacity_expansion if is_dynamic else False,
-        investment_steps_years=investment_steps_years if is_dynamic else None,
+        horizon_years=horizon_years if is_multi_year else None,
+        capacity_expansion=capacity_expansion if is_multi_year else False,
+        investment_steps_years=investment_steps_years if is_multi_year else None,
         n_res_sources=len(res_labels),
         resource_labels=res_labels,
         conversion_labels=conv_labels,
@@ -294,8 +298,6 @@ def validate_project(project_name: str) -> ProjectPaths:
     Raises:
         InputValidationError: with a message describing the first problem found.
     """
-    # Imported here to avoid a package-level import cycle with the model layer.
-    from microgridspy.typical_year_model.model import InputValidationError
 
     name = sanitize_project_name(project_name)
     paths = project_paths(name)

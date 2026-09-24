@@ -8,12 +8,10 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from microgridspy.errors import InputValidationError
 from microgridspy.export.results_bundle import ResultsBundle
+from microgridspy.io.formulation import TYPICAL_YEAR
 from microgridspy.io.utils import project_paths
-
-
-class InputValidationError(RuntimeError):
-    pass
 
 
 def safe_float(value: Any) -> float:
@@ -115,9 +113,9 @@ def get_bundle_formulation(bundle: ResultsBundle) -> str:
     """Return formulation mode from bundle data settings."""
     data = bundle.data
     if not isinstance(data, xr.Dataset):
-        return "steady_state"
+        return TYPICAL_YEAR
     settings = (data.attrs or {}).get("settings", {})
-    return str(settings.get("formulation", "steady_state"))
+    return str(settings.get("formulation", TYPICAL_YEAR))
 
 
 def ensure_results_dir(project_name: str, *, suffix: str | None = None) -> Path:

@@ -20,6 +20,8 @@ from microgridspy.export.common import (
     select_or_self,
     write_csv_outputs,
 )
+from microgridspy.finance import crf as _crf
+from microgridspy.io.formulation import MULTI_YEAR
 from microgridspy.io.vintage_labels import (
     load_multi_year_vintage_labels,
     vintage_display_for_step,
@@ -146,15 +148,6 @@ def _scenario_weights(p: Any, scenario_coord: xr.DataArray) -> xr.DataArray:
         dims=("scenario",),
         coords={"scenario": scenario_coord},
     )
-
-
-def _crf(r: xr.DataArray | float, n: xr.DataArray | float) -> xr.DataArray:
-    rr = xr.DataArray(r)
-    nn = xr.DataArray(n)
-    a = (1.0 + rr) ** nn
-    out = (rr * a) / (a - 1.0)
-    out = xr.where(np.abs(rr) < 1e-12, 1.0 / nn, out)
-    return xr.where(nn > 0, out, 0.0)
 
 
 def _as_year_scenario_da(x: Any, sets: xr.Dataset) -> xr.DataArray:
@@ -2267,7 +2260,7 @@ def build_multi_year_results_from_tables(
     )
     meta = dict(metadata or {})
     meta.setdefault("project_name", project_name)
-    meta.setdefault("formulation", "dynamic")
+    meta.setdefault("formulation", MULTI_YEAR)
     meta.setdefault("results_dir", str(results_dir) if results_dir is not None else None)
     return MultiYearResults(
         project_name=project_name,
@@ -2352,7 +2345,7 @@ def build_multi_year_results(
         source=source,
         metadata={
             "project_name": project_name,
-            "formulation": "dynamic",
+            "formulation": MULTI_YEAR,
             "objective_value": safe_float(objective_value),
             "status": status,
             "solver": solver,

@@ -8,6 +8,7 @@ import pandas as pd
 import xarray as xr
 
 from microgridspy.export.common import safe_float, safe_share, scalarize
+from microgridspy.finance import crf as _crf
 
 
 @dataclass
@@ -23,17 +24,6 @@ class TypicalYearReportingTables:
     scenario_variable_costs: pd.DataFrame
     scenario_emissions: pd.DataFrame
     scenario_total_operating_costs: pd.DataFrame
-
-
-def _crf(r: float, n: float) -> float:
-    r = float(r)
-    n = float(n)
-    if n <= 0.0:
-        return float("nan")
-    if abs(r) < 1e-12:
-        return 1.0 / n
-    a = (1.0 + r) ** n
-    return (r * a) / (a - 1.0)
 
 
 def weights_map(data: xr.Dataset) -> dict[str, float]:

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -15,21 +14,20 @@ from microgridspy.export.multi_year_results import (
     MultiYearResults,
     build_dispatch_timeseries_table_multi_year,
     build_energy_balance_table_multi_year,
-    build_multi_year_results,
     build_multi_year_results_from_tables,
     export_multi_year_results,
     export_multi_year_results_package,
 )
-from microgridspy.export.results_bundle import ResultsBundle, build_results_bundle
+from microgridspy.export.results_bundle import ResultsBundle
 from microgridspy.export.typical_year_results import (
     TypicalYearResults,
     build_dispatch_timeseries_table,
     build_energy_balance_table,
-    build_typical_year_results,
     build_typical_year_results_from_tables,
     export_typical_year_results,
     export_typical_year_results_package,
 )
+from microgridspy.io.formulation import MULTI_YEAR, TYPICAL_YEAR
 from microgridspy.io.utils import project_paths
 from microgridspy.multi_year_model.sets import initialize_sets as initialize_multi_year_sets
 from microgridspy.typical_year_model.sets import initialize_sets as initialize_typical_year_sets
@@ -60,7 +58,7 @@ def load_typical_year_results_from_files(project_name: str) -> TypicalYearResult
     except Exception:
         return None
 
-    if str(formulation.get("core_formulation", "steady_state")).strip() != "steady_state":
+    if str(formulation.get("core_formulation", TYPICAL_YEAR)) != TYPICAL_YEAR:
         return None
 
     results_dir = _resolve_typical_year_results_dir(project_name)
@@ -126,7 +124,7 @@ def load_multi_year_results_from_files(project_name: str) -> MultiYearResults | 
     except Exception:
         return None
 
-    if str(formulation.get("core_formulation", "steady_state")).strip() != "dynamic":
+    if str(formulation.get("core_formulation", TYPICAL_YEAR)) != MULTI_YEAR:
         return None
 
     results_dir = _resolve_multi_year_results_dir(project_name)
@@ -164,140 +162,8 @@ def load_multi_year_results_from_files(project_name: str) -> MultiYearResults | 
         scenario_costs_yearly_df=pd.read_csv(results_dir / "scenario_costs_yearly.csv"),
         results_dir=results_dir,
         source="files",
-        metadata={"project_name": project_name, "formulation": "dynamic"},
+        metadata={"project_name": project_name, "formulation": MULTI_YEAR},
         **optional_frames,
-    )
-
-
-def _dataset_project_name(data: Any) -> str | None:
-    if not isinstance(data, xr.Dataset):
-        return None
-    settings = (data.attrs or {}).get("settings", {})
-    if not isinstance(settings, dict):
-        return None
-    raw = settings.get("project_name", None)
-    return str(raw) if raw is not None else None
-
-
-def get_results_bundle_from_session(
-    session_state: Mapping[str, Any], *, active_project: str | None = None
-) -> ResultsBundle | None:
-    raw = session_state.get("gp_results_bundle")
-    if isinstance(raw, ResultsBundle):
-        if active_project is not None and _dataset_project_name(raw.data) not in {
-            None,
-            active_project,
-        }:
-            return None
-        model_obj = session_state.get("gp_model_obj")
-        model_sol = getattr(getattr(model_obj, "model", None), "solution", None)
-        if isinstance(model_sol, xr.Dataset):
-            raw.solution = model_sol
-        return raw
-
-    data = session_state.get("gp_data")
-    vars_dict = session_state.get("gp_vars")
-    if not isinstance(data, xr.Dataset) or not isinstance(vars_dict, dict):
-        return None
-    if active_project is not None and _dataset_project_name(data) not in {None, active_project}:
-        return None
-
-    return build_results_bundle(
-        sets=session_state.get("gp_sets"),
-        data=data,
-        vars=vars_dict,
-        model_obj=session_state.get("gp_model_obj"),
-        solution=session_state.get("gp_solution"),
-        solution_summary=session_state.get("gp_solution_summary"),
-        solver=None,
-    )
-
-
-def get_typical_year_results_from_session(
-    session_state: Mapping[str, Any],
-    *,
-    active_project: str | None = None,
-) -> TypicalYearResults | None:
-    raw = session_state.get("gp_typical_year_results")
-    if isinstance(raw, TypicalYearResults):
-        raw_project = str(raw.metadata.get("project_name") or raw.project_name)
-        if active_project is not None and raw_project not in {None, "", active_project}:
-            return None
-        return raw
-
-    data = session_state.get("gp_data")
-    vars_dict = session_state.get("gp_vars")
-    if not isinstance(data, xr.Dataset) or not isinstance(vars_dict, dict):
-        return None
-    if (
-        str(((data.attrs or {}).get("settings", {}) or {}).get("formulation", "steady_state"))
-        != "steady_state"
-    ):
-        return None
-    if active_project is not None and _dataset_project_name(data) not in {None, active_project}:
-        return None
-
-    # Legacy compatibility fallback while migrating old session-state payloads.
-    summary = session_state.get("gp_solution_summary")
-    objective_value = summary.get("objective_value") if isinstance(summary, dict) else None
-    status = summary.get("status") if isinstance(summary, dict) else None
-    return build_typical_year_results(
-        project_name=str(active_project or _dataset_project_name(data) or ""),
-        data=data,
-        vars=vars_dict,
-        solution=session_state.get("gp_solution")
-        if isinstance(session_state.get("gp_solution"), xr.Dataset)
-        else None,
-        objective_value=objective_value,
-        status=status,
-        solver=None,
-        results_dir=None,
-        source="session_legacy",
-    )
-
-
-def get_multi_year_results_from_session(
-    session_state: Mapping[str, Any],
-    *,
-    active_project: str | None = None,
-) -> MultiYearResults | None:
-    raw = session_state.get("gp_multi_year_results")
-    if isinstance(raw, MultiYearResults):
-        raw_project = str(raw.metadata.get("project_name") or raw.project_name)
-        if active_project is not None and raw_project not in {None, "", active_project}:
-            return None
-        return raw
-
-    bundle = get_results_bundle_from_session(session_state, active_project=active_project)
-    if (
-        bundle is None
-        or not isinstance(bundle.data, xr.Dataset)
-        or not isinstance(bundle.vars, dict)
-    ):
-        return None
-    if (
-        str(
-            ((bundle.data.attrs or {}).get("settings", {}) or {}).get("formulation", "steady_state")
-        )
-        != "dynamic"
-    ):
-        return None
-    summary = session_state.get("gp_solution_summary")
-    objective_value = (
-        summary.get("objective_value") if isinstance(summary, dict) else bundle.objective_value
-    )
-    status = summary.get("status") if isinstance(summary, dict) else bundle.status
-    return build_multi_year_results(
-        project_name=str(active_project or _dataset_project_name(bundle.data) or ""),
-        sets=bundle.sets if isinstance(bundle.sets, xr.Dataset) else xr.Dataset(),
-        data=bundle.data,
-        vars=bundle.vars,
-        solution=bundle.solution if isinstance(bundle.solution, xr.Dataset) else None,
-        objective_value=objective_value,
-        status=status,
-        solver=bundle.metadata.get("solver") if isinstance(bundle.metadata, dict) else None,
-        results_dir=None,
-        source="session_legacy",
     )
 
 
@@ -313,7 +179,7 @@ def build_energy_balance_dataframe(bundle: ResultsBundle) -> pd.DataFrame:
     if bundle.data is None or not isinstance(bundle.vars, dict):
         raise RuntimeError("Missing data/vars in ResultsBundle.")
     formulation = get_bundle_formulation(bundle)
-    if formulation == "dynamic":
+    if formulation == MULTI_YEAR:
         dispatch = build_dispatch_timeseries_table_multi_year(
             sets=bundle.sets,
             data=bundle.data,
@@ -339,7 +205,7 @@ def export_results_from_bundle(
 
     sets_ds = bundle.sets if isinstance(bundle.sets, xr.Dataset) else xr.Dataset()
     formulation = get_bundle_formulation(bundle)
-    if formulation == "dynamic":
+    if formulation == MULTI_YEAR:
         return export_multi_year_results(
             project_name=project_name,
             sets=sets_ds,

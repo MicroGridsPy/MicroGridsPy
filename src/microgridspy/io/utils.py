@@ -134,7 +134,7 @@ def simulate_grid_availability_typical_year(
     rng: np.random.Generator | None = None,
 ) -> np.ndarray:
     """
-    Simulate grid availability for a single representative year (steady_state).
+    Simulate grid availability for a single representative year (typical-year).
 
     Returns:
       np.ndarray shape (periods_per_year,) with values in {0.0, 1.0}.
@@ -223,7 +223,7 @@ def simulate_grid_availability_dynamic(
     years: int,
     periods_per_year: int = 8760,
     first_year_connection: int | None = None,
-    # Weibull params (same meaning as steady_state)
+    # Weibull params (same meaning as typical-year)
     scale_tbo: float = 1620 / 60.0,
     shape_tbo: float = 0.77,
     scale_od: float = 36 / 60.0,
@@ -271,7 +271,7 @@ def simulate_grid_availability_dynamic(
 
     out = np.zeros((periods_per_year, years), dtype=float)
 
-    # Helper: simulate one year (same as your steady_state core, kept local for clarity)
+    # Helper: simulate one year (same as your typical-year core, kept local for clarity)
     def _one_year(rng_year: np.random.Generator) -> np.ndarray:
         # Edge cases: no outages (or nonsensical inputs) -> always available
         if avg_outages_per_year <= 0 or avg_outage_duration_min <= 0:

@@ -20,6 +20,7 @@ from microgridspy.export.typical_year_reporting import (
     build_energy_balance_table as build_reporting_energy_balance_table,
 )
 from microgridspy.export.typical_year_reporting import build_reporting_tables
+from microgridspy.io.formulation import TYPICAL_YEAR
 from microgridspy.typical_year_model.params import get_params
 
 
@@ -27,7 +28,7 @@ from microgridspy.typical_year_model.params import get_params
 class TypicalYearResults:
     """Structured, analysis-ready results of a solved typical-year model.
 
-    Returned by `SteadyStateModel.results()` (and `microgridspy.load_results()`).
+    Returned by `TypicalYearModel.results()` (and `microgridspy.load_results()`).
     Its fields are `pandas` DataFrames covering the main result families — headline
     `kpis`, `design_summary` (installed capacity), `dispatch` and `energy_balance`
     time series, the cost breakdown (`upfront`, `annuities`, `expected_fixed_om`,
@@ -577,7 +578,7 @@ def build_typical_year_results(
     )
     metadata = {
         "project_name": project_name,
-        "formulation": "steady_state",
+        "formulation": TYPICAL_YEAR,
         "solver": solver,
         "status": status,
         "objective_value": objective_value,
@@ -658,7 +659,7 @@ def build_typical_year_results_from_tables(
         data=data,
         metadata={
             "project_name": project_name,
-            "formulation": "steady_state",
+            "formulation": TYPICAL_YEAR,
             "solver": None,
             "status": None,
             "objective_value": objective_value,
@@ -694,32 +695,6 @@ def build_typical_year_results_from_tables(
         results_dir=results_dir,
         source=source,
     )
-
-
-def _crf(r: float, n: float) -> float:
-    if n <= 0:
-        return float("nan")
-    if abs(r) < 1e-12:
-        return 1.0 / n
-    a = (1.0 + r) ** n
-    return (r * a) / (a - 1.0)
-
-
-def build_kpis_table(
-    *,
-    data: xr.Dataset,
-    vars: dict[str, Any],
-    solution: xr.Dataset | None,
-    objective_value: float | None,
-) -> pd.DataFrame:
-    dispatch = build_dispatch_timeseries_table(data=data, vars=vars, solution=solution)
-    design = build_design_summary_table(data=data, vars=vars, solution=solution)
-    return build_reporting_tables(
-        data=data,
-        dispatch_df=dispatch,
-        design_df=design,
-        solver_objective_value=objective_value,
-    ).kpis
 
 
 def build_summary_metrics_table(reporting) -> pd.DataFrame:
@@ -792,13 +767,6 @@ def build_summary_metrics_table(reporting) -> pd.DataFrame:
             },
         ]
     )
-
-
-def energy_balance_residual_summary(energy_balance_df: pd.DataFrame) -> pd.DataFrame:
-    g = energy_balance_df.groupby("scenario", as_index=False)["balance_residual"].agg(
-        max_abs_balance_residual=lambda x: float(np.max(np.abs(np.asarray(x, dtype=float))))
-    )
-    return g
 
 
 def export_typical_year_results(

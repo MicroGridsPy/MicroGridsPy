@@ -1,23 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
-import yaml
-
-
-def _read_yaml_optional(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    try:
-        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-    return payload if isinstance(payload, dict) else {}
+from microgridspy.io.jsonio import read_yaml_optional
 
 
 def renewable_labels_from_yaml(path: Path) -> dict[str, list[str]]:
-    payload = _read_yaml_optional(path)
+    payload = read_yaml_optional(path)
     renewables = payload.get("renewables", None)
     if not isinstance(renewables, list):
         return {"resources": [], "conversion_technologies": []}
@@ -37,19 +26,4 @@ def renewable_labels_from_yaml(path: Path) -> dict[str, list[str]]:
     return {
         "resources": resources,
         "conversion_technologies": conversions,
-    }
-
-
-def component_labels_from_yaml(*, battery_path: Path, generator_path: Path) -> dict[str, str]:
-    battery_payload = _read_yaml_optional(battery_path)
-    generator_payload = _read_yaml_optional(generator_path)
-
-    battery = battery_payload.get("battery", {}) or {}
-    generator = generator_payload.get("generator", {}) or {}
-    fuel = generator_payload.get("fuel", {}) or {}
-
-    return {
-        "battery": str(battery.get("label", "Battery") or "Battery").strip() or "Battery",
-        "generator": str(generator.get("label", "Generator") or "Generator").strip() or "Generator",
-        "fuel": str(fuel.get("label", "Fuel") or "Fuel").strip() or "Fuel",
     }

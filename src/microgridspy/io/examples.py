@@ -49,13 +49,6 @@ def list_examples() -> list[str]:
     return sorted(EXAMPLES)
 
 
-def example_description(name: str) -> str:
-    """Return the one-line description of a bundled example."""
-    if name not in EXAMPLES:
-        raise ValueError(f"Unknown example '{name}'. Available: {list_examples()}")
-    return EXAMPLES[name]
-
-
 def load_example(
     name: str = "demo_typical_year",
     dest: str | None = None,

@@ -8,6 +8,7 @@ import pandas as pd
 import yaml
 
 from microgridspy.io.csv_format import write_csv_with_format
+from microgridspy.io.formulation import MULTI_YEAR
 from microgridspy.io.jsonio import ensure_parent_dir
 from microgridspy.io.paths import ProjectPaths
 
@@ -31,7 +32,7 @@ class TemplateSettings:
     generated templates.
     """
 
-    formulation: str  # "steady_state" | "dynamic"
+    formulation: str  # "typical_year" | "multi_year"
     system_type: str  # "off_grid" | "on_grid"
     allow_export: bool
 
@@ -42,7 +43,7 @@ class TemplateSettings:
 
     # dynamic-only context used to generate year headers
     start_year_label: str  # e.g. "2026" or "typical_year"
-    horizon_years: int | None  # e.g. 20 (None for steady_state)
+    horizon_years: int | None  # e.g. 20 (None for typical-year)
     # capacity expansion context
     capacity_expansion: bool
     investment_steps_years: Sequence[int] | None  # e.g. [5,5,5,5] or None
@@ -141,14 +142,14 @@ def _safe_scenario_labels(settings: TemplateSettings) -> list[str]:
 def _safe_year_labels(settings: TemplateSettings) -> list[str]:
     """
     Return year labels for the second header level.
-    - steady_state -> ["typical_year"]
+    - typical-year -> ["typical_year"]
     - dynamic -> ["<start_year>", "<start_year+1>", ...] for horizon_years
 
     Multi-year projects require integer-like year labels in the current
     implementation. We therefore fail fast here instead of implying that a
     non-integer fallback would work end-to-end.
     """
-    if settings.formulation != "dynamic":
+    if settings.formulation != MULTI_YEAR:
         return ["typical_year"]
 
     horizon = int(settings.horizon_years or 0)
@@ -196,15 +197,15 @@ def _safe_conversion_labels(settings: TemplateSettings) -> list[str]:
 def _safe_step_keys(settings: TemplateSettings) -> list[str]:
     """
     Step keys used in YAML:
-    - steady_state -> ["base"]
+    - typical-year -> ["base"]
     - dynamic -> ["1"] or ["1", "2", ...]
 
     This keeps the user-facing multi-year templates aligned with the internal
     `sets.inv_step` labels and avoids relying on hidden alias remapping for the
     current workflow.
     """
-    is_dynamic = settings.formulation == "dynamic"
-    if not is_dynamic:
+    is_multi_year = settings.formulation == MULTI_YEAR
+    if not is_multi_year:
         return ["base"]
 
     years = list(settings.investment_steps_years or [])
@@ -232,7 +233,7 @@ def _safe_battery_loss_model(settings: TemplateSettings) -> str:
 
 
 def _battery_endogenous_degradation_enabled(settings: TemplateSettings) -> bool:
-    if settings.formulation != "dynamic":
+    if settings.formulation != MULTI_YEAR:
         return False
     if _safe_battery_loss_model(settings) != "convex_loss_epigraph":
         return False
@@ -243,7 +244,7 @@ def _battery_cycle_fade_active(settings: TemplateSettings) -> bool:
     """Semi-empirical cycle fade active in ANY formulation.
 
     Dynamic multi-year uses it as an endogenous capacity-fade recursion (requires the
-    convex-loss model); steady_state typical-year uses it as a binding-life CAPEX amortisation.
+    convex-loss model); typical-year uses it as a binding-life CAPEX amortisation.
     Both need the same degradation inputs (chemistry, SoH bounds, cycle life, ambient
     temperature), so this gate controls writing those inputs.
     """
@@ -282,68 +283,6 @@ def _template_scenarios(settings: TemplateSettings) -> list[str]:
 
 def _template_years(settings: TemplateSettings) -> list[str]:
     return _safe_year_labels(settings)
-
-
-def _blank_vintage_labels(step_keys: Sequence[str]) -> dict[str, str]:
-    return {str(step): "" for step in step_keys}
-
-
-def _default_step_label(family: str, step: str) -> str:
-    normalized = str(step).strip()
-    step_text = normalized.replace("step_", "").replace("step", "")
-    prefixes = {
-        "battery": "Storage technology",
-        "generator": "Backup technology",
-        "fuel": "Fuel",
-    }
-    prefix = prefixes.get(str(family), "Technology")
-    if step_text.lower() == "base":
-        return prefix
-    return f"{prefix} {step_text}"
-
-
-def _coerce_vintage_labels(
-    raw: Mapping[str, str] | None,
-    step_keys: Sequence[str],
-    *,
-    family: str,
-) -> dict[str, str]:
-    out = {str(step): _default_step_label(family, str(step)) for step in step_keys}
-    if not isinstance(raw, Mapping):
-        return out
-    for step in step_keys:
-        value = str(raw.get(str(step), "") or "").strip()
-        out[str(step)] = value or out[str(step)]
-    return out
-
-
-def _coerce_renewable_vintage_labels(
-    raw: Mapping[str, Mapping[str, str]] | None,
-    *,
-    step_keys: Sequence[str],
-    resource_labels: Sequence[str],
-) -> dict[str, dict[str, str]]:
-    out: dict[str, dict[str, str]] = {
-        str(step): {
-            str(resource): (
-                f"{str(resource)} technology"
-                if str(step).replace("step_", "").replace("step", "").lower() == "base"
-                else f"{str(resource)} technology {str(step).replace('step_', '').replace('step', '')}"
-            )
-            for resource in resource_labels
-        }
-        for step in step_keys
-    }
-    if not isinstance(raw, Mapping):
-        return out
-    for step in step_keys:
-        step_block = raw.get(str(step), {})
-        if not isinstance(step_block, Mapping):
-            continue
-        for resource in resource_labels:
-            value = str(step_block.get(str(resource), "") or "").strip()
-            out[str(step)][str(resource)] = value or out[str(step)][str(resource)]
-    return out
 
 
 def _ensure_parent_dir(path: Path) -> None:
@@ -526,7 +465,7 @@ def _write_inputs_readme(path: Path, settings: TemplateSettings, overwrite: bool
     if path.exists() and not overwrite:
         return
 
-    is_dynamic = settings.formulation == "dynamic"
+    is_multi_year = settings.formulation == MULTI_YEAR
     battery_curve_enabled = (
         str(getattr(settings, "battery_loss_model", "") or "").strip().lower()
         == "convex_loss_epigraph"
@@ -575,7 +514,7 @@ def _write_inputs_readme(path: Path, settings: TemplateSettings, overwrite: bool
         "- Renewable techno-economic parameters.\n",
         "- Parameters can vary by resource and, for investment-side data, by investment step.\n\n",
     ]
-    if is_dynamic:
+    if is_multi_year:
         if bool(getattr(settings, "capacity_expansion", False)):
             text_parts.append(
                 "- Multi-year capacity expansion uses a shared-technology interpretation: `investment.by_step` varies across steps, while technical parameters stay shared.\n"
@@ -590,7 +529,7 @@ def _write_inputs_readme(path: Path, settings: TemplateSettings, overwrite: bool
             "- Battery techno-economic parameters.\n",
             (
                 "- In the multi-year formulation, battery investment data are written by step while technical parameters remain shared.\n"
-                if is_dynamic
+                if is_multi_year
                 else "- In the typical-year formulation, battery investment data use a single base step and technical parameters remain shared.\n"
             ),
             "- `battery.technical.initial_soc` is interpreted as an absolute fraction of installed/effective capacity, not as a fraction of the usable DoD window. With the current SOC lower bound, choose `initial_soc >= 1 - depth_of_discharge` whenever positive battery capacity may be installed.\n",
@@ -619,7 +558,7 @@ def _write_inputs_readme(path: Path, settings: TemplateSettings, overwrite: bool
             "- Generator and fuel techno-economic parameters.\n",
             (
                 "- In the multi-year formulation, generator investment data are written by step while technical and fuel-physics data remain shared. Yearly fuel prices remain scenario-based.\n"
-                if is_dynamic
+                if is_multi_year
                 else "- In the typical-year formulation, generator investment data use a single base step while technical parameters remain shared and fuel inputs stay scenario-based.\n"
             ),
         ]
@@ -693,15 +632,15 @@ def _write_renewables_yaml(path: Path, settings: TemplateSettings, overwrite: bo
         - id, conversion_technology, resource
           investment:
             by_step:
-              "<inv_step_label>":   # e.g. "1", "2" ... (or "base" in steady_state)
+              "<inv_step_label>":   # e.g. "1", "2" ... (or "base" in typical-year)
                 {investment-side parameters}
           technical:
             {step-invariant technical parameters}
     Notes:
       - In the dynamic formulation, the generated step keys always follow the
         internal investment-step labels: "1", "2", ...
-      - In steady_state, the single step key remains "base".
-      - In steady_state, degradation keys are omitted (not applicable).
+      - In typical-year, the single step key remains "base".
+      - In typical-year, degradation keys are omitted (not applicable).
     """
     if path.exists() and not overwrite:
         return
@@ -710,16 +649,16 @@ def _write_renewables_yaml(path: Path, settings: TemplateSettings, overwrite: bo
     conversion_labels = _safe_conversion_labels(settings)
 
     # IMPORTANT: step keys MUST match the current multi-year canonical convention.
-    # Dynamic templates use ["1","2",...,"N"] and steady_state uses ["base"].
+    # Dynamic templates use ["1","2",...,"N"] and typical-year uses ["base"].
     step_keys = list(map(str, _safe_step_keys(settings)))
 
-    is_dynamic = settings.formulation == "dynamic"
+    is_multi_year = settings.formulation == MULTI_YEAR
     capexp = bool(getattr(settings, "capacity_expansion", False))
 
     # Optional step metadata (purely informational; not required by loaders)
     steps_years = list(getattr(settings, "investment_steps_years", None) or [])
     steps_meta = None
-    if is_dynamic and capexp and steps_years:
+    if is_multi_year and capexp and steps_years:
         # Map metadata to the canonical external step labels "1","2",...
         steps_meta = [
             {"step": str(i + 1), "duration_years": int(steps_years[i])}
@@ -754,7 +693,7 @@ def _write_renewables_yaml(path: Path, settings: TemplateSettings, overwrite: bo
             "specific_area_m2_per_kw": None,  # optional (m2/kW) -> allow null
             "max_installable_capacity_kw": None,  # optional (kW) -> allow null
         }
-        if is_dynamic:
+        if is_multi_year:
             params["capacity_degradation_rate_per_year"] = 0.0  # -/year (effective capacity)
         return params
 
@@ -795,7 +734,7 @@ def _write_renewables_yaml(path: Path, settings: TemplateSettings, overwrite: bo
         "res_specific_area_m2_per_kw": "m2_per_kW",
         "res_max_installable_capacity_kw": "kW",
     }
-    if is_dynamic:
+    if is_multi_year:
         units["res_capacity_degradation_rate_per_year"] = "per_year"
 
     description = {
@@ -819,7 +758,7 @@ def _write_renewables_yaml(path: Path, settings: TemplateSettings, overwrite: bo
             "res_production_subsidy_per_kwh": "Operating subsidy earned per unit of renewable generation in years belonging to that investment step.",
         },
     }
-    if is_dynamic:
+    if is_multi_year:
         description["parameters"]["res_capacity_degradation_rate_per_year"] = (
             "Annual reduction in effective renewable capacity used in the dynamic formulation."
         )
@@ -873,7 +812,7 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
 
     Notes:
     - If multi_scenario is False, only scenario_1 is used.
-    - If capacity_expansion is disabled (or not dynamic), the steady-state schema remains shared/scenario-based.
+    - If capacity_expansion is disabled (or not dynamic), the typical-year schema remains shared/scenario-based.
     """
     if path.exists() and not overwrite:
         return
@@ -882,13 +821,13 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
         settings
     )  # Dynamic templates use canonical step labels ["1","2",...]
 
-    is_dynamic = settings.formulation == "dynamic"
+    is_multi_year = settings.formulation == MULTI_YEAR
     capexp = bool(getattr(settings, "capacity_expansion", False))
 
     # Optional step metadata (human readability only)
     steps_years = list(getattr(settings, "investment_steps_years", None) or [])
     steps_meta = None
-    if is_dynamic and capexp:
+    if is_multi_year and capexp:
         steps_meta = [
             {"step": str(i + 1), "duration_years": int(steps_years[i])}
             for i in range(len(steps_years))
@@ -950,7 +889,7 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
             params["cycle_lifetime_to_eol_cycles"] = float(
                 getattr(settings, "battery_cycle_lifetime_to_eol_cycles", 6000.0) or 6000.0
             )
-        if is_dynamic:
+        if is_multi_year:
             # Simple flat calendar ageing: a single %/yr reduction in effective capacity
             # (0 = no calendar ageing). This is the only calendar-ageing input.
             params["capacity_degradation_rate_per_year"] = float(
@@ -1013,7 +952,7 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
                     {
                         "battery_capacity_degradation_rate_per_year": "per_year",
                     }
-                    if is_dynamic
+                    if is_multi_year
                     else {}
                 ),
             },
@@ -1099,7 +1038,7 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
                                 "only calendar-ageing input; it coexists with throughput-based cycle fade."
                             )
                         }
-                        if is_dynamic
+                        if is_multi_year
                         else {}
                     ),
                 },
@@ -1188,7 +1127,7 @@ def _write_generator_yaml(path: Path, settings: TemplateSettings, overwrite: boo
     if path.exists() and not overwrite:
         return
 
-    is_dynamic = settings.formulation == "dynamic"
+    is_multi_year = settings.formulation == MULTI_YEAR
     capexp = bool(getattr(settings, "capacity_expansion", False))
 
     scenarios = _template_scenarios(settings)
@@ -1199,7 +1138,7 @@ def _write_generator_yaml(path: Path, settings: TemplateSettings, overwrite: boo
     # Optional step metadata (for human readability; not required by loader)
     steps_years = list(getattr(settings, "investment_steps_years", None) or [])
     steps_meta = None
-    if is_dynamic and capexp:
+    if is_multi_year and capexp:
         steps_meta = [
             {"step": str(i + 1), "duration_years": int(steps_years[i])}
             for i in range(len(steps_years))
@@ -1248,14 +1187,14 @@ def _write_generator_yaml(path: Path, settings: TemplateSettings, overwrite: boo
                 getattr(settings, "generator_min_load_fraction", 0.0) or 0.0
             ),  # minimum stable load as a fraction of unit capacity
             "max_installable_capacity_kw": None,  # optional (kW)
-            **({"capacity_degradation_rate_per_year": 0.0} if is_dynamic else {}),
+            **({"capacity_degradation_rate_per_year": 0.0} if is_multi_year else {}),
         }
 
     def _default_fuel_block() -> dict:
         """
         Fuel block per scenario.
 
-        steady_state:
+        typical-year:
           - fuel_cost_per_unit_fuel: scalar
 
         dynamic:
@@ -1267,7 +1206,7 @@ def _write_generator_yaml(path: Path, settings: TemplateSettings, overwrite: boo
             "direct_emissions_kgco2e_per_unit_fuel": 0.0,  # kgCO2e per unit fuel
         }
 
-        if not is_dynamic:
+        if not is_multi_year:
             base["fuel_cost_per_unit_fuel"] = 0.0  # currency per unit fuel (constant typical-year)
             base["description"] = (
                 "Typical-year fuel inputs use a single constant fuel cost per unit fuel."
@@ -1298,11 +1237,11 @@ def _write_generator_yaml(path: Path, settings: TemplateSettings, overwrite: boo
     gen_technical = _default_generator_technical_params()
 
     # -------------------------------------------------------------------------
-    # Legacy steady_state fuel helper
+    # Legacy typical-year fuel helper
     # -------------------------------------------------------------------------
     fuel_by_scenario = {str(s): _default_fuel_block() for s in scenarios}
 
-    if is_dynamic:
+    if is_multi_year:
         generator_payload = {
             "label": _safe_generator_label(settings),
             "investment": {"by_step": gen_investment_by_step},
@@ -1344,7 +1283,7 @@ def _write_generator_yaml(path: Path, settings: TemplateSettings, overwrite: boo
         "fuel_lhv_kwh_per_unit_fuel": "kWh_per_unit_fuel",
         "fuel_direct_emissions_kgco2e_per_unit_fuel": "kgCO2e_per_unit_fuel",
     }
-    if is_dynamic:
+    if is_multi_year:
         units.update(
             {
                 "generator_capacity_degradation_rate_per_year": "per_year",
@@ -1373,10 +1312,10 @@ def _write_generator_yaml(path: Path, settings: TemplateSettings, overwrite: boo
             "generator_max_installable_capacity_kw": "Upper bound on installed generator capacity.",
             "fuel_lhv_kwh_per_unit_fuel": "Lower heating value of the fuel.",
             "fuel_direct_emissions_kgco2e_per_unit_fuel": "Direct combustion emissions per unit of fuel.",
-            "fuel_fuel_cost_per_unit_fuel": "Fuel price in the steady-state formulation.",
+            "fuel_fuel_cost_per_unit_fuel": "Fuel price in the typical-year formulation.",
         },
     }
-    if is_dynamic:
+    if is_multi_year:
         description["parameters"]["generator_capacity_degradation_rate_per_year"] = (
             "Annual reduction in effective generator capacity in the dynamic formulation."
         )
@@ -1513,7 +1452,7 @@ def _write_grid_yaml(path: Path, settings: TemplateSettings, overwrite: bool = F
 
     scenarios = _template_scenarios(settings)
     years = _template_years(settings)  # used for context + dynamic first_year_connection default
-    is_dynamic = settings.formulation == "dynamic"
+    is_multi_year = settings.formulation == MULTI_YEAR
     allow_export = bool(getattr(settings, "allow_export", False))
 
     def _default_grid_params() -> dict:
@@ -1536,7 +1475,7 @@ def _write_grid_yaml(path: Path, settings: TemplateSettings, overwrite: bool = F
         }
 
         # Only include future-connection parameter in dynamic formulation
-        if is_dynamic:
+        if is_multi_year:
             # best-effort default: first year label if parseable, otherwise None
             fy = None
             if years:
@@ -1575,7 +1514,7 @@ def _write_grid_yaml(path: Path, settings: TemplateSettings, overwrite: bool = F
                 "grid_outage_scale_od_hours": "hours",
                 "grid_outage_shape_od": "-",
                 "grid_outage_seed": "integer_seed",
-                "grid_first_year_connection": "year_label" if is_dynamic else None,
+                "grid_first_year_connection": "year_label" if is_multi_year else None,
             },
             "description": {
                 "summary": (
@@ -1602,7 +1541,7 @@ def _write_grid_yaml(path: Path, settings: TemplateSettings, overwrite: bool = F
                                 "are supported only when the model year labels are themselves integer-like."
                             )
                         }
-                        if is_dynamic
+                        if is_multi_year
                         else {}
                     ),
                 },
@@ -1648,7 +1587,7 @@ def _write_grid_import_price_csv(
       - includes meta/hour column as ("meta","hour") with values 0..8759
 
     Notes:
-      - If steady_state: year label is 'typical_year'
+      - If typical-year: year label is 'typical_year'
       - If dynamic: year labels expand across horizon_years
       - Scenario × year layout mirrors load_demand.csv
     """
