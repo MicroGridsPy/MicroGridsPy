@@ -11,6 +11,7 @@ dist/
 
 # Test / lint caches
 .pytest_cache/
+.cache/
 .ruff_cache/
 .coverage
 htmlcov/
