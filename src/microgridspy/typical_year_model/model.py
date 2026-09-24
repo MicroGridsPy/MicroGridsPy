@@ -18,10 +18,6 @@ if TYPE_CHECKING:
     from microgridspy.export.typical_year_results import TypicalYearResults
 
 
-class InputValidationError(RuntimeError):
-    """Raised when a project's inputs are missing, malformed, or inconsistent."""
-
-
 SolverKw = dict[str, Any]
 
 
@@ -35,8 +31,8 @@ class _BuildFlags:
     model_built: bool = False
 
 
-class SteadyStateModel:
-    """Typical-year (steady-state) optimization model for a project.
+class TypicalYearModel:
+    """Typical-year optimization model for a project.
 
     Builds and solves the single-representative-year formulation in Linopy: it
     assembles the sets and input data from the project folder, constructs the
@@ -49,9 +45,9 @@ class SteadyStateModel:
     The convenience wrapper `microgridspy.solve()` covers the common path.
 
     ```python
-    from microgridspy import SteadyStateModel
+    from microgridspy import TypicalYearModel
 
-    model = SteadyStateModel("demo_typical_year")
+    model = TypicalYearModel("demo_typical_year")
     model.solve_single_objective(solver="highs")
     results = model.results()
     results.kpis            # pandas DataFrame

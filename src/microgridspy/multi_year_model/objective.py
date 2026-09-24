@@ -4,6 +4,8 @@ import linopy as lp
 import numpy as np
 import xarray as xr
 
+from microgridspy.errors import InputValidationError
+from microgridspy.finance import crf as _crf
 from microgridspy.multi_year_model.lifecycle import (
     map_inv_step_to_year,
     replacement_active_mask,
@@ -11,10 +13,6 @@ from microgridspy.multi_year_model.lifecycle import (
     year_ordinal,
 )
 from microgridspy.multi_year_model.params import get_params
-
-
-class InputValidationError(RuntimeError):
-    pass
 
 
 def _require_da(name: str, da: xr.DataArray | None) -> xr.DataArray:
@@ -40,20 +38,6 @@ def _require_finite_da(name: str, da: xr.DataArray | None) -> xr.DataArray:
 def _finite_or_zero(da: xr.DataArray | float | int) -> xr.DataArray:
     out = xr.DataArray(da)
     return xr.where(np.isfinite(out), out, 0.0)
-
-
-def _crf(rate: xr.DataArray | float, lifetime: xr.DataArray | float) -> xr.DataArray:
-    """
-    Capital Recovery Factor:
-      CRF = r * (1+r)^n / ((1+r)^n - 1), and if r==0 -> 1/n.
-    """
-    r = xr.DataArray(rate)
-    n = xr.DataArray(lifetime)
-    one_plus = 1.0 + r
-    pow_term = one_plus**n
-    crf_val = (r * pow_term) / (pow_term - 1.0)
-    crf_val = xr.where(r == 0.0, 1.0 / n, crf_val)
-    return xr.where(n > 0.0, crf_val, 0.0)
 
 
 def _discount_factor_by_year(sets: xr.Dataset, social_rate: float) -> xr.DataArray:

@@ -18,10 +18,6 @@ if TYPE_CHECKING:
     from microgridspy.export.multi_year_results import MultiYearResults
 
 
-class InputValidationError(RuntimeError):
-    pass
-
-
 SolverKw = dict[str, Any]
 
 

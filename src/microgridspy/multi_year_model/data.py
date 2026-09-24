@@ -16,9 +16,6 @@ from microgridspy.data_pipeline.battery_degradation_coefficients import (
     normalize_chemistry,
 )
 from microgridspy.data_pipeline.battery_degradation_model import (
-    InputValidationError as BatteryDegradationInputValidationError,
-)
-from microgridspy.data_pipeline.battery_degradation_model import (
     get_battery_degradation_settings,
 )
 from microgridspy.data_pipeline.battery_loss_model import (
@@ -26,9 +23,6 @@ from microgridspy.data_pipeline.battery_loss_model import (
     get_battery_loss_model_from_formulation,
     load_battery_loss_curve_dataset,
     resolve_efficiency_curve_values,
-)
-from microgridspy.data_pipeline.battery_loss_model import (
-    InputValidationError as BatteryLossInputValidationError,
 )
 from microgridspy.data_pipeline.loader import load_project_dataset
 from microgridspy.data_pipeline.utils import (
@@ -38,53 +32,22 @@ from microgridspy.data_pipeline.utils import (
     broadcast_to_scenario,
     merge_optional_datasets,
     normalize_weights,
-    read_json_or_raise,
-    read_yaml_or_raise,
 )
+from microgridspy.errors import InputValidationError
 from microgridspy.io.csv_format import read_csv_with_format, write_csv_with_format
+from microgridspy.io.formulation import MULTI_YEAR, TYPICAL_YEAR
+from microgridspy.io.jsonio import read_json, read_yaml
 from microgridspy.io.utils import project_paths, simulate_grid_availability_dynamic
-
-
-class InputValidationError(RuntimeError):
-    pass
-
+from microgridspy.io.vintage_labels import normalize_step_key
 
 # -----------------------------------------------------------------------------
 # helpers
 # -----------------------------------------------------------------------------
-_read_json = partial(read_json_or_raise, error_cls=InputValidationError)
-_read_yaml = partial(read_yaml_or_raise, error_cls=InputValidationError)
-_as_float = partial(as_float, error_cls=InputValidationError)
-_as_float_or_nan = partial(as_float_or_nan, error_cls=InputValidationError)
-_as_str = partial(as_str, error_cls=InputValidationError)
+_as_float = partial(as_float)
+_as_float_or_nan = partial(as_float_or_nan)
+_as_str = partial(as_str)
 _normalize_weights = normalize_weights
 _broadcast_to_scenario = broadcast_to_scenario
-
-
-def _normalize_step_key(k: object) -> str:
-    """
-    Normalize YAML step keys to match inv_step_coord labels.
-
-    Accepts:
-      - "1", "2"
-      - 1, 2
-      - "step_1", "step_2" (legacy aliases)
-      - "base" (single-step legacy alias)
-      - "Step 1" (best effort)
-    Returns:
-      - "1" or "2" ... (string)
-    """
-    s = str(k).strip()
-    s_low = s.lower().replace(" ", "")
-    if s_low == "base":
-        return "base"
-    if s_low.startswith("step_"):
-        return s_low.split("step_", 1)[1]
-    if s_low.startswith("step"):
-        # e.g. "step1"
-        tail = s_low.split("step", 1)[1]
-        return tail
-    return s  # already like "1" (or something else)
 
 
 def _remap_by_step_dict(
@@ -108,7 +71,7 @@ def _remap_by_step_dict(
     # Normalize keys
     remapped: dict[str, dict] = {}
     for k, v in by_step.items():
-        nk = _normalize_step_key(k)
+        nk = normalize_step_key(k)
         remapped[str(nk)] = v
 
     if "base" in remapped:
@@ -129,173 +92,11 @@ def _remap_by_step_dict(
     return remapped
 
 
-def _component_top_level_by_step(
-    path: Path,
-    component_block: dict,
-    *,
-    expected_steps: list[str],
-    context: str,
-) -> dict[str, dict] | None:
-    by_step = component_block.get("by_step", None)
-    if by_step is None:
-        return None
-    remapped = _remap_by_step_dict(
-        path,
-        by_step,
-        expected_steps=expected_steps,
-        context=f"{context}.by_step",
-    )
-    for st in expected_steps:
-        blk = remapped.get(st, None)
-        if not isinstance(blk, dict):
-            raise InputValidationError(f"{path.name}: {context}.by_step['{st}'] must be a dict.")
-    return remapped
-
-
 def _normalize_optional_path(raw: object) -> str | None:
     if isinstance(raw, str):
         value = raw.strip()
         return value or None
     return None
-
-
-def _shared_technology_error(component: str) -> str:
-    return (
-        "Multi-year formulation assumes shared technology across investment steps; "
-        f"step-specific technical parameters are not supported for {component}."
-    )
-
-
-def _collapse_shared_by_step_numeric(
-    path: Path,
-    *,
-    by_step: dict[str, dict],
-    step_labels: list[str],
-    keys: list[str],
-    optional_defaults: dict[str, float],
-    context: str,
-) -> dict[str, float]:
-    shared: dict[str, float] = {}
-    for key in keys:
-        baseline: float | None = None
-        for step in step_labels:
-            block = by_step[step]
-            if key not in block:
-                if key in optional_defaults:
-                    value = float(optional_defaults[key])
-                else:
-                    raise InputValidationError(
-                        f"{path.name}: missing technical param '{key}' in {context}['{step}']."
-                    )
-            elif key.endswith("max_installable_capacity_kw") or key.endswith(
-                "max_installable_capacity_kwh"
-            ):
-                value = float(_as_float_or_nan(block.get(key), name=f"{context}/{step}/{key}"))
-            else:
-                value = float(
-                    _as_float(block.get(key), name=f"{context}/{step}/{key}", default=0.0)
-                )
-
-            if baseline is None:
-                baseline = value
-            else:
-                same = (not np.isfinite(baseline) and not np.isfinite(value)) or np.isclose(
-                    value, baseline, atol=1e-12, rtol=0.0
-                )
-                if not same:
-                    raise InputValidationError(
-                        f"{path.name}: {_shared_technology_error(context.split('.')[0])}"
-                    )
-        shared[key] = float("nan") if baseline is None else float(baseline)
-    return shared
-
-
-def _collapse_shared_by_step_paths(
-    path: Path,
-    *,
-    by_step: dict[str, dict],
-    step_labels: list[str],
-    keys: list[str],
-    context: str,
-) -> dict[str, str | None]:
-    shared: dict[str, str | None] = {}
-    for key in keys:
-        baseline: str | None = None
-        for step in step_labels:
-            value = _normalize_optional_path(by_step[step].get(key, None))
-            if baseline is None:
-                baseline = value
-            elif value != baseline:
-                raise InputValidationError(
-                    f"{path.name}: {_shared_technology_error(context.split('.')[0])}"
-                )
-        shared[key] = baseline
-    return shared
-
-
-def _apply_shared_override_numeric(
-    *,
-    current: dict[str, float],
-    key: str,
-    value: float,
-    component: str,
-) -> None:
-    baseline = current.get(key, None)
-    if baseline is not None:
-        same = (not np.isfinite(baseline) and not np.isfinite(value)) or np.isclose(
-            float(value), float(baseline), atol=1e-12, rtol=0.0
-        )
-        if not same:
-            raise InputValidationError(_shared_technology_error(component))
-    current[key] = float(value)
-
-
-def _require_shared_legacy_scenario_value(
-    path: Path,
-    *,
-    by_scenario: dict,
-    scenario_labels: list[str],
-    key: str,
-    context: str,
-    numeric: bool = True,
-    optional: bool = False,
-    default: float | str | None = None,
-) -> float | str | None:
-    values: list[float | str | None] = []
-    for scenario in scenario_labels:
-        block = by_scenario.get(scenario, None)
-        if not isinstance(block, dict):
-            raise InputValidationError(f"{path.name}: {context} missing scenario '{scenario}'.")
-        if key not in block:
-            if optional:
-                values.append(default)
-                continue
-            raise InputValidationError(f"{path.name}: {context}['{scenario}'] missing '{key}'.")
-        raw = block.get(key)
-        if raw is None and optional:
-            values.append(default)
-            continue
-        if numeric:
-            values.append(_as_float(raw, name=f"{context}/{scenario}/{key}", default=0.0))
-        else:
-            values.append(_normalize_optional_path(raw))
-
-    first = values[0]
-    for other in values[1:]:
-        if numeric:
-            if not np.isclose(float(other), float(first), atol=1e-12, rtol=0.0):
-                raise InputValidationError(
-                    f"{path.name}: legacy scenario-specific '{key}' values differ across scenarios in {context}. "
-                    "In the shared-technology multi-year model this parameter must be technology-based. "
-                    "Move it to a shared/by_step block or make the scenario values identical."
-                )
-        else:
-            if other != first:
-                raise InputValidationError(
-                    f"{path.name}: legacy scenario-specific '{key}' values differ across scenarios in {context}. "
-                    "In the shared-technology multi-year model this parameter must be technology-based."
-                )
-    return first
 
 
 # -----------------------------------------------------------------------------
@@ -680,7 +481,7 @@ def _load_renewables_yaml(
     if not path.exists():
         raise InputValidationError(f"Missing required file: {path}")
 
-    payload = _read_yaml(path)
+    payload = read_yaml(path)
 
     ren_list = payload.get("renewables", None)
     if not isinstance(ren_list, list) or len(ren_list) == 0:
@@ -965,7 +766,7 @@ def _load_battery_yaml(
     Technical battery parameters are treated as shared across investment steps
     in the multi-year formulation.
     """
-    payload = _read_yaml(path)
+    payload = read_yaml(path)
 
     bat = payload.get("battery", None)
     if not isinstance(bat, dict):
@@ -1162,7 +963,7 @@ def _load_battery_yaml(
     ds.attrs["battery_label"] = str(bat.get("label", "Battery"))
     ds.attrs["battery_chemistry"] = battery_chemistry
     ds.attrs["efficiency_curve_file"] = shared_paths.get("efficiency_curve_csv", None)
-    ds.attrs["settings"] = {"inputs_loaded": {"battery_yaml": str(path)}, "formulation": "dynamic"}
+    ds.attrs["settings"] = {"inputs_loaded": {"battery_yaml": str(path)}, "formulation": MULTI_YEAR}
     return ds
 
 
@@ -1175,7 +976,7 @@ def _load_generator_and_fuel_yaml(
     year_coord: xr.DataArray,
 ) -> tuple[xr.Dataset, xr.Dataset, xr.Dataset | None, dict]:
     """Load dynamic generator + fuel parameters from the current shared-technology schema."""
-    payload = _read_yaml(path)
+    payload = read_yaml(path)
 
     gen = payload.get("generator", None)
     fuel = payload.get("fuel", None)
@@ -1632,7 +1433,7 @@ def _load_grid_yaml_dynamic(
       - If first_year_connection is null, grid is available from the start of
         the modeled horizon.
     """
-    payload = _read_yaml(path)
+    payload = read_yaml(path)
 
     grid = payload.get("grid", None)
     if not isinstance(grid, dict):
@@ -1779,7 +1580,7 @@ def _load_grid_yaml_dynamic(
     )
 
     ds = xr.Dataset(data_vars=data_vars)
-    ds.attrs["settings"] = {"inputs_loaded": {"grid_yaml": str(path)}, "formulation": "dynamic"}
+    ds.attrs["settings"] = {"inputs_loaded": {"grid_yaml": str(path)}, "formulation": MULTI_YEAR}
     return ds
 
 
@@ -1950,12 +1751,12 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
     n_scen = int(scenario_coord.size)
 
     paths = project_paths(project_name)
-    formulation = _read_json(paths.formulation_json)
+    formulation = read_json(paths.formulation_json)
 
     formulation_mode = _as_str(
-        formulation.get("core_formulation", "steady_state"), name="core_formulation"
+        formulation.get("core_formulation", TYPICAL_YEAR), name="core_formulation"
     )
-    if formulation_mode != "dynamic":
+    if formulation_mode != MULTI_YEAR:
         raise InputValidationError("This data initializer is for dynamic only.")
 
     # Integer (discrete) capacity sizing. `unit_commitment` is the legacy key name.
@@ -2057,7 +1858,7 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
             formulation,
             battery_loss_model=battery_loss_model,
         )
-    except BatteryDegradationInputValidationError as exc:
+    except InputValidationError as exc:
         raise InputValidationError(str(exc)) from exc
     battery_path = paths.inputs_dir / "battery.yaml"
     bat_params_ds = _load_battery_yaml(
@@ -2232,7 +2033,7 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
                 charge_efficiency_base=charge_efficiency_base,
                 discharge_efficiency_base=discharge_efficiency_base,
             )
-        except BatteryLossInputValidationError as exc:
+        except InputValidationError as exc:
             raise InputValidationError(str(exc)) from exc
         battery_curve_point = xr.IndexVariable(
             "battery_curve_point", curve_ds.coords["battery_curve_point"].values

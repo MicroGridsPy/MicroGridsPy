@@ -4,29 +4,12 @@ import linopy as lp
 import numpy as np
 import xarray as xr
 
+from microgridspy.errors import InputValidationError
+from microgridspy.finance import crf as _crf
 from microgridspy.typical_year_model.params import get_params
-
-
-class InputValidationError(RuntimeError):
-    pass
-
 
 BATTERY_REGULARIZATION_EPSILON = 1e-4
 GRID_REGULARIZATION_EPSILON = 1e-4
-
-
-def _crf(r: xr.DataArray | float, n: xr.DataArray | float) -> xr.DataArray:
-    """
-    Capital Recovery Factor:
-        CRF = r * (1+r)^n / ((1+r)^n - 1)
-    with r = WACC, n = lifetime (years); if r=0 -> 1/n.
-    """
-    r = xr.DataArray(r)
-    n = xr.DataArray(n)
-    one_plus = 1.0 + r
-    pow_term = one_plus**n
-    crf_val = (r * pow_term) / (pow_term - 1.0)
-    return xr.where(r == 0.0, 1.0 / n, crf_val)
 
 
 def initialize_objective(

@@ -6,7 +6,7 @@ from typing import Any
 import numpy as np
 import xarray as xr
 
-from microgridspy.export.plots import plot_8760, plot_daily_profile_band
+from microgridspy.visualization.plots import plot_8760, plot_daily_profile_band
 
 
 @dataclass(frozen=True)

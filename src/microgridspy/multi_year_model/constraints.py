@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import linopy as lp
 import numpy as np
 import xarray as xr
@@ -12,16 +14,13 @@ from microgridspy.data_pipeline.generator_partial_load_model import (
     fit_generator_willans_from_curve,
 )
 from microgridspy.data_pipeline.utils import finite_nonnegative_scalar_limit
+from microgridspy.errors import InputValidationError
 from microgridspy.multi_year_model.lifecycle import (
     repeating_degradation_factor,
     replacement_active_mask,
     replacement_commission_mask,
 )
 from microgridspy.multi_year_model.params import get_params
-
-
-class InputValidationError(RuntimeError):
-    pass
 
 
 def _require_da(name: str, da: xr.DataArray | None) -> xr.DataArray:
@@ -376,7 +375,6 @@ def initialize_constraints(
         q0, q1 = fit_generator_willans_from_curve(
             p.generator_eff_curve_rel_power.values,
             p.generator_eff_curve_eff.values,
-            error_cls=InputValidationError,
         )
         min_load = float(gen_settings.get("min_load_fraction", 0.0) or 0.0)
         if not (0.0 <= min_load < 1.0):
@@ -732,6 +730,38 @@ def initialize_constraints(
     model.add_constraints(soc <= soc_upper_bound, name="soc_upper")
     model.add_constraints(soc >= soc_lower_bound, name="soc_lower")
 
+    # Terminal state of charge.
+    #
+    # `soc_balance` links soc[t] -> soc[t+1] for t = 0 .. T-2, and `soc_year_link_*`
+    # carries the last period of one year into the first period of the next. Together
+    # they bound every state except one: the state implied *after* the final period of
+    # the final year. That state is not a `soc` variable, so `soc_upper`/`soc_lower`
+    # never reach it, and without the bounds below the battery could discharge in that
+    # last step energy it never stored. Applying the same envelope closes the horizon
+    # without forcing a cyclic end==start condition, which would be wrong here: the
+    # multi-year formulation deliberately carries charge across years.
+    last_year = year_values[-1]
+
+    def _at_final_step(bound: Any) -> Any:
+        """Select the bound value that applies to the final period of the final year."""
+        sel = bound.sel(year=last_year) if "year" in getattr(bound, "dims", ()) else bound
+        return sel.isel(period=T - 1) if "period" in getattr(sel, "dims", ()) else sel
+
+    if battery_loss_model == CONVEX_LOSS_EPIGRAPH:
+        terminal_charge = bat_ch_dc.sel(year=last_year).isel(period=T - 1)
+        terminal_discharge = bat_dis_dc.sel(year=last_year).isel(period=T - 1)
+    else:
+        terminal_charge = eta_c * bat_ch.sel(year=last_year).isel(period=T - 1)
+        terminal_discharge = bat_dis.sel(year=last_year).isel(period=T - 1) / eta_d
+
+    terminal_soc = soc.sel(year=last_year).isel(period=T - 1) + terminal_charge - terminal_discharge
+    model.add_constraints(
+        terminal_soc <= _at_final_step(soc_upper_bound), name="soc_terminal_upper"
+    )
+    model.add_constraints(
+        terminal_soc >= _at_final_step(soc_lower_bound), name="soc_terminal_lower"
+    )
+
     # ------------------------------------------------------------------
     # 5) Grid limits and nodal balance
     # ------------------------------------------------------------------
@@ -813,7 +843,6 @@ def initialize_constraints(
     land_limit = finite_nonnegative_scalar_limit(
         land_m2.values,
         name="land_availability_m2",
-        error_cls=InputValidationError,
     )
     if land_limit is not None:
         model.add_constraints(area_used <= land_m2, name="land_availability")

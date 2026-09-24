@@ -8,11 +8,8 @@ from microgridspy.data_pipeline.battery_loss_model import (
     CONVEX_LOSS_EPIGRAPH,
     normalize_battery_loss_model,
 )
+from microgridspy.errors import InputValidationError
 from microgridspy.multi_year_model.params import get_params
-
-
-class InputValidationError(RuntimeError):
-    pass
 
 
 def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict[str, lp.Variable]:

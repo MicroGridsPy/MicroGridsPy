@@ -12,11 +12,8 @@ from microgridspy.data_pipeline.generator_partial_load_model import (
     fit_generator_willans_from_curve,
 )
 from microgridspy.data_pipeline.utils import finite_nonnegative_scalar_limit
+from microgridspy.errors import InputValidationError
 from microgridspy.typical_year_model.params import get_params
-
-
-class InputValidationError(RuntimeError):
-    pass
 
 
 def initialize_constraints(
@@ -26,7 +23,7 @@ def initialize_constraints(
     model: lp.Model,
 ) -> None:
     """
-    Add steady_state (typical-year) constraints to the linopy model.
+    Add typical-year constraints to the linopy model.
 
     Conventions (consistent with your current implementation):
       - period = 0..8759
@@ -191,7 +188,6 @@ def initialize_constraints(
     gen_cap_limit = finite_nonnegative_scalar_limit(
         gen_max_installable_kw.values,
         name="generator_max_installable_capacity_kw",
-        error_cls=InputValidationError,
     )
     if gen_cap_limit is not None:
         model.add_constraints(
@@ -234,7 +230,6 @@ def initialize_constraints(
         q0, q1 = fit_generator_willans_from_curve(
             p.generator_eff_curve_rel_power.values,
             p.generator_eff_curve_eff.values,
-            error_cls=InputValidationError,
         )
         min_load = float(gen_settings.get("min_load_fraction", 0.0) or 0.0)
         if not (0.0 <= min_load < 1.0):
@@ -278,7 +273,6 @@ def initialize_constraints(
         finite_nonnegative_scalar_limit(
             bat_max_charge_c_rate.values,
             name="battery_max_charge_c_rate",
-            error_cls=InputValidationError,
         )
         if bat_max_charge_c_rate is not None
         else None
@@ -287,7 +281,6 @@ def initialize_constraints(
         finite_nonnegative_scalar_limit(
             bat_max_discharge_c_rate.values,
             name="battery_max_discharge_c_rate",
-            error_cls=InputValidationError,
         )
         if bat_max_discharge_c_rate is not None
         else None
@@ -296,7 +289,6 @@ def initialize_constraints(
         battery_cap_limit = finite_nonnegative_scalar_limit(
             bat_max_installable_kwh.values,
             name="battery_max_installable_capacity_kwh",
-            error_cls=InputValidationError,
         )
         if battery_cap_limit is not None:
             model.add_constraints(
@@ -549,7 +541,6 @@ def initialize_constraints(
     land_limit = finite_nonnegative_scalar_limit(
         land_m2.values,
         name="land_availability_m2",
-        error_cls=InputValidationError,
     )
     if land_limit is not None:
         area_used = (res_units * res_nom_kw * res_area_m2_per_kw).sum("resource")  # scalar

@@ -7,10 +7,7 @@ from microgridspy.data_pipeline.battery_loss_model import (
     CONVEX_LOSS_EPIGRAPH,
     normalize_battery_loss_model,
 )
-
-
-class InputValidationError(RuntimeError):
-    pass
+from microgridspy.errors import InputValidationError
 
 
 def _bool_from_attrs(obj: xr.Dataset, path: list[str], default: bool = False) -> bool:
@@ -31,7 +28,7 @@ def _bool_from_attrs(obj: xr.Dataset, path: list[str], default: bool = False) ->
 
 def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict[str, lp.Variable]:
     """
-    Define steady_state (typical-year) decision variables using labeled coords from `sets`.
+    Define typical-year decision variables using labeled coords from `sets`.
 
     Design variables (scenario-invariant):
       - res_units(resource)

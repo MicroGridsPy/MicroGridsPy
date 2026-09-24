@@ -1,26 +1,14 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from typing import Any
 
 import xarray as xr
 
+from microgridspy.errors import InputValidationError
+from microgridspy.io.formulation import MULTI_YEAR, TYPICAL_YEAR
 from microgridspy.io.input_labels import renewable_labels_from_yaml
+from microgridspy.io.jsonio import read_json
 from microgridspy.io.utils import project_paths
-
-
-class InputValidationError(RuntimeError):
-    pass
-
-
-def _read_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        raise InputValidationError(f"Missing required file: {path}")
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception as e:
-        raise InputValidationError(f"Cannot parse JSON: {path}\nerror: {e}")
 
 
 def _safe_int(v: Any, *, name: str) -> int:
@@ -57,11 +45,11 @@ def initialize_sets(project_name: str) -> xr.Dataset:
       - inv_active_in_year[inv_step, year]  (availability mask)
     """
     paths = project_paths(project_name)
-    formulation = _read_json(paths.formulation_json)
+    formulation = read_json(paths.formulation_json)
 
     # --- formulation flags ---
-    formulation_mode = str(formulation.get("core_formulation", "steady_state"))
-    if formulation_mode != "dynamic":
+    formulation_mode = str(formulation.get("core_formulation", TYPICAL_YEAR))
+    if formulation_mode != MULTI_YEAR:
         raise InputValidationError("This initializer is for dynamic formulation only.")
 
     # --- scenarios ---
