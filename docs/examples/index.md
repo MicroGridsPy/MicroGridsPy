@@ -78,29 +78,55 @@ The examples are grouped into three short chapters, each pairing two scenarios:
 
 ## Reproducibility
 
-Every scenario is a complete project under `projects/` in the repository, solved with the
-same MicroGridsPy version. The figures on these pages are regenerated directly from each
-project's `results/` folder, so the numbers here match what you get by re-solving the inputs.
+The seven scenarios are published as a citable dataset rather than bundled with the source
+code — together they are several hundred megabytes, which does not belong in a repository
+people clone to install the package:
 
-| Scenario | Project folder |
+!!! quote "Kalobeyei case-study dataset"
+    **DOI: [10.5281/zenodo.22958510](https://doi.org/10.5281/zenodo.22958510)**
+
+    Each scenario ships as a complete project folder: `inputs/` (the data needed to re-solve
+    it), `results/` (the tables every figure on these pages is drawn from) and `logs/` (the
+    solver log of the published run).
+
+Every number in this section is read directly from those `results/` folders, so the figures
+and the archive cannot drift apart.
+
+| Scenario | Project folder in the archive |
 |---|---|
-| 1 — Baseline (lead-acid) | `projects/Kalobeyei_1` |
-| 2 — Lithium-ion | `projects/Kalobeyei_2` |
-| 3 — Battery degradation | `projects/Kalobeyei_3` |
-| 4 — Demand growth | `projects/Kalobeyei_4` |
-| 5 — Capacity expansion | `projects/Kalobeyei_5` |
-| 6 — Stochastic grid connection | `projects/Kalobeyei_6` |
-| 7 — Carbon cost | `projects/Kalobeyei_7` |
+| 1 — Baseline (lead-acid) | `Kalobeyei_1` |
+| 2 — Lithium-ion | `Kalobeyei_2` |
+| 3 — Battery degradation | `Kalobeyei_3` |
+| 4 — Demand growth | `Kalobeyei_4` |
+| 5 — Capacity expansion | `Kalobeyei_5` |
+| 6 — Stochastic grid connection | `Kalobeyei_6` |
+| 7 — Carbon cost | `Kalobeyei_7` |
 
-To re-solve any scenario:
+To re-solve a scenario, download the archive and unpack the project folders into a
+`projects/` directory inside your workspace:
+
+```text
+my-workspace/
+└── projects/
+    ├── Kalobeyei_1/
+    ├── Kalobeyei_2/
+    └── ...
+```
+
+Then point MicroGridsPy at that workspace and solve:
 
 ```python
 import microgridspy as mgp
 
-model = mgp.solve("Kalobeyei_2", solver="highs")  # lithium-ion reference
+mgp.set_workspace("my-workspace")          # or run from inside it
+model = mgp.solve("Kalobeyei_2", solver="highs")   # lithium-ion reference
 results = model.results()
 print(results.kpis)
 ```
+
+The published runs used **Gurobi 13.0.3**; HiGHS reproduces the same optima. Solver versions
+can shift the last digits of a degenerate LP, so expect agreement to a few decimal places
+rather than bit-for-bit equality.
 
 !!! note "Solving scenario 3"
     The semi-empirical degradation model discretises the battery into state-of-charge bands,

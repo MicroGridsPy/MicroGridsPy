@@ -87,6 +87,13 @@ authors:
     email: squoilin@uliege.be
     orcid: "https://orcid.org/0000-0002-2064-209X"
 references:
+  - type: dataset
+    title: "Kalobeyei case-study dataset for MicroGridsPy: seven mini-grid planning scenarios"
+    doi: 10.5281/zenodo.22958510
+    notes: "Inputs, results and solver logs for the seven scenarios documented in the Examples section."
+    authors:
+      - family-names: Onori
+        given-names: Alessandro
   - type: software
     title: "MicroGridsPy-Pyomo: archived Pyomo implementation of the MicroGridsPy mini-grid planning model"
     doi: 10.5281/zenodo.22900498

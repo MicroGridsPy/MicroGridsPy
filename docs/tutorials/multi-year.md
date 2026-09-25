@@ -69,6 +69,9 @@ scenarios while dispatch (recourse) is scenario-specific.
 
 ## Example projects
 
-The repository ships example projects (e.g. the `Kalobeyei_*` cases under `projects/`) that
-exercise the dynamic formulation with real-world data. They are a useful reference for how a
-complete multi-year input set is structured.
+The `Kalobeyei_*` case studies exercise the multi-year formulation with real-world data and
+are a useful reference for how a complete multi-year input set is structured. They are
+published as a separate dataset —
+[doi:10.5281/zenodo.22958510](https://doi.org/10.5281/zenodo.22958510) — and walked through
+in the [Examples](../examples/index.md) section. For a smaller set that needs no download,
+the package bundles `demo_multi_year` (see `mgp.list_examples()`).

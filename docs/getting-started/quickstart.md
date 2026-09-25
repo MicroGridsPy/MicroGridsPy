@@ -40,7 +40,8 @@ microgridspy demo         # load + solve demo_typical_year end-to-end
 The active **workspace** is the directory containing a `projects/` folder — by default the
 current working directory, or the path in the `MICROGRIDSPY_WORKSPACE` environment variable, or
 whatever you pass to [`set_workspace`](../api/index.md#workspace-helpers). The
-[Examples](../examples/index.md) section walks through the larger `Kalobeyei_*` case studies the
+[Examples](../examples/index.md) section walks through the larger `Kalobeyei_*` case studies (a
+separately published dataset) the
 same way.
 
 ## Build your own project
