@@ -31,7 +31,7 @@ bibliography: paper.bib
 
 # Summary
 
-Many communities in remote regions are not reached by a national electricity grid. Mini-grids — small local electricity systems built around renewable generation, storage, and backup generators — are one of the main ways to supply them, but designing one means deciding what to build, how large, in what order, and at what cost.
+Many communities in remote regions are not reached by a national electricity grid. Mini-grids - small local electricity systems built around renewable generation, storage, and backup generators - are one of the main ways to supply them, but designing one means deciding what to build, how large, in what order, and at what cost.
 
 `MicroGridsPy` is an open-source Python package that supports these decisions. Given electricity-demand and renewable-resource time series together with technical and economic assumptions, it builds and solves an optimization model that determines which generation and storage assets to install, when to expand them, and how to operate them over time. Systems can combine renewable generation, battery storage, backup generators, and an optional grid connection with import and export. The package supports both representative-year and explicit multi-year planning, and can account for uncertain future conditions by optimizing across several scenarios at once.
 
@@ -47,7 +47,7 @@ The primary users are researchers, energy planners, and practitioners studying r
 
 # State of the field
 
-General-purpose energy-system frameworks such as `Calliope` [@calliope], `PyPSA` [@pypsa], and `OSeMOSYS` [@osemosys] are powerful open-source tools for energy-system optimization, but they are aimed primarily at regional and national power systems. Representing the features that dominate mini-grid economics — battery ageing, generator part-load behaviour, staged investment under demand growth, lost-load pricing, and scenario-weighted uncertainty — therefore requires substantial additional model development.
+General-purpose energy-system frameworks such as `Calliope` [@calliope], `PyPSA` [@pypsa], and `OSeMOSYS` [@osemosys] are powerful open-source tools for energy-system optimization, but they are aimed primarily at regional and national power systems. Representing the features that dominate mini-grid economics - battery ageing, generator part-load behaviour, staged investment under demand growth, lost-load pricing, and scenario-weighted uncertainty - therefore requires substantial additional model development.
 
 Tools built specifically for off-grid systems are closer to this use case. `HOMER` [@lambert2006homer] is the practitioner standard for hybrid-system sizing but is proprietary, which limits transparency and reproducibility in research. `Offgridplanner` [@offgridplanner] and `CLOVER` [@Sandwell2023] are open source and offer strong capabilities in system design, simulation, and spatial distribution planning. `MicroGridsPy` differs in formulating capacity expansion explicitly as a multi-year optimization problem, with stochastic recourse and mini-grid-specific component representations inside a single economic formulation.
 
