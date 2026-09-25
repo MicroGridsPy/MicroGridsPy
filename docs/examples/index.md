@@ -118,8 +118,8 @@ Then point MicroGridsPy at that workspace and solve:
 ```python
 import microgridspy as mgp
 
-mgp.set_workspace("my-workspace")          # or run from inside it
-model = mgp.solve("Kalobeyei_2", solver="highs")   # lithium-ion reference
+mgp.set_workspace("my-workspace")  # or run from inside it
+model = mgp.solve("Kalobeyei_2", solver="highs")  # lithium-ion reference
 results = model.results()
 print(results.kpis)
 ```
