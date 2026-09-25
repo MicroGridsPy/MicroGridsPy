@@ -1,13 +1,13 @@
 # Planning for Growth
 
-*Scenarios 3–4 · demand grows +5 %/year · off-grid · lithium-ion*
+*Scenarios 4–5 · demand grows +5 %/year · off-grid · lithium-ion*
 
 Real communities rarely stand still. After electrification, demand typically grows as
 households acquire appliances and new businesses and productive uses appear. These two
 scenarios ask how the least-cost system should respond — first by sizing for growth, then by
 **staging** the investment over time.
 
-## Scenario 3 — Demand growth
+## Scenario 4 — Demand growth
 
 We keep the lithium-ion off-grid system from [Scenario 2](technology-choice.md#scenario-2-lithium-ion)
 but let electricity demand **increase by 5 % per year** over the 10-year horizon. Because the
@@ -29,21 +29,21 @@ alone cannot keep up with a larger demand.
 Compared with the constant-demand case, the system shows a **lower renewable share and higher
 fuel use** — growing demand puts more pressure on backup generation.
 
-![Annual variable cost rising with demand growth](../assets/examples/case3_cost.png)
+![Annual variable cost rising with demand growth](../assets/examples/case4_cost.png)
 
 *With demand growing every year, annual variable costs rise progressively — the system serves
 a larger load and leans more on backup generation in later years.* This is the challenge of
 long-term planning: a system designed only for today's demand can become insufficient, or
 increasingly expensive to operate, as the community grows.
 
-## Scenario 4 — Capacity expansion
+## Scenario 5 — Capacity expansion
 
 We keep the same 5 %/year growth but enable **capacity expansion**: instead of installing the
 whole system upfront, MicroGridsPy can invest in **two stages** (two 5-year steps). The first
 investment meets the initial demand; additional capacity is commissioned later, as needs
 increase.
 
-![Staged capacity trajectory under two investment steps](../assets/examples/case4_expansion.png)
+![Staged capacity trajectory under two investment steps](../assets/examples/case5_expansion.png)
 
 *Installed capacity grows in two steps: an initial 2026 investment, then an increment in 2031.
 Installed capacity is non-decreasing across the horizon (see the
@@ -52,7 +52,7 @@ Installed capacity is non-decreasing across the horizon (see the
 With the freedom to phase investment, the model chooses a **different, more renewable
 strategy** than the single-shot case:
 
-| Quantity | Demand growth (Sc. 3) | Capacity expansion (Sc. 4) | Change |
+| Quantity | Demand growth (Sc. 4) | Capacity expansion (Sc. 5) | Change |
 |---|--:|--:|--:|
 | Solar PV (final) | 329 kW | 386 kW | +17 % |
 | Battery (final) | 897 kWh | 1087 kWh | +21 % |
@@ -77,7 +77,7 @@ The cost dynamics are also more interesting: as demand grows, variable costs ris
 the second investment step they temporarily drop**, because the new capacity improves system
 performance and displaces diesel.
 
-![Annual variable cost under capacity expansion](../assets/examples/case4_cost.png)
+![Annual variable cost under capacity expansion](../assets/examples/case5_cost.png)
 
 *Variable cost climbs with demand, then eases after the second investment step reinforces the
 renewable system.*

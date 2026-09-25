@@ -162,11 +162,6 @@ def _render_markdown_bullets(title: str, items: tuple[str, ...]) -> None:
     st.markdown(f"**{title}**\n\n{bullet_lines}")
 
 
-def _render_useful_links() -> None:
-    link_lines = "\n".join(f"- {label}: {url}" for label, url in USEFUL_LINKS)
-    st.markdown(f"**Useful links**:\n\n{link_lines}")
-
-
 def _render_ecosystem() -> None:
     st.title("Welcome to MicroGridsPy!")
     st.markdown(
@@ -224,16 +219,13 @@ def _render_resources() -> None:
     st.markdown("**Documentation**")
     st.info(f"Full documentation is available at [{DOCS_URL}]({DOCS_URL}).")
 
-    st.write("")
-    _render_useful_links()
-
 
 def _render_footer() -> None:
     st.subheader("Contacts")
     st.markdown("**Active Developer**")
     st.markdown(
         """
-        **Alessandro Onori**  
+        **Alessandro Onori** , alessandro.onori@polimi.it
         *Core Linopy optimization model, modeling advancements, and Streamlit UI development*
         """
     )
@@ -241,9 +233,9 @@ def _render_footer() -> None:
     st.markdown("**Technical Advisors**")
     st.markdown(
         """
-        - Nicolò Stevanato, Politecnico di Milano
-        - Riccardo Mereu, Politecnico di Milano
-        - Emanuela Colombo, Politecnico di Milano
+        - Nicolò Stevanato, nicolo.stevanato@polimi.it, Politecnico di Milano
+        - Riccardo Mereu, riccardo.mereu@polimi.it, Politecnico di Milano
+        - Emanuela Colombo, emanuela.colombo@polimi.it, Politecnico di Milano
         """
     )
 
