@@ -44,16 +44,16 @@ authors:
     affiliation: "Politecnico di Milano"
     email: nicolo.stevanato@polimi.it
     orcid: "https://orcid.org/0000-0002-3419-0389"
-  - family-names: Mereu
-    given-names: Riccardo
-    affiliation: "Politecnico di Milano"
-    email: riccardo.mereu@polimi.it
-    orcid: "https://orcid.org/0000-0003-0544-595X"
   - family-names: Colombo
     given-names: Emanuela
     affiliation: "Politecnico di Milano"
     email: emanuela.colombo@polimi.it
     orcid: "https://orcid.org/0000-0002-9747-5699"
+  - family-names: Mereu
+    given-names: Riccardo
+    affiliation: "Politecnico di Milano"
+    email: riccardo.mereu@polimi.it
+    orcid: "https://orcid.org/0000-0003-0544-595X"
   # Contributors to earlier versions.
   - family-names: Lombardi
     given-names: Francesco

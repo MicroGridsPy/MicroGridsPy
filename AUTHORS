@@ -26,21 +26,21 @@ battery degradation, inverter sizing, expanded stochastic optimisation and multi
 
 The following contributors worked on **earlier versions** of MicroGridsPy, **up to the 2023 release line**:
 
-- Francesco Lombardi, TU Delft <f.lombardi@tudelft.nl>
+- Francesco Lombardi, TU Delft
   — El Espino (2019), PowerTech (2019), MYCE (2020)
-- Giulia Guidicini, Politecnico di Milano <giulia.guidicini@polimi.it>
+- Giulia Guidicini, Politecnico di Milano
   — MYCE (2020)
-- Lorenzo Rinaldi, Politecnico di Milano <lorenzo.rinaldi@polimi.it>
+- Lorenzo Rinaldi, Politecnico di Milano
   — MYCE (2020)
-- Gianluca Pellecchia, Politecnico di Milano <gianluca.pellecchia@polimi.it>
+- Gianluca Pellecchia, Politecnico di Milano
   — Third-generation minigrids (2023)
-- Ivan Sangiorgio, Politecnico di Milano <ivan.sangiorgio@polimi.it>
+- Ivan Sangiorgio, Politecnico di Milano
   — Third-generation minigrids (2023)
 
 The original MicroGridsPy framework and **first open-source release (2019)** were developed at the Université de Liège:
 
-- Sergio Balderrama, Université de Liège <slbalderrama@doct.ulg.ac.be>
-- Sylvain Quoilin, Université de Liège <squoilin@uliege.be>
+- Sergio Balderrama, Université de Liège
+- Sylvain Quoilin, Université de Liège
 
 ## Development history
 
