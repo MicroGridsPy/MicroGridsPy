@@ -11,7 +11,6 @@ tags:
 authors:
   - name: Alessandro Onori
     orcid: 0009-0009-1195-2078
-    corresponding: true
     affiliation: '1'
   - name: Nicolò Stevanato
     orcid: 0000-0002-3419-0389
@@ -22,6 +21,7 @@ authors:
   - name: Riccardo Mereu
     orcid: 0000-0003-0544-595X
     affiliation: '1'
+    corresponding: true
 affiliations:
   - name: Department of Energy, Politecnico di Milano, Milan, Italy
     index: 1
