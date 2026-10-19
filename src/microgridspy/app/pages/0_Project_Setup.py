@@ -67,12 +67,15 @@ K = {
     "battery_label": "gp_battery_label",  # str
     "battery_loss_model": "gp_battery_loss_model",  # str
     "battery_efficiency_curve_csv": "gp_battery_efficiency_curve_csv",  # str
-    "battery_cycle_fade_enabled": "gp_battery_cycle_fade_enabled",  # bool
+    "battery_semiempirical_degradation_enabled": "gp_battery_semiempirical_degradation_enabled",  # bool
     "battery_chemistry": "gp_battery_chemistry",  # str
     "battery_cycle_lifetime_to_eol_cycles": "gp_battery_cycle_lifetime_to_eol_cycles",  # float
     "battery_capacity_degradation_rate_per_year": "gp_battery_capacity_degradation_rate_per_year",  # float
     "battery_end_of_life_soh": "gp_battery_end_of_life_soh",  # float
-    "battery_n_soc_bands": "gp_battery_n_soc_bands",  # int (Li-ion marginal-bands count)
+    "battery_cycle_life_reference_dod": "gp_battery_cycle_life_reference_dod",  # float
+    "battery_cycle_life_reference_temperature_c": "gp_battery_cycle_life_reference_temperature_c",  # float
+    "battery_enclosure_temperature_rise_c": "gp_battery_enclosure_temperature_rise_c",  # float
+    "battery_calendar_fade_scale": "gp_battery_calendar_fade_scale",  # float
     "generator_label": "gp_generator_label",  # str
     "generator_efficiency_model": "gp_generator_efficiency_model",  # str
     "generator_efficiency_curve_csv": "gp_generator_efficiency_curve_csv",  # str
@@ -141,7 +144,7 @@ class PageConfig:
     battery_label: str
     battery_loss_model: str
     battery_efficiency_curve_csv: str
-    battery_cycle_fade_enabled: bool
+    battery_semiempirical_degradation_enabled: bool
     battery_cycle_lifetime_to_eol_cycles: float
     battery_end_of_life_soh: float
     generator_label: str
@@ -158,22 +161,25 @@ class PageConfig:
     generator_min_load_fraction: float = 0.0
     battery_capacity_degradation_rate_per_year: float = 0.0
     battery_chemistry: str = "LFP"
-    battery_n_soc_bands: int = 5
+    battery_cycle_life_reference_dod: float = 0.8
+    battery_cycle_life_reference_temperature_c: float = 25.0
+    battery_enclosure_temperature_rise_c: float = 10.0
+    battery_calendar_fade_scale: float = 1.0
 
 
 def _battery_endogenous_degradation_enabled(cfg: PageConfig) -> bool:
     return (
         str(cfg.formulation or "").strip().lower() == MULTI_YEAR
         and str(cfg.battery_loss_model or "").strip().lower() == "convex_loss_epigraph"
-        and bool(cfg.battery_cycle_fade_enabled)
+        and bool(cfg.battery_semiempirical_degradation_enabled)
     )
 
 
-def _battery_cycle_fade_active(cfg: PageConfig) -> bool:
+def _battery_semiempirical_active(cfg: PageConfig) -> bool:
     # Semi-empirical cycle fade in ANY formulation: multi-year runs it as an endogenous
     # capacity-fade recursion (needs the convex-loss model), typical-year as a
     # binding-life CAPEX amortisation. Both need the same degradation inputs.
-    return bool(cfg.battery_cycle_fade_enabled)
+    return bool(cfg.battery_semiempirical_degradation_enabled)
 
 
 # =============================================================================
@@ -224,12 +230,15 @@ def init_session_state_defaults() -> None:
         K["battery_label"]: "Battery",
         K["battery_loss_model"]: "constant_efficiency",
         K["battery_efficiency_curve_csv"]: "battery_efficiency_curve.csv",
-        K["battery_cycle_fade_enabled"]: False,
+        K["battery_semiempirical_degradation_enabled"]: False,
         K["battery_chemistry"]: "LFP",
         K["battery_cycle_lifetime_to_eol_cycles"]: 6000.0,
         K["battery_capacity_degradation_rate_per_year"]: 0.0,
         K["battery_end_of_life_soh"]: 0.8,
-        K["battery_n_soc_bands"]: 5,
+        K["battery_cycle_life_reference_dod"]: 0.8,
+        K["battery_cycle_life_reference_temperature_c"]: 25.0,
+        K["battery_enclosure_temperature_rise_c"]: 10.0,
+        K["battery_calendar_fade_scale"]: 1.0,
         K["generator_label"]: "Generator",
         K["generator_efficiency_model"]: "constant_efficiency",
         K["generator_efficiency_curve_csv"]: "generator_efficiency_curve.csv",
@@ -256,7 +265,7 @@ def write_formulation_file(*, project_name: str, project_description: str, cfg: 
     # Cycle fade is supported in both formulations (dynamic: capacity state;
     # typical-year: binding-life CAPEX amortisation).
     degradation_supported = cfg.formulation in (MULTI_YEAR, TYPICAL_YEAR)
-    battery_cycle_fade_active = _battery_cycle_fade_active(cfg) if degradation_supported else False
+    battery_semiempirical_active = _battery_semiempirical_active(cfg) if degradation_supported else False
     payload = build_formulation_payload(
         project_name=project_name,
         description=project_description,
@@ -282,8 +291,7 @@ def write_formulation_file(*, project_name: str, project_description: str, cfg: 
         emission_cost_per_kgco2e=cfg.emission_cost_per_kgco2e,
         n_sources=cfg.n_res_sources,
         battery_loss_model=cfg.battery_loss_model,
-        battery_cycle_fade_enabled=battery_cycle_fade_active,
-        battery_n_soc_bands=cfg.battery_n_soc_bands,
+        battery_semiempirical_degradation_enabled=battery_semiempirical_active,
         generator_efficiency_model=cfg.generator_efficiency_model,
         csv_delimiter=normalize_csv_delimiter(cfg.csv_delimiter),
         csv_decimal=normalize_csv_decimal(cfg.csv_decimal),
@@ -343,7 +351,11 @@ def create_or_overwrite_project(
         resource_labels=cfg.res_resource_labels,
         battery_label=cfg.battery_label,
         battery_loss_model=cfg.battery_loss_model,
-        battery_cycle_fade_enabled=cfg.battery_cycle_fade_enabled,
+        battery_semiempirical_degradation_enabled=cfg.battery_semiempirical_degradation_enabled,
+        battery_cycle_life_reference_dod=cfg.battery_cycle_life_reference_dod,
+        battery_cycle_life_reference_temperature_c=cfg.battery_cycle_life_reference_temperature_c,
+        battery_enclosure_temperature_rise_c=cfg.battery_enclosure_temperature_rise_c,
+        battery_calendar_fade_scale=cfg.battery_calendar_fade_scale,
         battery_chemistry=getattr(cfg, "battery_chemistry", "LFP"),
         battery_efficiency_curve_csv=cfg.battery_efficiency_curve_csv,
         battery_cycle_lifetime_to_eol_cycles=cfg.battery_cycle_lifetime_to_eol_cycles,
@@ -986,7 +998,9 @@ def render_system_section() -> tuple[
         ),
         "battery_efficiency_curve.csv",
     )
-    cycle_fade_enabled = bool(st.session_state.get(K["battery_cycle_fade_enabled"], False))
+    semiempirical_enabled = bool(
+        st.session_state.get(K["battery_semiempirical_degradation_enabled"], False)
+    )
     cycle_lifetime_to_eol_cycles = float(
         st.session_state.get(K["battery_cycle_lifetime_to_eol_cycles"], 6000.0)
     )
@@ -1033,31 +1047,72 @@ def render_system_section() -> tuple[
                         battery_efficiency_curve_csv
                     )
 
-        if _formulation_mode == MULTI_YEAR and battery_loss_model != "convex_loss_epigraph":
-            # Multi-year cycle fade tracks a degraded usable-capacity state defined on
-            # the internal DC-side powers, so it requires the convex-loss model.
-            cycle_fade_enabled = False
-            st.session_state[K["battery_cycle_fade_enabled"]] = False
-            st.info(
-                "Select the `Power-dependent (convex loss)` efficiency model above to unlock the multi-year battery cycle-fade capacity-state surrogate. "
-                "(In typical-year projects, cycle fade is priced as a binding-life CAPEX amortisation and does not require the convex-loss model.)"
+        # Battery ageing: exactly two modes, so the user picks one and sees only its inputs.
+        _semiempirical_available = (
+            _formulation_mode == MULTI_YEAR and battery_loss_model == "convex_loss_epigraph"
+        )
+        with main_col:
+            _modes = ["Linear capacity fade", "Semi-empirical (cycle + calendar)"]
+            _mode_index = 1 if (semiempirical_enabled and _semiempirical_available) else 0
+            _mode = st.radio(
+                "Battery ageing",
+                options=_modes,
+                index=_mode_index,
+                help=(
+                    "Linear capacity fade: a flat yearly loss of usable capacity, the same "
+                    "term the renewable and generator technologies carry. Set it to 0 to size "
+                    "without ageing.\n\n"
+                    "Semi-empirical: throughput-driven cycle fade plus temperature-driven "
+                    "calendar fade from fitted coefficients, with a usable-energy state, a "
+                    "hard end-of-life floor and a service life derived from the physics. "
+                    "Multi-year projects with the power-dependent (convex loss) efficiency "
+                    "model only."
+                ),
+                key="gp_battery_ageing_mode_radio",
+                disabled=not _semiempirical_available,
             )
-        else:
-            with main_col:
-                col1, col2 = st.columns([0.9, 1.05])
-                with col1:
-                    cycle_fade_enabled = st.checkbox(
-                        "Enable cycle fade",
-                        value=bool(st.session_state.get(K["battery_cycle_fade_enabled"], False)),
-                        help=(
-                            "Throughput-based semi-empirical cycle-fade degradation. "
-                            "Dynamic multi-year: a degraded usable-capacity state; typical-year "
-                            "typical-year: a binding-life CAPEX amortisation in the objective."
+            semiempirical_enabled = bool(_semiempirical_available and _mode == _modes[1])
+            st.session_state[K["battery_semiempirical_degradation_enabled"]] = semiempirical_enabled
+            if not _semiempirical_available:
+                st.info(
+                    "Semi-empirical degradation needs a multi-year project and the "
+                    "`Power-dependent (convex loss)` efficiency model above: cycle fade is "
+                    "defined on the internal DC-side powers, and ageing accumulates on the "
+                    "year axis a typical year does not have."
+                )
+
+            if not semiempirical_enabled:
+                # ---------------- mode 1: linear capacity fade ----------------
+                flat_fade = float(
+                    st.number_input(
+                        "Linear capacity fade [fraction/yr]",
+                        min_value=0.0,
+                        max_value=0.2,
+                        step=0.005,
+                        format="%.3f",
+                        value=float(
+                            st.session_state.get(
+                                K["battery_capacity_degradation_rate_per_year"], 0.0
+                            )
+                            or 0.0
                         ),
-                        key="gp_battery_cycle_fade_enabled_checkbox",
+                        help=(
+                            "Flat yearly loss of usable capacity (0 = no ageing; 0.02 = 2 %/yr). "
+                            "Applied to the capacity available each year, exactly like the "
+                            "renewable and generator capacity-fade terms."
+                        ),
+                        key="gp_battery_flat_fade_input",
                     )
-                    st.session_state[K["battery_cycle_fade_enabled"]] = cycle_fade_enabled
-                    _chem_options = ["LFP", "NMC", "lead_acid"]
+                )
+                st.session_state[K["battery_capacity_degradation_rate_per_year"]] = flat_fade
+            else:
+                # ---------------- mode 2: semi-empirical ----------------
+                # The flat rate would double-count the calendar channel modelled here.
+                st.session_state[K["battery_capacity_degradation_rate_per_year"]] = 0.0
+
+                col1, col2 = st.columns([1.0, 1.0])
+                with col1:
+                    _chem_options = ["LFP", "NMC"]
                     _chem_current = str(
                         st.session_state.get(K["battery_chemistry"], "LFP") or "LFP"
                     )
@@ -1069,19 +1124,25 @@ def render_system_section() -> tuple[
                             if _chem_current in _chem_options
                             else 0
                         ),
-                        disabled=not cycle_fade_enabled,
                         help=(
-                            "Selects the semi-empirical degradation curves "
-                            "(alpha calendar + beta cycle). Ambient temperature "
-                            "(ambient_temperature.csv) and depth_of_discharge select the "
-                            "temperature and DoD bands of the curves."
+                            "Selects the fitted coefficient sets. LFP is the calibrated "
+                            "chemistry; NMC inherits two known defects of the distilled "
+                            "coefficients and should be read as the pessimistic end of the band."
                         ),
                         key="gp_battery_chemistry_selectbox",
                     )
                     st.session_state[K["battery_chemistry"]] = battery_chemistry
+                    if battery_chemistry == "NMC":
+                        st.caption(
+                            "NMC: the temperature correction derived from an LFP datasheet is "
+                            "applied to NMC as well (implied activation energy about "
+                            "70 kJ/mol against a published ~50), and the cubic surrogate "
+                            "misfits the steep NMC law by up to 14 %."
+                        )
+
                     cycle_lifetime_to_eol_cycles = float(
                         st.number_input(
-                            "Cycle lifetime to end of life [cycles]",
+                            "Rated cycle life [cycles]",
                             min_value=1.0,
                             step=100.0,
                             format="%.0f",
@@ -1090,92 +1151,134 @@ def render_system_section() -> tuple[
                                     K["battery_cycle_lifetime_to_eol_cycles"], 6000.0
                                 )
                             ),
-                            disabled=not cycle_fade_enabled,
-                            help="Full-equivalent cycle life used together with battery.yaml depth_of_discharge and the end-of-life SoH target to derive the internal cycle-fade coefficient automatically.",
+                            help=(
+                                "Datasheet cycle count to the end-of-life SoH below. The "
+                                "cycle-fade magnitude is pinned so that exactly this many "
+                                "cycles, at the reference depth and temperature, consume the "
+                                "usable SoH budget."
+                            ),
                             key="gp_battery_cycle_lifetime_to_eol_cycles_input",
                         )
                     )
                     st.session_state[K["battery_cycle_lifetime_to_eol_cycles"]] = (
                         cycle_lifetime_to_eol_cycles
                     )
-
-                    # Calendar (time) ageing: a single flat %/yr capacity fade (0 = off).
-                    # Only meaningful in the multi-year formulation (the typical-year model
-                    # has no multi-year capacity state), so it is shown for dynamic only.
-                    if _formulation_mode == MULTI_YEAR:
-                        flat_fade = float(
-                            st.number_input(
-                                "Calendar ageing [fraction/yr]",
-                                min_value=0.0,
-                                max_value=0.2,
-                                step=0.005,
-                                format="%.3f",
-                                value=float(
-                                    st.session_state.get(
-                                        K["battery_capacity_degradation_rate_per_year"], 0.0
-                                    )
-                                    or 0.0
-                                ),
-                                help=(
-                                    "Flat yearly loss of usable capacity from time/ageing, independent "
-                                    "of use (0 = no calendar ageing; e.g. 0.02 = 2%/yr). It coexists with "
-                                    "cycle fade, so total wear = use (cycle fade) + age (this term)."
-                                ),
-                                key="gp_battery_flat_fade_input",
-                            )
+                    battery_end_of_life_soh = float(
+                        st.number_input(
+                            "End-of-life SoH [-]",
+                            min_value=0.05,
+                            max_value=0.99,
+                            step=0.01,
+                            format="%.2f",
+                            value=float(
+                                st.session_state.get(K["battery_end_of_life_soh"], 0.8)
+                            ),
+                            help=(
+                                "The health the rated cycle life refers to, and the hard floor "
+                                "the capacity state may not cross. Keep it at or above 0.8: the "
+                                "model is linear in the state and cannot represent the fade "
+                                "knee below roughly 70-80 % SoH."
+                            ),
+                            key="gp_battery_end_of_life_soh_input",
                         )
-                        st.session_state[K["battery_capacity_degradation_rate_per_year"]] = (
-                            flat_fade
-                        )
-
-                        # Number of usable SOC bands for the Li-ion depth-resolved cycle-fade
-                        # model. The cycle-fade representation is selected by chemistry, not by
-                        # a user option: Li-ion (LFP/NMC) uses this depth-resolved marginal-band
-                        # model; lead-acid uses the flat beta(T) model and ignores this input.
-                        _is_liion = str(battery_chemistry).strip().lower() in ("lfp", "nmc")
-                        n_soc_bands = int(
-                            st.number_input(
-                                "SOC bands (Li-ion depth-resolved cycle fade)",
-                                min_value=1,
-                                max_value=20,
-                                step=1,
-                                value=int(st.session_state.get(K["battery_n_soc_bands"], 5)),
-                                disabled=(not cycle_fade_enabled) or (not _is_liion),
-                                help=(
-                                    "Number of usable state-of-charge bands the Li-ion depth-resolved "
-                                    "cycle-fade model (LFP/NMC) uses to discretise the convex per-band "
-                                    "wear cost. More bands resolve cycling depth more finely."
-                                ),
-                                key="gp_battery_n_soc_bands_input",
-                            )
-                        )
-                        st.session_state[K["battery_n_soc_bands"]] = n_soc_bands
-                        if cycle_fade_enabled and not _is_liion:
-                            st.caption(
-                                "Lead-acid cycle fade uses the flat semi-empirical beta(T) model "
-                                "(the depth-resolved SOC-band model is Li-ion only)."
-                            )
-                    else:
-                        st.session_state[K["battery_capacity_degradation_rate_per_year"]] = 0.0
-                soh_enabled = cycle_fade_enabled
-                st.caption(
-                    "Cycle fade (throughput/use) and calendar ageing (a flat %/yr) are independent "
-                    "— set either or both."
-                )
-                battery_end_of_life_soh = float(
-                    st.number_input(
-                        "Battery end-of-life SoH [-]",
-                        min_value=0.01,
-                        max_value=1.0,
-                        step=0.01,
-                        format="%.2f",
-                        value=float(st.session_state.get(K["battery_end_of_life_soh"], 0.8)),
-                        disabled=not soh_enabled,
-                        help="Health threshold used to calibrate the degradation inputs and compare simulated ageing against calendar_lifetime_years in Results.",
-                        key="gp_battery_end_of_life_soh_input",
                     )
+                    st.session_state[K["battery_end_of_life_soh"]] = battery_end_of_life_soh
+
+                with col2:
+                    battery_cycle_life_reference_dod = float(
+                        st.number_input(
+                            "Rated-life reference DoD [-]",
+                            min_value=0.05,
+                            max_value=1.0,
+                            step=0.05,
+                            format="%.2f",
+                            value=float(
+                                st.session_state.get(K["battery_cycle_life_reference_dod"], 0.8)
+                            ),
+                            help=(
+                                "The depth of discharge the rated cycle life was measured at. "
+                                "Read it off the same datasheet line as the cycle count -- "
+                                "calibrating at one depth and operating at another is a 23 % "
+                                "error in the fade budget."
+                            ),
+                            key="gp_battery_cycle_life_reference_dod_input",
+                        )
+                    )
+                    st.session_state[K["battery_cycle_life_reference_dod"]] = (
+                        battery_cycle_life_reference_dod
+                    )
+                    battery_cycle_life_reference_temperature_c = float(
+                        st.number_input(
+                            "Rated-life reference temperature [degC]",
+                            min_value=-20.0,
+                            max_value=80.0,
+                            step=1.0,
+                            format="%.0f",
+                            value=float(
+                                st.session_state.get(
+                                    K["battery_cycle_life_reference_temperature_c"], 25.0
+                                )
+                            ),
+                            help="Almost always 25 degC on a datasheet.",
+                            key="gp_battery_cycle_life_reference_temperature_c_input",
+                        )
+                    )
+                    st.session_state[K["battery_cycle_life_reference_temperature_c"]] = (
+                        battery_cycle_life_reference_temperature_c
+                    )
+                    battery_enclosure_temperature_rise_c = float(
+                        st.number_input(
+                            "Enclosure temperature rise [K]",
+                            min_value=0.0,
+                            max_value=30.0,
+                            step=1.0,
+                            format="%.0f",
+                            value=float(
+                                st.session_state.get(
+                                    K["battery_enclosure_temperature_rise_c"], 10.0
+                                )
+                            ),
+                            help=(
+                                "Outdoor air to enclosure air. 0 K actively cooled; "
+                                "5-10 K ventilated, shaded room; 15-20 K sealed metal container "
+                                "in full sun. This is the single most influential input in the "
+                                "module and a design assumption, not a measurement -- run it as "
+                                "a sensitivity."
+                            ),
+                            key="gp_battery_enclosure_temperature_rise_c_input",
+                        )
+                    )
+                    st.session_state[K["battery_enclosure_temperature_rise_c"]] = (
+                        battery_enclosure_temperature_rise_c
+                    )
+                    battery_calendar_fade_scale = float(
+                        st.number_input(
+                            "Calendar fade scale [-]",
+                            min_value=0.0,
+                            max_value=5.0,
+                            step=0.1,
+                            format="%.2f",
+                            value=float(
+                                st.session_state.get(K["battery_calendar_fade_scale"], 1.0)
+                            ),
+                            help=(
+                                "Walks the 2.7x literature band on calendar magnitude: 1.0 is "
+                                "the model anchored to a ten-year shelf-ageing measurement, "
+                                "2.72 recovers the unscaled published fit. Report both ends."
+                            ),
+                            key="gp_battery_calendar_fade_scale_input",
+                        )
+                    )
+                    st.session_state[K["battery_calendar_fade_scale"]] = (
+                        battery_calendar_fade_scale
+                    )
+
+                st.caption(
+                    "Needs `ambient_temperature.csv` in inputs/. Leave "
+                    "`calendar_lifetime_years` null in battery.yaml to have the service life "
+                    "derived from these coefficients; set a number only for a contractual "
+                    "replacement policy."
                 )
-                st.session_state[K["battery_end_of_life_soh"]] = battery_end_of_life_soh
 
     generator_label = (
         st.text_input(
@@ -1283,7 +1386,7 @@ def render_system_section() -> tuple[
         battery_label,
         battery_loss_model,
         battery_efficiency_curve_csv,
-        cycle_fade_enabled,
+        semiempirical_enabled,
         cycle_lifetime_to_eol_cycles,
         battery_end_of_life_soh,
         generator_label,
@@ -1450,7 +1553,7 @@ def render_project_setup_page() -> None:
                 battery_label,
                 battery_loss_model,
                 battery_efficiency_curve_csv,
-                battery_cycle_fade_enabled,
+                semiempirical_enabled,
                 battery_cycle_lifetime_to_eol_cycles,
                 battery_end_of_life_soh,
                 generator_label,
@@ -1497,11 +1600,10 @@ def render_project_setup_page() -> None:
                 battery_label=battery_label,
                 battery_loss_model=battery_loss_model,
                 battery_efficiency_curve_csv=battery_efficiency_curve_csv,
-                battery_cycle_fade_enabled=battery_cycle_fade_enabled,
+                battery_semiempirical_degradation_enabled=semiempirical_enabled,
                 battery_chemistry=str(st.session_state.get(K["battery_chemistry"], "LFP") or "LFP"),
                 battery_cycle_lifetime_to_eol_cycles=battery_cycle_lifetime_to_eol_cycles,
                 battery_end_of_life_soh=battery_end_of_life_soh,
-                battery_n_soc_bands=int(st.session_state.get(K["battery_n_soc_bands"], 5)),
                 battery_capacity_degradation_rate_per_year=float(
                     st.session_state.get(K["battery_capacity_degradation_rate_per_year"], 0.0)
                 ),

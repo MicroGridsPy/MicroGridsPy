@@ -767,26 +767,27 @@ def _render_curve_diagnostics(formulation: dict[str, Any], paths) -> None:
 def _degradation_active(formulation: dict[str, Any]) -> bool:
     battery_model = formulation.get("battery_model", {}) or {}
     degradation_model = battery_model.get("degradation_model", {}) or {}
-    return bool(degradation_model.get("cycle_fade_enabled", False))
+    return bool(degradation_model.get("coefficients_enabled", False))
 
 
 def _render_degradation_coefficient_curves(formulation: dict[str, Any], paths) -> None:
     """
-    Preview the semi-empirical degradation coefficients alpha(T) (calendar)
-    and beta(T) (cycle) for the active battery chemistry / DoD / cycle life. This is
-    the predefined curve *shape* (built into the model, per chemistry and DoD/SoC
-    band) scaled by the user's rated cycle life - analogous to the generator
-    partial-load curve. Rendered only when endogenous battery degradation is active.
+    Preview the two coefficient curves the semi-empirical degradation mode consumes:
+    the marginal cycle-fade cost c(T) per kWh discharged, and the linear-equivalent
+    calendar rate r_cal(T) per kWh of nameplate per year.
+
+    Both are plotted against CELL temperature, which is what the model evaluates them at --
+    outdoor air plus the enclosure rise, not outdoor air. Rendered only in that mode.
     """
     if not _degradation_active(formulation):
         return
 
     try:
         from microgridspy.data_pipeline.battery_degradation_coefficients import (
+            CALENDAR_FADE_SOURCES,
             InputValidationError,
             coefficient_curve_preview,
             normalize_chemistry,
-            reference_cycle_life,
         )
     except Exception as exc:  # pragma: no cover - import guard
         st.warning(f"Could not import degradation coefficient curves: {exc}")
@@ -800,18 +801,26 @@ def _render_degradation_coefficient_curves(formulation: dict[str, Any], paths) -
     raw_chemistry = technical.get("chemistry", None)
     dod = _safe_yaml_float(technical.get("depth_of_discharge", None), 0.8)
     user_cycle_life = technical.get("cycle_lifetime_to_eol_cycles", None)
+    end_of_life_soh = _safe_yaml_float(technical.get("end_of_life_soh", None), 0.8)
+    reference_dod = _safe_yaml_float(technical.get("cycle_life_reference_dod", None), 0.8)
+    reference_temperature = _safe_yaml_float(
+        technical.get("cycle_life_reference_temperature_c", None), 25.0
+    )
+    enclosure_rise = _safe_yaml_float(technical.get("enclosure_temperature_rise_c", None), 10.0)
+    calendar_scale = _safe_yaml_float(technical.get("calendar_fade_scale", None), 1.0)
+    budget = max(1e-9, 1.0 - float(end_of_life_soh))
 
-    st.subheader("Battery Degradation Coefficients (semi-empirical curves)")
+    st.subheader("Battery Degradation Coefficients")
     st.caption(
-        "Predefined semi-empirical shape selected by chemistry and depth-of-discharge, "
-        "scaled by the rated cycle life. These alpha (calendar) and beta (cycle) "
-        "coefficients drive the endogenous degradation layer; they are evaluated per "
-        "hour from ambient_temperature.csv."
+        "Predefined curve shapes, with the cycle magnitude pinned to the battery's rated "
+        "cycle life so that the datasheet promise holds exactly at its reference depth and "
+        "temperature. Both curves are read at CELL temperature: the model adds "
+        "`enclosure_temperature_rise_c` to the outdoor air series in ambient_temperature.csv."
     )
 
     if raw_chemistry in (None, ""):
         st.warning(
-            "`battery.technical.chemistry` is not set. Add one of {LFP, NMC, lead_acid} "
+            "`battery.technical.chemistry` is not set. Add one of {LFP, NMC} "
             "to battery.yaml to enable the semi-empirical degradation curves."
         )
         return
@@ -821,19 +830,21 @@ def _render_degradation_coefficient_curves(formulation: dict[str, Any], paths) -
             chemistry=chemistry,
             depth_of_discharge=dod,
             user_cycle_life=(float(user_cycle_life) if user_cycle_life not in (None, "") else None),
+            usable_soh_budget=budget,
+            reference_dod=reference_dod,
+            reference_temperature_degc=reference_temperature,
+            calendar_fade_scale=calendar_scale,
         )
     except InputValidationError as exc:
         st.error(str(exc))
         return
 
-    n_ref = reference_cycle_life(chemistry)
-    scaling = (n_ref / float(user_cycle_life)) if user_cycle_life not in (None, "") else 1.0
-
+    reference_years = float(preview["calendar_reference_years"])
     curve_df = pd.DataFrame(
         {
-            "Ambient temperature [degC]": preview["temperature_degc"],
-            "alpha (calendar) [1/h]": preview["alpha"],
-            "beta (cycle) [1/kWh exchanged]": preview["beta"],
+            "Cell temperature [degC]": preview["temperature_degc"],
+            "c (cycle) [1/kWh discharged]": preview["cycle_fade_coefficient"],
+            "r_cal (calendar) [1/yr]": preview["calendar_rate_per_year"],
         }
     )
 
@@ -841,28 +852,33 @@ def _render_degradation_coefficient_curves(formulation: dict[str, Any], paths) -
     with c1:
         _render_curve_plot(
             curve_df,
-            x="Ambient temperature [degC]",
-            y_columns=["beta (cycle) [1/kWh exchanged]"],
-            title=f"Cycle coefficient beta(T) - {chemistry}, DoD={dod:.2f}",
-            x_label="Ambient temperature [degC]",
-            y_label="beta [fraction of nameplate / kWh exchanged]",
+            x="Cell temperature [degC]",
+            y_columns=["c (cycle) [1/kWh discharged]"],
+            title=f"Cycle coefficient c(T) - {chemistry}, DoD={dod:.2f}",
+            x_label="Cell temperature [degC]",
+            y_label="c [fraction of nameplate / kWh discharged]",
         )
         _render_curve_plot(
             curve_df,
-            x="Ambient temperature [degC]",
-            y_columns=["alpha (calendar) [1/h]"],
-            title=f"Calendar coefficient alpha(T) - {chemistry}",
-            x_label="Ambient temperature [degC]",
-            y_label="alpha [fraction of nameplate / h]",
+            x="Cell temperature [degC]",
+            y_columns=["r_cal (calendar) [1/yr]"],
+            title=f"Calendar rate r_cal(T) - {chemistry}, mean SoC={preview['calendar_mean_soc']:.2f}",
+            x_label="Cell temperature [degC]",
+            y_label="r_cal [fraction of nameplate / yr]",
         )
     with c2:
         st.metric("Chemistry", chemistry)
-        st.metric("DoD band", f"{dod:.2f}")
-        st.metric("Cycle-life scaling (Nref/Nuser)", f"{scaling:.3f}")
+        st.metric("Usable SoH budget", f"{budget:.2f}")
+        st.metric("Enclosure rise [K]", f"{enclosure_rise:.1f}")
+        st.metric("Calendar fade scale", f"{calendar_scale:.2f}")
         st.caption(
-            f"Reference cycle life: {n_ref:.0f}. "
-            f"Rated cycle life: {user_cycle_life if user_cycle_life not in (None, '') else 'unset (scaling=1)'}."
+            f"Cycle magnitude pinned at DoD {reference_dod:.2f} / "
+            f"{reference_temperature:.0f} degC to "
+            f"{user_cycle_life if user_cycle_life not in (None, '') else 'unset (raw fitted shape)'}"
+            " cycles. The calendar law is sub-linear in time, so the rate shown is linearised "
+            f"over {reference_years:.0f} years; the model uses the service life instead."
         )
+        st.caption(f"Calendar sources - {CALENDAR_FADE_SOURCES}")
         st.dataframe(curve_df, width="stretch", hide_index=True)
 
 
@@ -1067,7 +1083,7 @@ def _infer_y_label(variable: str) -> str:
         return "Temperature [degC]"
     if "alpha_calendar" in name:
         return "alpha [fraction of nameplate / h]"
-    if "beta_cycle" in name:
+    if "cycle_fade_coefficient" in name:
         return "beta [fraction of nameplate / kWh exchanged]"
     if "availability" in name:
         return "Value [-]"
