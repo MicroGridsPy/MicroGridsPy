@@ -48,7 +48,7 @@ def _write_default_curve(tmp_path: Path) -> Path:
         conversion_labels=["Solar PV"],
         battery_label="Battery",
         battery_loss_model="convex_loss_epigraph",
-        battery_cycle_fade_enabled=False,
+        battery_semiempirical_degradation_enabled=False,
         battery_efficiency_curve_csv="battery_efficiency_curve.csv",
         battery_cycle_lifetime_to_eol_cycles=6000.0,
         battery_end_of_life_soh=0.8,

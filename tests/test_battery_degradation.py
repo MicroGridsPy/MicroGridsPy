@@ -49,6 +49,7 @@ def _deg_data(
     *,
     years: tuple[str, ...] = ("2026", "2027"),
     calendar_lifetime: float = 20.0,
+    calendar_rate: float = 0.0,
 ) -> tuple[xr.Dataset, xr.Dataset]:
     sets = _deg_sets(scenarios, years=years)
     yrs, pers, scs, res, inv = sets.year, sets.period, sets.scenario, sets.resource, sets.inv_step
@@ -128,10 +129,17 @@ def _deg_data(
             "battery_depth_of_discharge": scal(1.0),
             "battery_max_charge_c_rate": scal(1.0),
             "battery_max_discharge_c_rate": scal(1.0),
-            "battery_beta_cycle": xr.DataArray(
+            # c(T): capacity lost per kWh of DC discharge. Flat here so the tests can
+            # reason about the recursion arithmetic directly.
+            "battery_cycle_fade_coefficient": xr.DataArray(
                 np.full((2, ny, ns), 0.01),
                 dims=("period", "year", "scenario"),
                 coords={"period": pers, "year": yrs, "scenario": scs},
+            ),
+            # r_cal,y: fraction of nameplate lost per year. Zero by default so cycle fade
+            # can be isolated; the calendar tests override it.
+            "battery_calendar_rate_per_year": xr.DataArray(
+                np.full(ny, calendar_rate), dims=("year",), coords={"year": yrs}
             ),
             "battery_end_of_life_soh": scal(0.8),
             "battery_capacity_degradation_rate_per_year": scal(0.0),
@@ -169,7 +177,7 @@ def _deg_data(
         "optimization_constraints": {"enforcement": "scenario_wise"},
         "battery_model": {
             "loss_model": "convex_loss_epigraph",
-            "degradation_model": {"cycle_fade_enabled": True},
+            "degradation_model": {"coefficients_enabled": True},
         },
     }
     data.attrs["conversion_technology_by_resource"] = {"Solar": "Solar PV"}
@@ -218,44 +226,121 @@ def test_cycle_fade_diverges_across_scenarios() -> None:
     assert abs(v_high - v_low) > 1e-6  # genuinely different cycle fade per scenario
 
 
-def _as_marginal_bands(data: xr.Dataset, *, n_bands: int = 3, ck: float = 0.01) -> xr.Dataset:
-    """Turn a (single-beta) degradation fixture into a Li-ion marginal_bands one: attach
-    constant per-SOC-band marginals c_k and stamp the mode, so the depth-resolved cycle-fade
-    path is exercised. Constant c_k keeps the toy easy to reason about (total fade = c_k *
-    total DC discharge)."""
-    data = data.copy()
-    pers, yrs, scs = data.period, data.year, data.scenario
-    data["battery_ck_bands"] = xr.DataArray(
-        np.full((n_bands, pers.size, yrs.size, scs.size), ck),
-        dims=("soc_band", "period", "year", "scenario"),
-        coords={"soc_band": np.arange(n_bands), "period": pers, "year": yrs, "scenario": scs},
-        name="battery_ck_bands",
-    )
-    settings = dict(data.attrs["settings"])
-    battery_model = dict(settings["battery_model"])
-    degradation = dict(battery_model["degradation_model"])
-    degradation["cycle_fade_mode"] = "marginal_bands"
-    degradation["n_soc_bands"] = n_bands
-    battery_model["degradation_model"] = degradation
-    settings["battery_model"] = battery_model
-    data.attrs["settings"] = settings
-    return data
+def test_cycle_fade_counts_discharge_only() -> None:
+    """(D4) F_cyc = sum_t c(T_t) * DC discharge, discharge only.
 
-
-def test_marginal_bands_cycle_fade_definition() -> None:
-    # Li-ion depth-resolved cycle fade (the only Li-ion mode): battery_cycle_fade equals the
-    # sum over bands and periods of c_k * discharge-through-band. Fast 2-period toy.
+    A coefficient applied to charge plus discharge would be exactly twice this -- the two
+    conventions differ by a factor of two and nothing but the constraint distinguishes them,
+    so the identity is worth pinning.
+    """
     sets, data = _deg_data(["scenario_1"], {"scenario_1": 0.5})
-    data = _as_marginal_bands(data, n_bands=3, ck=0.01)
+    # Start empty, so the battery has to charge from the period-0 renewable before it can
+    # serve the period-1 load. With initial_soc = 1.0 it would only ever discharge and the
+    # two conventions would be indistinguishable.
+    data["battery_initial_soc"] = xr.DataArray(0.0)
     _, vd, sol = _solve_deg(sets, data)
 
-    assert "scenario" in set(vd["battery_discharge_band"].dims)  # band vars are scenario-wise
-    cf = float(sol["battery_cycle_fade"].sum())
-    ck = data["battery_ck_bands"]
-    dis_band = vd["battery_discharge_band"].solution
-    expected = float((ck * dis_band).sum())
-    assert cf > 0.0  # the battery actually cycles
-    assert cf == pytest.approx(expected, rel=1e-6)
+    coefficient = data["battery_cycle_fade_coefficient"]
+    discharge = vd["battery_discharge_dc"].solution
+    charge = vd["battery_charge_dc"].solution
+    fade = float(sol["battery_cycle_fade"].sum())
+
+    discharge_term = float((coefficient * discharge).sum())
+    charge_term = float((coefficient * charge).sum())
+
+    assert fade > 0.0  # the battery actually cycles
+    assert charge_term > 0.0  # ...and charges, so the two conventions are distinguishable
+    assert fade == pytest.approx(discharge_term, rel=1e-6)
+    # The charge-plus-discharge convention would be larger by exactly the charge term.
+    assert fade < discharge_term + charge_term
+
+
+def test_calendar_fade_is_proportional_to_nameplate() -> None:
+    """(D5) F_cal = r_cal,y * installed nameplate, independent of how the battery is used."""
+    sets, data = _deg_data(["scenario_1"], {"scenario_1": 0.5}, calendar_rate=0.01)
+    _, vd, sol = _solve_deg(sets, data)
+
+    nameplate = float(vd["battery_units"].solution.sum())
+    assert nameplate > 0.0
+    calendar = sol["battery_calendar_fade"].sum("inv_step")
+    for year in sol["battery_calendar_fade"].coords["year"].values:
+        assert float(calendar.sel(year=year).max()) == pytest.approx(0.01 * nameplate, rel=1e-6)
+
+
+def test_both_fades_subtract_from_the_state() -> None:
+    """(D6) the state carries forward minus BOTH fades, which add.
+
+    With a calendar rate active the second year must lose cycle fade AND calendar fade from
+    the first, not the larger of the two and not just one of them.
+    """
+    sets, data = _deg_data(["scenario_1"], {"scenario_1": 0.4}, calendar_rate=0.01)
+    _, _, sol = _solve_deg(sets, data)
+
+    years = list(sol["battery_effective_energy_capacity"].coords["year"].values)
+    state = sol["battery_effective_energy_capacity"].sum("inv_step")
+    cycle = sol["battery_cycle_fade"].sum("inv_step")
+    calendar = sol["battery_calendar_fade"].sum("inv_step")
+
+    first, second = years[0], years[1]
+    expected = (
+        float(state.sel(year=first).max())
+        - float(cycle.sel(year=first).max())
+        - float(calendar.sel(year=first).max())
+    )
+    assert float(state.sel(year=second).max()) == pytest.approx(expected, abs=1e-7)
+    assert float(calendar.sel(year=first).max()) > 0.0
+    assert float(cycle.sel(year=first).max()) > 0.0
+
+
+def test_end_of_life_floor_holds_and_forces_oversizing() -> None:
+    """(D2) the state may not fall below SoH_eol * nameplate, and that floor is what turns a
+    rated lifetime from advisory into binding.
+
+    Both sides scale with nameplate, so the floor cannot be relaxed by buying more battery;
+    what it does instead is force more nameplate to carry the same load while aged. A heavier
+    calendar rate must therefore never reduce the installed energy.
+    """
+    sets, light = _deg_data(["scenario_1"], {"scenario_1": 0.4}, calendar_rate=0.0)
+    _, light_vd, light_sol = _solve_deg(sets, light)
+    sets_h, heavy = _deg_data(["scenario_1"], {"scenario_1": 0.4}, calendar_rate=0.03)
+    _, heavy_vd, heavy_sol = _solve_deg(sets_h, heavy)
+
+    for vd, sol in ((light_vd, light_sol), (heavy_vd, heavy_sol)):
+        nameplate = float(vd["battery_units"].solution.sum())
+        state = sol["battery_effective_energy_capacity"].sum("inv_step")
+        assert float(state.min()) >= 0.8 * nameplate - 1e-6
+
+    assert float(heavy_vd["battery_units"].solution.sum()) >= float(
+        light_vd["battery_units"].solution.sum()
+    ) - 1e-9
+
+
+def test_soc_window_rides_on_the_degraded_state() -> None:
+    """(C16) the usable window tracks usable energy, not nameplate. Without this link
+    ageing would have no effect on the dispatch at all."""
+    sets, data = _deg_data(["scenario_1"], {"scenario_1": 0.4}, calendar_rate=0.01)
+    _, vd, sol = _solve_deg(sets, data)
+
+    state = sol["battery_effective_energy_capacity"].sum("inv_step")
+    soc = sol["battery_soc"].sum("inv_step")
+    for year in state.coords["year"].values:
+        assert float(soc.sel(year=year).max()) <= float(state.sel(year=year).max()) + 1e-6
+
+
+def test_the_band_and_wear_machinery_is_gone() -> None:
+    """The depth-band states and the max-of-annuities wear epigraph were removed: the fitted
+    depth effect is about 1.7 % for LFP, so the bands resolved almost nothing at a cost of
+    order a million LP variables, and the wear charge billed the same physics twice."""
+    sets, data = _deg_data(["scenario_1"], {"scenario_1": 0.4})
+    model = lp.Model()
+    vd = initialize_vars(sets, data, model)
+    for gone in (
+        "battery_soc_band",
+        "battery_discharge_band",
+        "battery_charge_band",
+        "battery_replacement_cost",
+    ):
+        assert gone not in vd
 
 
 def test_reported_effective_capacity_uses_physical_recursion() -> None:
@@ -433,7 +518,7 @@ def _battery_template_settings(**overrides):
         conversion_labels=["Solar PV"],
         battery_label="Battery",
         battery_loss_model="constant_efficiency",
-        battery_cycle_fade_enabled=False,
+        battery_semiempirical_degradation_enabled=False,
         battery_efficiency_curve_csv="battery_efficiency_curve.csv",
         battery_cycle_lifetime_to_eol_cycles=6000.0,
         battery_end_of_life_soh=0.8,
@@ -468,17 +553,24 @@ def test_battery_simple_flat_ageing_is_written(tmp_path) -> None:
     assert tech.get("capacity_degradation_rate_per_year") == pytest.approx(0.02)
 
 
-def test_battery_flat_ageing_defaults_to_zero_and_coexists_with_cycle_fade(tmp_path) -> None:
-    # Flat calendar ageing defaults to 0 (off), is still written, and is independent of
-    # cycle fade (both can be active at once -- no mutual suppression).
+def test_semiempirical_mode_writes_its_own_inputs(tmp_path) -> None:
+    # The linear rate is still written (and defaults to 0), but in semi-empirical mode the
+    # loader suppresses it, because that mode models calendar ageing explicitly. The mode's
+    # own inputs are written alongside.
     tech = _written_battery_technical(
         tmp_path,
         "bat_default",
         _battery_template_settings(
             battery_loss_model="convex_loss_epigraph",
-            battery_cycle_fade_enabled=True,
+            battery_semiempirical_degradation_enabled=True,
         ),
     )
+    assert tech.get("enclosure_temperature_rise_c") == pytest.approx(10.0)
+    assert tech.get("calendar_fade_scale") == pytest.approx(1.0)
+    assert tech.get("cycle_life_reference_dod") == pytest.approx(0.8)
+    assert tech.get("cycle_life_reference_temperature_c") == pytest.approx(25.0)
+    # initial_soh is fixed at 1.0 by the model and is no longer a user input.
+    assert "initial_soh" not in tech
     assert tech.get("capacity_degradation_rate_per_year") == pytest.approx(0.0)
     assert tech.get("cycle_lifetime_to_eol_cycles") == pytest.approx(6000.0)
     # The SOC-dependent calendar curve was removed entirely.

@@ -1,8 +1,15 @@
-"""Typical-year battery cycle-fade as a throughput WEAR COST (no state).
+"""Battery degradation is refused in the typical-year formulation.
 
-The semi-empirical cycle coefficient beta(T) is loaded from ambient_temperature.csv
-and charged in the objective as a marginal wear cost per unit of throughput. There is
-no capacity state and no new decision variables.
+A typical year has no year axis, so capacity fade cannot accumulate: the state cannot
+decline, the end-of-life floor has nothing to bind in, and no replacement schedule can be
+expressed. What used to live here was a binding-life CAPEX amortisation -- a max-of-annuities
+epigraph over min(calendar, cycle-limited) life -- which priced ageing without modelling it
+and inherited the pre-audit coefficient defects. Its calendar branch bound in every case
+tested, which made the cycle branch, and so the whole mechanism, inert.
+
+Rather than maintain a second degradation scheme whose numbers cannot be reconciled with the
+multi-year one, a typical-year project asking for degradation is now refused. Sizing without
+ageing is unaffected, which is what the last test here checks.
 """
 
 from __future__ import annotations
@@ -44,7 +51,7 @@ def _build_project(
         conversion_labels=["Solar PV"],
         battery_label="Battery",
         battery_loss_model="constant_efficiency",
-        battery_cycle_fade_enabled=cycle_fade,
+        battery_semiempirical_degradation_enabled=cycle_fade,
         battery_efficiency_curve_csv="battery_efficiency_curve.csv",
         battery_cycle_lifetime_to_eol_cycles=cyclelife,
         battery_end_of_life_soh=0.8,
@@ -105,7 +112,7 @@ def _build_project(
         "battery_model": {
             "loss_model": "constant_efficiency",
             "degradation_model": {
-                "cycle_fade_enabled": cycle_fade,
+                "coefficients_enabled": cycle_fade,
             },
         },
         "generator_model": {"efficiency_model": "constant_efficiency"},
@@ -121,9 +128,11 @@ def _build_project(
     res = pd.read_csv(inp / "resource_availability.csv", header=[0, 1, 2])
     res[("scenario_1", "typical_year", "Solar")] = np.where((hod >= 9) & (hod <= 15), 1.0, 0.0)
     res.to_csv(inp / "resource_availability.csv", index=False)
-    if cycle_fade:
+    # The templates no longer write a temperature series for typical-year projects, because
+    # the mode that would consume it is refused there.
+    if (inp / "ambient_temperature.csv").exists():
         amb = pd.read_csv(inp / "ambient_temperature.csv", header=[0, 1])
-        amb[("scenario_1", "typical_year")] = 35.0  # hot -> higher beta
+        amb[("scenario_1", "typical_year")] = 35.0
         amb.to_csv(inp / "ambient_temperature.csv", index=False)
 
 
@@ -163,59 +172,34 @@ def _crf(r: float, n: float) -> float:
     return (r * (1 + r) ** n) / ((1 + r) ** n - 1) if r > 0 else 1.0 / n
 
 
-def _annuities(ds, v):
-    """Return (Z, calendar_annuity, cycle_annuity) for scenario_1 at the solution."""
-    z = float(v["battery_replacement_cost"].solution.sel(scenario="scenario_1"))
-    cap = float((v["battery_units"] * ds["battery_nominal_capacity_kwh"]).solution)
-    capex, wacc, cal = 300.0, 0.05, 10.0
-    cal_ann = _crf(wacc, cal) * capex * cap
-    c_repl, phi = capex / (1.0 - 0.8), _crf(wacc, cal) * cal
-    fade = float(
-        (ds["battery_beta_cycle"] * (v["battery_charge"] + v["battery_discharge"]).solution).sum()
-    )
-    return z, cal_ann, c_repl * phi * fade
+def test_typical_year_degradation_is_refused(tmp_path, monkeypatch) -> None:
+    """Semi-empirical degradation in a typical-year project is refused at load time, and the
+    message names the flag that was set and the formulation that supports it."""
+    from microgridspy.errors import InputValidationError
+
+    root = tmp_path / "degradation_on"
+    _build_project(root, cycle_fade=True, lost_load_cost=50.0, cyclelife=6000.0)
+    with pytest.raises(InputValidationError) as exc:
+        _solve(root, monkeypatch)
+    message = str(exc.value)
+    assert "multi-year" in message
+    assert "coefficients_enabled" in message
 
 
-def test_typical_year_replacement_cost_is_max_of_annuities(tmp_path, monkeypatch) -> None:
-    # The battery energy CAPEX is amortized over the binding life via a max-of-annuities
-    # epigraph. With a long rated life (gentle cycling) the CALENDAR limit binds, so the
-    # charged cost equals the calendar annuity and NPC stays flat vs no degradation.
-    root_off = tmp_path / "off"
-    _build_project(root_off, cycle_fade=False, lost_load_cost=50.0)
-    ds_off, obj_off, _, _, _ = _solve(root_off, monkeypatch)
-    assert "battery_beta_cycle" not in ds_off.data_vars
+def test_typical_year_without_degradation_still_solves(tmp_path, monkeypatch) -> None:
+    """The refusal must not cost the typical-year formulation its ordinary sizing path.
 
-    root_on = tmp_path / "on"
-    _build_project(root_on, cycle_fade=True, lost_load_cost=50.0, cyclelife=6000.0)
-    ds_on, obj_on, _, _, v_on = _solve(root_on, monkeypatch)
+    With the flags off the model solves, the battery is used to time-shift midday PV into the
+    night, and no degradation artefacts are left in the dataset or the variable set.
+    """
+    root = tmp_path / "off"
+    _build_project(root, cycle_fade=False, lost_load_cost=50.0)
+    ds, objective, throughput, _, v = _solve(root, monkeypatch)
 
-    assert "battery_beta_cycle" in ds_on.data_vars
-    assert "battery_replacement_cost" in v_on
-    deg = ds_on.attrs["settings"]["battery_model"]["degradation_model"]
-    assert deg["coefficient_source"] == "semi_empirical"
-    assert deg["cycle_fade_mode"] == "binding_life_annuity"
-
-    z, cal_ann, cyc_ann = _annuities(ds_on, v_on)
-    # epigraph identity: Z == max(calendar, cycle) annuity
-    assert z == pytest.approx(max(cal_ann, cyc_ann), rel=1e-3)
-    # gentle cycling -> calendar limit binds
-    assert cal_ann >= cyc_ann - 1e-6
-    # and NPC is essentially flat vs no degradation (only the convex-loss efficiency diff)
-    assert obj_on == pytest.approx(obj_off, rel=0.05)
-
-
-def test_typical_year_shorter_cycle_life_is_never_cheaper(tmp_path, monkeypatch) -> None:
-    # For any fixed decision the cycle annuity is higher when the rated life is shorter,
-    # so the optimal NPC is monotonic: a shorter cycle life is never cheaper. When the
-    # cycle limit binds the charged cost is the (larger) cycle annuity.
-    root_long = tmp_path / "long"
-    _build_project(root_long, cycle_fade=True, lost_load_cost=50.0, cyclelife=6000.0)
-    _, obj_long, _, _, _ = _solve(root_long, monkeypatch)
-
-    root_short = tmp_path / "short"
-    _build_project(root_short, cycle_fade=True, lost_load_cost=50.0, cyclelife=800.0)
-    ds_short, obj_short, _, _, v_short = _solve(root_short, monkeypatch)
-
-    z, cal_ann, cyc_ann = _annuities(ds_short, v_short)
-    assert z == pytest.approx(max(cal_ann, cyc_ann), rel=1e-3)
-    assert obj_short >= obj_long - 1e-6
+    assert objective > 0.0
+    assert throughput > 0.0  # the battery is actually cycling
+    assert "battery_beta_cycle" not in ds.data_vars
+    assert "ambient_temperature" not in ds.data_vars
+    assert "battery_replacement_cost" not in v
+    degradation = ds.attrs["settings"]["battery_model"]["degradation_model"]
+    assert degradation["cycle_fade_enabled"] is False
