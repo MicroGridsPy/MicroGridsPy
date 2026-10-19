@@ -67,8 +67,7 @@ def build_formulation_payload(
     emission_cost_per_kgco2e: float | None = 0.0,
     n_sources: int = 1,
     battery_loss_model: str = "constant_efficiency",
-    battery_cycle_fade_enabled: bool = False,
-    battery_n_soc_bands: int = 5,
+    battery_semiempirical_degradation_enabled: bool = False,
     generator_efficiency_model: str = "constant_efficiency",
     csv_delimiter: str = ",",
     csv_decimal: str = ".",
@@ -117,13 +116,13 @@ def build_formulation_payload(
         },
         "battery_model": {
             "loss_model": str(battery_loss_model or "constant_efficiency"),
+            # Battery ageing has exactly two modes. Linear capacity fade (the default)
+            # is the flat yearly rate in battery.technical, consistent with the other
+            # technologies; set it to 0 to size without ageing. Semi-empirical
+            # degradation adds the cycle + calendar coefficient model and its own
+            # capacity state, and is multi-year only.
             "degradation_model": {
-                "cycle_fade_enabled": bool(battery_cycle_fade_enabled),
-                # Number of usable SOC bands for the Li-ion depth-resolved cycle-fade
-                # model. The cycle-fade representation itself is selected by chemistry
-                # (Li-ion -> depth-resolved marginal bands; lead-acid -> flat beta(T)),
-                # not by a user option.
-                "n_soc_bands": int(battery_n_soc_bands),
+                "coefficients_enabled": bool(battery_semiempirical_degradation_enabled),
             },
         },
         "generator_model": {
@@ -267,7 +266,7 @@ def create_project(
         conversion_labels=conv_labels,
         battery_label=battery_label,
         battery_loss_model="constant_efficiency",
-        battery_cycle_fade_enabled=False,
+        battery_semiempirical_degradation_enabled=False,
         battery_efficiency_curve_csv="",
         battery_cycle_lifetime_to_eol_cycles=6000.0,
         battery_end_of_life_soh=0.8,

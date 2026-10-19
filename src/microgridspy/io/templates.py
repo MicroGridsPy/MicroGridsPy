@@ -55,7 +55,7 @@ class TemplateSettings:
     # single-tech component labels
     battery_label: str
     battery_loss_model: str
-    battery_cycle_fade_enabled: bool
+    battery_semiempirical_degradation_enabled: bool
     battery_efficiency_curve_csv: str
     battery_cycle_lifetime_to_eol_cycles: float
     battery_end_of_life_soh: float
@@ -73,9 +73,14 @@ class TemplateSettings:
     # Battery calendar ageing: a single flat %/yr capacity fade (0 = no calendar ageing).
     battery_capacity_degradation_rate_per_year: float = 0.0
     # Battery electrochemistry, selecting the semi-empirical degradation
-    # curves (alpha/beta). One of {"LFP", "NMC", "lead_acid"}. Only consumed when
+    # curves (alpha/beta). One of {"LFP", "NMC"} -- Li-ion only. Only consumed when
     # endogenous battery degradation is active.
     battery_chemistry: str = "LFP"
+    # Semi-empirical degradation inputs (see validate_degradation_technical_inputs).
+    battery_cycle_life_reference_dod: float = 0.8
+    battery_cycle_life_reference_temperature_c: float = 25.0
+    battery_enclosure_temperature_rise_c: float = 10.0
+    battery_calendar_fade_scale: float = 1.0
     renewable_vintage_labels_by_step: Mapping[str, Mapping[str, str]] | None = None
     battery_vintage_labels_by_step: Mapping[str, str] | None = None
     generator_vintage_labels_by_step: Mapping[str, str] | None = None
@@ -96,7 +101,7 @@ def write_templates(
     )
     # Ambient temperature drives the semi-empirical degradation coefficients; only needed
     # when endogenous battery degradation is active.
-    if _battery_cycle_fade_active(settings):
+    if _battery_semiempirical_degradation_active(settings):
         _write_ambient_temperature_csv(
             paths.inputs_dir / "ambient_temperature.csv", settings, overwrite=overwrite
         )
@@ -232,23 +237,19 @@ def _safe_battery_loss_model(settings: TemplateSettings) -> str:
     return "constant_efficiency"
 
 
-def _battery_endogenous_degradation_enabled(settings: TemplateSettings) -> bool:
+def _battery_semiempirical_degradation_active(settings: TemplateSettings) -> bool:
+    """Semi-empirical degradation mode: multi-year only, and needs the convex-loss model.
+
+    This gate controls writing the mode's inputs (chemistry, end-of-life SoH, rated cycle
+    life, the datasheet reference point, the enclosure rise, the calendar scale) and the
+    ambient-temperature series they are evaluated against. The other mode, linear capacity
+    fade, needs no inputs beyond the flat yearly rate every technology already has.
+    """
     if settings.formulation != MULTI_YEAR:
         return False
     if _safe_battery_loss_model(settings) != "convex_loss_epigraph":
         return False
-    return bool(getattr(settings, "battery_cycle_fade_enabled", False))
-
-
-def _battery_cycle_fade_active(settings: TemplateSettings) -> bool:
-    """Semi-empirical cycle fade active in ANY formulation.
-
-    Dynamic multi-year uses it as an endogenous capacity-fade recursion (requires the
-    convex-loss model); typical-year uses it as a binding-life CAPEX amortisation.
-    Both need the same degradation inputs (chemistry, SoH bounds, cycle life, ambient
-    temperature), so this gate controls writing those inputs.
-    """
-    return bool(getattr(settings, "battery_cycle_fade_enabled", False))
+    return bool(getattr(settings, "battery_semiempirical_degradation_enabled", False))
 
 
 def _safe_generator_label(settings: TemplateSettings) -> str:
@@ -274,7 +275,7 @@ def _safe_generator_efficiency_model(settings: TemplateSettings) -> str:
 
 
 def _battery_requires_lp_soh_capacity_reference(settings: TemplateSettings) -> bool:
-    return _battery_endogenous_degradation_enabled(settings)
+    return _battery_semiempirical_degradation_active(settings)
 
 
 def _template_scenarios(settings: TemplateSettings) -> list[str]:
@@ -507,7 +508,7 @@ def _write_inputs_readme(path: Path, settings: TemplateSettings, overwrite: bool
                 "semi-empirical alpha (calendar) and beta (cycle) degradation coefficients "
                 "together with `battery.technical.chemistry` and `depth_of_discharge`.\n",
             ]
-            if _battery_cycle_fade_active(settings)
+            if _battery_semiempirical_degradation_active(settings)
             else []
         ),
         "\n## renewables.yaml\n",
@@ -535,7 +536,7 @@ def _write_inputs_readme(path: Path, settings: TemplateSettings, overwrite: bool
             "- `battery.technical.initial_soc` is interpreted as an absolute fraction of installed/effective capacity, not as a fraction of the usable DoD window. With the current SOC lower bound, choose `initial_soc >= 1 - depth_of_discharge` whenever positive battery capacity may be installed.\n",
         ]
     )
-    if _battery_cycle_fade_active(settings):
+    if _battery_semiempirical_degradation_active(settings):
         text_parts.append(
             "- Battery cycle-fade degradation controls (chemistry, SoH bounds, cycle life) are written in `battery.technical` when cycle fade is enabled.\n"
         )
@@ -858,8 +859,8 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
         # Both formulations need SoH bounds when cycle fade is on (multi-year for the
         # capacity state, typical-year for the wear-cost marginal). Gate on the shared
         # cycle-fade switch, not the multi-year-only endogenous gate.
-        endogenous_degradation = _battery_cycle_fade_active(settings)
-        cycle_fade_active = _battery_cycle_fade_active(settings)
+        endogenous_degradation = _battery_semiempirical_degradation_active(settings)
+        cycle_fade_active = _battery_semiempirical_degradation_active(settings)
         max_installable_capacity_kwh = (
             1.0e6 if _battery_requires_lp_soh_capacity_reference(settings) else None
         )
@@ -879,13 +880,29 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
             ),  # used only by convex_loss_epigraph mode
         }
         if endogenous_degradation:
-            params["initial_soh"] = 1.0
             params["end_of_life_soh"] = float(
                 getattr(settings, "battery_end_of_life_soh", 0.8) or 0.8
             )
         if cycle_fade_active:
-            # Electrochemistry selects the semi-empirical alpha/beta degradation curves.
+            # Electrochemistry selects the fitted coefficient sets (Li-ion only).
             params["chemistry"] = str(getattr(settings, "battery_chemistry", "LFP") or "LFP")
+            # The datasheet point the cycle magnitude is pinned to: read both off the same
+            # datasheet line as the cycle count.
+            params["cycle_life_reference_dod"] = float(
+                getattr(settings, "battery_cycle_life_reference_dod", 0.8) or 0.8
+            )
+            params["cycle_life_reference_temperature_c"] = float(
+                getattr(settings, "battery_cycle_life_reference_temperature_c", 25.0) or 25.0
+            )
+            # Outdoor air -> enclosure air. The most influential input in the module and a
+            # design assumption, not a measurement: run it as a sensitivity.
+            params["enclosure_temperature_rise_c"] = float(
+                getattr(settings, "battery_enclosure_temperature_rise_c", 10.0) or 10.0
+            )
+            # 1.0 anchored to a ten-year shelf test, 2.72 the unscaled published envelope.
+            params["calendar_fade_scale"] = float(
+                getattr(settings, "battery_calendar_fade_scale", 1.0) or 1.0
+            )
             params["cycle_lifetime_to_eol_cycles"] = float(
                 getattr(settings, "battery_cycle_lifetime_to_eol_cycles", 6000.0) or 6000.0
             )
@@ -933,19 +950,16 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
                     else {}
                 ),
                 **(
-                    {"battery_initial_soh": "share"} if _battery_cycle_fade_active(settings) else {}
-                ),
-                **(
-                    {"battery_end_of_life_soh": "share"}
-                    if _battery_cycle_fade_active(settings)
-                    else {}
-                ),
-                **(
                     {
+                        "battery_end_of_life_soh": "share",
                         "battery_chemistry": "-",
                         "battery_cycle_lifetime_to_eol_cycles": "cycles",
+                        "battery_cycle_life_reference_dod": "share",
+                        "battery_cycle_life_reference_temperature_c": "degC",
+                        "battery_enclosure_temperature_rise_c": "K",
+                        "battery_calendar_fade_scale": "-",
                     }
-                    if _battery_cycle_fade_active(settings)
+                    if _battery_semiempirical_degradation_active(settings)
                     else {}
                 ),
                 **(
@@ -971,7 +985,13 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
                     "battery_specific_investment_cost_per_kwh": "Specific investment cost of battery capacity.",
                     "battery_inverter_specific_investment_cost_per_kw": "Specific investment cost of the explicit battery converter/inverter power capacity used as the charge/discharge reference.",
                     "battery_wacc": "Weighted average cost of capital used for battery annuities.",
-                    "battery_calendar_lifetime_years": "Calendar lifetime used for battery replacement economics.",
+                    "battery_calendar_lifetime_years": (
+                        "Replacement interval, and the amortisation period of the battery energy "
+                        "CAPEX. With semi-empirical degradation, leave it null to derive the "
+                        "service life from the physics so that the replacement schedule, the "
+                        "capital recovery and end_of_life_soh stay mutually consistent; set a "
+                        "number only to represent a policy such as a warranty term."
+                    ),
                     "battery_embedded_emissions_kgco2e_per_kwh": "Embodied emissions associated with battery capacity.",
                     "battery_fixed_om_share_per_year": "Fixed annual O&M cost expressed as a share of battery CAPEX. In the typical-year formulation this input is scenario-independent.",
                     "battery_inverter_fixed_om_share_per_year": "Fixed annual O&M cost expressed as a share of battery inverter CAPEX.",
@@ -988,17 +1008,6 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
                     ),
                     **(
                         {
-                            "battery_initial_soh": (
-                                "Initial state of health, the starting point for cycle-fade "
-                                "degradation accounting (a capacity state in the dynamic "
-                                "formulation, a wear-cost reference in the typical-year formulation)."
-                            )
-                        }
-                        if _battery_cycle_fade_active(settings)
-                        else {}
-                    ),
-                    **(
-                        {
                             "battery_efficiency_curve_csv": (
                                 "CSV file containing the battery charge/discharge efficiency shape used by the advanced convex loss model. Preferred semantics: normalized multipliers relative to the scalar efficiencies above."
                             )
@@ -1008,34 +1017,67 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
                     ),
                     **(
                         {
-                            "battery_end_of_life_soh": "End-of-life SoH target. Sets the usable-life span (initial_soh - end_of_life_soh) used by the cycle-fade capacity state (dynamic) and the throughput wear-cost marginal (typical-year)."
+                            "battery_end_of_life_soh": (
+                                "State of health the rated cycle life refers to, and the hard "
+                                "floor the capacity state may not cross. Keep it at or above 0.8: "
+                                "the model is linear in the state and cannot represent the fade "
+                                "knee below roughly 70-80 % SoH. Initial SoH is fixed at 1.0."
+                            )
                         }
-                        if _battery_cycle_fade_active(settings)
+                        if _battery_semiempirical_degradation_active(settings)
                         else {}
                     ),
                     **(
                         {
                             "battery_chemistry": (
-                                "Battery electrochemistry selecting the semi-empirical "
-                                "degradation curves (alpha calendar + beta cycle). One of "
-                                "{LFP, NMC, lead_acid}. Ambient temperature (ambient_temperature.csv) "
-                                "and depth_of_discharge select the temperature and DoD bands of the curves."
+                                "Battery electrochemistry selecting the fitted coefficient sets. "
+                                "One of {LFP, NMC} -- Li-ion only. LFP is the calibrated "
+                                "chemistry; NMC inherits a temperature correction derived from an "
+                                "LFP datasheet and a cubic surrogate that misfits its steeper law, "
+                                "so NMC results should be read as the pessimistic end of the band."
                             ),
                             "battery_cycle_lifetime_to_eol_cycles": (
-                                "Rated cycle life to end of life. Scales the cycle coefficient "
-                                "beta by the cycle-life ratio (reference/rated), porting the validated "
-                                "curve shape to the user's battery without re-fitting."
+                                "Datasheet cycle life to end_of_life_soh. The cycle-fade magnitude "
+                                "is pinned so that exactly this many cycles, at the reference depth "
+                                "and temperature below, consume the usable SoH budget."
+                            ),
+                            "battery_cycle_life_reference_dod": (
+                                "Depth of discharge the rated cycle life was measured at. Read it "
+                                "off the same datasheet line as the cycle count: calibrating at one "
+                                "depth and operating at another is a 23 % error in the fade budget."
+                            ),
+                            "battery_cycle_life_reference_temperature_c": (
+                                "Temperature the rated cycle life was measured at; almost always "
+                                "25 degC on a datasheet."
+                            ),
+                            "battery_enclosure_temperature_rise_c": (
+                                "Step from outdoor air to enclosure air. The temperature series is "
+                                "2 m outdoor air while cells sit in a hotter box, and the fitted "
+                                "cycle law already contains cell self-heating, so the model needs "
+                                "the air temperature around the pack. Guidance: 0 K actively "
+                                "cooled, 5-10 K ventilated and shaded, 15-20 K sealed in full sun. "
+                                "This is the most influential input in the degradation module and "
+                                "a design assumption rather than a measurement -- run it as a "
+                                "sensitivity."
+                            ),
+                            "battery_calendar_fade_scale": (
+                                "Walks the 2.7x literature band on calendar-fade magnitude: 1.0 is "
+                                "the model anchored to a ten-year shelf-ageing measurement, 2.72 "
+                                "recovers the unscaled published fit. Report both ends."
                             ),
                         }
-                        if _battery_cycle_fade_active(settings)
+                        if _battery_semiempirical_degradation_active(settings)
                         else {}
                     ),
                     **(
                         {
                             "battery_capacity_degradation_rate_per_year": (
-                                "Calendar ageing: a single flat %/yr reduction in effective battery "
-                                "capacity, independent of use (0 = no calendar ageing). This is the "
-                                "only calendar-ageing input; it coexists with throughput-based cycle fade."
+                                "Linear capacity fade: a flat yearly reduction in available battery "
+                                "capacity, independent of use (0 = no ageing). This is the default "
+                                "ageing mode and the same term the renewable and generator "
+                                "technologies carry. It is IGNORED when semi-empirical degradation "
+                                "is enabled, because that mode models calendar ageing explicitly "
+                                "and applying a flat rate as well would count it twice."
                             )
                         }
                         if is_multi_year
