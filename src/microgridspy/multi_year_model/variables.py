@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import linopy as lp
-import numpy as np
 import xarray as xr
 
 from microgridspy.data_pipeline.battery_loss_model import (
@@ -64,8 +63,9 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict
     )
     battery_model_settings = p.settings.get("battery_model", {}) or {}
     degradation_settings = battery_model_settings.get("degradation_model", {}) or {}
-    cycle_fade_enabled = bool(degradation_settings.get("cycle_fade_enabled", False))
-    degradation_state_enabled = cycle_fade_enabled
+    # Semi-empirical degradation mode: the only mode with an endogenous capacity state.
+    # Linear capacity fade is exogenous and needs no variables (it scales the ceiling).
+    coefficients_enabled = bool(degradation_settings.get("coefficients_enabled", False))
     # In the current multi-year formulation this flag controls integer sizing
     # of investment-unit variables only; it is not chronological unit commitment.
     is_integer = bool(p.settings.get("integer_sizing", p.settings.get("unit_commitment", False)))
@@ -198,63 +198,31 @@ def initialize_vars(sets: xr.Dataset, data: xr.Dataset, model: lp.Model) -> dict
             coords={"period": period, "year": year, "scenario": scenario, "inv_step": inv_step},
             name="battery_discharge_loss",
         )
-        if degradation_state_enabled:
-            # Annual cycle fade per cohort (kWh of capacity lost that year). Defined as
-            # the per-year sum of beta(T)*(charge_dc+discharge_dc); aggregating to a
-            # yearly variable (instead of one per hour) keeps the state recursion exact
-            # while removing the 8760x per-period fade variables/constraints.
+        if coefficients_enabled:
+            # Usable energy state and the two annual fade channels, per cohort.
+            #
+            # All three are yearly, not hourly: fade accumulates on the year axis, so one
+            # variable per year carries the state exactly while avoiding 8760x per-period
+            # duplicates. The whole degradation layer is 3*Y variables per (scenario, step) --
+            # 60 at Y = 20, one scenario, one step.
+            ysk_dims = ("year", "scenario", "inv_step")
+            ysk_coords = {"year": year, "scenario": scenario, "inv_step": inv_step}
+            # Capacity lost to throughput this year [kWh]: sum_t c(T_t) * DC discharge.
             vars["battery_cycle_fade"] = model.add_variables(
-                lower=0.0,
-                dims=("year", "scenario", "inv_step"),
-                coords={"year": year, "scenario": scenario, "inv_step": inv_step},
-                name="battery_cycle_fade",
+                lower=0.0, dims=ysk_dims, coords=ysk_coords, name="battery_cycle_fade"
             )
+            # Capacity lost to time this year [kWh]: r_cal,y * installed nameplate.
+            vars["battery_calendar_fade"] = model.add_variables(
+                lower=0.0, dims=ysk_dims, coords=ysk_coords, name="battery_calendar_fade"
+            )
+            # Usable energy [kWh]. The state-of-charge window rides on this, not on
+            # nameplate, which is what makes ageing bite on the dispatch.
             vars["battery_effective_energy_capacity"] = model.add_variables(
                 lower=0.0,
-                dims=("year", "scenario", "inv_step"),
-                coords={"year": year, "scenario": scenario, "inv_step": inv_step},
+                dims=ysk_dims,
+                coords=ysk_coords,
                 name="battery_effective_energy_capacity",
             )
-            # Epigraph for the battery energy CAPEX amortized over the BINDING life:
-            # >= calendar annuity and >= cycle-limited annuity, so at the optimum it
-            # equals max(the two) = CAPEX amortized over min(calendar, cycle) life. This
-            # keeps degradation inside the annuity/no-salvage cash-flow convention (no
-            # double-counting wear charge).
-            vars["battery_replacement_cost"] = model.add_variables(
-                lower=0.0,
-                dims=("year", "scenario", "inv_step"),
-                coords={"year": year, "scenario": scenario, "inv_step": inv_step},
-                name="battery_replacement_cost",
-            )
-
-            # Depth-resolved cycle aging (marginal_bands): a stacked SOC-band reservoir.
-            #   battery_soc_band[b]       usable stored energy in band b (0=top/shallow) [kWh]
-            #   battery_discharge_band[b] DC discharge routed through band b             [kWh]
-            #   battery_charge_band[b]    DC charge routed into band b                   [kWh]
-            # Convex costs c_k (increasing with depth) make the optimiser cycle shallow
-            # bands first, so cycling depth is emergent and the block stays a pure LP.
-            cycle_fade_mode = (
-                str(degradation_settings.get("cycle_fade_mode", "single_beta")).strip().lower()
-            )
-            if cycle_fade_mode == "marginal_bands":
-                n_soc_bands = int(degradation_settings.get("n_soc_bands", 5))
-                band_coord = np.arange(n_soc_bands)
-                band_dims = ("soc_band", "period", "year", "scenario", "inv_step")
-                band_coords = {
-                    "soc_band": band_coord,
-                    "period": period,
-                    "year": year,
-                    "scenario": scenario,
-                    "inv_step": inv_step,
-                }
-                for _nm in (
-                    "battery_soc_band",
-                    "battery_discharge_band",
-                    "battery_charge_band",
-                ):
-                    vars[_nm] = model.add_variables(
-                        lower=0.0, dims=band_dims, coords=band_coords, name=_nm
-                    )
 
     # Lost load [kWh]
     vars["lost_load"] = model.add_variables(
