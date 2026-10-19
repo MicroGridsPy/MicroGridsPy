@@ -11,7 +11,7 @@ my_site/
 ├── formulation.json              # mode, scenarios, grid flags, global constraints
 ├── load_demand.csv               # hourly demand time series
 ├── resource_availability.csv     # hourly renewable availability by resource
-├── ambient_temperature.csv       # hourly ambient temperature   (battery cycle fade only)
+├── ambient_temperature.csv       # hourly outdoor air temp      (semi-empirical ageing only)
 ├── renewables.yaml               # renewable techno-economic inputs
 ├── battery.yaml                  # battery techno-economic inputs
 ├── generator.yaml                # generator + fuel inputs
@@ -39,16 +39,18 @@ each file is mandatory — is in the [Data Reference](../data-reference/overview
   battery, generators, fuel, and grid.
 - **Optional curves** (CSV) — battery loss and generator part-load efficiency curves that
   activate the advanced formulations described in the [Methodology](../methodology/overview.md).
-- **Battery degradation inputs** (conditional) — when battery cycle fade is enabled
-  (`battery_model.degradation_model.cycle_fade_enabled`), the project also needs
-  `ambient_temperature.csv` (an hourly ambient-temperature series in °C, same scenario/year
-  layout as `load_demand.csv`) together with a few `battery.yaml → technical` fields:
-  `chemistry` (one of `LFP`, `NMC`, `lead_acid`), `cycle_lifetime_to_eol_cycles`, `initial_soh`,
-  and `end_of_life_soh`. The temperature series and depth-of-discharge drive the semi-empirical
-  ageing coefficients. The cycle-fade model is chosen automatically from the chemistry —
-  **Li-ion (LFP/NMC)** uses the depth-resolved per-SOC-band model (its band count is
-  `battery_model.degradation_model.n_soc_bands`, default 5), while **lead-acid** uses the flat
-  $\beta(T)$ model. See [Battery degradation](../methodology/battery.md#battery-degradation).
+- **Battery degradation inputs** (conditional) — battery ageing has two modes. The default,
+  **linear capacity fade**, needs only `battery.yaml → technical.capacity_degradation_rate_per_year`
+  (a flat fraction per year; `0` disables ageing) and no extra files. **Semi-empirical
+  degradation** (`battery_model.degradation_model.coefficients_enabled`, multi-year projects with
+  the convex-loss efficiency model only) additionally needs `ambient_temperature.csv` — an hourly
+  **outdoor air** series in °C with the same scenario/year layout as `load_demand.csv` — and these
+  `battery.yaml → technical` fields: `chemistry` (`LFP` or `NMC`), `cycle_lifetime_to_eol_cycles`
+  and `end_of_life_soh`, plus four with defaults: `cycle_life_reference_dod` (0.8),
+  `cycle_life_reference_temperature_c` (25), `enclosure_temperature_rise_c` (10) and
+  `calendar_fade_scale` (1.0). Leave `calendar_lifetime_years` as `null` to have the service life
+  derived from the physics. See
+  [Battery degradation](../methodology/battery.md#battery-degradation).
 
 ## Inspecting inputs before solving
 

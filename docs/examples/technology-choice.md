@@ -153,7 +153,7 @@ storage and solar:
     The more accurate loss model is worth **−11.8 kUSD**; the degradation model on its own
     *adds* **+4.3 kUSD**. Modelling ageing physically makes the system **more** expensive, as
     the faster fade implies — the net saving is entirely due to the loss model. The control
-    run is scenario 3 with `cycle_fade_enabled: false`.
+    run is scenario 3 with `coefficients_enabled: false`.
 
 !!! tip "The lesson"
     A fixed degradation rate is a modelling **assumption**, not a property of the battery.

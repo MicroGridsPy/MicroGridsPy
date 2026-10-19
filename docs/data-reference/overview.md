@@ -36,7 +36,7 @@ hand · **no** = reference only.
     | `grid_export_price.csv` | CSV | conditional | `on_grid=true` and `allow_export=true` | yes | hourly export tariff → export revenue |
     | `grid_availability.csv` | CSV | derived | `on_grid=true` | no | hourly availability after outage simulation |
     | `battery_efficiency_curve.csv` | CSV | conditional | `loss_model = convex_loss_epigraph` | yes | advanced convex battery loss formulation |
-    | `ambient_temperature.csv` | CSV | conditional | `degradation_model.cycle_fade_enabled=true` | yes | hourly ambient temperature → semi-empirical $\alpha(T)$/$\beta(T)$ degradation |
+    | `ambient_temperature.csv` | CSV | conditional | `degradation_model.coefficients_enabled=true` | yes | hourly outdoor air temperature → the cycle $c(T)$ and calendar $r^{	ext{cal}}(T)$ coefficients |
     | `generator_efficiency_curve.csv` | CSV | conditional | `efficiency_model = efficiency_curve` | yes | partial-load generator efficiency curve |
     | `README_inputs.md` | Markdown | no | always | no | human-readable summary of generated inputs |
 
@@ -44,7 +44,7 @@ hand · **no** = reference only.
 
     In addition to the typical-year files (with an extra **year** axis), the multi-year
     formulation carries cohort/investment-step dimensions and, when degradation is enabled,
-    an ambient-temperature series driving the semi-empirical $\alpha(T)$/$\beta(T)$ coefficients.
+    an outdoor-air temperature series driving the cycle $c(T)$ and calendar $r^{	ext{cal}}(T)$ coefficients.
 
     | File | Format | Required | Condition | Dimensional meaning |
     |---|---|---|---|---|
@@ -59,7 +59,7 @@ hand · **no** = reference only.
     | `grid_export_price.csv` | CSV | conditional | `on_grid=true` and `allow_export=true` | period × scenario × year |
     | `grid_availability.csv` | CSV | derived | `on_grid=true` | period × scenario × year |
     | `battery_efficiency_curve.csv` | CSV | conditional | `loss_model = convex_loss_epigraph` | curve points |
-    | `ambient_temperature.csv` | CSV | conditional | `degradation_model.cycle_fade_enabled=true` | period × scenario × year |
+    | `ambient_temperature.csv` | CSV | conditional | `degradation_model.coefficients_enabled=true` | period × scenario × year |
     | `generator_efficiency_curve.csv` | CSV | conditional | `efficiency_model = efficiency_curve` | curve points |
     | `README_inputs.md` | Markdown | no | always | reference only |
 
@@ -77,7 +77,7 @@ Time-series CSVs use a small header block to label value axes, followed by 8760 
     | `grid_import_price.csv` | 2 | `meta/hour` | scenario × typical_year | currency/kWh | 8760 | `on_grid=true` |
     | `grid_export_price.csv` | 2 | `meta/hour` | scenario × typical_year | currency/kWh | 8760 | `on_grid=true` and export enabled |
     | `grid_availability.csv` | 2 | `meta/hour` | scenario × typical_year | 0/1 | 8760 | derived |
-    | `ambient_temperature.csv` | 2 | `meta/hour` | scenario × typical_year | °C | 8760 | battery cycle-fade degradation |
+    | `ambient_temperature.csv` | 2 | `meta/hour` | scenario × typical_year | °C | 8760 | not used — degradation is multi-year only |
     | `generator_efficiency_curve.csv` | 1 | – | `Relative Power Output [-]`, `Efficiency [-]` | dimensionless | variable | generator curve mode |
     | `battery_efficiency_curve.csv` | 1 | – | `relative_power_pu`, `charge_efficiency`, `discharge_efficiency` | dimensionless | variable | battery convex-loss mode |
 
@@ -94,7 +94,7 @@ Time-series CSVs use a small header block to label value axes, followed by 8760 
     | `grid_import_price.csv` | 2 | `meta/hour` | scenario × year | currency/kWh | 8760 | `on_grid=true` |
     | `grid_export_price.csv` | 2 | `meta/hour` | scenario × year | currency/kWh | 8760 | `on_grid=true` and export enabled |
     | `grid_availability.csv` | 2 | `meta/hour` | scenario × year | 0/1 | 8760 | derived |
-    | `ambient_temperature.csv` | 2 | `meta/hour` | scenario × year | °C | 8760 | battery cycle-fade degradation |
+    | `ambient_temperature.csv` | 2 | `meta/hour` | scenario × year | °C (outdoor air) | 8760 | semi-empirical battery degradation |
     | `generator_efficiency_curve.csv` | 1 | – | `Relative Power Output [-]`, `Efficiency [-]` | dimensionless | variable | generator curve mode |
     | `battery_efficiency_curve.csv` | 1 | – | `relative_power_pu`, `charge_efficiency`, `discharge_efficiency` | dimensionless | variable | battery convex-loss mode |
 
