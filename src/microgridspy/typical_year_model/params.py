@@ -61,7 +61,6 @@ class Params:
     battery_max_charge_c_rate: xr.DataArray | None
     battery_max_discharge_c_rate: xr.DataArray | None
     # Semi-empirical cycle-fade wear-cost inputs (typical-year throughput-cost mode).
-    battery_beta_cycle: xr.DataArray | None
     battery_initial_soh: xr.DataArray | None
     battery_end_of_life_soh: xr.DataArray | None
 
@@ -157,7 +156,6 @@ def get_params(ds: xr.Dataset) -> Params:
         battery_inverter_nominal_power_kw=ds["battery_inverter_nominal_power_kw"],
         battery_max_charge_c_rate=_opt("battery_max_charge_c_rate"),
         battery_max_discharge_c_rate=_opt("battery_max_discharge_c_rate"),
-        battery_beta_cycle=_opt("battery_beta_cycle"),
         battery_initial_soh=_opt("battery_initial_soh"),
         battery_end_of_life_soh=_opt("battery_end_of_life_soh"),
         generator_nominal_capacity_kw=ds["generator_nominal_capacity_kw"],
