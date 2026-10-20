@@ -189,11 +189,20 @@ F^{\text{cal}}_{y} \;=\; r^{\text{cal}}_{y}\, E^{\text{nom}}_{y}
 Both are pre-fitted, exogenous coefficients — the optimisation sees constants, so it stays linear —
 and both are evaluated at **cell** temperature, not outdoor air (see below).
 
-**The end-of-life floor.** The state is held above the end-of-life threshold in every year:
+**The end-of-life floor.** $E_y$ is the usable energy at the **start** of year $y$; the year's
+fades are only subtracted when the next year begins. The floor is therefore tested on the
+**end-of-year** state, in every year including the last year of the horizon:
 
 \[
-E_{y} \;\ge\; \text{SoH}_{\text{eol}}\, E^{\text{nom}}_{y}
+E_{y} \;-\; F^{\text{cyc}}_{y} \;-\; F^{\text{cal}}_{y} \;\ge\; \text{SoH}_{\text{eol}}\, E^{\text{nom}}_{y}
 \]
+
+A cohort is retired at its end-of-year state in its last service year, so this is the state the
+end-of-life threshold refers to. An earlier version tested $E_y$ itself, which let a cohort finish
+its final year one year's fade (2.5–2.8 % of nameplate on the Kalobeyei case) below the
+threshold. The results report both states per cohort and year (`battery_soh_by_year.csv`) and the
+lowest end-of-year value as *Battery SoH end of cohort (min)*; the dispatch column `battery_soh`
+remains the start-of-year state.
 
 This is what makes a rated lifetime *binding* rather than advisory. Note that both sides scale with
 nameplate, so the floor cannot be relaxed by buying more battery; what it does instead is force
@@ -219,11 +228,34 @@ cycles at `cycle_life_reference_dod` and `cycle_life_reference_temperature_c` co
 SoH budget $B = 1 - \text{SoH}_{\text{eol}}$:
 
 \[
-c(\delta_{\text{ref}}, T_{\text{ref}}) \;=\; \frac{B}{N_{\text{rated}}\,\delta_{\text{ref}}}
+c(\delta_{\text{ref}}, T_{\text{ref}}) \;=\; \lambda_{\text{cyc}}\,
+\frac{\Psi_{\text{raw}}(\delta_{\text{ref}}, T_{\text{ref}})}{\delta_{\text{ref}}},
+\qquad
+\lambda_{\text{cyc}} \;=\; \frac{B \;-\; \varphi_{\text{cal}}\,
+Q_{\text{cal}}\!\left(\overline{\text{SoC}}, T_{\text{ref}}, \tau_{\text{test}}\right)}
+{N_{\text{rated}}\;\Psi_{\text{raw}}(\delta_{\text{ref}}, T_{\text{ref}})}
 \]
 
 Read the reference depth and temperature **off the same datasheet line as the cycle count**:
 calibrating at one depth and operating at another is a 23 % error in the fade budget.
+
+**The rating test ages on the calendar too (Defect 11).** A datasheet cycle count is measured over
+a test that lasts months to years, and the cells lose capacity to calendar ageing during it. If the
+whole budget $B$ is attributed to cycling, that calendar share is counted twice in a project run —
+once inside $c$, once in $F^{\text{cal}}$. `cycle_test_duration_years` ($\tau_{\text{test}}$)
+removes it: the calendar fade the test itself contained, $\varphi_{\text{cal}}\,Q_{\text{cal}}$ at
+the reference temperature over $\tau_{\text{test}}$ years, is subtracted from $B$ before the cycle
+magnitude is fitted. Left `null` (the default) the correction is off and $c$ absorbs the whole
+budget, as before.
+
+The value is rarely printed. The reference datasheet gives 6000 cycles at 0.8 depth and 25 °C but
+states neither the C-rate nor the test duration; $\tau_{\text{test}} = 2.0$ years is inferred from
+the shape of its 25 °C curve, with a plausible band of **1.5–3.0 years**. For LFP at
+$\varphi_{\text{cal}} = 1$ it removes $Q_{\text{cal}} \approx 0.035$ of nameplate from a budget of
+0.2, so $\lambda_{\text{cyc}}$ falls from 1.229 to 1.013 (a factor 0.825) and
+$c(T_{\text{ref}})$ from $4.17\times10^{-5}$ to $3.44\times10^{-5}$ per kWh discharged. A
+$\tau_{\text{test}}$ whose calendar fade alone reaches $B$ is refused. Each run records
+`cycle_test_duration_years`, `lambda_cyc`, `c_at_tref` and `test_time_calendar_fade`.
 
 **Calendar fade.** An empirical storage-ageing law — Arrhenius in temperature, exponential in mean
 state of charge, and $\tau^{0.48}$ in time (diffusion-limited SEI growth, so the *first* year is
@@ -285,7 +317,8 @@ consume the usable budget:
 \varphi_{\text{cal}}\,Q_{\text{cal}}(\overline{T}^{\text{cell}}, L) \;+\; L\, f^{\text{cyc}} \;=\; B
 \]
 
-solved by bisection and **rounded to the nearest whole year**, because the replacement schedule
+solved by bisection and **rounded to the nearest whole year, halves up** ($\lfloor L + 0.5
+\rfloor$, so 8.5 becomes 9 — not Python's round-half-to-even), because the replacement schedule
 steps in integers. The annual cycle fade $f^{\text{cyc}}$ is the one term that is really a dispatch
 outcome, so it has to be assumed; it is estimated from the load and irradiance profiles on the
 observation that an off-grid battery sized to carry the design night is discharged every night, so
@@ -295,9 +328,16 @@ cancels**, which is what makes it computable before the solve.
 Setting a number instead is legitimate when it represents a *policy*: a warranty term, an O&M
 contract, a financing tenor. It is then validated rather than derived.
 
+Because $f^{\text{cyc}}$ is estimated before the solve, the derived life is a priori. The campaign
+script (`scripts/run_degradation_sweep.py`) can re-derive it from the cycle fade the solve actually
+realised and re-solve with that life fixed until it repeats (`refine_life`). The iteration lives
+outside the optimisation on purpose: the life sets the calendar rate and the amortisation, so
+making it a decision variable would put products of variables in the model.
+
 !!! tip "The consistency check worth running"
-    Look at state of health in the year **before** a replacement. At or just above
-    `end_of_life_soh` (0.80–0.85) the interval matches the physics. Far above it — 0.94, say —
+    Look at the **end-of-year** state of health in a cohort's last service year (*Battery SoH end
+    of cohort* in the results). At or just above `end_of_life_soh` (0.80–0.85) the interval
+    matches the physics. Far above it — 0.94, say —
     the interval is too short and healthy cells are being scrapped.
 
 ### Guards
@@ -308,12 +348,15 @@ Degenerate inputs are refused where they arise rather than producing a plausible
   commissioning year, so health resets annually, fade never accumulates, and the degradation model
   **silently switches itself off** — while the capital amortises over a single year. The run would
   look optimal and be meaningless.
-- **End-of-life floor infeasibility.** Because calendar fade and the floor both scale with
-  nameplate, the model becomes infeasible once calendar fade alone would consume the budget over
-  the replacement interval. The guard catches that at input time and names the longest interval
-  that still works.
-- **Warning band.** Above 70 % of the budget consumed by calendar fade the run stays feasible but
-  sizing becomes hypersensitive to the enclosure and calendar assumptions, so it warns.
+- **End-of-life floor infeasibility.** Over a cohort of $L$ years the floor needs
+  $E^{\text{nom}}\,(B - r^{\text{cal}} L) \ge$ cumulative cycle fade. Calendar fade and the floor
+  both scale with nameplate, so the model is infeasible as soon as $r^{\text{cal}} L \ge B$ —
+  $r^{\text{cal}}$ is linearised over the life used, so $r^{\text{cal}} L$ is exactly the
+  cumulative calendar fade at end of life. The guard tests $r^{\text{cal}} L / B$ at input time and
+  names the longest admissible interval, $\lceil L^{*} \rceil - 1$ with $L^{*}$ the calendar-only
+  root of the life equation. A derived life never reaches the bound; this validates a hand-set one.
+- **Warning band.** Above $r^{\text{cal}} L / B = 0.70$ the run stays feasible but sizing becomes
+  hypersensitive to the enclosure and calendar assumptions, so it warns.
   `calendar_fade_budget_fraction` is recorded on **every** run, so a large sweep can be sorted on
   it.
 - **Fitted temperature window.** The coefficients were fitted over 10–45 °C. Outside 10–50 °C the
@@ -371,7 +414,9 @@ Mode 1 needs one input, which every technology already has:
 Mode 2 is selected with `battery_model.degradation_model.coefficients_enabled` and requires the
 **multi-year** formulation and the **convex-loss** efficiency model — throughput is defined on the
 internal DC-side powers, so a constant round-trip efficiency leaves nothing for $c(T)$ to
-multiply. It takes seven inputs, four of which have usable defaults:
+multiply. It takes eight inputs, five of which have usable defaults
+(`cycle_test_duration_years` sits in `formulation.json` under `battery_model.degradation_model`
+and is deliberately kept out of the GUI setup form):
 
 | Input | Default | Notes |
 |---|---|---|
@@ -382,6 +427,7 @@ multiply. It takes seven inputs, four of which have usable defaults:
 | `cycle_life_reference_temperature_c` | 25 | and the temperature |
 | `enclosure_temperature_rise_c` | 10 | outdoor air → enclosure air |
 | `calendar_fade_scale` | 1.0 | 1.0 anchored · 2.72 unscaled envelope |
+| `cycle_test_duration_years` | `null` | duration of the datasheet cycle test, years in (0, 20]; `null` = no test-time calendar correction |
 
 It also needs `inputs/ambient_temperature.csv` — the key per-project degradation input, since both
 channels are evaluated against it. `capacity_degradation_rate_per_year` is **ignored** in this
@@ -390,8 +436,10 @@ well would remove the same capacity twice.
 
 Every run records its resolved assumptions under
 `settings.battery_model.degradation_model` — the derived and used service life, the assumed cycles
-per year, the mean cell temperature, the calendar budget fraction — so a result can be audited
-without re-deriving it.
+per year, the mean cell temperature, the calendar budget fraction, $\tau_{\text{test}}$,
+$\lambda_{\text{cyc}}$, $c(T_{\text{ref}})$ and the test-time calendar fade — so a result can be
+audited without re-deriving it. The Results page shows them under *Battery degradation
+traceability*.
 
 !!! info "Not currently modelled"
     **Endogenous replacement timing.** Optimal size and replacement date are coupled: a larger

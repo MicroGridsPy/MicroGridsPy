@@ -6,6 +6,33 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+- **Semi-empirical battery degradation: the end-of-life floor tests the end-of-year state.**
+  The usable-energy state `E_y` is the start-of-year value (the year's fades are subtracted
+  when the next year begins), but the floor was written on `E_y` itself, so a cohort could
+  finish its last service year one year's fade below `end_of_life_soh` (2.5–2.8 % of
+  nameplate on the Kalobeyei case). The floor is now
+  `E_y - F_cyc,y - F_cal,y >= end_of_life_soh * E_nom` in every year, including the last
+  year of the horizon. **This is a correctness fix and changes results for every
+  semi-empirical run**: expect a somewhat larger battery or more generator energy, and a
+  higher NPC, at the same inputs. New output `battery_soh_by_year.csv` (start- and end-of-
+  year SoH per cohort) and the summary row *Battery SoH end of cohort (min)*; the dispatch
+  column `battery_soh` is unchanged (start-of-year).
+- **Calendar-budget guard on `r_cal * L / B`.** The input-time feasibility check of the
+  end-of-life floor now uses the cumulative calendar fade over the life actually used
+  (infeasible at `>= 1`, warning above 0.70) and names the longest admissible life.
+- **Derived service life rounds halves up** (`floor(L + 0.5)`: 8.5 -> 9), instead of
+  Python's round-half-to-even.
+
+### Added
+- **`battery_model.degradation_model.cycle_test_duration_years`** (default `null`): the
+  duration of the datasheet cycle test. The calendar fade the cells accumulate during that
+  test is removed from the usable SoH budget before the cycle-fade magnitude is fitted, so
+  it is not counted twice (Defect 11). `null` keeps the previous behaviour. Validated to
+  `(0, 20]` years; a duration whose calendar fade alone consumes the budget is refused.
+  Each run records `lambda_cyc`, `c_at_tref` and `test_time_calendar_fade`, and the Results
+  page shows them under *Battery degradation traceability*.
+
 ## [0.4.0] - 2026-09-25
 
 ### Fixed

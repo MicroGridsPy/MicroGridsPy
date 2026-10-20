@@ -958,6 +958,7 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
                         "battery_cycle_life_reference_temperature_c": "degC",
                         "battery_enclosure_temperature_rise_c": "K",
                         "battery_calendar_fade_scale": "-",
+                        "battery_cycle_test_duration_years": "years",
                     }
                     if _battery_semiempirical_degradation_active(settings)
                     else {}
@@ -1064,6 +1065,16 @@ def _write_battery_yaml(path: Path, settings: TemplateSettings, overwrite: bool 
                                 "Walks the 2.7x literature band on calendar-fade magnitude: 1.0 is "
                                 "the model anchored to a ten-year shelf-ageing measurement, 2.72 "
                                 "recovers the unscaled published fit. Report both ends."
+                            ),
+                            "battery_cycle_test_duration_years": (
+                                "Set in formulation.json -> battery_model.degradation_model."
+                                "cycle_test_duration_years, not here. Duration of the datasheet "
+                                "cycle-life test, years in (0, 20]. The cells age on the calendar "
+                                "during that test, so this share of the usable SoH budget is "
+                                "removed before the cycle-fade magnitude is fitted; otherwise it "
+                                "would be counted again by the calendar channel. null (default) "
+                                "applies no correction. Rarely printed on a datasheet: 2.0 is a "
+                                "reasonable LFP value (band 1.5-3.0)."
                             ),
                         }
                         if _battery_semiempirical_degradation_active(settings)

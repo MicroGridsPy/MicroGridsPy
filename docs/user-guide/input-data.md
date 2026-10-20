@@ -49,7 +49,10 @@ each file is mandatory — is in the [Data Reference](../data-reference/overview
   and `end_of_life_soh`, plus four with defaults: `cycle_life_reference_dod` (0.8),
   `cycle_life_reference_temperature_c` (25), `enclosure_temperature_rise_c` (10) and
   `calendar_fade_scale` (1.0). Leave `calendar_lifetime_years` as `null` to have the service life
-  derived from the physics. See
+  derived from the physics. One advanced key sits in `formulation.json →
+  battery_model.degradation_model`: `cycle_test_duration_years` (default `null`), the duration of
+  the datasheet cycle test, which removes the calendar ageing the test itself contained from the
+  cycle calibration. See
   [Battery degradation](../methodology/battery.md#battery-degradation).
 
 ## Inspecting inputs before solving
