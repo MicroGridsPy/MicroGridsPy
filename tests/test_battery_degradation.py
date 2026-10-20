@@ -307,8 +307,12 @@ def test_end_of_life_floor_holds_and_forces_oversizing() -> None:
 
     for vd, sol in ((light_vd, light_sol), (heavy_vd, heavy_sol)):
         nameplate = float(vd["battery_units"].solution.sum())
-        state = sol["battery_effective_energy_capacity"].sum("inv_step")
-        assert float(state.min()) >= 0.8 * nameplate - 1e-6
+        end_of_year = (
+            sol["battery_effective_energy_capacity"]
+            - sol["battery_cycle_fade"]
+            - sol["battery_calendar_fade"]
+        ).sum("inv_step")
+        assert float(end_of_year.min()) >= 0.8 * nameplate - 1e-6
 
     assert float(heavy_vd["battery_units"].solution.sum()) >= float(
         light_vd["battery_units"].solution.sum()
@@ -609,3 +613,67 @@ def test_physical_effective_capacity_handles_integer_year_coord() -> None:
     assert float(out.sel(year=2026).values.reshape(-1)[0]) == pytest.approx(1.0)
     # year 2 = prev(1.0) - cycle(0.1) = 0.9
     assert float(out.sel(year=2027).values.reshape(-1)[0]) == pytest.approx(0.9)
+
+
+# ---------------------------------------------------------------------------
+# End-of-life floor on the END-of-year state (T4.4, T4.12)
+# ---------------------------------------------------------------------------
+
+
+def _three_year_cohort(cycle_coefficient: float, calendar_rate: float):
+    """A 3-year horizon with a 3-year service life: one cohort, never replaced."""
+    years = ("2026", "2027", "2028")
+    sets, data = _deg_data(
+        ["s1"], {"s1": 0.5}, years=years, calendar_lifetime=3.0, calendar_rate=calendar_rate
+    )
+    data["battery_cycle_fade_coefficient"] = xr.full_like(
+        data["battery_cycle_fade_coefficient"], cycle_coefficient
+    )
+    data["battery_initial_soc"] = xr.DataArray(0.0)  # charge, then discharge, every year
+    return years, sets, data
+
+
+def test_t4_4_floor_holds_on_the_end_of_year_state_in_every_year() -> None:
+    """T4.4: E_y is the START-of-year state (D6 subtracts the previous year's fade), so the
+    floor must be tested on E_y - F_cyc,y - F_cal,y, including the last horizon year.
+
+    The parameters are chosen so that the old start-of-year rule binds with the battery
+    ending its life at SoH 0.700: with c = 0.08 and r_cal = 0.04 the start of year 3 sits
+    exactly on 0.800 and the year's own fade is never tested. Under the end-of-year rule that
+    configuration is not admissible, so the assertion is on the state, not on the cost.
+    """
+    years, sets, data = _three_year_cohort(cycle_coefficient=0.08, calendar_rate=0.04)
+    _, vd, sol = _solve_deg(sets, data)
+
+    nameplate = float(vd["battery_units"].solution.sum())
+    start = sol["battery_effective_energy_capacity"].sum("inv_step")
+    end = start - sol["battery_cycle_fade"].sum("inv_step") - sol["battery_calendar_fade"].sum("inv_step")
+    assert nameplate > 0.0
+    for year in years:
+        assert float(end.sel(year=year).max()) >= 0.8 * nameplate - 1e-6, year
+
+    # and it is the END-of-year floor that decides the design: active in the last year, while
+    # the start of that year sits strictly above the threshold
+    assert float(end.sel(year=years[-1]).max()) == pytest.approx(0.8 * nameplate, abs=1e-6)
+    assert float(start.sel(year=years[-1]).max()) > 0.8 * nameplate + 1e-3
+
+
+def test_t4_12_soh_end_of_cohort_under_constant_fade() -> None:
+    """T4.12: with calendar fade only (a constant fraction f of nameplate per year), the
+    end-of-cohort state of health is exactly 1 - L * f."""
+    from microgridspy.export.multi_year_results import (
+        build_battery_soh_by_year_table_multi_year,
+        soh_end_of_cohort,
+    )
+
+    fade = 0.05
+    years, sets, data = _three_year_cohort(cycle_coefficient=0.0, calendar_rate=fade)
+    _, vd, sol = _solve_deg(sets, data)
+
+    table = build_battery_soh_by_year_table_multi_year(sets=sets, data=data, vars=vd, solution=sol)
+    assert set(table.columns) >= {"year", "scenario", "inv_step", "soh_start_of_year",
+                                  "soh_end_of_year"}
+    assert soh_end_of_cohort(table) == pytest.approx(1.0 - len(years) * fade, abs=1e-6)
+    # the start-of-year column keeps its old meaning: the last year starts at 1 - (L-1) f
+    last = table[table["year"].astype(str) == years[-1]]
+    assert float(last["soh_start_of_year"].max()) == pytest.approx(1.0 - (len(years) - 1) * fade, abs=1e-6)

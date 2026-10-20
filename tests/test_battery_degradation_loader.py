@@ -312,11 +312,13 @@ def test_an_over_long_hand_set_life_is_refused_with_a_bound(tmp_path, monkeypatc
 
 
 def test_the_warning_band_fires_without_failing(tmp_path, monkeypatch) -> None:
+    # With the floor on the end-of-year state the fraction is r_cal * L / B; at this hot,
+    # pessimistic site 7 years is now infeasible (112 %) and the guard suggests at most 5.
     with pytest.warns(UserWarning, match="hypersensitive"):
         _, _, ds = _build(
             tmp_path,
             monkeypatch,
-            life=7,
+            life=5,
             technical={"enclosure_temperature_rise_c": 15.0, "calendar_fade_scale": 2.0},
         )
     degradation = _degradation(ds)
@@ -505,3 +507,46 @@ def test_t1_23_test_duration_reaches_the_traceability_fields(tmp_path, monkeypat
     assert n["cycle_test_duration_years"] is None
     assert n["test_time_calendar_fade"] == 0.0
     assert n["c_at_tref"] == pytest.approx(0.2 / (6000 * 0.8), rel=1e-12)
+
+
+# ===========================================================================
+# Guards and rounding with the end-of-year floor (T4.13-T4.15)
+# ===========================================================================
+
+
+def test_t4_13_infeasible_interval_is_refused_with_the_largest_admissible_life() -> None:
+    """T4.13: calendar fade alone over L years reaches B, so the end-of-year floor cannot hold
+    whatever nameplate is bought; the message names the longest interval that would."""
+    from microgridspy.multi_year_model.data import _check_calendar_budget
+
+    with pytest.raises(InputValidationError) as exc:
+        _check_calendar_budget(rate_per_year=0.03, life_years=8.0, budget=0.2,
+                               max_admissible_life=6)
+    message = str(exc.value)
+    assert "at most 6" in message
+    assert "end-of-life floor" in message
+
+
+def test_t4_14_warning_band_uses_r_cal_times_l() -> None:
+    """T4.14: the fraction is r_cal * L / B (whole life, not L - 1): 0.75 warns, 0.65 does not."""
+    import warnings
+
+    from microgridspy.multi_year_model.data import _check_calendar_budget
+
+    with pytest.warns(UserWarning, match="hypersensitive"):
+        fraction = _check_calendar_budget(rate_per_year=0.75 * 0.2 / 8.0, life_years=8.0,
+                                          budget=0.2, max_admissible_life=10)
+    assert fraction == pytest.approx(0.75)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        fraction = _check_calendar_budget(rate_per_year=0.65 * 0.2 / 8.0, life_years=8.0,
+                                          budget=0.2, max_admissible_life=10)
+    assert fraction == pytest.approx(0.65)
+
+
+@pytest.mark.parametrize(("derived", "used"), [(7.56, 8.0), (8.42, 8.0), (8.57, 9.0), (8.5, 9.0)])
+def test_t4_15_derived_life_rounds_half_up(derived: float, used: float) -> None:
+    """T4.15: nearest whole year, ties upward. Python's round() would send 8.5 to 8."""
+    from microgridspy.multi_year_model.data import _round_service_life
+
+    assert _round_service_life(derived) == used

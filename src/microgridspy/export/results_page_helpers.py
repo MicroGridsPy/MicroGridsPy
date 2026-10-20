@@ -144,6 +144,7 @@ def load_multi_year_results_from_files(project_name: str) -> MultiYearResults | 
         "investment_summary_df": "investment_summary.csv",
         "yearly_expected_df": "yearly_expected.csv",
         "reporting_summary_df": "reporting_summary.csv",
+        "battery_soh_by_year_df": "battery_soh_by_year.csv",
     }
     for key, filename in optional_files.items():
         path = results_dir / filename

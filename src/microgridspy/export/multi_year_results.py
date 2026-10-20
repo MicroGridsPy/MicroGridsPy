@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -73,6 +73,9 @@ class MultiYearResults:
     reporting_summary: pd.DataFrame
     results_dir: Path | None = None
     source: str = "session"
+    # Per-cohort, per-year battery state of health at the start and at the END of each year
+    # (semi-empirical degradation only; empty otherwise).
+    battery_soh_by_year: pd.DataFrame = field(default_factory=pd.DataFrame)
 
     def to_excel(self, out_dir: Path | None = None) -> dict:
         """Write these results to CSV/Excel files.
@@ -393,6 +396,114 @@ def _battery_capacity_tables(
     return active_energy_by_step, active_inv_power_by_step
 
 
+def _battery_state_by_cohort(
+    *,
+    sets: xr.Dataset,
+    vars: dict[str, Any],
+    solution: xr.Dataset | None,
+    p: Any,
+) -> tuple[Any, Any, Any, Any]:
+    """Usable energy at the START of each year, both annual fades and the nameplate, per cohort.
+
+    All four are indexed by (year, scenario, inv_step). The usable energy is the physical
+    reconstruction, not the raw LP state: the regularizer only nudges that state tight and it
+    can stay slack-low in degenerate corners, so the year-link recursion is replayed from the
+    initial SoH and the (equality-tight) fade solutions. Entries are None when the run has no
+    degradation state.
+    """
+    raw_bcycle = get_var_solution(vars_dict=vars, solution=solution, name="battery_cycle_fade")
+    raw_bcalendar = get_var_solution(
+        vars_dict=vars, solution=solution, name="battery_calendar_fade"
+    )
+    raw_beff = get_var_solution(
+        vars_dict=vars, solution=solution, name="battery_effective_energy_capacity"
+    )
+    nominal_available = None
+    if (
+        isinstance(raw_beff, xr.DataArray)
+        and isinstance(raw_bcycle, xr.DataArray)
+        and p.battery_nominal_capacity_kwh is not None
+        and p.battery_calendar_lifetime_years is not None
+        and p.battery_initial_soh is not None
+    ):
+        bat_units_sol = get_var_solution(vars_dict=vars, solution=solution, name="battery_units")
+        if isinstance(bat_units_sol, xr.DataArray):
+            nominal_available = (
+                (bat_units_sol * p.battery_nominal_capacity_kwh)
+                * replacement_active_mask(sets)
+                * repeating_degradation_factor(
+                    sets,
+                    p.battery_calendar_lifetime_years,
+                    p.battery_capacity_degradation_rate_per_year,
+                )
+            )
+            nominal_available = nominal_available.expand_dims(
+                scenario=sets.coords["scenario"]
+            ).transpose("year", "scenario", "inv_step")
+            raw_beff = _physical_effective_capacity(
+                calendar_fade_year=(
+                    raw_bcalendar if isinstance(raw_bcalendar, xr.DataArray) else None
+                ),
+                nominal_available=nominal_available,
+                cycle_fade_year=raw_bcycle,
+                commission=replacement_commission_mask(sets, p.battery_calendar_lifetime_years),
+                soh0=float(np.asarray(p.battery_initial_soh.values).reshape(-1)[0]),
+            )
+    return raw_beff, raw_bcycle, raw_bcalendar, nominal_available
+
+
+def build_battery_soh_by_year_table_multi_year(
+    *,
+    sets: xr.Dataset,
+    data: xr.Dataset,
+    vars: dict[str, Any],
+    solution: xr.Dataset | None,
+) -> pd.DataFrame:
+    """State of health per year, scenario and cohort, at the start and at the end of the year.
+
+    ``soh_start_of_year`` is E_y / E_nom -- the state the (D6) recursion carries, and what
+    ``battery_soh`` in the dispatch table reports. ``soh_end_of_year`` is
+    (E_y - F_cyc,y - F_cal,y) / E_nom, the state the end-of-life floor (D2) is tested on. A
+    cohort is retired at its last end-of-year state, so that is the number to compare with
+    ``end_of_life_soh``. Inactive (year, cohort) pairs are dropped.
+    """
+    p = get_params(data)
+    eff, cycle, calendar, nominal = _battery_state_by_cohort(
+        sets=sets, vars=vars, solution=solution, p=p
+    )
+    columns = ["year", "scenario", "inv_step", "nominal_kwh", "soh_start_of_year",
+               "soh_end_of_year"]
+    if not all(isinstance(x, xr.DataArray) for x in (eff, cycle, nominal)):
+        return pd.DataFrame(columns=columns)
+    calendar = calendar if isinstance(calendar, xr.DataArray) else xr.zeros_like(cycle)
+    nominal = nominal.transpose("year", "scenario", "inv_step")
+    frame = xr.Dataset(
+        {
+            "nominal_kwh": nominal,
+            "start": eff.transpose("year", "scenario", "inv_step"),
+            "end": (eff - cycle - calendar).transpose("year", "scenario", "inv_step"),
+        }
+    ).to_dataframe().reset_index()
+    frame = frame[frame["nominal_kwh"] > 1e-9].copy()
+    frame["soh_start_of_year"] = frame["start"] / frame["nominal_kwh"]
+    frame["soh_end_of_year"] = frame["end"] / frame["nominal_kwh"]
+    for col in ("year", "scenario", "inv_step"):
+        frame[col] = frame[col].astype(str)
+    return frame[columns].reset_index(drop=True)
+
+
+def soh_end_of_cohort(battery_soh_by_year: pd.DataFrame) -> float:
+    """Lowest end-of-year state of health over all years, scenarios and cohorts (NaN if none).
+
+    This is the state a cohort is actually retired at; under the end-of-life floor it may not be
+    below ``end_of_life_soh``.
+    """
+    if battery_soh_by_year is None or battery_soh_by_year.empty:
+        return float("nan")
+    values = pd.to_numeric(battery_soh_by_year["soh_end_of_year"], errors="coerce").dropna()
+    return float(values.min()) if len(values) else float("nan")
+
+
 def build_dispatch_timeseries_table_multi_year(
     *,
     sets: xr.Dataset,
@@ -440,47 +551,9 @@ def build_dispatch_timeseries_table_multi_year(
     bdis_loss = _sum_if_has_inv_step(
         get_var_solution(vars_dict=vars, solution=solution, name="battery_discharge_loss")
     )
-    raw_bcycle = get_var_solution(vars_dict=vars, solution=solution, name="battery_cycle_fade")
-    raw_bcalendar = get_var_solution(
-        vars_dict=vars, solution=solution, name="battery_calendar_fade"
+    raw_beff, raw_bcycle, raw_bcalendar, _ = _battery_state_by_cohort(
+        sets=sets, vars=vars, solution=solution, p=p
     )
-    raw_beff = get_var_solution(
-        vars_dict=vars, solution=solution, name="battery_effective_energy_capacity"
-    )
-    # Reported SoH must reflect the physical effective capacity, not the raw LP state
-    # variable, which the regularizer only nudges tight (it can stay slack-low in
-    # degenerate corners). Rebuild it from the initial SoH and the reliable cycle-fade
-    # solution via the year-link recursion.
-    if (
-        isinstance(raw_beff, xr.DataArray)
-        and isinstance(raw_bcycle, xr.DataArray)
-        and p.battery_nominal_capacity_kwh is not None
-        and p.battery_calendar_lifetime_years is not None
-        and p.battery_initial_soh is not None
-    ):
-        bat_units_sol = get_var_solution(vars_dict=vars, solution=solution, name="battery_units")
-        if isinstance(bat_units_sol, xr.DataArray):
-            nominal_available = (
-                (bat_units_sol * p.battery_nominal_capacity_kwh)
-                * replacement_active_mask(sets)
-                * repeating_degradation_factor(
-                    sets,
-                    p.battery_calendar_lifetime_years,
-                    p.battery_capacity_degradation_rate_per_year,
-                )
-            )
-            nominal_available = nominal_available.expand_dims(
-                scenario=sets.coords["scenario"]
-            ).transpose("year", "scenario", "inv_step")
-            raw_beff = _physical_effective_capacity(
-                calendar_fade_year=(
-                    raw_bcalendar if isinstance(raw_bcalendar, xr.DataArray) else None
-                ),
-                nominal_available=nominal_available,
-                cycle_fade_year=raw_bcycle,
-                commission=replacement_commission_mask(sets, p.battery_calendar_lifetime_years),
-                soh0=float(np.asarray(p.battery_initial_soh.values).reshape(-1)[0]),
-            )
     # battery_cycle_fade is an ANNUAL (year, scenario, inv_step) variable. For the per-hour
     # dispatch table, reconstruct the hourly fade from the coefficient and the DC-side flow:
     # fade_t = c(T)_t * discharge_dc_t. Discharge only, matching the constraint that defines
@@ -2199,6 +2272,7 @@ def build_multi_year_results_from_tables(
     investment_summary_df: pd.DataFrame | None = None,
     yearly_expected_df: pd.DataFrame | None = None,
     reporting_summary_df: pd.DataFrame | None = None,
+    battery_soh_by_year_df: pd.DataFrame | None = None,
     results_dir: Path | None = None,
     source: str = "files",
     metadata: dict[str, Any] | None = None,
@@ -2285,6 +2359,31 @@ def build_multi_year_results_from_tables(
             else None,
         )
     )
+    battery_soh_by_year = (
+        battery_soh_by_year_df.copy()
+        if isinstance(battery_soh_by_year_df, pd.DataFrame)
+        else pd.DataFrame()
+    )
+    if not battery_soh_by_year.empty and "Battery SoH end of cohort (min)" not in set(
+        reporting_summary.get("row_label", pd.Series(dtype=str)).astype(str)
+    ):
+        reporting_summary = pd.concat(
+            [
+                reporting_summary,
+                pd.DataFrame(
+                    [
+                        {
+                            "section": "summary_metrics",
+                            "row_label": "Battery SoH end of cohort (min)",
+                            "year": "",
+                            "unit": "-",
+                            "value": soh_end_of_cohort(battery_soh_by_year),
+                        }
+                    ]
+                ),
+            ],
+            ignore_index=True,
+        )
     meta = dict(metadata or {})
     meta.setdefault("project_name", project_name)
     meta.setdefault("formulation", MULTI_YEAR)
@@ -2310,6 +2409,7 @@ def build_multi_year_results_from_tables(
         reporting_summary=reporting_summary,
         results_dir=results_dir,
         source=source,
+        battery_soh_by_year=battery_soh_by_year,
     )
 
 
@@ -2354,6 +2454,9 @@ def build_multi_year_results(
     scenario_costs = build_scenario_costs_table_multi_year(
         sets=sets, data=data, vars=vars, solution=solution
     )
+    battery_soh_by_year = build_battery_soh_by_year_table_multi_year(
+        sets=sets, data=data, vars=vars, solution=solution
+    )
     return build_multi_year_results_from_tables(
         project_name=project_name,
         data=data,
@@ -2368,6 +2471,7 @@ def build_multi_year_results(
         kpis_yearly_df=kpis,
         cashflows_discounted_df=cash,
         scenario_costs_yearly_df=scenario_costs,
+        battery_soh_by_year_df=battery_soh_by_year,
         results_dir=results_dir,
         source=source,
         metadata={
@@ -2438,6 +2542,7 @@ def export_multi_year_results_package(
             "yearly_expected.csv": results.yearly_expected,
             "investment_summary.csv": results.investment_summary,
             "reporting_summary.csv": results.reporting_summary,
+            "battery_soh_by_year.csv": results.battery_soh_by_year,
         },
     )
 

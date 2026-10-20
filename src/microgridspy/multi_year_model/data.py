@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from functools import partial
 from pathlib import Path
 from typing import Any
@@ -2061,11 +2062,7 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
                 usable_soh_budget=budget,
                 scale=calendar_scale,
             )
-            # Round to nearest whole year, not down: the replacement masks step in integers,
-            # and with the end-of-life floor in place overshooting the budget forces the LP to
-            # oversize rather than go infeasible, while flooring always retires healthy cells
-            # early and over-steepens the capital recovery factor.
-            life_used = float(max(1.0, round(derived_life)))
+            life_used = _round_service_life(derived_life)
             battery_degradation_settings.update(
                 {
                     "calendar_lifetime_mode": "derived",
@@ -2111,39 +2108,38 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
             },
         )
 
-        # End-of-life floor feasibility. In the cohort's last year the floor needs
-        #     E_nom * [budget - r_cal*(L-1)] >= c_bar * D * (L-1)
-        # and because calendar fade and the floor BOTH scale with nameplate, the bracket on
-        # the left does not improve by buying more battery: the usual escape hatch is closed,
-        # so the LP is infeasible as soon as r_cal*(L-1) >= budget. Just inside the boundary
-        # the required nameplate grows as 1/[budget - r_cal*(L-1)], i.e. hyperbolically.
-        # A derived life can never reach this, since it solves fade(L) = budget by
-        # construction; this is the validator for a hand-set one.
-        calendar_consumed = float(np.nanmax(calendar_rate)) * max(0.0, life_used - 1.0)
-        budget_fraction = calendar_consumed / budget if budget > 0.0 else float("inf")
+        # End-of-life floor feasibility, with the floor on the END-of-year state. Over a cohort
+        # of L years the floor needs
+        #     E_nom * [budget - r_cal * L] >= cumulative cycle fade over the L years
+        # and because calendar fade and the floor BOTH scale with nameplate, the bracket on the
+        # left does not improve by buying more battery: the LP is infeasible as soon as
+        # r_cal * L >= budget. Since r_cal is linearised over the life actually used,
+        # r_cal * L is exactly the cumulative calendar fade at end of life. A derived life can
+        # never reach the bound (it solves calendar(L) + L * f_cyc = budget); this is the
+        # validator for a hand-set one.
+        try:
+            calendar_only_life = implied_calendar_life(
+                chemistry,
+                soc_mean,
+                mean_cell_temperature,
+                cycle_fade_per_year=0.0,
+                usable_soh_budget=budget,
+                scale=calendar_scale,
+            )
+            max_admissible_life = int(np.ceil(calendar_only_life) - 1)
+        except InputValidationError:
+            max_admissible_life = None
+        budget_fraction = _check_calendar_budget(
+            rate_per_year=float(np.nanmax(calendar_rate)),
+            life_years=life_used,
+            budget=budget,
+            max_admissible_life=max_admissible_life,
+            detail=(
+                f" at a {mean_cell_temperature:.1f} degC mean cell temperature (including a "
+                f"{enclosure_rise:.1f} K enclosure rise)"
+            ),
+        )
         battery_degradation_settings["calendar_fade_budget_fraction"] = float(budget_fraction)
-        if budget_fraction >= 1.0:
-            max_life = 1.0 + budget / float(np.nanmax(calendar_rate))
-            raise InputValidationError(
-                f"Calendar fade alone consumes {100.0 * budget_fraction:.0f} % of the usable "
-                f"SoH budget over a {life_used:g}-year replacement interval at a "
-                f"{mean_cell_temperature:.1f} degC mean cell temperature (including a "
-                f"{enclosure_rise:.1f} K enclosure rise), so the end-of-life floor cannot be "
-                f"met and the model is infeasible. Lower "
-                f"battery.investment.by_step[*].calendar_lifetime_years to at most "
-                f"{max_life:.1f} y, set it to null to derive it from the physics, or reduce "
-                "battery.technical.enclosure_temperature_rise_c / calendar_fade_scale."
-            )
-        if budget_fraction > 0.70:
-            warnings.warn(
-                f"Calendar fade consumes {100.0 * budget_fraction:.0f} % of the usable SoH "
-                f"budget before any cycling, at a {mean_cell_temperature:.1f} degC mean cell "
-                f"temperature. The run stays feasible, but battery sizing becomes "
-                f"hypersensitive to enclosure_temperature_rise_c and calendar_fade_scale -- "
-                "treat them as the headline sensitivity of this study.",
-                UserWarning,
-                stacklevel=2,
-            )
 
         # Calendar ageing is carried explicitly in the state now, so the flat exogenous rate
         # must not also scale the nameplate ceiling: that would remove the same capacity twice.
@@ -2401,6 +2397,61 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
 
     return data
 
+
+
+
+def _round_service_life(derived_life_years: float) -> float:
+    """Round a derived service life to the nearest whole year, ties upward.
+
+    The replacement masks step in whole years. Rounding to nearest rather than down is safe
+    because the end-of-life floor is enforced on the end-of-year state: overshooting the budget
+    by part of a year makes the LP oversize the battery, it cannot make it retire cells below
+    the threshold. Flooring would always scrap healthy cells early and over-steepen the capital
+    recovery factor. Python's round() is avoided because it rounds 8.5 to 8.
+    """
+    return float(max(1, math.floor(float(derived_life_years) + 0.5)))
+
+
+def _check_calendar_budget(
+    *,
+    rate_per_year: float,
+    life_years: float,
+    budget: float,
+    max_admissible_life: int | None,
+    detail: str = "",
+) -> float:
+    """Return calendar_fade_budget_fraction = r_cal * L / B, refusing an infeasible interval.
+
+    r_cal * L is the calendar fade accumulated over the whole replacement interval (r_cal is
+    linearised over that same L). With the end-of-life floor on the end-of-year state the LP is
+    infeasible once it reaches the budget, whatever nameplate is bought. Above 0.70 the run is
+    feasible but the sizing becomes hypersensitive to the enclosure and calendar assumptions.
+    """
+    fraction = rate_per_year * life_years / budget if budget > 0.0 else float("inf")
+    if fraction >= 1.0:
+        bound = (
+            f"at most {max_admissible_life} y"
+            if max_admissible_life is not None and max_admissible_life >= 2
+            else "a value the annual replacement model cannot represent (under 2 y)"
+        )
+        raise InputValidationError(
+            f"Calendar fade alone consumes {100.0 * fraction:.0f} % of the usable SoH budget "
+            f"over a {life_years:g}-year replacement interval{detail}, so the end-of-life floor "
+            "cannot be met whatever nameplate is installed and the model is infeasible. Lower "
+            f"battery.investment.by_step[*].calendar_lifetime_years to {bound}, set it to null "
+            "to derive it from the physics, or reduce "
+            "battery.technical.enclosure_temperature_rise_c / calendar_fade_scale."
+        )
+    if fraction > 0.70:
+        warnings.warn(
+            f"Calendar fade consumes {100.0 * fraction:.0f} % of the usable SoH budget over the "
+            f"replacement interval{detail}. The run stays feasible, but battery sizing becomes "
+            "hypersensitive to enclosure_temperature_rise_c and calendar_fade_scale -- treat "
+            "them as the headline sensitivity of this study.",
+            UserWarning,
+            stacklevel=3,
+        )
+    return float(fraction)
 
 
 def _estimate_equivalent_full_cycles_per_year(

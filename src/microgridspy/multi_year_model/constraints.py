@@ -535,12 +535,22 @@ def initialize_constraints(
                 bat_eff_cap <= bat_cap_available,
                 name="battery_effective_energy_capacity_upper_available",
             )
-            # (D2) END-OF-LIFE FLOOR. This is what makes the rated lifetime binding rather
-            #      than advisory: the cohort must still be above SoH_eol in its last year, so
-            #      the nameplate has to be bought large enough to carry the load while aged.
-            #      Both sides scale with nameplate, so buying more battery does not relax it.
+            # (D2) END-OF-LIFE FLOOR, tested on the END-of-year state. This is what makes the
+            #      rated lifetime binding rather than advisory: the cohort must still be above
+            #      SoH_eol when it is retired, so the nameplate has to be bought large enough to
+            #      carry the load while aged.
+            #
+            #      E_y is the START-of-year state: (D6) carries E_{y-1} minus the fade of year
+            #      y-1. Testing the floor on E_y therefore never checks the fade of the year
+            #      itself, and a cohort retired after its last year ended one year's fade below
+            #      the threshold (SoH 0.778 instead of 0.80 on the Kalobeyei base case). The
+            #      floor is applied to E_y - F_cyc,y - F_cal,y instead, in every year including
+            #      the last one of the horizon: a truncated cohort must not cross the threshold
+            #      before the project ends either. Calendar fade and the floor both scale with
+            #      nameplate, so buying more battery cannot relax the calendar share of it.
             model.add_constraints(
-                bat_eff_cap >= soh_eol_scalar * bat_cap_available,
+                bat_eff_cap - bat_cycle_fade - bat_calendar_fade
+                >= soh_eol_scalar * bat_cap_available,
                 name="battery_effective_energy_capacity_end_of_life",
             )
             # (D4) cycle fade: capacity lost to throughput. c(T_t) is a (period, year,
