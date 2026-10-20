@@ -329,8 +329,14 @@ Setting a number instead is legitimate when it represents a *policy*: a warranty
 contract, a financing tenor. It is then validated rather than derived.
 
 Because $f^{\text{cyc}}$ is estimated before the solve, the derived life is a priori. The campaign
-script (`scripts/run_degradation_sweep.py`) can re-derive it from the cycle fade the solve actually
-realised and re-solve with that life fixed until it repeats (`refine_life`). The iteration lives
+script (`scripts/run_degradation_sweep.py`) can re-derive it from the cycle fade a solve actually
+realised (`refine_life`). That only carries information while the end-of-life floor is **slack**:
+when it binds, the solve sizes nameplate and diesel so that the cumulative fade over $L$ years is
+exactly $B$, the realised cycle fade is $(B - r^{\text{cal}}L)/L$, and re-deriving the life returns
+$L$ itself — every life is a fixed point. The script therefore starts one year below the a-priori
+life, steps down until the floor is slack, re-derives the life from that solve's cycling and
+solves there, stopping at the first life whose floor binds. On the Kalobeyei case this gives
+8.57 → 8 → 7 → 8, against 9 from the a-priori estimate. The iteration lives
 outside the optimisation on purpose: the life sets the calendar rate and the amortisation, so
 making it a decision variable would put products of variables in the model.
 

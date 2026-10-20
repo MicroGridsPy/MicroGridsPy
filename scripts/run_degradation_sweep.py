@@ -19,8 +19,9 @@ sweep_results.csv was produced before the end-of-year floor and the test-time ca
 correction; it is never written to again.
 
 Service-life refinement (run_with_life_refinement): the derived life is computed BEFORE the
-solve from an estimated cycle fade. A case with refine_life re-derives it from the cycle fade
-the solve actually realised and re-solves with that life fixed, until it repeats. This lives
+solve from an estimated cycle fade. A case with refine_life re-derives it from the cycle fade a
+solve realises while its end-of-life floor is slack -- a binding floor makes every life a fixed
+point -- and solves at that life (see the function for the steps). This lives
 here, outside the LP, on purpose: the life sets the calendar rate and the amortisation, so
 making it a decision variable would put products of variables in the model.
 
@@ -577,46 +578,91 @@ def _fmt_life(value) -> str:
     return f"{float(value):g}"
 
 
-def run_with_life_refinement(case: Case, max_iter: int = 4, min_battery_kwh: float = 1.0,
-                             *, prov: dict | None = None) -> dict:
-    """Solve, re-derive the life from the realised cycle fade, re-solve with it fixed; repeat.
+def a_priori_life(case: Case) -> float:
+    """The service life the loader derives before any solve (unrounded).
 
-    Stops when the life repeats (converged), when it returns to a value already tried or the
-    iteration budget runs out (oscillating: the SHORTER life is kept -- the one whose floor is
-    met with the realised cycling), or when the system buys no battery.
+    Loads the case in the scratch workspace -- no solve, nothing under SWEEP/projects touched.
+    """
+    import microgridspy as mgp
+    import microgridspy.multi_year_model.data as mdata
+    import microgridspy.multi_year_model.sets as msets
+
+    scratch = SWEEP / "_dry_run"
+    build(case, root=scratch)
+    mgp.set_workspace(scratch)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        data = mdata.initialize_data(case.name, msets.initialize_sets(case.name))
+    settings = data.attrs["settings"]["battery_model"]["degradation_model"]
+    return float(settings["calendar_lifetime_years_derived"])
+
+
+def floor_binds(row: dict, tol: float = 1e-4) -> bool:
+    """True when a cohort retires AT the end-of-life floor rather than above it."""
+    return float(row["soh_end_of_cohort"]) <= float(row["end_of_life_soh"]) + tol
+
+
+def run_with_life_refinement(case: Case, max_iter: int = 5, min_battery_kwh: float = 1.0,
+                             *, prov: dict | None = None) -> dict:
+    """Re-derive the life from cycling the floor did NOT constrain; solve at that life.
+
+    Why from below: when the end-of-life floor binds, the solve adjusts nameplate and diesel
+    until the cumulative fade over L years is exactly B, so the realised cycle fade is
+    (B - r_cal*L)/L and re-deriving the life returns L itself -- every L is a fixed point and
+    the realised cycling says nothing. Only a solve whose floor is slack shows the cycling the
+    system chooses on its own, and that is the cycling the life equation needs.
+
+        1. start at the a-priori derived life minus one year, life fixed;
+        2. while the floor binds, step one year shorter, until it is slack;
+        3. from a slack solve, re-derive L (package solver, half-up rounding) and solve there;
+        4. stop when the life reaches a binding solve (a consistent fixed point), when it
+           repeats, or when the solve budget runs out (the last solved life is kept).
     """
     prov = prov or {}
-    seq: list[float] = []
-    first = row = run(case, prov)
-    solves, rederived = 1, np.nan
+    derived = a_priori_life(case)
+    life = max(2, round_life(derived) - 1)
+    rows: dict[int, dict] = {}
+    seq: list[int] = []
+    rederived = np.nan
+    note = ""
+
+    def solve(L: int) -> dict:
+        if L not in rows:
+            rows[L] = run(replace(case, service_life=int(L)), prov)
+        seq.append(L)
+        return rows[L]
+
     while True:
-        life = float(row["life_used"])
-        seq.append(life)
+        row = solve(life)
         if not (float(row["battery_kwh"]) >= min_battery_kwh):
             note = "no battery, not refined"
             break
-        rederived = derived_life_for_row(row)
-        new = float(round_life(rederived))
-        if new == life:
-            note = "converged"
+        if floor_binds(row):
+            if any(not floor_binds(r) for r in rows.values()):
+                note = "converged from below (floor binding)"
+                break
+            # no slack solve yet: the start was already too long
+            if life <= 2:
+                note = "floor binds even at 2 y"
+                break
+            new = life - 1
+        else:
+            rederived = derived_life_for_row(row)
+            new = max(life, round_life(rederived))  # slack => fade < B => L* > life
+            if new == life:
+                note = "converged from below (floor slack)"
+                break
+        if new not in rows and len(rows) >= max_iter:
+            note = "solve budget exhausted, last kept"
             break
-        if new in seq or len(seq) > max_iter:
-            new = min(life, new)
-            if new != life:
-                row = run(replace(case, service_life=int(new)), prov)
-                solves += 1
-            seq.append(new)
-            note = "oscillating, shorter kept"
-            break
-        row = run(replace(case, service_life=int(new)), prov)
-        solves += 1
+        life = new
+    final = rows[seq[-1]]
     return {
-        **row,
-        # the life the loader derived a priori, and the last re-derivation (unrounded)
-        "life_derived": first.get("life_derived", np.nan),
+        **final,
+        "life_derived": derived,
         "life_rederived": rederived,
-        "life_sequence": "->".join(_fmt_life(v) for v in seq),
-        "life_iterations": solves,
+        "life_sequence": "->".join(str(v) for v in seq),
+        "life_iterations": len(rows),
         "life_note": note,
     }
 
@@ -632,7 +678,7 @@ def run_case(case: Case, prov: dict) -> dict:
 
 
 def append_row(path: Path, row: dict) -> None:
-    """Rewrite the CSV with the union of columns.
+    """Rewrite the CSV with the union of columns, replacing any earlier row of the same case.
 
     Appending under the old header drops (or shifts) any column the earlier rows did not
     have, so the file is read, extended and written back whole.
@@ -640,6 +686,8 @@ def append_row(path: Path, row: dict) -> None:
     frame = pd.DataFrame([row])
     if path.exists():
         previous = pd.read_csv(path)
+        # a re-run (--force) replaces the case's earlier row instead of duplicating it
+        previous = previous[previous["case"] != row.get("case")]
         columns = list(previous.columns) + [c for c in frame.columns
                                             if c not in previous.columns]
         frame = pd.concat([previous, frame], ignore_index=True).reindex(columns=columns)

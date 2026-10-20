@@ -35,57 +35,91 @@ def sweep():
         sys.modules.pop(spec.name, None)
 
 
-def _fake_solver(monkeypatch, sweep, *, first_life: float, rederive: dict[float, float],
-                 battery_kwh: float = 800.0) -> list:
-    """Replace run() and the derived-life solver; return the list of lives actually solved."""
+def _fake_solver(monkeypatch, sweep, *, a_priori: float, soh_end: dict[int, float],
+                 rederive: dict[int, float], battery_kwh: float = 800.0) -> list:
+    """Replace the a-priori loader, run() and the derived-life solver.
+
+    ``soh_end[L]`` is the end-of-cohort SoH a solve at life L returns (0.80 = floor binding),
+    ``rederive[L]`` the unrounded life re-derived from that solve. Returns the lives solved.
+    """
     solved: list = []
 
     def fake_run(case, prov):
-        life = first_life if case.service_life == "null" else float(case.service_life)
+        life = a_priori if case.service_life == "null" else int(case.service_life)
         solved.append(life)
-        return {"case": case.name, "life_used": life, "battery_kwh": battery_kwh,
-                "life_derived": first_life if case.service_life == "null" else np.nan}
+        return {"case": case.name, "life_used": float(life), "battery_kwh": battery_kwh,
+                "soh_end_of_cohort": soh_end.get(life, 0.80), "end_of_life_soh": 0.80,
+                "life_derived": np.nan}
 
+    monkeypatch.setattr(sweep, "a_priori_life", lambda case: a_priori)
     monkeypatch.setattr(sweep, "run", fake_run)
-    monkeypatch.setattr(sweep, "derived_life_for_row", lambda row: rederive[row["life_used"]])
+    monkeypatch.setattr(sweep, "derived_life_for_row",
+                        lambda row: rederive[int(row["life_used"])])
     return solved
 
 
-def test_t6_1_refinement_converges(monkeypatch, sweep):
-    # 8 -> re-derived 7.2 (7) -> re-derived 6.8 (7): converged at 7
-    solved = _fake_solver(monkeypatch, sweep, first_life=8.0, rederive={8.0: 7.2, 7.0: 6.8})
-    row = sweep.run_with_life_refinement(sweep.Case("x", "QC"))
-    assert row["life_used"] == 7.0
-    assert row["life_note"] == "converged"
-    assert row["life_sequence"] == "8->7"
-    assert row["life_iterations"] == 2
-    assert solved == [8.0, 7.0]
-    assert row["life_derived"] == 8.0  # the a-priori derivation is kept for traceability
-
-
-def test_t6_1_refinement_oscillation_keeps_shorter(monkeypatch, sweep):
-    # 8 -> 9 -> back to 8: oscillating, the shorter life is kept and re-solved
-    solved = _fake_solver(monkeypatch, sweep, first_life=8.0, rederive={8.0: 8.6, 9.0: 8.4})
+def test_t6_1_binding_start_steps_down_then_rederives(monkeypatch, sweep):
+    # The Kalobeyei QC shape: a priori 8.57 -> start at 8, which binds; 7 is slack and its
+    # own cycling re-derives 7.8 -> 8, already solved and binding: a consistent fixed point.
+    solved = _fake_solver(monkeypatch, sweep, a_priori=8.57,
+                          soh_end={8: 0.80, 7: 0.815}, rederive={7: 7.8})
     row = sweep.run_with_life_refinement(sweep.Case("x", "QC"))
     assert row["life_used"] == 8.0
-    assert row["life_note"] == "oscillating, shorter kept"
-    assert row["life_sequence"] == "8->9->8"
-    assert solved == [8.0, 9.0, 8.0]
+    assert row["life_sequence"] == "8->7->8"
+    assert row["life_note"] == "converged from below (floor binding)"
+    assert row["life_iterations"] == 2
+    assert solved == [8, 7]  # 8 is not solved twice
+    assert row["life_derived"] == 8.57 and row["life_rederived"] == 7.8
+
+
+def test_t6_1_slack_start_that_rederives_to_itself(monkeypatch, sweep):
+    solved = _fake_solver(monkeypatch, sweep, a_priori=8.4,
+                          soh_end={7: 0.81}, rederive={7: 7.3})
+    row = sweep.run_with_life_refinement(sweep.Case("x", "QC"))
+    assert solved == [7]
+    assert row["life_used"] == 7.0
+    assert row["life_note"] == "converged from below (floor slack)"
+
+
+def test_t6_1_slack_start_climbs_to_a_binding_life(monkeypatch, sweep):
+    solved = _fake_solver(monkeypatch, sweep, a_priori=6.2,
+                          soh_end={5: 0.83, 7: 0.80}, rederive={5: 6.6})
+    row = sweep.run_with_life_refinement(sweep.Case("x", "QC"))
+    assert solved == [5, 7]
+    assert row["life_sequence"] == "5->7"
+    assert row["life_note"] == "converged from below (floor binding)"
+
+
+def test_t6_1_climb_through_slack_lives(monkeypatch, sweep):
+    solved = _fake_solver(monkeypatch, sweep, a_priori=6.2,
+                          soh_end={5: 0.83, 7: 0.805}, rederive={5: 6.6, 7: 7.2})
+    row = sweep.run_with_life_refinement(sweep.Case("x", "QC"))
+    assert solved == [5, 7]
+    assert row["life_used"] == 7.0
+    assert row["life_note"] == "converged from below (floor slack)"
 
 
 def test_t6_1_refinement_uses_half_up_rounding(monkeypatch, sweep):
-    _fake_solver(monkeypatch, sweep, first_life=9.0, rederive={9.0: 8.5})
+    solved = _fake_solver(monkeypatch, sweep, a_priori=9.2,
+                          soh_end={8: 0.82, 9: 0.80}, rederive={8: 8.5})
     row = sweep.run_with_life_refinement(sweep.Case("x", "QC"))
-    assert row["life_note"] == "converged" and row["life_used"] == 9.0
+    assert solved == [8, 9]
+    assert row["life_used"] == 9.0
 
 
-def test_t6_1_refinement_iteration_budget(monkeypatch, sweep):
-    # a run-away sequence 5 -> 6 -> 7 -> 8 -> 9 stops at the budget and keeps the shorter
-    rederive = {float(L): L + 1.0 for L in range(5, 12)}
-    solved = _fake_solver(monkeypatch, sweep, first_life=5.0, rederive=rederive)
+def test_t6_1_floor_binding_down_to_two_years(monkeypatch, sweep):
+    solved = _fake_solver(monkeypatch, sweep, a_priori=3.4, soh_end={}, rederive={})
+    row = sweep.run_with_life_refinement(sweep.Case("x", "QC"))
+    assert solved == [2]
+    assert row["life_note"] == "floor binds even at 2 y"
+
+
+def test_t6_1_solve_budget(monkeypatch, sweep):
+    solved = _fake_solver(monkeypatch, sweep, a_priori=9.0, soh_end={}, rederive={})
     row = sweep.run_with_life_refinement(sweep.Case("x", "QC"), max_iter=2)
-    assert row["life_note"] == "oscillating, shorter kept"
-    assert len(solved) <= 4
+    assert solved == [8, 7]
+    assert row["life_used"] == 7.0
+    assert row["life_note"] == "solve budget exhausted, last kept"
 
 
 @pytest.mark.parametrize(
@@ -100,7 +134,7 @@ def test_t6_1_refinement_iteration_budget(monkeypatch, sweep):
     ],
 )
 def test_t6_1_excluded_cases_do_not_iterate(monkeypatch, sweep, case_kwargs, reason):
-    solved = _fake_solver(monkeypatch, sweep, first_life=8.0, rederive={8.0: 6.0, 7.0: 6.0})
+    solved = _fake_solver(monkeypatch, sweep, a_priori=8.0, soh_end={8: 0.85}, rederive={8: 6.0})
     row = sweep.run_case(sweep.Case("x", "E", **case_kwargs), {})
     assert len(solved) == 1
     assert row["life_note"] == reason
@@ -108,10 +142,10 @@ def test_t6_1_excluded_cases_do_not_iterate(monkeypatch, sweep, case_kwargs, rea
 
 
 def test_t6_1_no_battery_is_not_refined(monkeypatch, sweep):
-    solved = _fake_solver(monkeypatch, sweep, first_life=8.0, rederive={8.0: 6.0},
+    solved = _fake_solver(monkeypatch, sweep, a_priori=8.0, soh_end={}, rederive={},
                           battery_kwh=0.4)
     row = sweep.run_with_life_refinement(sweep.Case("x", "QC"))
-    assert solved == [8.0]
+    assert solved == [7]
     assert row["life_note"] == "no battery, not refined"
 
 
@@ -210,3 +244,13 @@ def test_t6_2_qc_block(sweep):
     assert [cases[f"QC_F{L}"].service_life for L in (7, 8, 9)] == [7, 8, 9]
     assert sweep.QC_RESULTS.name == "qc_results.csv"
     assert sweep.RESULTS.name == "sweep_results_v2.csv"
+
+
+def test_t6_2_rerun_replaces_the_case_row(sweep, tmp_path):
+    out = tmp_path / "rows.csv"
+    sweep.append_row(out, {"case": "a", "npc": 1.0})
+    sweep.append_row(out, {"case": "b", "npc": 2.0})
+    sweep.append_row(out, {"case": "a", "npc": 3.0, "life_note": "converged"})
+    frame = pd.read_csv(out)
+    assert sorted(frame["case"]) == ["a", "b"]
+    assert frame.set_index("case").loc["a", "npc"] == 3.0
