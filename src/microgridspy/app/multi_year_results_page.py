@@ -560,23 +560,65 @@ def _battery_lifetime_soh_warning(ctx: MultiYearResultsContext) -> str | None:
         return None
     target_year_label = str(ctx.years[target_service_year - 1])
 
-    expected_dispatch = _build_expected_dispatch(ctx.dispatch.copy(), _weights_da(ctx.data))
-    if expected_dispatch.empty or "battery_soh" not in expected_dispatch.columns:
+    # A cohort is retired at its END-of-year state in its last service year: the state that
+    # (D2) tests. battery_soh in the dispatch table is the START-of-year state, one year's
+    # fade higher, so it is only used for results exported before battery_soh_by_year existed.
+    by_year = getattr(ctx.results, "battery_soh_by_year", None)
+    if isinstance(by_year, pd.DataFrame) and not by_year.empty:
+        rows = by_year[by_year["year"].astype(str) == target_year_label]
+        if rows.empty:
+            return None
+        simulated_soh = float(pd.to_numeric(rows["soh_end_of_year"], errors="coerce").min())
+        basis = "end of"
+    else:
+        expected_dispatch = _build_expected_dispatch(ctx.dispatch.copy(), _weights_da(ctx.data))
+        if expected_dispatch.empty or "battery_soh" not in expected_dispatch.columns:
+            return None
+        year_view = expected_dispatch[
+            expected_dispatch["year"].astype(str) == target_year_label
+        ].copy()
+        if year_view.empty:
+            return None
+        simulated_soh = float(year_view["battery_soh"].iloc[-1])
+        basis = "start of"
+    if not np.isfinite(simulated_soh):
         return None
-    year_view = expected_dispatch[expected_dispatch["year"].astype(str) == target_year_label].copy()
-    if year_view.empty:
-        return None
-
-    simulated_soh = float(year_view["battery_soh"].iloc[-1])
     diff = simulated_soh - end_of_life_soh
     if abs(diff) < 0.05:
         return None
 
     relation = "above" if diff > 0.0 else "below"
     return (
-        f"Battery expected SoH at the end of service year {target_service_year} ({target_year_label}) is {simulated_soh:.2f}, "
+        f"Battery SoH at the {basis} service year {target_service_year} ({target_year_label}) is {simulated_soh:.2f}, "
         f"which is {abs(diff):.2f} {relation} the configured end-of-life SoH {end_of_life_soh:.2f}. "
         f"This means the degradation settings and `calendar_lifetime_years` are not closely aligned."
+    )
+
+
+def _battery_degradation_traceability(ctx: MultiYearResultsContext) -> pd.DataFrame | None:
+    """The assumptions a semi-empirical run resolved to, so a result can be audited."""
+    degradation = (ctx.settings.get("battery_model", {}) or {}).get("degradation_model", {}) or {}
+    if not degradation.get("coefficients_enabled"):
+        return None
+    tau = degradation.get("cycle_test_duration_years", None)
+    by_year = getattr(ctx.results, "battery_soh_by_year", None)
+    rows = [
+        ("Service life used", degradation.get("calendar_lifetime_years_used"), "y"),
+        ("Service life derived", degradation.get("calendar_lifetime_years_derived"), "y"),
+        ("Datasheet test duration tau_test", "not set" if tau is None else tau, "y"),
+        ("lambda_cyc (cycle magnitude factor)", degradation.get("lambda_cyc"), "-"),
+        ("c(T_ref) at the datasheet point", degradation.get("c_at_tref"), "kWh fade per kWh discharged"),
+        ("Calendar fade inside the datasheet test", degradation.get("test_time_calendar_fade"), "of nameplate"),
+        ("Calendar fade budget fraction (r_cal * L / B)", degradation.get("calendar_fade_budget_fraction"), "-"),
+        ("Mean cell temperature", degradation.get("mean_cell_temperature_c"), "degC"),
+    ]
+    if isinstance(by_year, pd.DataFrame) and not by_year.empty:
+        from microgridspy.export.multi_year_results import soh_end_of_cohort
+
+        rows.append(("SoH at retirement (end-of-year, min)", soh_end_of_cohort(by_year), "-"))
+    return pd.DataFrame(
+        [{"Quantity": q, "Value": "" if v is None else (f"{v:.6g}" if isinstance(v, float) else str(v)), "Unit": u}
+         for q, v, u in rows]
     )
 
 
@@ -668,6 +710,10 @@ def _render_performance_kpis(ctx: MultiYearResultsContext) -> None:
     lifetime_warning = _battery_lifetime_soh_warning(ctx)
     if lifetime_warning:
         st.warning(lifetime_warning)
+    traceability = _battery_degradation_traceability(ctx)
+    if traceability is not None:
+        with st.expander("Battery degradation traceability", expanded=False):
+            st.dataframe(traceability, hide_index=True, width="stretch")
     expected = ctx.kpis[ctx.kpis["scenario"].astype(str).str.lower() == "expected"].copy()
     options = ["Average yearly"] + ctx.years
     choice = st.selectbox("View performance for", options, key="my_results_kpi_period")
