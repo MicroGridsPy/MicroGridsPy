@@ -135,11 +135,12 @@ def get_battery_degradation_settings(
         raise InputValidationError(
             "battery_model.degradation_model.cycle_lifetime_to_eol_cycles must be > 0."
         )
-    if cycle_test_duration_years is not None and cycle_test_duration_years <= 0.0:
+    if cycle_test_duration_years is not None and not (0.0 < cycle_test_duration_years <= 20.0):
         raise InputValidationError(
-            "battery_model.degradation_model.cycle_test_duration_years must be > 0 when set. "
-            "Leave it unset (null) if the datasheet does not state how long the cycle-life test "
-            "ran; the cycle channel is then knowingly 18-23 % pessimistic."
+            "battery_model.degradation_model.cycle_test_duration_years must be null or a "
+            f"number of years in (0, 20]; got {cycle_test_duration_years:g}. It is how long the "
+            "datasheet cycle-life test ran. Leave it null if the datasheet does not say, and the "
+            "cycle channel is then knowingly 18-23 % pessimistic for a continuous test."
         )
 
     # The semi-empirical mode needs both ends of the SoH span and the rated cycle life: the

@@ -458,11 +458,12 @@ def cycle_life_scaling(
         )
         if calendar_during_test >= budget:
             raise InputValidationError(
-                f"battery cycle_test_duration_years={tau:g} y implies "
-                f"{100.0 * calendar_during_test:.1f} % of calendar fade during the rating test, "
-                f"which already exceeds the usable SoH budget of {100.0 * budget:.1f} %. "
-                "The cycle channel cannot be re-pinned against a non-positive remainder; check "
-                "the test duration, end_of_life_soh and calendar_fade_scale."
+                f"battery cycle_test_duration_years: with tau={tau:g} y the rating test's own "
+                f"calendar ageing is Q_cal(tau)={calendar_during_test:.4f} of nameplate "
+                f"(calendar_fade_scale={float(calendar_fade_scale):g}), which already reaches the "
+                f"usable SoH budget B={budget:.4f}. Nothing is left to attribute to cycling, so "
+                "the cycle channel cannot be calibrated; check the test duration, "
+                "end_of_life_soh and calendar_fade_scale."
             )
         budget = budget - calendar_during_test
 
@@ -472,6 +473,53 @@ def cycle_life_scaling(
     if fade_per_reference_cycle <= 0.0:
         return 1.0
     return budget / (float(user_cycle_life) * fade_per_reference_cycle)
+
+
+def cycle_calibration_summary(
+    chemistry: str,
+    user_cycle_life: float | None,
+    *,
+    usable_soh_budget: float,
+    reference_dod: float = DEFAULT_CYCLE_LIFE_REFERENCE_DOD,
+    reference_temperature_degc: float = DEFAULT_CYCLE_LIFE_REFERENCE_TEMPERATURE_C,
+    cycle_test_duration_years: float | None = None,
+    calendar_fade_scale: float = 1.0,
+    calendar_mean_soc: float = 0.6,
+) -> dict[str, float]:
+    """The datasheet calibration in three numbers, for traceability.
+
+    ``lambda_cyc``               magnitude factor applied to the fitted Psi shape
+    ``c_at_tref``                c at the datasheet point (reference depth and temperature)
+    ``test_time_calendar_fade``  calendar ageing inside the rating test, phi * Q_cal(tau);
+                                 0 when the test duration is not given
+
+    By construction N_rated * reference_dod * c_at_tref + test_time_calendar_fade equals the
+    usable SoH budget: replaying the datasheet test consumes exactly B.
+    """
+    chem = normalize_chemistry(chemistry)
+    lambda_cyc = cycle_life_scaling(
+        chem,
+        user_cycle_life,
+        usable_soh_budget=usable_soh_budget,
+        reference_dod=reference_dod,
+        reference_temperature_degc=reference_temperature_degc,
+        cycle_test_duration_years=cycle_test_duration_years,
+        calendar_fade_scale=calendar_fade_scale,
+        calendar_mean_soc=calendar_mean_soc,
+    )
+    t_ref = np.array([float(reference_temperature_degc)])
+    c_at_tref = float(_psi_raw(chem, float(reference_dod), t_ref)[0]) / float(reference_dod) * lambda_cyc
+    test_calendar = (
+        0.0
+        if cycle_test_duration_years is None
+        else float(calendar_fade_scale)
+        * float(calendar_fade_fraction(chem, calendar_mean_soc, t_ref, float(cycle_test_duration_years))[0])
+    )
+    return {
+        "lambda_cyc": float(lambda_cyc),
+        "c_at_tref": c_at_tref,
+        "test_time_calendar_fade": test_calendar,
+    }
 
 
 def cycle_fade_coefficient(

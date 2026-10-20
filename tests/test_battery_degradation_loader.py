@@ -480,3 +480,28 @@ def test_preview_returns_both_curves() -> None:
     assert np.all(np.diff(preview["cycle_fade_coefficient"]) > 0.0)
     assert np.all(np.diff(preview["calendar_rate_per_year"]) > 0.0)
     assert preview["calendar_mean_soc"] == pytest.approx(0.6)
+
+
+def test_t1_23_test_duration_reaches_the_traceability_fields(tmp_path, monkeypatch) -> None:
+    """T1.23: formulation.json -> settings.battery_model.degradation_model, with the values.
+
+    With tau = 2.0 at 25 degC and SoC 0.6 the test's own calendar ageing is 3.51 % of
+    nameplate, so the cycle coefficient at the datasheet point drops by the factor
+    (0.2 - 0.0351) / 0.2 = 0.825 against the null case.
+    """
+    _, _, with_tau = _build(
+        tmp_path / "tau", monkeypatch, formulation=_formulation(cycle_test_duration_years=2.0)
+    )
+    _, _, without = _build(tmp_path / "null", monkeypatch)
+    d = _degradation(with_tau)
+    n = _degradation(without)
+
+    assert d["cycle_test_duration_years"] == pytest.approx(2.0)
+    assert d["test_time_calendar_fade"] == pytest.approx(0.03508, abs=5e-5)
+    assert d["c_at_tref"] == pytest.approx(3.4359e-5, abs=1e-8)
+    assert 6000 * 0.8 * d["c_at_tref"] + d["test_time_calendar_fade"] == pytest.approx(0.2, abs=1e-9)
+    assert d["lambda_cyc"] / n["lambda_cyc"] == pytest.approx(0.8246, abs=5e-4)
+    # the null case keeps the old calibration and records a zero test-time share
+    assert n["cycle_test_duration_years"] is None
+    assert n["test_time_calendar_fade"] == 0.0
+    assert n["c_at_tref"] == pytest.approx(0.2 / (6000 * 0.8), rel=1e-12)

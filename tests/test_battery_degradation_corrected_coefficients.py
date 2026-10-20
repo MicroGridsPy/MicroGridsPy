@@ -25,6 +25,7 @@ from microgridspy.data_pipeline.battery_degradation_coefficients import (
     InputValidationError,
     calendar_fade_fraction,
     calendar_rate_per_year,
+    cycle_calibration_summary,
     cycle_fade_coefficient,
     cycle_life_scaling,
     implied_calendar_life,
@@ -296,7 +297,7 @@ def test_t1_18_cycle_test_duration_removes_double_counted_calendar() -> None:
     # A test whose own calendar ageing exhausts the budget leaves nothing to pin against.
     # A 5 % budget (end_of_life_soh 0.95) against a five-year rating test does it: calendar fade
     # alone is 5.4 % there.
-    with pytest.raises(InputValidationError, match="exceeds the usable SoH budget"):
+    with pytest.raises(InputValidationError, match="already reaches the usable SoH budget"):
         cycle_life_scaling(
             "LFP", N_RATED, usable_soh_budget=0.05, cycle_test_duration_years=5.0
         )
@@ -417,7 +418,7 @@ def test_t2_3_calendar_rate_matches_the_corrected_physics_exactly() -> None:
         assert np.abs(got / reference - 1.0).max() < 1e-4
 
 
-def test_t2_5_shipped_coefficient_file_is_pinned() -> None:
+def test_t1_24_t2_5_shipped_coefficient_file_is_pinned() -> None:
     """T2.5: regenerating the distilled Psi shape must be a deliberate act.
 
     This hash is shared with the reference engine. If it changes, Tier 2 tolerances and
@@ -514,3 +515,95 @@ def test_t3_8_shallow_cycling_buys_cycles_not_kilowatt_hours() -> None:
     cycles_shallow = B / psi_of(0.4)
     assert cycles_shallow == pytest.approx(14812.0, rel=5e-3)
     assert cycles_shallow / cycles_full == pytest.approx(2.51, rel=0.02)
+
+
+# ===========================================================================
+# Defect 11 -- the datasheet test also aged on the calendar (T1.19-T1.22)
+# ===========================================================================
+
+
+@pytest.mark.parametrize("tau", [1.5, 2.0, 3.0])
+@pytest.mark.parametrize("phi", [1.0, 1.75])
+def test_t1_19_rerun_datasheet_test_consumes_exactly_the_budget(tau: float, phi: float) -> None:
+    """T1.19: replaying the datasheet test closes the budget exactly.
+
+    N_rated cycles at (delta_ref, T_ref) consume N * delta_ref * c(T_ref) of capacity, and the
+    test's own calendar ageing consumes phi * lambda_cal * Q_raw(SoC_mean, T_ref, 365 tau). Once
+    the calendar share is removed from the cycle calibration, the two together must equal B --
+    neither more (double count) nor less.
+    """
+    summary = cycle_calibration_summary(
+        "LFP",
+        N_RATED,
+        usable_soh_budget=B,
+        reference_dod=DOD_REF,
+        reference_temperature_degc=T_REF,
+        cycle_test_duration_years=tau,
+        calendar_fade_scale=phi,
+        calendar_mean_soc=SOC_MEAN,
+    )
+    replayed = N_RATED * DOD_REF * summary["c_at_tref"] + summary["test_time_calendar_fade"]
+    assert abs(replayed - B) < 1e-9
+    # and the calendar share is the anchored law scaled by phi, not something else
+    expected_calendar = phi * float(calendar_fade_fraction("LFP", SOC_MEAN, np.array([T_REF]), tau)[0])
+    assert summary["test_time_calendar_fade"] == pytest.approx(expected_calendar, rel=1e-12)
+
+
+def test_t1_20_test_time_calendar_alone_exhausting_the_budget_is_refused() -> None:
+    """T1.20: a test whose own calendar ageing reaches B leaves nothing to pin cycling to."""
+    with pytest.raises(InputValidationError) as exc:
+        cycle_life_scaling(
+            "LFP", N_RATED, usable_soh_budget=B, cycle_test_duration_years=20.0,
+            calendar_fade_scale=2.72, calendar_mean_soc=SOC_MEAN,
+        )
+    message = str(exc.value)
+    assert "tau=20" in message
+    assert "Q_cal(tau)" in message
+
+
+def test_t1_21_null_duration_reproduces_the_old_coefficients() -> None:
+    """T1.21: tau = null is the old behaviour, to round-off, over the whole temperature grid."""
+    from microgridspy.data_pipeline.battery_degradation_coefficients import _psi_raw
+
+    grid = np.linspace(10.0, 50.0, 81)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        new = c_of(grid, cycle_test_duration_years=None)
+    old = _psi_raw("LFP", DOD_REF, grid) / DOD_REF * (
+        B / (N_RATED * float(_psi_raw("LFP", DOD_REF, np.array([T_REF]))[0]))
+    )
+    assert np.max(np.abs(new - old)) < 1e-12
+
+
+@pytest.mark.parametrize("bad", [0.0, -1.0, 25.0, "two years"])
+def test_t1_22_test_duration_validation(bad) -> None:
+    """T1.22: null or a number in (0, 20]; anything else names the key path."""
+    from microgridspy.data_pipeline.battery_degradation_model import get_battery_degradation_settings
+
+    formulation = {
+        "core_formulation": "multi_year",
+        "battery_model": {
+            "loss_model": "convex_loss_epigraph",
+            "degradation_model": {
+                "coefficients_enabled": True,
+                "end_of_life_soh": 0.8,
+                "cycle_lifetime_to_eol_cycles": 6000,
+                "cycle_test_duration_years": bad,
+            },
+        },
+    }
+    with pytest.raises(InputValidationError) as exc:
+        get_battery_degradation_settings(formulation, battery_loss_model="convex_loss_epigraph")
+    assert "battery_model.degradation_model.cycle_test_duration_years" in str(exc.value)
+
+
+def test_t1_22b_valid_test_durations_pass() -> None:
+    from microgridspy.data_pipeline.battery_degradation_model import get_battery_degradation_settings
+
+    for good in (None, 0.5, 2.0, 20.0):
+        formulation = {
+            "core_formulation": "multi_year",
+            "battery_model": {"degradation_model": {"cycle_test_duration_years": good}},
+        }
+        out = get_battery_degradation_settings(formulation, battery_loss_model="constant_efficiency")
+        assert out["cycle_test_duration_years"] == good

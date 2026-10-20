@@ -13,6 +13,7 @@ import xarray as xr
 from microgridspy.data_pipeline.battery_degradation_coefficients import (
     CALENDAR_FADE_SOURCES,
     calendar_rate_per_year,
+    cycle_calibration_summary,
     cycle_fade_coefficient,
     implied_calendar_life,
     normalize_chemistry,
@@ -2001,6 +2002,21 @@ def _initialize_data_legacy(project_name: str, sets: xr.Dataset) -> xr.Dataset:
             calendar_fade_scale=calendar_scale,
             calendar_mean_soc=soc_mean,
         )
+        # Traceability of the datasheet calibration (Defect 11): the magnitude factor, c at the
+        # datasheet point, and the calendar ageing the rating test itself contained.
+        calibration = cycle_calibration_summary(
+            chemistry,
+            user_cycle_life,
+            usable_soh_budget=budget,
+            reference_dod=technical["cycle_life_reference_dod"],
+            reference_temperature_degc=technical["cycle_life_reference_temperature_c"],
+            cycle_test_duration_years=battery_degradation_settings.get(
+                "cycle_test_duration_years", None
+            ),
+            calendar_fade_scale=calendar_scale,
+            calendar_mean_soc=soc_mean,
+        )
+        battery_degradation_settings.update(calibration)
         cycle_coefficient = xr.DataArray(
             coeff["c"],
             coords=cell_temperature.coords,
