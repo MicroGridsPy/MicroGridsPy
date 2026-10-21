@@ -65,6 +65,7 @@ def test_t6_1_binding_start_steps_down_then_rederives(monkeypatch, sweep):
                           soh_end={8: 0.80, 7: 0.815}, rederive={7: 7.8})
     row = sweep.run_with_life_refinement(sweep.Case("x", "QC"))
     assert row["life_used"] == 8.0
+    assert row["case"] == "x" and row["results_project"] == "x__L8"
     assert row["life_sequence"] == "8->7->8"
     assert row["life_note"] == "converged from below (floor binding)"
     assert row["life_iterations"] == 2
@@ -254,3 +255,11 @@ def test_t6_2_rerun_replaces_the_case_row(sweep, tmp_path):
     frame = pd.read_csv(out)
     assert sorted(frame["case"]) == ["a", "b"]
     assert frame.set_index("case").loc["a", "npc"] == 3.0
+
+
+def test_t6_2_reduced_campaign_names_exist(sweep):
+    names = {c.name for c in sweep.matrix()}
+    assert set(sweep.REDUCED) <= names
+    assert len(sweep.REDUCED) == len(set(sweep.REDUCED))
+    tau = {c.name: c for c in sweep.matrix()}["E12_tau_1.5"]
+    assert tau.test_duration == 1.5 and sweep.refinement_exclusion(tau) is None

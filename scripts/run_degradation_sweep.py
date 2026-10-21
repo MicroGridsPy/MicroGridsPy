@@ -192,7 +192,30 @@ def matrix() -> list[Case]:
                    f"min RE {r:.0%}, no ageing", min_renewable=r, coefficients=False,
                    linear_rate=0.0, service_life=8) for r in (0.95, 1.0)]
 
+    # E12 - datasheet test duration (Defect 11): the declared band around the base tau = 2.0
+    cases += [Case(f"E12_tau_{t:g}", "E12", f"cycle_test_duration_years {t:g}",
+                   test_duration=t) for t in (1.5, 3.0)]
+
     return cases
+
+
+# The reduced v2 campaign (decided after the end-of-life QC): the cases the paper's claims rest
+# on. Parameter uncertainty (N, the upper phi, tau beyond its band) moves to the separate
+# robustness analysis; E4, E6 and E9 are cut (outside the validity domain, a flawed design, a
+# functionality check). Linear-mode cases are untouched by the corrections, so after
+# E0_no_ageing reproduces its v1 result the other linear rows are reused from v1, and the
+# fixed lives 7/8/9 come from the QC block (QC_F7..F9). Order: the reuse check first.
+REDUCED = [
+    "E0_no_ageing",
+    "baseline",
+    "E5_life_5", "E5_life_6", "E5_life_10", "E5_life_12",
+    "E1_enclosure_00K", "E1_enclosure_05K", "E1_enclosure_15K", "E1_enclosure_20K",
+    "E11_minre_100",
+    "E10_fuel_0.65", "E10_fuel_2.6", "E10_fuel_2.6_hot",
+    "E12_tau_1.5", "E12_tau_3",
+    "E8_growth",
+    "E2_phi_1.75",
+]
 
 
 def qc_cases() -> list[Case]:
@@ -628,7 +651,7 @@ def run_with_life_refinement(case: Case, max_iter: int = 5, min_battery_kwh: flo
 
     def solve(L: int) -> dict:
         if L not in rows:
-            rows[L] = run(replace(case, service_life=int(L)), prov)
+            rows[L] = run(replace(case, name=f"{case.name}__L{L}", service_life=int(L)), prov)
         seq.append(L)
         return rows[L]
 
@@ -659,6 +682,9 @@ def run_with_life_refinement(case: Case, max_iter: int = 5, min_battery_kwh: flo
     final = rows[seq[-1]]
     return {
         **final,
+        "case": case.name,
+        # every tried life keeps its own project directory; this one holds the chosen life
+        "results_project": f"{case.name}__L{seq[-1]}",
         "life_derived": derived,
         "life_rederived": rederived,
         "life_sequence": "->".join(str(v) for v in seq),
@@ -702,6 +728,8 @@ def main() -> int:
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--dry-run", action="store_true",
                         help="build and load every case without solving")
+    parser.add_argument("--reduced", action="store_true",
+                        help="the reduced v2 campaign (REDUCED), in that order")
     parser.add_argument("--qc", action="store_true",
                         help="the end-of-life QC block, written to qc_results.csv")
     parser.add_argument("--src", default=None,
@@ -709,6 +737,9 @@ def main() -> int:
     args = parser.parse_args()
 
     cases = qc_cases() if args.qc else matrix()
+    if args.reduced:
+        by_name = {c.name: c for c in cases}
+        cases = [by_name[n] for n in REDUCED]
     results = QC_RESULTS if args.qc else RESULTS
     assert results != LEGACY_RESULTS
     if args.block:
