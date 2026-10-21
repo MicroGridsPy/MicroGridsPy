@@ -308,3 +308,36 @@ def test_robustness_blocks_build(sweep):
     cells = {(c.fuel_price, int(c.enclosure)) for c in b} | set(sweep.FACTORIAL_REUSED)
     assert cells == {(p, t) for p in (0.65, 1.3, 2.6) for t in (0, 10, 20)}
     assert {c.name for c in sweep.robustness_cases("C")} >= {"RC_worst", "RC_best"}
+
+
+def test_option_b_non_viable_battery_is_solved_without_battery(monkeypatch, sweep):
+    from microgridspy.errors import InputValidationError
+
+    solved = []
+
+    def fake_a_priori(case):
+        raise InputValidationError("Battery implied service life is under 2 years at ...")
+
+    def fake_run(case, prov):
+        solved.append(case)
+        return {"case": case.name, "battery_kwh": 0.0, "life_used": 8.0, "npc": 1.0}
+
+    monkeypatch.setattr(sweep, "a_priori_life", fake_a_priori)
+    monkeypatch.setattr(sweep, "run", fake_run)
+    row = sweep.run_case(sweep.Case("R_3301", "RA", enclosure=20.0, calendar_scale=2.72), {})
+    assert len(solved) == 1
+    variant = solved[0]
+    assert variant.no_battery and not variant.coefficients and variant.name == "R_3301__nobattery"
+    assert row["case"] == "R_3301" and row["life_note"].startswith("battery not viable")
+    assert np.isnan(row["life_used"])
+
+
+def test_option_b_other_input_errors_still_fail(monkeypatch, sweep):
+    from microgridspy.errors import InputValidationError
+
+    def fake_a_priori(case):
+        raise InputValidationError("something else is wrong")
+
+    monkeypatch.setattr(sweep, "a_priori_life", fake_a_priori)
+    with pytest.raises(InputValidationError):
+        sweep.run_case(sweep.Case("x", "RA"), {})

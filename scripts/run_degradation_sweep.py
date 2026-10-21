@@ -119,6 +119,7 @@ class Case:
     test_duration: object = INHERIT
     refine_life: bool = True                # iterate the derived life on the realised cycle fade
     floor_convention: str = "end_of_year"   # traceability only: which state the EoL floor tests
+    no_battery: bool = False                # battery capacity capped at 0 (non-viable battery)
     extra: dict = field(default_factory=dict)
 
 
@@ -191,6 +192,10 @@ def matrix() -> list[Case]:
     cases += [Case(f"E11_minre_{int(100*r)}_no_ageing", "E11",
                    f"min RE {r:.0%}, no ageing", min_renewable=r, coefficients=False,
                    linear_rate=0.0, service_life=8) for r in (0.95, 1.0)]
+    # The no-ageing reference at the life the aged 100 % RE case refines to (10 y): a reference
+    # at 8 y would mix the amortisation period into the cost of ageing.
+    cases += [Case("E11_minre_100_no_ageing_L10", "E11", "min RE 100%, no ageing, life 10 y",
+                   min_renewable=1.0, coefficients=False, linear_rate=0.0, service_life=10)]
 
     # E12 - datasheet test duration (Defect 11): the declared band around the base tau = 2.0
     cases += [Case(f"E12_tau_{t:g}", "E12", f"cycle_test_duration_years {t:g}",
@@ -502,6 +507,8 @@ def build(case: Case, root: Path = SWEEP) -> Path:
     ):
         if value is not None:
             technical[key] = value
+    if case.no_battery:
+        technical["max_installable_capacity_kwh"] = 0.0
     technical["capacity_degradation_rate_per_year"] = (
         0.0 if case.linear_rate is None else case.linear_rate
     )
@@ -845,11 +852,37 @@ def run_with_life_refinement(case: Case, max_iter: int = 5, min_battery_kwh: flo
     }
 
 
+NON_VIABLE = "implied service life is under"
+
+
+def run_without_battery(case: Case, prov: dict, why: str) -> dict:
+    """Option b for inputs the degradation model refuses (implied life under 2 years).
+
+    A planner facing a battery that would not last two years does not install one, so the
+    point is solved with battery capacity capped at zero (linear mode, no ageing: with no
+    battery the degradation settings do nothing). The result is a valid point of the design
+    -- the threshold beyond which storage is not viable -- rather than a hole in it.
+    """
+    variant = replace(case, name=f"{case.name}__nobattery", no_battery=True,
+                      coefficients=False, linear_rate=0.0, service_life=8, refine_life=False)
+    row = run(variant, prov)
+    return {**row, "case": case.name, "results_project": variant.name,
+            "life_used": np.nan, "life_sequence": "", "life_iterations": 1,
+            "life_note": f"battery not viable, solved without battery ({why[:120]})"}
+
+
 def run_case(case: Case, prov: dict) -> dict:
+    from microgridspy.errors import InputValidationError
+
     reason = refinement_exclusion(case)
-    if reason is None:
-        return run_with_life_refinement(case, prov=prov)
-    row = run(case, prov)
+    try:
+        if reason is None:
+            return run_with_life_refinement(case, prov=prov)
+        row = run(case, prov)
+    except InputValidationError as exc:
+        if NON_VIABLE not in str(exc):
+            raise
+        return run_without_battery(case, prov, str(exc))
     life = row.get("life_used", np.nan)
     return {**row, "life_sequence": _fmt_life(life) if life == life else "",
             "life_iterations": 1, "life_note": reason}
