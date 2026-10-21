@@ -263,3 +263,48 @@ def test_t6_2_reduced_campaign_names_exist(sweep):
     assert len(sweep.REDUCED) == len(set(sweep.REDUCED))
     tau = {c.name: c for c in sweep.matrix()}["E12_tau_1.5"]
     assert tau.test_duration == 1.5 and sweep.refinement_exclusion(tau) is None
+
+
+# ---------------------------------------------------------------------------- robustness
+
+
+def test_morris_design_moves_one_factor_per_step(sweep):
+    design = sweep.morris_design(r=12)
+    k = len(sweep.MORRIS_FACTORS)
+    names = [n for n, *_ in sweep.MORRIS_FACTORS]
+    delta = sweep.MORRIS_LEVELS / (2 * (sweep.MORRIS_LEVELS - 1))
+    assert len(design) == 12 * (k + 1)
+    for _, traj in design.groupby("trajectory"):
+        u = traj.sort_values("step")[[f"u_{n}" for n in names]].to_numpy()
+        assert ((u >= -1e-12) & (u <= 1 + 1e-12)).all()
+        steps = np.abs(np.diff(u, axis=0))
+        assert (np.isclose(steps, delta) | np.isclose(steps, 0.0)).all()
+        assert (np.isclose(steps, delta).sum(axis=1) == 1).all()  # exactly one factor moves
+        assert sorted(traj["moved"].iloc[1:]) == sorted(names)  # and each moves once
+    assert design.equals(sweep.morris_design(r=12))  # reproducible
+
+
+def test_morris_indices_recover_a_known_function(sweep):
+    """y = 3 u0 - 2 u1 + 0 u2 + 4 u0 u3: mu* ranks u0 and u3 by their effect, u2 is zero,
+    and only the interacting factors (u0, u3) have sigma > 0."""
+    design = sweep.morris_design(r=20)
+    names = [n for n, *_ in sweep.MORRIS_FACTORS]
+    u = design[[f"u_{n}" for n in names]].to_numpy()
+    y = 3 * u[:, 0] - 2 * u[:, 1] + 4 * u[:, 0] * u[:, 3]
+    results = pd.DataFrame({"case": design["case"], "y": y}).drop_duplicates("case")
+    idx = sweep.morris_indices(design, results, "y").set_index("factor")
+    assert idx.loc[names[1], "mu"] == pytest.approx(-2.0)
+    assert idx.loc[names[1], "sigma"] == pytest.approx(0.0, abs=1e-9)
+    assert idx.loc[names[2], "mu_star"] == pytest.approx(0.0, abs=1e-12)
+    assert idx.loc[names[0], "sigma"] > 0 and idx.loc[names[3], "sigma"] > 0
+    assert idx.loc[names[0], "mu_star"] > idx.loc[names[1], "mu_star"]
+
+
+def test_robustness_blocks_build(sweep):
+    a = sweep.robustness_cases("A", r=10)
+    assert len(a) <= 50 and len({c.name for c in a}) == len(a)
+    assert all(c.refine_life and c.block == "RA" for c in a)
+    b = sweep.robustness_cases("B")
+    cells = {(c.fuel_price, int(c.enclosure)) for c in b} | set(sweep.FACTORIAL_REUSED)
+    assert cells == {(p, t) for p in (0.65, 1.3, 2.6) for t in (0, 10, 20)}
+    assert {c.name for c in sweep.robustness_cases("C")} >= {"RC_worst", "RC_best"}

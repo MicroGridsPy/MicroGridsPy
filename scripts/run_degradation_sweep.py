@@ -240,6 +240,158 @@ def qc_cases() -> list[Case]:
     ]
 
 
+# ---------------------------------------------------------------------------- robustness
+#
+# A  Morris screening of the degradation-model uncertainty: where in the plausible space does
+#    each parameter matter, and does it act alone or through interactions? r trajectories of
+#    k + 1 points on a 4-level grid; mu* (mean |elementary effect|) ranks importance, sigma
+#    flags interaction or thresholds. Points are named by their level indices, so a point
+#    two trajectories share is solved once.
+# B  Economic context as a 3 x 3 factorial (diesel price x enclosure): two factors are read
+#    more directly off a grid than off Morris, and the interaction is the result.
+# C  Stress corners: do the paper's claims hold at the extremes?
+# Every point runs with the life refinement from below, like the campaign.
+
+ROBUST_RESULTS = SWEEP / "robustness_results.csv"
+ROBUST_DESIGN = SWEEP / "robustness_design.csv"
+MORRIS_LEVELS = 4
+MORRIS_SEED = 20261021
+# (factor, Case field, low, high). Ranges are the paper's to defend: enclosure as in E1 (the
+# hot end extrapolates the cycle law outside its fitted window), calendar_fade_scale over the
+# published band, N over a typical LFP datasheet spread, tau over its declared band.
+MORRIS_FACTORS = [
+    ("enclosure_rise_k", "enclosure", 0.0, 20.0),
+    ("calendar_fade_scale", "calendar_scale", 1.0, 2.72),
+    ("cycle_life_n", "cycle_life", 4000.0, 8000.0),
+    ("test_duration_y", "test_duration", 1.5, 3.0),
+]
+BASE_FUEL_PRICE = 1.3
+
+
+def morris_design(r: int = 10, levels: int = MORRIS_LEVELS, seed: int = MORRIS_SEED
+                  ) -> pd.DataFrame:
+    """r Morris trajectories on a ``levels``-point grid (Morris 1991, step delta = p/(2(p-1))).
+
+    Each trajectory starts at a random grid point and moves every factor once, in random
+    order and direction, by delta in unit scale. Columns: trajectory, step, moved (the factor
+    changed to reach this point, '' at the start), direction, u_<factor> (unit scale),
+    <factor> (physical value), case (name from the level indices).
+    """
+    rng = np.random.default_rng(seed)
+    k = len(MORRIS_FACTORS)
+    delta = levels / (2.0 * (levels - 1))
+    grid = np.arange(levels) / (levels - 1)
+    low_starts = grid[grid + delta <= 1.0 + 1e-12]
+    rows = []
+    for t in range(r):
+        sign = rng.choice([-1.0, 1.0], size=k)
+        x = rng.choice(low_starts, size=k)
+        x = np.where(sign < 0, x + delta, x)  # a downward step starts high
+        order = rng.permutation(k)
+        points = [(x.copy(), "", 0.0)]
+        for i in order:
+            x = x.copy()
+            x[i] += sign[i] * delta
+            points.append((x, MORRIS_FACTORS[i][0], float(sign[i])))
+        for step, (u, moved, direction) in enumerate(points):
+            idx = np.rint(u * (levels - 1)).astype(int)
+            row = {"trajectory": t, "step": step, "moved": moved, "direction": direction,
+                   "case": "R_" + "".join(str(i) for i in idx)}
+            for (name, _field, lo, hi), ui in zip(MORRIS_FACTORS, u):
+                row[f"u_{name}"] = float(ui)
+                row[name] = float(lo + ui * (hi - lo))
+            rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def robustness_cases(block: str, r: int = 10) -> list[Case]:
+    if block == "A":
+        design = morris_design(r)
+        cases: dict[str, Case] = {}
+        for _, row in design.iterrows():
+            if row["case"] in cases:
+                continue
+            kwargs = {field: float(row[name]) for name, field, _lo, _hi in MORRIS_FACTORS}
+            note = ", ".join(f"{name}={row[name]:g}" for name, *_ in MORRIS_FACTORS)
+            cases[row["case"]] = Case(row["case"], "RA", note, **kwargs)
+        return list(cases.values())
+    if block == "B":
+        # the six points the campaign already solved are reused by name, not re-run
+        return [Case(f"RB_fuel{p:g}_encl{t:02d}K", "RB", f"diesel {p:g}, enclosure +{t} K",
+                     fuel_price=p, enclosure=float(t))
+                for p, t in ((0.65, 0), (0.65, 20), (2.6, 0))]
+    if block == "C":
+        return [
+            Case("RC_worst", "RC", "+20 K, phi 2.72, N 4000, tau 1.5", enclosure=20.0,
+                 calendar_scale=2.72, cycle_life=4000.0, test_duration=1.5),
+            Case("RC_best", "RC", "+0 K, phi 1.0, N 8000, tau 3.0", enclosure=0.0,
+                 calendar_scale=1.0, cycle_life=8000.0, test_duration=3.0),
+            Case("RC_worst_dear_diesel", "RC", "worst corner, diesel 2.6", enclosure=20.0,
+                 calendar_scale=2.72, cycle_life=4000.0, test_duration=1.5, fuel_price=2.6),
+        ]
+    raise ValueError(f"unknown robustness block {block!r}")
+
+
+# the factorial's other six cells, already in the campaign results
+FACTORIAL_REUSED = {
+    (1.3, 10): "baseline", (0.65, 10): "E10_fuel_0.65", (2.6, 10): "E10_fuel_2.6",
+    (1.3, 0): "E1_enclosure_00K", (1.3, 20): "E1_enclosure_20K",
+    (2.6, 20): "E10_fuel_2.6_hot",
+}
+
+
+def morris_indices(design: pd.DataFrame, results: pd.DataFrame, output: str,
+                   n_boot: int = 1000, seed: int = MORRIS_SEED) -> pd.DataFrame:
+    """mu, mu*, sigma and a bootstrap 95 % interval on mu* for one output.
+
+    Elementary effects are in output units per unit-scale step of the factor (the factor's
+    whole range = 1), so they compare across factors with different physical units.
+    """
+    values = results.set_index("case")[output]
+    effects: dict[str, list[tuple[int, float]]] = {name: [] for name, *_ in MORRIS_FACTORS}
+    for t, traj in design.sort_values(["trajectory", "step"]).groupby("trajectory"):
+        cases = list(traj["case"])
+        for step in range(1, len(traj)):
+            row = traj.iloc[step]
+            name = row["moved"]
+            du = row[f"u_{name}"] - traj.iloc[step - 1][f"u_{name}"]
+            y0, y1 = values.get(cases[step - 1], np.nan), values.get(cases[step], np.nan)
+            effects[name].append((int(t), float((y1 - y0) / du)))
+    rng = np.random.default_rng(seed)
+    out = []
+    for name, pairs in effects.items():
+        ee = np.array([e for _t, e in pairs if np.isfinite(e)])
+        if ee.size == 0:
+            out.append({"factor": name, "n": 0})
+            continue
+        boot = [np.mean(np.abs(rng.choice(ee, size=ee.size, replace=True)))
+                for _ in range(n_boot)]
+        out.append({
+            "factor": name, "n": int(ee.size), "mu": float(ee.mean()),
+            "mu_star": float(np.abs(ee).mean()),
+            "sigma": float(ee.std(ddof=1)) if ee.size > 1 else np.nan,
+            "mu_star_lo": float(np.percentile(boot, 2.5)),
+            "mu_star_hi": float(np.percentile(boot, 97.5)),
+        })
+    return pd.DataFrame(out).sort_values("mu_star", ascending=False).reset_index(drop=True)
+
+
+def analyse_robustness(r: int = 10) -> int:
+    if not ROBUST_RESULTS.exists():
+        print(f"no results yet: {ROBUST_RESULTS}")
+        return 1
+    results = pd.read_csv(ROBUST_RESULTS)
+    if "error" in results.columns:
+        results = results[results["error"].isna()]
+    design = morris_design(r)
+    pd.set_option("display.width", 200)
+    for output in ("npc", "battery_kwh", "diesel_share", "life_used"):
+        print(f"\nMorris -- {output}")
+        print(morris_indices(design, results, output).to_string(
+            index=False, float_format=lambda v: f"{v:,.4g}"))
+    return 0
+
+
 # ---------------------------------------------------------------------------- building
 
 
@@ -728,6 +880,10 @@ def main() -> int:
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--dry-run", action="store_true",
                         help="build and load every case without solving")
+    parser.add_argument("--robustness", choices=["A", "B", "C"], default=None,
+                        help="robustness block, written to robustness_results.csv")
+    parser.add_argument("--morris-r", type=int, default=10, help="Morris trajectories (A)")
+    parser.add_argument("--analyse-robustness", action="store_true")
     parser.add_argument("--reduced", action="store_true",
                         help="the reduced v2 campaign (REDUCED), in that order")
     parser.add_argument("--qc", action="store_true",
@@ -736,11 +892,18 @@ def main() -> int:
                         help="package source to run (QC case A: a checkout of 39a3738)")
     args = parser.parse_args()
 
+    if args.analyse_robustness:
+        return analyse_robustness(args.morris_r)
     cases = qc_cases() if args.qc else matrix()
+    if args.robustness:
+        cases = robustness_cases(args.robustness, args.morris_r)
+        if args.robustness == "A" and not args.list:
+            SWEEP.mkdir(parents=True, exist_ok=True)
+            morris_design(args.morris_r).to_csv(ROBUST_DESIGN, index=False)
     if args.reduced:
         by_name = {c.name: c for c in cases}
         cases = [by_name[n] for n in REDUCED]
-    results = QC_RESULTS if args.qc else RESULTS
+    results = QC_RESULTS if args.qc else (ROBUST_RESULTS if args.robustness else RESULTS)
     assert results != LEGACY_RESULTS
     if args.block:
         cases = [c for c in cases if c.block in args.block]
