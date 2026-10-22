@@ -345,6 +345,70 @@ FACTORIAL_REUSED = {
 }
 
 
+def case_fuel_price(name: str) -> float:
+    """Diesel price a campaign or robustness case ran at (base unless the name says otherwise)."""
+    for tag, price in (("fuel2.6", 2.6), ("fuel_2.6", 2.6), ("fuel0.65", 0.65),
+                       ("fuel_0.65", 0.65), ("fuel1.95", 1.95), ("fuel_1.95", 1.95)):
+        if tag in name:
+            return price
+    return BASE_FUEL_PRICE
+
+
+def reference_key(row) -> tuple | None:
+    """(diesel price, life, variant) of the no-ageing run an aged result is compared with.
+
+    The cost of ageing is NPC(aged, L) - NPC(no ageing, same L): a reference at another life
+    would fold a different amortisation period into it. A no-ageing run does not depend on
+    the degradation inputs (enclosure, phi, N, tau), so one reference serves every point that
+    shares price, life and system variant. None for rows without a battery or without a life.
+    """
+    name = str(row["case"])
+    note = str(row.get("life_note", ""))
+    if not (float(row.get("battery_kwh", 0.0) or 0.0) >= 1.0) or pd.isna(row.get("life_used")):
+        return None
+    if note.startswith(("linear", "fixed", "battery not viable")):
+        return None
+    variant = "growth" if name.startswith("E8") else ("minre100" if name.startswith("E11") else "")
+    return (case_fuel_price(name), int(row["life_used"]), variant)
+
+
+# references that already exist in the campaign results, by key
+EXISTING_REFERENCES = {
+    (BASE_FUEL_PRICE, 8, ""): "E0_no_ageing",
+    (BASE_FUEL_PRICE, 8, "growth"): "E8_growth_no_ageing",
+    (BASE_FUEL_PRICE, 10, "minre100"): "E11_minre_100_no_ageing_L10",
+}
+
+
+def reference_name(key: tuple) -> str:
+    if key in EXISTING_REFERENCES:
+        return EXISTING_REFERENCES[key]
+    price, life, variant = key
+    return f"N0_fuel{price:g}_L{life:02d}" + (f"_{variant}" if variant else "")
+
+
+def reference_cases() -> list[Case]:
+    """No-ageing runs at every (price, life, variant) the aged results need and lack."""
+    keys = set()
+    for path in (RESULTS, ROBUST_RESULTS):
+        if path.exists():
+            for _, row in pd.read_csv(path).iterrows():
+                key = reference_key(row)
+                if key is not None:
+                    keys.add(key)
+    cases = []
+    for key in sorted(keys):
+        if key in EXISTING_REFERENCES:
+            continue
+        price, life, variant = key
+        if variant:  # growth / 100 % RE references are added by hand when a case needs one
+            raise ValueError(f"no reference recipe for variant {variant!r} at life {life}")
+        cases.append(Case(reference_name(key), "N0", f"no ageing, life {life} y, diesel {price:g}",
+                          coefficients=False, linear_rate=0.0, service_life=life,
+                          fuel_price=None if price == BASE_FUEL_PRICE else price))
+    return cases
+
+
 def morris_indices(design: pd.DataFrame, results: pd.DataFrame, output: str,
                    n_boot: int = 1000, seed: int = MORRIS_SEED) -> pd.DataFrame:
     """mu, mu*, sigma and a bootstrap 95 % interval on mu* for one output.
@@ -913,7 +977,7 @@ def main() -> int:
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--dry-run", action="store_true",
                         help="build and load every case without solving")
-    parser.add_argument("--robustness", choices=["A", "B", "C"], default=None,
+    parser.add_argument("--robustness", choices=["A", "B", "C", "N0"], default=None,
                         help="robustness block, written to robustness_results.csv")
     parser.add_argument("--morris-r", type=int, default=10, help="Morris trajectories (A)")
     parser.add_argument("--analyse-robustness", action="store_true")
@@ -929,7 +993,8 @@ def main() -> int:
         return analyse_robustness(args.morris_r)
     cases = qc_cases() if args.qc else matrix()
     if args.robustness:
-        cases = robustness_cases(args.robustness, args.morris_r)
+        cases = (reference_cases() if args.robustness == "N0"
+                 else robustness_cases(args.robustness, args.morris_r))
         if args.robustness == "A" and not args.list:
             SWEEP.mkdir(parents=True, exist_ok=True)
             morris_design(args.morris_r).to_csv(ROBUST_DESIGN, index=False)

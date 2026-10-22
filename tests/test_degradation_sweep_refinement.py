@@ -341,3 +341,15 @@ def test_option_b_other_input_errors_still_fail(monkeypatch, sweep):
     monkeypatch.setattr(sweep, "a_priori_life", fake_a_priori)
     with pytest.raises(InputValidationError):
         sweep.run_case(sweep.Case("x", "RA"), {})
+
+
+
+def test_reference_key_matches_price_life_and_variant(sweep):
+    row = {"case": "RB_fuel2.6_encl00K", "battery_kwh": 800.0, "life_used": 13.0,
+           "life_note": "converged from below (floor slack)"}
+    assert sweep.reference_key(row) == (2.6, 13, "")
+    assert sweep.reference_name((2.6, 13, "")) == "N0_fuel2.6_L13"
+    assert sweep.reference_name((1.3, 8, "")) == "E0_no_ageing"
+    assert sweep.reference_key({**row, "case": "E11_minre_100", "life_used": 10.0}) == (1.3, 10, "minre100")
+    assert sweep.reference_key({**row, "battery_kwh": 0.0}) is None
+    assert sweep.reference_key({**row, "life_note": "fixed life, not refined"}) is None
