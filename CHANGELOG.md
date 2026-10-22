@@ -7,6 +7,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Fixed
+- **Multi-year exported NPC now matches the objective.** `cashflows_discounted.csv` (and
+  the *Net Present Cost (Expected)* and *LCOE* in `reporting_summary.csv` built from it when
+  no objective value is passed, which is the `mgp.solve` path) carried only the inverter
+  fixed O&M. The PV, battery and generator fixed O&M that the optimisation charges were
+  missing, so the reported NPC and LCOE were too low (by about 13 % on a 20-year off-grid
+  case). The optimisation itself was not affected. Fixed O&M is now also reported on the
+  gross asset value, as the objective charges it: a capital grant lowers the PV investment,
+  not its upkeep (`scenario_costs_yearly.csv` previously applied the grant to the PV fixed
+  O&M as well). **Results exported by earlier versions understate NPC and LCOE.**
 - **Semi-empirical battery degradation: the end-of-life floor tests the end-of-year state.**
   The usable-energy state `E_y` is the start-of-year value (the year's fades are subtracted
   when the next year begins), but the floor was written on `E_y` itself, so a cohort could

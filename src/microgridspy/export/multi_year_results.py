@@ -1455,11 +1455,32 @@ def build_discounted_cashflows_table_multi_year(
         opex_y_s = opex_y_s - (res_gen * subsidy).sum("period").sum("resource")
 
     ext_y_s = xr.DataArray(0.0).broadcast_like(opex_y_s)
+    # Fixed O&M exactly as the objective charges it: every technology, on the GROSS asset
+    # value (a capital grant lowers the investment, not the upkeep). The table used to carry
+    # the inverter terms only, so the exported NPC fell short of the objective by the PV,
+    # battery and generator fixed O&M.
+    res_fom_base = res_units * res_nom * res_capex
+    res_inv_fom_base = (res_units * res_nom / res_dc_ac_ratio) * res_inv_capex
+    if p.res_fixed_om_share_per_year is not None:
+        opex_y_s = opex_y_s + _as_year_scenario_da(
+            (res_fom_base * p.res_fixed_om_share_per_year * act_res)
+            .sum("inv_step")
+            .sum("resource"),
+            sets,
+        )
+    if p.battery_fixed_om_share_per_year is not None:
+        opex_y_s = opex_y_s + _as_year_scenario_da(
+            (bat_inv * p.battery_fixed_om_share_per_year * act_bat).sum("inv_step"), sets
+        )
+    if p.generator_fixed_om_share_per_year is not None:
+        opex_y_s = opex_y_s + _as_year_scenario_da(
+            (gen_inv * p.generator_fixed_om_share_per_year * act_gen).sum("inv_step"), sets
+        )
     fixed_om_res_inv_y_s = _as_year_scenario_da(0.0, sets)
     fixed_om_bat_inv_y_s = _as_year_scenario_da(0.0, sets)
     if p.res_inverter_fixed_om_share_per_year is not None:
         fixed_om_res_inv_y_s = _as_year_scenario_da(
-            (res_inv_inverter * p.res_inverter_fixed_om_share_per_year * act_res)
+            (res_inv_fom_base * p.res_inverter_fixed_om_share_per_year * act_res)
             .sum("inv_step")
             .sum("resource"),
             sets,
@@ -1701,11 +1722,14 @@ def build_scenario_costs_table_multi_year(
         else 0.0
     )
 
+    # Fixed O&M on the gross asset value, as in the objective (the grant only lowers capex).
+    res_fom_base = res_units * res_nom * res_capex
+    res_inv_fom_base = (res_units * res_nom / res_dc_ac_ratio) * res_inv_capex
     fixed_om_res_y_s = _as_year_scenario_da(
-        (res_inv * res_fom_share * active).sum("inv_step").sum("resource"), sets
+        (res_fom_base * res_fom_share * active).sum("inv_step").sum("resource"), sets
     )
     fixed_om_res_inverter_y_s = _as_year_scenario_da(
-        (res_inv_inverter * res_inv_fom_share * active).sum("inv_step").sum("resource"), sets
+        (res_inv_fom_base * res_inv_fom_share * active).sum("inv_step").sum("resource"), sets
     )
     fixed_om_battery_y_s = _as_year_scenario_da(
         (bat_inv * bat_fom_share * active).sum("inv_step"), sets
